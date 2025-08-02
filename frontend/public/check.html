@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Check</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <h1>Debug Check</h1>
+    <div id="output" style="white-space: pre-wrap; font-family: monospace; background: #f0f0f0; padding: 20px;"></div>
+    
+    <script type="module">
+        const output = document.getElementById('output');
+        
+        function log(msg, error = false) {
+            const line = document.createElement('div');
+            line.style.color = error ? 'red' : 'black';
+            line.textContent = msg;
+            output.appendChild(line);
+        }
+        
+        // Capture errors
+        window.onerror = (msg, url, line, col, error) => {
+            log(`ERROR: ${msg} at ${url}:${line}:${col}`, true);
+            if (error && error.stack) {
+                log(`Stack: ${error.stack}`, true);
+            }
+        };
+        
+        window.addEventListener('unhandledrejection', event => {
+            log(`PROMISE REJECTION: ${event.reason}`, true);
+        });
+        
+        log('Starting debug check...');
+        
+        // Check if we can access the app
+        try {
+            log('Checking root element...');
+            const root = document.getElementById('root');
+            if (!root) {
+                log('Creating root element...');
+                const newRoot = document.createElement('div');
+                newRoot.id = 'root';
+                document.body.appendChild(newRoot);
+            }
+            
+            log('Loading main.jsx...');
+            const module = await import('/src/main.jsx');
+            log('✓ main.jsx loaded successfully!');
+        } catch (e) {
+            log(`Failed to load main.jsx: ${e.message}`, true);
+            if (e.stack) {
+                log(`Stack trace:\n${e.stack}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Digis - Offline</title>
+    <style>
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            text-align: center; 
+            padding: 0;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 400px;
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 { 
+            font-size: 2.5em; 
+            margin-bottom: 20px; 
+            background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        p { 
+            font-size: 1.2em; 
+            line-height: 1.6; 
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        button {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        button:hover {
+            background: white;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+        .features {
+            margin-top: 30px;
+            text-align: left;
+        }
+        .feature {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .feature-icon {
+            margin-right: 12px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 You're Offline</h1>
+        <p>No internet connection detected. Some features may be limited, but you can still browse cached content.</p>
+        
+        <div class="features">
+            <div class="feature">
+                <span class="feature-icon">💾</span>
+                <span>Cached creator profiles available</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">💬</span>
+                <span>Message history accessible</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">⚙️</span>
+                <span>Settings and preferences saved</span>
+            </div>
+        </div>
+        
+        <button onclick="window.location.reload()">🔄 Try Again</button>
+    </div>
+</body>
+</html>

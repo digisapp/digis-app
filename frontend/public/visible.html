@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VISIBLE TEST</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:20px; background-color: #FF6B6B !important; color: white !important; font-size: 24px !important; font-family: Arial !important;">
+    <div style="background: #4ECDC4 !important; color: white !important; padding: 40px !important; text-align: center !important; border-radius: 10px !important;">
+        <h1 style="color: white !important; font-size: 48px !important; margin: 0 0 20px 0 !important;">🎯 VISIBLE TEST 🎯</h1>
+        <p style="color: white !important; font-size: 24px !important;">If you see this colorful page, the server is working!</p>
+        <p style="color: white !important; font-size: 20px !important;">Background: RED | Box: TEAL</p>
+        <p style="background: #FFE66D !important; color: #333 !important; padding: 20px !important; margin: 20px 0 !important; border-radius: 5px !important;">
+            URL: <strong>http://localhost:3002/visible.html</strong>
+        </p>
+        <div style="background: #95E1D3 !important; color: #333 !important; padding: 20px !important; margin-top: 20px !important; border-radius: 5px !important;">
+            <p style="margin: 0 !important; color: #333 !important;">Time: <span id="time">Loading...</span></p>
+        </div>
+    </div>
+    
+    <script>
+        document.body.style.backgroundColor = '#FF6B6B';
+        setInterval(function() {
+            document.getElementById('time').textContent = new Date().toLocaleTimeString();
+        }, 1000);
+        console.log('VISIBLE TEST PAGE LOADED - Check for bright red background!');
+    </script>
+</body>
+</html>

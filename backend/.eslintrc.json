@@ -1,0 +1,34 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true,
+    "jest": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:node/recommended",
+    "plugin:security/recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  },
+  "plugins": [
+    "node",
+    "security"
+  ],
+  "rules": {
+    "no-console": "off",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "security/detect-object-injection": "off",
+    "node/no-unpublished-require": "off",
+    "node/no-missing-require": "off",
+    "no-process-exit": "off"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "logs/",
+    "coverage/",
+    "*.test.js"
+  ]
+}

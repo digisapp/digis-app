@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Mobile</title>
+</head>
+<body>
+    <h1>Debug Console</h1>
+    <div id="console-output" style="font-family: monospace; white-space: pre-wrap; background: #f0f0f0; padding: 20px; margin: 20px; border-radius: 8px;"></div>
+    
+    <script>
+        const output = document.getElementById('console-output');
+        
+        // Override console methods to capture errors
+        const originalError = console.error;
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        
+        console.error = function(...args) {
+            output.innerHTML += '<span style="color: red;">ERROR: ' + args.join(' ') + '</span>\n';
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            output.innerHTML += '<span style="color: orange;">WARN: ' + args.join(' ') + '</span>\n';
+            originalWarn.apply(console, args);
+        };
+        
+        console.log = function(...args) {
+            output.innerHTML += 'LOG: ' + args.join(' ') + '\n';
+            originalLog.apply(console, args);
+        };
+        
+        // Capture unhandled errors
+        window.addEventListener('error', (event) => {
+            output.innerHTML += '<span style="color: red; font-weight: bold;">UNHANDLED ERROR: ' + event.message + ' at ' + event.filename + ':' + event.lineno + ':' + event.colno + '</span>\n';
+        });
+        
+        // Capture unhandled promise rejections
+        window.addEventListener('unhandledrejection', (event) => {
+            output.innerHTML += '<span style="color: red; font-weight: bold;">UNHANDLED PROMISE REJECTION: ' + event.reason + '</span>\n';
+        });
+        
+        // Load the main app in an iframe to capture its errors
+        const iframe = document.createElement('iframe');
+        iframe.src = '/';
+        iframe.style.width = '100%';
+        iframe.style.height = '500px';
+        iframe.style.border = '1px solid #ccc';
+        iframe.style.marginTop = '20px';
+        document.body.appendChild(iframe);
+    </script>
+</body>
+</html>

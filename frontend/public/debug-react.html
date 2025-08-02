@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug React App</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+        .error { color: #ff6b6b; }
+        .success { color: #51cf66; }
+        .info { color: #74c0fc; }
+        pre { background: #2a2a2a; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>React App Debug Console</h1>
+    <div id="console"></div>
+    
+    <script>
+        const consoleDiv = document.getElementById('console');
+        let logs = [];
+        
+        function log(type, ...args) {
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${args.join(' ')}`;
+            consoleDiv.appendChild(entry);
+            logs.push({ type, time: new Date(), args });
+        }
+        
+        // Override console methods
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = (...args) => {
+            originalLog(...args);
+            log('info', ...args);
+        };
+        
+        console.error = (...args) => {
+            originalError(...args);
+            log('error', ...args);
+        };
+        
+        console.warn = (...args) => {
+            originalWarn(...args);
+            log('error', ...args);
+        };
+        
+        // Catch errors
+        window.addEventListener('error', (e) => {
+            log('error', `ERROR: ${e.message} at ${e.filename}:${e.lineno}:${e.colno}`);
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            log('error', 'Unhandled Promise Rejection:', e.reason);
+        });
+        
+        // Load the app in an iframe
+        log('info', 'Creating iframe to load app...');
+        const iframe = document.createElement('iframe');
+        iframe.src = '/';
+        iframe.style.width = '100%';
+        iframe.style.height = '400px';
+        iframe.style.border = '1px solid #444';
+        iframe.style.marginTop = '20px';
+        
+        iframe.onload = () => {
+            log('success', 'Iframe loaded');
+            
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const iframeWin = iframe.contentWindow;
+                
+                // Check for React
+                log('info', `React in iframe: ${iframeWin.React ? 'YES' : 'NO'}`);
+                log('info', `ReactDOM in iframe: ${iframeWin.ReactDOM ? 'YES' : 'NO'}`);
+                
+                // Check root element
+                const root = iframeDoc.getElementById('root');
+                log('info', `Root element exists: ${root ? 'YES' : 'NO'}`);
+                log('info', `Root innerHTML length: ${root ? root.innerHTML.length : 0}`);
+                
+                // Override iframe console
+                iframeWin.console.log = (...args) => log('info', '[IFRAME]', ...args);
+                iframeWin.console.error = (...args) => log('error', '[IFRAME]', ...args);
+                iframeWin.console.warn = (...args) => log('error', '[IFRAME]', ...args);
+                
+                iframeWin.addEventListener('error', (e) => {
+                    log('error', `[IFRAME ERROR] ${e.message} at ${e.filename}:${e.lineno}`);
+                });
+                
+            } catch (e) {
+                log('error', 'Cannot access iframe:', e.message);
+            }
+        };
+        
+        document.body.appendChild(iframe);
+        
+        // Also try to check module loading
+        log('info', 'Testing ES module support...');
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.textContent = `
+            console.log('ES modules supported');
+            import('/src/main.jsx')
+                .then(() => console.log('main.jsx loaded successfully'))
+                .catch(err => console.error('Failed to load main.jsx:', err.message));
+        `;
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

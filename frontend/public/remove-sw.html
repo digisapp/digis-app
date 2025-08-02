@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Remove Service Worker</title>
+</head>
+<body>
+    <h1>Removing Service Worker</h1>
+    <div id="status"></div>
+    
+    <script>
+        async function removeServiceWorker() {
+            const status = document.getElementById('status');
+            
+            if ('serviceWorker' in navigator) {
+                try {
+                    // Get all registrations
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    
+                    // Unregister all
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                        status.innerHTML += `<p>✅ Unregistered: ${registration.scope}</p>`;
+                    }
+                    
+                    // Clear all caches
+                    const cacheNames = await caches.keys();
+                    for (let cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        status.innerHTML += `<p>🗑️ Deleted cache: ${cacheName}</p>`;
+                    }
+                    
+                    status.innerHTML += '<p><strong>✨ All service workers removed! Please go back to the main site.</strong></p>';
+                    
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                    
+                } catch (error) {
+                    status.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+                }
+            } else {
+                status.innerHTML = '<p>Service Workers not supported in this browser.</p>';
+            }
+        }
+        
+        // Run immediately
+        removeServiceWorker();
+    </script>
+</body>
+</html>

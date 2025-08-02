@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Console Check</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .log { margin: 5px 0; padding: 5px; background: #f0f0f0; }
+        .error { background: #ffe0e0; color: red; }
+        .warn { background: #fff0e0; color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Console Output Check</h1>
+    <button onclick="checkApp()">Check App Status</button>
+    <div id="logs"></div>
+    
+    <script>
+        const logs = document.getElementById('logs');
+        
+        function addLog(type, msg) {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${type.toUpperCase()}] ${msg}`;
+            logs.appendChild(div);
+        }
+        
+        async function checkApp() {
+            logs.innerHTML = '';
+            
+            // Check if modules are loading
+            addLog('info', 'Checking module support...');
+            
+            try {
+                // Check React
+                const reactCheck = await fetch('/node_modules/react/index.js');
+                addLog(reactCheck.ok ? 'info' : 'error', `React module: ${reactCheck.status}`);
+                
+                // Check ReactDOM
+                const reactDomCheck = await fetch('/node_modules/react-dom/index.js');
+                addLog(reactDomCheck.ok ? 'info' : 'error', `ReactDOM module: ${reactDomCheck.status}`);
+                
+                // Check main.jsx
+                const mainCheck = await fetch('/src/main.jsx');
+                addLog(mainCheck.ok ? 'info' : 'error', `main.jsx: ${mainCheck.status}`);
+                
+                // Check if the app HTML has the root element
+                const appHtml = await fetch('/');
+                const appText = await appHtml.text();
+                const hasRoot = appText.includes('id="root"');
+                addLog(hasRoot ? 'info' : 'error', `Root element in HTML: ${hasRoot}`);
+                
+                // Try to import main.jsx as a module
+                addLog('info', 'Attempting to import main.jsx...');
+                import('/src/main.jsx')
+                    .then(() => {
+                        addLog('info', 'main.jsx imported successfully!');
+                    })
+                    .catch(err => {
+                        addLog('error', `Failed to import main.jsx: ${err.message}`);
+                    });
+                    
+            } catch (err) {
+                addLog('error', `Check failed: ${err.message}`);
+            }
+        }
+        
+        // Auto-check on load
+        checkApp();
+    </script>
+</body>
+</html>

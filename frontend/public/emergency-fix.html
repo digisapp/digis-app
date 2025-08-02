@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emergency Fix - Digis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f3f4f6;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .red { background: #dc2626; color: white; }
+        .red:hover { background: #b91c1c; }
+        .blue { background: #2563eb; color: white; }
+        .blue:hover { background: #1d4ed8; }
+        .green { background: #16a34a; color: white; }
+        .green:hover { background: #15803d; }
+        .status { 
+            background: #f3f4f6; 
+            padding: 1rem; 
+            border-radius: 6px; 
+            margin-bottom: 1rem;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 Emergency Navigation Fix</h1>
+        <p>Your dashboard and wallet are safe! You're just stuck in the wrong view.</p>
+        
+        <div class="status" id="status">
+            Checking authentication status...
+        </div>
+
+        <button class="red" onclick="clearEverything()">
+            🧹 Clear Everything & Start Fresh
+        </button>
+
+        <button class="blue" onclick="forceDashboard()">
+            📊 Force Go to Dashboard
+        </button>
+
+        <button class="green" onclick="forceProfile()">
+            👤 Force Go to Profile
+        </button>
+
+        <button class="blue" onclick="forceWallet()">
+            💰 Force Go to Wallet
+        </button>
+
+        <hr style="margin: 2rem 0;">
+        
+        <h3>Manual Override:</h3>
+        <input type="text" id="customUrl" placeholder="Enter path (e.g., /dashboard)" style="width: 100%; padding: 8px; margin-bottom: 8px;">
+        <button class="green" onclick="goToCustom()">
+            Go to Custom Path
+        </button>
+    </div>
+
+    <script>
+        // Check current status
+        function updateStatus() {
+            const status = document.getElementById('status');
+            status.innerHTML = `
+                Current URL: ${window.location.href}<br>
+                Has localStorage: ${localStorage.length > 0 ? 'Yes' : 'No'}<br>
+                Has sessionStorage: ${sessionStorage.length > 0 ? 'Yes' : 'No'}
+            `;
+        }
+        updateStatus();
+
+        function clearEverything() {
+            if(confirm('This will clear all stored data and restart fresh. Continue?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                // Clear all cookies
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                window.location.href = '/';
+            }
+        }
+
+        function forceDashboard() {
+            window.location.href = '/dashboard';
+        }
+
+        function forceProfile() {
+            window.location.href = '/profile';
+        }
+
+        function forceWallet() {
+            window.location.href = '/wallet';
+        }
+
+        function goToCustom() {
+            const path = document.getElementById('customUrl').value;
+            if(path) {
+                window.location.href = path.startsWith('/') ? path : '/' + path;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test App Loading</title>
+</head>
+<body>
+  <h1>Testing Digis App</h1>
+  <div id="test-status">Checking...</div>
+  
+  <script type="module">
+    const statusEl = document.getElementById('test-status');
+    
+    // Test 1: Check if Vite is responding
+    fetch('http://localhost:3000/')
+      .then(res => {
+        statusEl.innerHTML += '<br>✅ Vite server is running';
+        return res.text();
+      })
+      .catch(err => {
+        statusEl.innerHTML += '<br>❌ Vite server error: ' + err.message;
+      });
+    
+    // Test 2: Try to load the main module
+    import('http://localhost:3000/src/main.jsx')
+      .then(() => {
+        statusEl.innerHTML += '<br>✅ main.jsx loaded successfully';
+      })
+      .catch(err => {
+        statusEl.innerHTML += '<br>❌ Error loading main.jsx: ' + err.message;
+        console.error('Module load error:', err);
+      });
+      
+    // Test 3: Check Supabase config
+    import('http://localhost:3000/src/utils/supabase-auth.js')
+      .then(module => {
+        statusEl.innerHTML += '<br>✅ Supabase module loaded';
+        if (module.supabase) {
+          statusEl.innerHTML += '<br>✅ Supabase client created';
+        }
+      })
+      .catch(err => {
+        statusEl.innerHTML += '<br>❌ Error loading Supabase: ' + err.message;
+        console.error('Supabase error:', err);
+      });
+  </script>
+</body>
+</html>

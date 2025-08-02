@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clear Storage - Digis</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    .status {
+      margin: 1rem 0;
+      font-size: 1.2rem;
+    }
+    .success {
+      color: #4ade80;
+    }
+    button {
+      background: white;
+      color: #764ba2;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+      margin: 0.5rem;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧹 Clear Storage</h1>
+    <div id="status" class="status">Ready to clear all browser data...</div>
+    <button onclick="clearAndRedirect()">Clear & Go to Dashboard</button>
+    <button onclick="clearAndHome()">Clear & Go to Home</button>
+    <button onclick="justClear()">Just Clear Storage</button>
+  </div>
+
+  <script>
+    function clearAllStorage() {
+      // Clear localStorage
+      localStorage.clear();
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+      
+      // Clear all cookies
+      document.cookie.split(";").forEach(function(c) {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
+      // Clear IndexedDB (if any)
+      if (window.indexedDB) {
+        indexedDB.databases().then(databases => {
+          databases.forEach(db => indexedDB.deleteDatabase(db.name));
+        }).catch(e => console.log('IndexedDB clear error:', e));
+      }
+      
+      // Clear caches (if any)
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        }).catch(e => console.log('Cache clear error:', e));
+      }
+    }
+
+    function clearAndRedirect() {
+      clearAllStorage();
+      document.getElementById('status').innerHTML = '<span class="success">✅ Storage cleared! Redirecting to dashboard...</span>';
+      setTimeout(() => {
+        window.location.href = 'http://localhost:3000/dashboard';
+      }, 1000);
+    }
+
+    function clearAndHome() {
+      clearAllStorage();
+      document.getElementById('status').innerHTML = '<span class="success">✅ Storage cleared! Redirecting to home...</span>';
+      setTimeout(() => {
+        window.location.href = 'http://localhost:3000';
+      }, 1000);
+    }
+
+    function justClear() {
+      clearAllStorage();
+      document.getElementById('status').innerHTML = '<span class="success">✅ All storage cleared successfully!</span>';
+    }
+  </script>
+</body>
+</html>

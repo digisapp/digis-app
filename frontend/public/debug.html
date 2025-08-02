@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Console</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+        .log { margin: 5px 0; padding: 10px; background: #2a2a2a; border-radius: 4px; }
+        .error { background: #4a2020; color: #ff6b6b; }
+        .warn { background: #4a4020; color: #ffeb3b; }
+        .info { background: #204a20; color: #4caf50; }
+    </style>
+</head>
+<body>
+    <h1>Debug Console</h1>
+    <div id="logs"></div>
+    
+    <script>
+        const logsDiv = document.getElementById('logs');
+        
+        function addLog(type, message, details = '') {
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.innerHTML = `<strong>[${type.toUpperCase()}]</strong> ${message}${details ? '<br>' + details : ''}`;
+            logsDiv.appendChild(logDiv);
+        }
+        
+        // Override console methods
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog('info', args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog('error', args.join(' '));
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog('warn', args.join(' '));
+        };
+        
+        // Catch global errors
+        window.addEventListener('error', (e) => {
+            addLog('error', e.message, `File: ${e.filename}:${e.lineno}:${e.colno}`);
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            addLog('error', 'Unhandled Promise Rejection', e.reason);
+        });
+        
+        // Load the main app in an iframe
+        addLog('info', 'Loading main app...');
+        
+        const iframe = document.createElement('iframe');
+        iframe.src = '/';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        iframe.onload = () => {
+            addLog('info', 'Main app iframe loaded');
+            
+            // Try to access the iframe's console
+            try {
+                const iframeWindow = iframe.contentWindow;
+                if (iframeWindow) {
+                    // Override iframe console
+                    iframeWindow.console.log = function(...args) {
+                        addLog('info', '[IFRAME] ' + args.join(' '));
+                    };
+                    iframeWindow.console.error = function(...args) {
+                        addLog('error', '[IFRAME] ' + args.join(' '));
+                    };
+                    
+                    // Check if React loaded
+                    setTimeout(() => {
+                        const hasReact = iframeWindow.React !== undefined;
+                        const hasRoot = iframeWindow.document.getElementById('root');
+                        const rootContent = hasRoot ? hasRoot.innerHTML : 'No content';
+                        
+                        addLog('info', `React loaded: ${hasReact}`);
+                        addLog('info', `Root element exists: ${!!hasRoot}`);
+                        addLog('info', `Root content length: ${rootContent.length}`);
+                        
+                        if (rootContent.length < 50) {
+                            addLog('warn', 'Root element has very little content - React may not be rendering');
+                        }
+                    }, 1000);
+                }
+            } catch (e) {
+                addLog('error', 'Cannot access iframe content', e.message);
+            }
+        };
+        
+        // Also try to load the app directly
+        fetch('/')
+            .then(res => res.text())
+            .then(html => {
+                const hasRoot = html.includes('id="root"');
+                const hasMainScript = html.includes('src="/src/main.jsx');
+                addLog('info', `HTML has root element: ${hasRoot}`);
+                addLog('info', `HTML has main.jsx script: ${hasMainScript}`);
+            })
+            .catch(err => {
+                addLog('error', 'Failed to fetch main page', err.message);
+            });
+    </script>
+</body>
+</html>
