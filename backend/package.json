@@ -26,6 +26,7 @@
     "migrate:down": "node utils/migrate.js down",
     "migrate:status": "node utils/migrate.js status",
     "migrate:reset": "node utils/migrate.js reset",
+    "migrate:validate": "node migrations/validate.js",
     "db:test": "node -e \"require('./utils/db').testConnection()\"",
     "db:seed": "node utils/seed.js",
     "clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
