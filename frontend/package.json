@@ -1,28 +1,25 @@
 {
-  "name": "digis-frontend",
+  "name": "@digis/frontend",
   "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "build:analyze": "vite build --mode production && vite-bundle-visualizer",
     "build:optimize": "vite build --config vite.config.optimized.js",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --ext ts,tsx,js,jsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx,js,jsx --fix",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "build:css": "tailwindcss -i ./src/index.css -o ./src/output.css --minify",
     "dev:css": "tailwindcss -i ./src/index.css -o ./src/output.css --watch",
     "analyze": "node analyze-bundle.js",
-    "size": "size-limit",
-    "lighthouse": "lighthouse http://localhost:3000 --output html --output-path ./lighthouse-report.html",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
-    "test-storybook": "test-storybook"
+    "clean": "rm -rf node_modules pnpm-lock.yaml dist && pnpm install"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
