@@ -10,30 +10,40 @@ import toast from 'react-hot-toast';
 import LiveStreamNotification from './components/LiveStreamNotification';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { BREAKPOINTS } from './constants/breakpoints';
+// Core components (loaded immediately for auth flow)
 import Auth from './components/Auth';
-import ImprovedProfile from './components/ImprovedProfile';
+import HomePage from './components/HomePage';
+import Skeleton from './components/ui/Skeleton';
+
 // Lazy load heavy components for better performance
 const VideoCall = lazy(() => import('./components/VideoCall'));
 const EnhancedSchedule = lazy(() => import('./components/EnhancedSchedule'));
 const FanEngagement = lazy(() => import('./components/FanEngagement'));
 const StreamingLayout = lazy(() => import('./components/StreamingLayout'));
 const StreamingDashboard = lazy(() => import('./components/StreamingDashboard'));
-import HomePage from './components/HomePage';
-import CreatorPublicProfileEnhanced from './components/CreatorPublicProfileEnhanced';
 const EnhancedCreatorDiscovery = lazy(() => import('./components/EnhancedCreatorDiscovery'));
-import PrivacySettings from './components/PrivacySettings';
-import Settings from './components/Settings';
-import PublicCreatorShop from './components/PublicCreatorShop';
-import DigitalsPage from './components/pages/DigitalsPage';
-import CreatorApplication from './components/CreatorApplication';
-import Skeleton from './components/ui/Skeleton';
-import StreamingLoadingSkeleton from './components/StreamingLoadingSkeleton';
-import GoLiveSetup from './components/GoLiveSetup';
-import MobileGoLive from './components/mobile/MobileGoLive';
-import MobileLiveStream from './components/mobile/MobileLiveStream';
-import TipModal from './components/TipModal';
-import FollowingSystem from './components/FollowingSystem';
-import CreatorKYCVerification from './components/CreatorKYCVerification';
+
+// Lazy load profile and settings pages
+const ImprovedProfile = lazy(() => import('./components/ImprovedProfile'));
+const PrivacySettings = lazy(() => import('./components/PrivacySettings'));
+const Settings = lazy(() => import('./components/Settings'));
+
+// Lazy load creator features
+const CreatorPublicProfileEnhanced = lazy(() => import('./components/CreatorPublicProfileEnhanced'));
+const PublicCreatorShop = lazy(() => import('./components/PublicCreatorShop'));
+const DigitalsPage = lazy(() => import('./components/pages/DigitalsPage'));
+const CreatorApplication = lazy(() => import('./components/CreatorApplication'));
+const CreatorKYCVerification = lazy(() => import('./components/CreatorKYCVerification'));
+
+// Lazy load streaming components
+const StreamingLoadingSkeleton = lazy(() => import('./components/StreamingLoadingSkeleton'));
+const GoLiveSetup = lazy(() => import('./components/GoLiveSetup'));
+const MobileGoLive = lazy(() => import('./components/mobile/MobileGoLive'));
+const MobileLiveStream = lazy(() => import('./components/mobile/MobileLiveStream'));
+
+// Lazy load interaction components
+const TipModal = lazy(() => import('./components/TipModal'));
+const FollowingSystem = lazy(() => import('./components/FollowingSystem'));
 const WalletPage = lazy(() => import('./components/pages/WalletPage'));
 const EnhancedAdminDashboard = lazy(() => import('./components/EnhancedAdminDashboard'));
 import InstantChatWidget from './components/InstantChatWidget';
@@ -45,57 +55,60 @@ const ShopManagementPage = lazy(() => import('./components/pages/ShopManagementP
 import { Navigation, NavigationProvider } from './components/navigation';
 import PullToRefresh from './components/ui/PullToRefresh';
 import NextLevelMobileApp from './components/mobile/NextLevelMobileApp';
-import MobileApp from './components/mobile/MobileApp';
+// Lazy load rarely accessed pages and components
+const MobileApp = lazy(() => import('./components/mobile/MobileApp'));
+const TermsOfService = lazy(() => import('./components/pages/TermsOfService'));
+const PrivacyPolicy = lazy(() => import('./components/pages/PrivacyPolicy'));
+const EnhancedNotificationBell = lazy(() => import('./components/EnhancedNotificationBell'));
+const FileUpload = lazy(() => import('./components/FileUpload'));
+const PictureInPicture = lazy(() => import('./components/PictureInPicture'));
+
+// Keep essential UI components eager
 import ErrorBoundary from './components/ui/ErrorBoundary';
-import TermsOfService from './components/pages/TermsOfService';
-import PrivacyPolicy from './components/pages/PrivacyPolicy';
-import EnhancedNotificationBell from './components/EnhancedNotificationBell';
-import FileUpload from './components/FileUpload';
 import ErrorPage from './components/ErrorPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import PictureInPicture from './components/PictureInPicture';
 
-// Mobile components
+// Mobile components - lazy load for better initial bundle size
 import { MobileUIProvider } from './components/mobile/MobileUIProvider';
-import FloatingActionButton from './components/mobile/FloatingActionButton';
-// Navigation components removed - using new Navigation system
-import MobileBottomSheet from './components/mobile/MobileBottomSheet';
-import MobileProfile from './components/mobile/MobileProfile';
-import MobileMessages from './components/mobile/MobileMessages';
-import MobileCreatorDashboard from './components/mobile/MobileCreatorDashboard';
-import MobileFanDashboard from './components/mobile/MobileFanDashboard';
-import MobileContent from './components/mobile/MobileContent';
-import MobileWallet from './components/mobile/MobileWallet';
-import MobileTokenPurchase from './components/mobile/MobileTokenPurchase';
-import MobileCalls from './components/mobile/MobileCalls';
-import MobileAnalytics from './components/mobile/MobileAnalytics';
-import MobileSchedule from './components/mobile/MobileSchedule';
-import MobileSettings from './components/mobile/MobileSettings';
-import MobileEditProfile from './components/mobile/MobileEditProfile';
-import MobileSettingsPage from './components/mobile/pages/MobileSettingsPage';
-import MobileExplore from './components/mobile/MobileExplore';
-import MobileCreatorProfile from './components/mobile/MobileCreatorProfile';
-import SimpleMobileApp from './components/mobile/SimpleMobileApp';
-import MobileLandingPage from './components/mobile/MobileLandingPage';
-import RecentlyViewedCreators from './components/RecentlyViewedCreators';
-import ImprovedTokenPurchase from './components/ImprovedTokenPurchase';
-// Removed unused import: SwipeableCreatorGallery
-import RealTimeNotifications from './components/RealTimeNotifications';
-import IncomingCallNotification from './components/IncomingCallNotification';
-import IncomingCallModal from './components/IncomingCallModal';
+const FloatingActionButton = lazy(() => import('./components/mobile/FloatingActionButton'));
+const MobileBottomSheet = lazy(() => import('./components/mobile/MobileBottomSheet'));
+const MobileProfile = lazy(() => import('./components/mobile/MobileProfile'));
+const MobileMessages = lazy(() => import('./components/mobile/MobileMessages'));
+const MobileCreatorDashboard = lazy(() => import('./components/mobile/MobileCreatorDashboard'));
+const MobileFanDashboard = lazy(() => import('./components/mobile/MobileFanDashboard'));
+const MobileContent = lazy(() => import('./components/mobile/MobileContent'));
+const MobileWallet = lazy(() => import('./components/mobile/MobileWallet'));
+const MobileTokenPurchase = lazy(() => import('./components/mobile/MobileTokenPurchase'));
+const MobileCalls = lazy(() => import('./components/mobile/MobileCalls'));
+const MobileAnalytics = lazy(() => import('./components/mobile/MobileAnalytics'));
+const MobileSchedule = lazy(() => import('./components/mobile/MobileSchedule'));
+const MobileSettings = lazy(() => import('./components/mobile/MobileSettings'));
+const MobileEditProfile = lazy(() => import('./components/mobile/MobileEditProfile'));
+const MobileSettingsPage = lazy(() => import('./components/mobile/pages/MobileSettingsPage'));
+const MobileExplore = lazy(() => import('./components/mobile/MobileExplore'));
+const MobileCreatorProfile = lazy(() => import('./components/mobile/MobileCreatorProfile'));
+const SimpleMobileApp = lazy(() => import('./components/mobile/SimpleMobileApp'));
+const MobileLandingPage = lazy(() => import('./components/mobile/MobileLandingPage'));
+// Lazy load additional features and pages
+const RecentlyViewedCreators = lazy(() => import('./components/RecentlyViewedCreators'));
+const ImprovedTokenPurchase = lazy(() => import('./components/ImprovedTokenPurchase'));
+const RealTimeNotifications = lazy(() => import('./components/RealTimeNotifications'));
+const IncomingCallNotification = lazy(() => import('./components/IncomingCallNotification'));
+const IncomingCallModal = lazy(() => import('./components/IncomingCallModal'));
+const ExplorePage = lazy(() => import('./components/pages/ExplorePage'));
+const TVPage = lazy(() => import('./components/pages/TVPage'));
+const CallRequestsPage = lazy(() => import('./components/pages/CallRequestsPage'));
+const CallManagementPage = lazy(() => import('./components/pages/CallManagementPage'));
+const CollectionsPage = lazy(() => import('./components/pages/CollectionsPage'));
+const AnalyticsDashboard = lazy(() => import('./components/AnalyticsDashboard'));
+const SchedulePage = lazy(() => import('./components/pages/SchedulePage'));
+const FollowersSubscribersPage = lazy(() => import('./components/pages/FollowersSubscribersPage'));
+const SupabaseTestPage = lazy(() => import('./components/SupabaseTestPage'));
+
+// Keep utility imports eager
 import recentlyViewedService from './utils/recentlyViewedService';
 import serviceWorkerManager from './utils/ServiceWorkerManager';
 import agoraLoader from './utils/AgoraLoader';
-import ExplorePage from './components/pages/ExplorePage';
-import TVPage from './components/pages/TVPage';
-// Removed EnhancedContentStudio and OffersManagement - using Enhanced Content Gallery instead
-import CallRequestsPage from './components/pages/CallRequestsPage';
-import CallManagementPage from './components/pages/CallManagementPage';
-import CollectionsPage from './components/pages/CollectionsPage';
-import AnalyticsDashboard from './components/AnalyticsDashboard';
-import SchedulePage from './components/pages/SchedulePage';
-import FollowersSubscribersPage from './components/pages/FollowersSubscribersPage';
-import SupabaseTestPage from './components/SupabaseTestPage';
 import socketService from './services/socket';
 import { useBalance, useNotifications } from './hooks/useSocket';
 // Import hybrid store

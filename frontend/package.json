@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:analyze": "vite build --mode production && vite-bundle-visualizer",
+    "build:analyze": "ANALYZE=true vite build",
     "build:optimize": "vite build --config vite.config.optimized.js",
     "preview": "vite preview",
     "test": "vitest",

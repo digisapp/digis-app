@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { visualizer } from 'rollup-plugin-visualizer';
 import path from 'path';
 import { fileURLToPath, URL } from 'url';
 
@@ -11,6 +12,13 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
   plugins: [
     react(),
+    // Bundle analyzer - only run when needed
+    process.env.ANALYZE && visualizer({
+      open: true,
+      filename: 'dist/stats.html',
+      gzipSize: true,
+      brotliSize: true,
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'digis-logo-black.png', 'digis-logo-white.png'],
@@ -125,17 +133,49 @@ export default defineConfig({
     },
     // Optimize bundle size
     chunkSizeWarningLimit: 500, // Warn if chunk is larger than 500kb
-    // Optimize chunks
+    // Optimize chunks with route-based splitting
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['framer-motion', '@headlessui/react', 'react-hot-toast'],
-          'agora-vendor': ['agora-rtc-sdk-ng'],
-          'state': ['zustand'],
-          'utils': ['axios', 'date-fns', 'classnames'],
+        manualChunks: (id) => {
+          // Vendor chunks
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor';
+            }
+            if (id.includes('framer-motion') || id.includes('@headlessui') || id.includes('react-hot-toast')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('agora-rtc-sdk-ng') || id.includes('agora-rtm-sdk')) {
+              return 'agora-vendor';
+            }
+            if (id.includes('zustand')) {
+              return 'state-vendor';
+            }
+            if (id.includes('@supabase')) {
+              return 'supabase-vendor';
+            }
+            // All other node_modules
+            return 'vendor';
+          }
+
+          // Route-based code splitting
+          if (id.includes('/components/mobile/')) {
+            return 'mobile';
+          }
+          if (id.includes('/components/pages/')) {
+            return 'pages';
+          }
+          if (id.includes('VideoCall') || id.includes('StreamingDashboard') || id.includes('StreamingLayout')) {
+            return 'streaming';
+          }
+          if (id.includes('/components/ui/')) {
+            return 'ui-components';
+          }
+          if (id.includes('/utils/') || id.includes('/services/')) {
+            return 'utils';
+          }
         },
-        // Generate smaller chunks
+        // Generate smaller chunks with better naming
         chunkFileNames: (chunkInfo) => {
           const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
           return `assets/js/${facadeModuleId}-[hash].js`;
