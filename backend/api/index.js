@@ -610,7 +610,7 @@ server.listen(PORT, HOST, () => {
   console.log(`📚 API Documentation: http://${HOST}:${PORT}/api-docs`);
   console.log(`🏥 Health Check: http://${HOST}:${PORT}/health`);
   // Removed sensitive URL logging - use secure logger instead
-  
+
   logger.info('Server started successfully', {
     port: PORT,
     host: HOST,
@@ -618,17 +618,27 @@ server.listen(PORT, HOST, () => {
     nodeVersion: process.version
   });
 
+  // Initialize BullMQ background workers
+  try {
+    const { initWorkers } = require('../lib/queue');
+    initWorkers();
+    console.log('⚙️ Background job workers initialized (BullMQ)');
+  } catch (queueError) {
+    console.warn('⚠️ Failed to initialize background workers:', queueError.message);
+    // Continue without background jobs
+  }
+
   // Initialize scheduled jobs for payouts
   if (process.env.NODE_ENV === 'production' || process.env.ENABLE_CRON === 'true') {
     const { initializeScheduledJobs } = require('../jobs/cron-config');
     initializeScheduledJobs();
     console.log('📅 Scheduled jobs initialized for creator payouts');
-    
+
     // Initialize automatic withdrawal cron jobs
     const { scheduleWithdrawals } = require('../utils/cron-withdrawals');
     scheduleWithdrawals();
     console.log('💰 Automatic withdrawal jobs scheduled for 1st and 15th of each month');
-    
+
     // Initialize loyalty perk delivery jobs
     const loyaltyPerkDeliveryJob = require('../jobs/loyalty-perk-delivery');
     loyaltyPerkDeliveryJob.start();
