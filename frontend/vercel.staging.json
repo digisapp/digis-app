@@ -1,0 +1,86 @@
+{
+  "name": "digis-frontend-staging",
+  "version": 2,
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  
+  "env": {
+    "NODE_ENV": "staging",
+    "VITE_BACKEND_URL": "@backend_url_staging",
+    "VITE_SUPABASE_URL": "@supabase_url",
+    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key",
+    "VITE_AGORA_APP_ID": "@agora_app_id",
+    "VITE_STRIPE_PUBLIC_KEY": "@stripe_public_key_test",
+    "VITE_SENTRY_DSN": "@sentry_dsn_staging"
+  },
+  
+  "build": {
+    "env": {
+      "NODE_ENV": "production",
+      "VITE_BUILD_TIME": "@build_time"
+    }
+  },
+  
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://digis-backend-staging.vercel.app/api/$1"
+    },
+    {
+      "src": "/assets/(.*)",
+      "headers": {
+        "cache-control": "public, immutable, max-age=31536000"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "headers": {
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "X-XSS-Protection": "1; mode=block",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(self), microphone=(self), geolocation=()",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.agora.io https://*.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://*.agora.io wss://*.supabase.co https://*.stripe.com; font-src 'self' data:; media-src 'self' https://*.agora.io; frame-src https://*.stripe.com"
+      }
+    }
+  ],
+  
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        }
+      ]
+    }
+  ],
+  
+  "functions": {
+    "api/health": {
+      "maxDuration": 10
+    }
+  },
+  
+  "github": {
+    "enabled": true,
+    "autoAlias": true,
+    "silent": false,
+    "autoJobCancelation": true
+  },
+  
+  "public": false,
+  "cleanUrls": true,
+  "trailingSlash": false
+}

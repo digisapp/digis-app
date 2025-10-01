@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- text: ✨ 💫 🌟
+- navigation:
+  - link "Digis":
+    - /url: /
+    - img "Digis"
+  - button "Log In"
+  - button "Sign Up ✨"
+- heading "Connect with your favorite creators" [level=1]
+- paragraph: Monetize with live streams, video and voice calls, classes, exclusive content, and creator collabs.
+- button "Get Started Now"
+- text: Your browser does not support the video tag. Your browser does not support the video tag. Your browser does not support the video tag.
+- paragraph: Join thousands of creators building thriving communities on Digis
+- heading "Streams & Video Calls" [level=3]
+- paragraph: Go live, host co-streams with fellow creators, or offer private sessions.
+- heading "Fan Chat" [level=3]
+- paragraph: Build loyal connections with real time Chat Messaging! Chat in Streams & Privately!
+- heading "Tips & Gifts" [level=3]
+- paragraph: Earn from Streams, Classes, Content, and Messages.
+- heading "Classes" [level=3]
+- paragraph: Host your Pilates Class or Online Coach your Students through interactive classes!
+- heading "Why Creators Love Digis" [level=2]
+- text: 💰
+- heading "Financially Independent" [level=4]
+- paragraph: Set your prices and get paid fast and reliably.
+- text: 🚀
+- heading "Discoverability" [level=4]
+- paragraph: Get organic exposure via Digis TV and Creator Explore Page
+- text: 👩‍💼
+- heading "Empowering Tools" [level=4]
+- paragraph: Latest tools for Stream, Video and Calls, and Messaging designed for your success.
+- text: 💬
+- heading "Direct Fan Connections" [level=4]
+- paragraph: Build genuine relationships with chats, gifts, and exclusive content.
+- text: 📈
+- heading "Proven Earnings" [level=4]
+- paragraph: Join creators earning monthly with our supportive community.
+- text: ✈️
+- heading "Travel" [level=4]
+- paragraph: Join Creator Experiences! Connect, Create, and Travel with Digis Creators!
+- text: 2K+ Active Creators $50K+ Top Monthly Earnings 95% Creator Satisfaction
+- paragraph: Ready to join the fun? 🚀
+- button "Get Started Free"
+```

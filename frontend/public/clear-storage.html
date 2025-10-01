@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Storage</title>
+</head>
+<body>
+    <h1>Clear Application Storage</h1>
+    <button onclick="clearAllStorage()">Clear All Storage</button>
+    <div id="status"></div>
+
+    <script>
+        function clearAllStorage() {
+            // Clear localStorage
+            localStorage.clear();
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            
+            // Clear cookies for this domain
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            document.getElementById('status').innerHTML = '<p style="color: green;">All storage cleared! You can now navigate back to the app.</p>';
+            
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

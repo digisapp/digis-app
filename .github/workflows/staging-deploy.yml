@@ -1,0 +1,288 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging, develop]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+env:
+  NODE_VERSION: '18.x'
+  PNPM_VERSION: '8'
+
+jobs:
+  # Lint and Type Check
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+          
+      - name: Run ESLint
+        run: |
+          cd frontend
+          npm run lint
+          
+      - name: Type Check
+        run: |
+          cd frontend
+          npm run type-check
+
+  # Unit Tests
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+          
+      - name: Run unit tests
+        run: |
+          cd frontend
+          npm run test -- --coverage
+          
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./frontend/coverage
+          flags: unittests
+          name: codecov-umbrella
+
+  # E2E Tests
+  test-e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+          npx playwright install --with-deps
+          
+      - name: Build application
+        run: |
+          cd frontend
+          npm run build
+          
+      - name: Run E2E tests
+        run: |
+          cd frontend
+          npm run test:e2e
+          
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
+  # Bundle Analysis
+  analyze:
+    name: Bundle Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+          
+      - name: Build and analyze
+        run: |
+          cd frontend
+          npm run build:analyze
+          
+      - name: Upload bundle stats
+        uses: actions/upload-artifact@v3
+        with:
+          name: bundle-stats
+          path: frontend/dist/stats.html
+          retention-days: 30
+          
+      - name: Check bundle size
+        run: |
+          cd frontend
+          npm run size
+
+  # Performance Testing
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+          
+      - name: Build application
+        run: |
+          cd frontend
+          npm run build
+          
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: './frontend/.lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+  # Deploy Frontend to Vercel Staging
+  deploy-frontend:
+    name: Deploy Frontend to Staging
+    needs: [quality, test-unit]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+        
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./frontend
+        
+      - name: Build Project
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./frontend
+        env:
+          VITE_BACKEND_URL: ${{ secrets.STAGING_BACKEND_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+          VITE_STRIPE_PUBLIC_KEY: ${{ secrets.STRIPE_PUBLIC_KEY_TEST }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_STAGING }}
+        
+      - name: Deploy to Vercel
+        run: |
+          vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
+          echo "DEPLOYMENT_URL=$(cat deployment-url.txt)" >> $GITHUB_ENV
+        working-directory: ./frontend
+        
+      - name: Comment PR with deployment URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 Staging deployment ready!\n\nFrontend: ${process.env.DEPLOYMENT_URL}\n\n[View Deployment](${process.env.DEPLOYMENT_URL})`
+            })
+
+  # Deploy Backend to Vercel Staging
+  deploy-backend:
+    name: Deploy Backend to Staging
+    needs: [quality]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+        
+      - name: Deploy Backend to Vercel
+        run: |
+          cd backend
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --env-file=.env.staging
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+          AGORA_APP_CERTIFICATE: ${{ secrets.AGORA_APP_CERTIFICATE }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_TEST }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET_TEST }}
+
+  # Health Check
+  health-check:
+    name: Health Check
+    needs: [deploy-frontend, deploy-backend]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check Frontend Health
+        run: |
+          curl -f ${{ secrets.STAGING_FRONTEND_URL }}/api/health || exit 1
+          
+      - name: Check Backend Health
+        run: |
+          curl -f ${{ secrets.STAGING_BACKEND_URL }}/health || exit 1
+          
+      - name: Notify Deployment Success
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ Staging deployment successful!",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Staging Deployment Complete*\n\n:rocket: Frontend: ${{ secrets.STAGING_FRONTEND_URL }}\n:gear: Backend: ${{ secrets.STAGING_BACKEND_URL }}\n:git: Commit: `${{ github.sha }}`"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

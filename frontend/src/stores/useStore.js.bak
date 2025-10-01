@@ -1,0 +1,600 @@
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { devtools } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+import { supabase, subscribeToAuthChanges } from '../utils/supabase-auth.js';
+
+// ARIA announcement helper
+const announceToScreenReader = (message) => {
+  const announcement = document.createElement('div');
+  announcement.setAttribute('aria-live', 'polite');
+  announcement.setAttribute('aria-atomic', 'true');
+  announcement.setAttribute('style', 'position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden;');
+  announcement.textContent = message;
+  document.body.appendChild(announcement);
+  setTimeout(() => document.body.removeChild(announcement), 1000);
+};
+
+// Main store combining all contexts
+const useStore = create(
+  devtools(
+    persist(
+      immer((set, get) => ({
+        // ===== App State (from AppContext) =====
+        user: null,
+        isCreator: false,
+        creators: [],
+        channel: '',
+        token: '',
+        chatToken: '',
+        hasPaid: false,
+        sessionUid: null,
+        isStreaming: false,
+        isVoiceOnly: false,
+        error: null,
+        loading: false,
+        notifications: [],
+        sessionHistory: [],
+        connectionStatus: 'disconnected',
+        userProfile: null,
+        sessionStats: {
+          totalSessions: 0,
+          totalEarnings: 0,
+          totalMinutes: 0,
+          activeUsers: 0
+        },
+        
+        // ===== Recording State =====
+        isRecording: false,
+        recordingId: null,
+        recordingResourceId: null,
+        recordingSid: null,
+        savedRecordings: [],
+        purchasedRecordings: [],
+
+        // ===== Theme State (from ThemeContext) =====
+        theme: (() => {
+          if (typeof window === 'undefined') return 'light';
+          try {
+            const saved = localStorage.getItem('digis-theme');
+            if (saved && ['light', 'dark'].includes(saved)) return saved;
+          } catch (error) {
+            console.warn('Failed to load theme from localStorage:', error);
+          }
+          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        })(),
+        
+        accentColor: (() => {
+          if (typeof window === 'undefined') return 'primary';
+          try {
+            const saved = localStorage.getItem('digis-accent');
+            const validColors = ['primary', 'secondary', 'emerald', 'rose', 'gold', 'sky'];
+            return saved && validColors.includes(saved) ? saved : 'primary';
+          } catch (error) {
+            console.warn('Failed to load accent color from localStorage:', error);
+            return 'primary';
+          }
+        })(),
+        
+        animations: (() => {
+          if (typeof window === 'undefined') return true;
+          try {
+            const saved = localStorage.getItem('digis-animations');
+            if (saved !== null) return JSON.parse(saved);
+          } catch (error) {
+            console.warn('Failed to load animations preference from localStorage:', error);
+          }
+          return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        })(),
+        
+        fontSize: (() => {
+          if (typeof window === 'undefined') return 'normal';
+          try {
+            const saved = localStorage.getItem('digis-font-size');
+            const validSizes = ['small', 'normal', 'large', 'xlarge'];
+            return saved && validSizes.includes(saved) ? saved : 'normal';
+          } catch (error) {
+            console.warn('Failed to load font size from localStorage:', error);
+            return 'normal';
+          }
+        })(),
+        
+        highContrast: (() => {
+          if (typeof window === 'undefined') return false;
+          try {
+            const saved = localStorage.getItem('digis-high-contrast');
+            return saved ? JSON.parse(saved) : false;
+          } catch (error) {
+            console.warn('Failed to load high contrast preference from localStorage:', error);
+            return false;
+          }
+        })(),
+
+        // ===== Content State (from ContentContext) =====
+        creatorContent: {},
+
+        // ===== Token State (from useAppStore) =====
+        tokenBalance: 0,
+        isAdmin: false,
+
+        // ===== App Actions =====
+        setUser: (user) => set((state) => { state.user = user }),
+        
+        setLoading: (loading) => set((state) => { state.loading = loading }),
+        
+        setError: (error) => set((state) => { state.error = error }),
+        
+        setCreators: (creators) => set((state) => { state.creators = creators }),
+        
+        setChannel: (channel) => set((state) => { state.channel = channel }),
+        
+        setTokens: ({ token, chatToken }) => set((state) => {
+          state.token = token;
+          state.chatToken = chatToken;
+        }),
+        
+        setPaymentStatus: (hasPaid) => set((state) => { state.hasPaid = hasPaid }),
+        
+        setSessionUid: (sessionUid) => set((state) => { state.sessionUid = sessionUid }),
+        
+        setStreaming: (isStreaming) => set((state) => { state.isStreaming = isStreaming }),
+        
+        setVoiceOnly: (isVoiceOnly) => set((state) => { state.isVoiceOnly = isVoiceOnly }),
+        
+        setConnectionStatus: (connectionStatus) => set((state) => { state.connectionStatus = connectionStatus }),
+        
+        setUserProfile: (userProfile) => set((state) => {
+          state.userProfile = userProfile;
+          state.isCreator = userProfile?.is_creator || false;
+          state.isAdmin = userProfile?.role === 'admin' || false;
+        }),
+        
+        addNotification: (message, type = 'info') => {
+          const notification = {
+            id: Date.now(),
+            message,
+            type,
+            timestamp: new Date().toISOString()
+          };
+          
+          set((state) => {
+            state.notifications.push(notification);
+          });
+          
+          // Auto-remove after 5 seconds
+          setTimeout(() => {
+            set((state) => {
+              state.notifications = state.notifications.filter(n => n.id !== notification.id);
+            });
+          }, 5000);
+        },
+        
+        removeNotification: (id) => set((state) => {
+          state.notifications = state.notifications.filter(n => n.id !== id);
+        }),
+        
+        clearNotifications: () => set((state) => { state.notifications = [] }),
+        
+        setSessionHistory: (sessionHistory) => set((state) => { state.sessionHistory = sessionHistory }),
+        
+        addSessionHistory: (session) => set((state) => {
+          state.sessionHistory.unshift(session);
+        }),
+        
+        updateSessionStats: (stats) => set((state) => {
+          Object.assign(state.sessionStats, stats);
+        }),
+        
+        resetSession: () => set((state) => {
+          state.channel = '';
+          state.token = '';
+          state.chatToken = '';
+          state.sessionUid = null;
+          state.isStreaming = false;
+          state.isVoiceOnly = false;
+          state.connectionStatus = 'authenticated';
+        }),
+        
+        resetAll: () => set((state) => {
+          // Reset app state
+          state.user = null;
+          state.isCreator = false;
+          state.creators = [];
+          state.channel = '';
+          state.token = '';
+          state.chatToken = '';
+          state.hasPaid = false;
+          state.sessionUid = null;
+          state.isStreaming = false;
+          state.isVoiceOnly = false;
+          state.error = null;
+          state.loading = false;
+          state.notifications = [];
+          state.sessionHistory = [];
+          state.connectionStatus = 'disconnected';
+          state.userProfile = null;
+          state.sessionStats = {
+            totalSessions: 0,
+            totalEarnings: 0,
+            totalMinutes: 0,
+            activeUsers: 0
+          };
+          state.tokenBalance = 0;
+          state.isAdmin = false;
+          state.creatorContent = {};
+          state.isRecording = false;
+          state.recordingId = null;
+          state.recordingResourceId = null;
+          state.recordingSid = null;
+          state.savedRecordings = [];
+          state.purchasedRecordings = [];
+        }),
+
+        // ===== Theme Actions =====
+        setTheme: (theme) => {
+          if (!['light', 'dark'].includes(theme)) {
+            console.warn(`Invalid theme: ${theme}. Using light.`);
+            theme = 'light';
+          }
+          set((state) => { state.theme = theme });
+          try {
+            localStorage.setItem('digis-theme', theme);
+            localStorage.setItem('digis-theme-manual', 'true');
+          } catch (error) {
+            console.warn('Failed to save theme preference:', error);
+          }
+        },
+        
+        toggleTheme: () => {
+          const newTheme = get().theme === 'light' ? 'dark' : 'light';
+          get().setTheme(newTheme);
+        },
+        
+        resetToSystemTheme: () => {
+          try {
+            localStorage.removeItem('digis-theme-manual');
+          } catch (error) {
+            console.warn('Failed to remove manual theme preference:', error);
+          }
+          
+          if (typeof window !== 'undefined') {
+            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            get().setTheme(systemTheme);
+          }
+        },
+        
+        setAccentColor: (color) => {
+          const validColors = ['primary', 'secondary', 'emerald', 'rose', 'gold', 'sky'];
+          if (!validColors.includes(color)) {
+            console.warn(`Invalid accent color: ${color}. Using primary.`);
+            color = 'primary';
+          }
+          set((state) => { state.accentColor = color });
+          try {
+            localStorage.setItem('digis-accent', color);
+          } catch (error) {
+            console.warn('Failed to save accent color:', error);
+          }
+        },
+        
+        setAnimations: (animations) => {
+          set((state) => { state.animations = animations });
+          try {
+            localStorage.setItem('digis-animations', JSON.stringify(animations));
+          } catch (error) {
+            console.warn('Failed to save animations preference:', error);
+          }
+        },
+        
+        setFontSize: (size) => {
+          const validSizes = ['small', 'normal', 'large', 'xlarge'];
+          if (!validSizes.includes(size)) {
+            console.warn(`Invalid font size: ${size}. Using normal.`);
+            size = 'normal';
+          }
+          set((state) => { state.fontSize = size });
+          try {
+            localStorage.setItem('digis-font-size', size);
+          } catch (error) {
+            console.warn('Failed to save font size:', error);
+          }
+        },
+        
+        setHighContrast: (highContrast) => {
+          set((state) => { state.highContrast = highContrast });
+          try {
+            localStorage.setItem('digis-high-contrast', JSON.stringify(highContrast));
+          } catch (error) {
+            console.warn('Failed to save high contrast preference:', error);
+          }
+        },
+        
+        // ===== Recording Actions =====
+        setRecording: (isRecording) => set((state) => { 
+          state.isRecording = isRecording;
+        }),
+        
+        setRecordingData: (data) => set((state) => {
+          if (data.recordingId) state.recordingId = data.recordingId;
+          if (data.resourceId) state.recordingResourceId = data.resourceId;
+          if (data.sid) state.recordingSid = data.sid;
+        }),
+        
+        clearRecordingData: () => set((state) => {
+          state.isRecording = false;
+          state.recordingId = null;
+          state.recordingResourceId = null;
+          state.recordingSid = null;
+        }),
+        
+        addSavedRecording: (recording) => set((state) => {
+          if (!state.savedRecordings.find(r => r.id === recording.id)) {
+            state.savedRecordings.push(recording);
+          }
+        }),
+        
+        addPurchasedRecording: (recording) => set((state) => {
+          if (!state.purchasedRecordings.find(r => r.id === recording.id)) {
+            state.purchasedRecordings.push(recording);
+          }
+        }),
+        
+        setSavedRecordings: (recordings) => set((state) => {
+          state.savedRecordings = recordings;
+        }),
+        
+        setPurchasedRecordings: (recordings) => set((state) => {
+          state.purchasedRecordings = recordings;
+        }),
+        
+        enableTransitions: () => {
+          if (typeof window === 'undefined') return;
+          
+          const css = document.createElement('style');
+          css.type = 'text/css';
+          css.appendChild(document.createTextNode(`
+            * {
+              transition: background-color var(--duration-300, 300ms) var(--ease-out, ease-out),
+                          border-color var(--duration-300, 300ms) var(--ease-out, ease-out),
+                          color var(--duration-300, 300ms) var(--ease-out, ease-out),
+                          box-shadow var(--duration-300, 300ms) var(--ease-out, ease-out) !important;
+            }
+          `));
+          document.head.appendChild(css);
+          
+          setTimeout(() => {
+            document.head.removeChild(css);
+          }, 300);
+        },
+
+        // ===== Content Actions =====
+        addCreatorContent: (creatorId, content) => set((state) => {
+          state.creatorContent[creatorId] = content;
+        }),
+        
+        getCreatorContent: (creatorId) => {
+          return get().creatorContent[creatorId] || [];
+        },
+
+        // ===== Token Actions =====
+        updateTokenBalance: (balance) => set((state) => { state.tokenBalance = balance }),
+        
+        addTokens: (amount) => set((state) => {
+          state.tokenBalance += amount;
+        }),
+        
+        subtractTokens: (amount) => set((state) => {
+          state.tokenBalance = Math.max(0, state.tokenBalance - amount);
+        }),
+
+        // ===== Computed Values =====
+        isDark: () => get().theme === 'dark',
+        getThemeValue: (lightValue, darkValue) => get().theme === 'dark' ? darkValue : lightValue,
+        prefersReducedMotion: () => !get().animations,
+        
+        // ===== Theme Constants =====
+        themes: {
+          light: 'Light',
+          dark: 'Dark',
+          auto: 'System'
+        },
+        
+        accentColors: {
+          primary: 'Indigo',
+          secondary: 'Purple', 
+          emerald: 'Emerald',
+          rose: 'Rose',
+          gold: 'Gold',
+          sky: 'Sky'
+        },
+        
+        fontSizes: {
+          small: 'Small',
+          normal: 'Normal',
+          large: 'Large',
+          xlarge: 'Extra Large'
+        }
+      })),
+      {
+        name: 'digis-store',
+        storage: createJSONStorage(() => localStorage),
+        partialize: (state) => ({
+          // Only persist non-sensitive data
+          theme: state.theme,
+          accentColor: state.accentColor,
+          animations: state.animations,
+          fontSize: state.fontSize,
+          highContrast: state.highContrast,
+          tokenBalance: state.tokenBalance,
+          notifications: state.notifications
+        })
+      }
+    ),
+    {
+      name: 'digis-store'
+    }
+  )
+);
+
+// Apply theme settings on store initialization and changes
+const applyThemeSettings = (state) => {
+  if (typeof window === 'undefined') return;
+  
+  const root = document.documentElement;
+  
+  // Set theme attribute
+  root.setAttribute('data-theme', state.theme);
+  
+  // Apply dark class for Tailwind CSS
+  if (state.theme === 'dark') {
+    root.classList.add('dark');
+    announceToScreenReader('Switched to dark theme');
+  } else {
+    root.classList.remove('dark');
+    announceToScreenReader('Switched to light theme');
+  }
+  
+  // Set accent color
+  root.setAttribute('data-accent', state.accentColor);
+  
+  // Set font size
+  const fontSizeMap = {
+    small: '0.875',
+    normal: '1',
+    large: '1.125',
+    xlarge: '1.25'
+  };
+  root.style.fontSize = `${fontSizeMap[state.fontSize]}rem`;
+  
+  // Set animations
+  if (!state.animations) {
+    root.style.setProperty('--duration-75', '0ms');
+    root.style.setProperty('--duration-100', '0ms');
+    root.style.setProperty('--duration-150', '0ms');
+    root.style.setProperty('--duration-200', '0ms');
+    root.style.setProperty('--duration-300', '0ms');
+    root.style.setProperty('--duration-500', '0ms');
+    root.style.setProperty('--duration-700', '0ms');
+    root.style.setProperty('--duration-1000', '0ms');
+  } else {
+    root.style.removeProperty('--duration-75');
+    root.style.removeProperty('--duration-100');
+    root.style.removeProperty('--duration-150');
+    root.style.removeProperty('--duration-200');
+    root.style.removeProperty('--duration-300');
+    root.style.removeProperty('--duration-500');
+    root.style.removeProperty('--duration-700');
+    root.style.removeProperty('--duration-1000');
+  }
+  
+  // Enhanced high contrast mode
+  if (state.highContrast) {
+    root.classList.add('high-contrast');
+    root.setAttribute('data-high-contrast', 'true');
+    // Set high contrast CSS variables using Miami theme
+    root.style.setProperty('--miami-cyan', '#00ffff');
+    root.style.setProperty('--miami-magenta', '#ff00ff');
+    root.style.setProperty('--miami-coral', '#ff4500');
+    root.style.setProperty('--miami-lime', '#32cd32');
+    root.style.setProperty('--miami-purple', '#9400d3');
+    root.style.setProperty('--miami-gold', '#ffff00');
+    root.style.setProperty('--miami-sunset', '#ff0000');
+    root.style.setProperty('--miami-ocean', '#0000ff');
+    root.style.setProperty('--neutral-200', '#000000');
+    root.style.setProperty('--neutral-800', '#FFFFFF');
+    root.style.setProperty('--primary-500', '#0000FF');
+    root.style.setProperty('--secondary-500', '#FF00FF');
+    root.style.setProperty('--text-primary', '#000000');
+    root.style.setProperty('--text-secondary', '#000000');
+    root.style.setProperty('--bg-surface', '#FFFFFF');
+    root.style.setProperty('--bg-surface-elevated', '#F0F0F0');
+    announceToScreenReader('High contrast mode enabled');
+  } else {
+    root.classList.remove('high-contrast');
+    root.removeAttribute('data-high-contrast');
+    // Remove high contrast CSS variables
+    root.style.removeProperty('--miami-cyan');
+    root.style.removeProperty('--miami-magenta');
+    root.style.removeProperty('--miami-coral');
+    root.style.removeProperty('--miami-lime');
+    root.style.removeProperty('--miami-purple');
+    root.style.removeProperty('--miami-gold');
+    root.style.removeProperty('--miami-sunset');
+    root.style.removeProperty('--miami-ocean');
+    root.style.removeProperty('--neutral-200');
+    root.style.removeProperty('--neutral-800');
+    root.style.removeProperty('--primary-500');
+    root.style.removeProperty('--secondary-500');
+    root.style.removeProperty('--text-primary');
+    root.style.removeProperty('--text-secondary');
+    root.style.removeProperty('--bg-surface');
+    root.style.removeProperty('--bg-surface-elevated');
+  }
+};
+
+// Subscribe to theme-related changes
+useStore.subscribe(
+  (state) => ({
+    theme: state.theme,
+    accentColor: state.accentColor,
+    animations: state.animations,
+    fontSize: state.fontSize,
+    highContrast: state.highContrast
+  }),
+  (themeState) => {
+    applyThemeSettings(themeState);
+  }
+);
+
+// Subscribe to auth changes
+let authUnsubscribe = null;
+
+const initializeAuth = () => {
+  authUnsubscribe = subscribeToAuthChanges((event, session) => {
+    const user = session?.user || null;
+    useStore.getState().setUser(user);
+    if (user) {
+      useStore.getState().setConnectionStatus('authenticated');
+    } else {
+      useStore.getState().resetAll();
+    }
+  });
+};
+
+// Initialize auth subscription
+if (typeof window !== 'undefined') {
+  initializeAuth();
+}
+
+// Listen for system theme changes
+if (typeof window !== 'undefined') {
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  
+  const handleChange = (e) => {
+    // Only auto-switch if user hasn't manually set a preference
+    try {
+      if (!localStorage.getItem('digis-theme-manual')) {
+        useStore.getState().setTheme(e.matches ? 'dark' : 'light');
+      }
+    } catch (error) {
+      console.warn('Failed to check manual theme preference:', error);
+    }
+  };
+  
+  mediaQuery.addEventListener('change', handleChange);
+}
+
+// Apply initial theme settings
+if (typeof window !== 'undefined') {
+  applyThemeSettings(useStore.getState());
+}
+
+// Export the store and cleanup function
+export default useStore;
+
+export const cleanupStore = () => {
+  if (authUnsubscribe) {
+    authUnsubscribe();
+  }
+};

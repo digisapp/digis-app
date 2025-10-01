@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unregister Service Workers</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Service Worker Cleanup</h1>
+    <p>This page will unregister ALL service workers and clear caches</p>
+    
+    <div id="status"></div>
+    <button onclick="window.location.href='/'">Go to App</button>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        async function unregisterServiceWorkers() {
+            try {
+                statusDiv.innerHTML = '<p>Starting cleanup...</p>';
+                
+                if ('serviceWorker' in navigator) {
+                    // Get all service worker registrations
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    
+                    statusDiv.innerHTML += `<p class="info">Found ${registrations.length} service worker(s)</p>`;
+                    
+                    // Unregister all service workers
+                    for (const registration of registrations) {
+                        const success = await registration.unregister();
+                        if (success) {
+                            statusDiv.innerHTML += `<p class="success">✅ Unregistered: ${registration.scope}</p>`;
+                        } else {
+                            statusDiv.innerHTML += `<p class="error">❌ Failed to unregister: ${registration.scope}</p>`;
+                        }
+                    }
+                    
+                    // Clear all caches
+                    const cacheNames = await caches.keys();
+                    statusDiv.innerHTML += `<p class="info">Found ${cacheNames.length} cache(s)</p>`;
+                    
+                    for (const cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        statusDiv.innerHTML += `<p class="success">✅ Deleted cache: ${cacheName}</p>`;
+                    }
+                    
+                    statusDiv.innerHTML += '<p class="success"><strong>✅ All service workers unregistered and caches cleared!</strong></p>';
+                    statusDiv.innerHTML += '<p>Please refresh your application or click the button above.</p>';
+                } else {
+                    statusDiv.innerHTML += '<p class="error">Service workers not supported in this browser.</p>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML += `<p class="error">❌ Error: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        // Run on page load
+        unregisterServiceWorkers();
+    </script>
+</body>
+</html>

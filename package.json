@@ -1,0 +1,52 @@
+{
+  "name": "digis-platform",
+  "version": "2.0.0",
+  "description": "Digis Creator Economy Platform - Full Stack Application",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "echo 'Backend is Node.js - no build required'",
+    "build": "npm run build:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test": "npm run test:backend && npm run test:frontend",
+    "migrate": "cd backend && npm run migrate",
+    "migrate:status": "cd backend && npm run migrate:status",
+    "deploy": "./deploy.sh production",
+    "deploy:staging": "./deploy.sh staging",
+    "vercel": "vercel",
+    "vercel:backend": "cd backend && vercel --prod",
+    "vercel:frontend": "cd frontend && vercel --prod",
+    "clean": "rm -rf node_modules backend/node_modules frontend/node_modules",
+    "clean:install": "npm run clean && npm run install:all"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/digis-platform"
+  },
+  "keywords": [
+    "creator-economy",
+    "video-streaming",
+    "live-streaming",
+    "video-calls",
+    "supabase",
+    "stripe",
+    "agora",
+    "react",
+    "nodejs",
+    "express"
+  ],
+  "author": "Digis Team",
+  "license": "MIT"
+}

@@ -1,0 +1,531 @@
+/* Improved Design System for Digis */
+
+/* Enhanced Color Variables */
+:root {
+  /* Primary Colors - Purple/Pink Gradient */
+  --color-primary-50: #f8f4ff;
+  --color-primary-100: #f1e8ff;
+  --color-primary-200: #e4d3ff;
+  --color-primary-300: #d1b3ff;
+  --color-primary-400: #b585ff;
+  --color-primary-500: #9333ea; /* Main purple */
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-800: #5b21b6;
+  --color-primary-900: #4c1d95;
+
+  /* Secondary Colors - Pink */
+  --color-secondary-50: #fdf2f8;
+  --color-secondary-100: #fce7f3;
+  --color-secondary-200: #fbcfe8;
+  --color-secondary-300: #f9a8d4;
+  --color-secondary-400: #f472b6;
+  --color-secondary-500: #ec4899; /* Main pink */
+  --color-secondary-600: #db2777;
+  --color-secondary-700: #be185d;
+  --color-secondary-800: #9d174d;
+  --color-secondary-900: #831843;
+
+  /* Success Colors */
+  --color-success-50: #ecfdf5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+
+  /* Error Colors */
+  --color-error-50: #fef2f2;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+
+  /* Warning Colors */
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  /* Neutral Colors */
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
+  /* Typography Scale */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 1.875rem;  /* 30px */
+  --font-size-4xl: 2.25rem;   /* 36px */
+  --font-size-5xl: 3rem;      /* 48px */
+  --font-size-6xl: 3.75rem;   /* 60px */
+
+  /* Font Weights */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* Spacing Scale */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+
+  /* Border Radius */
+  --radius-sm: 0.375rem;  /* 6px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  --radius-2xl: 1.5rem;   /* 24px */
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 350ms ease;
+
+  /* Z-Index Scale */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+}
+
+/* Enhanced Button System with Clear Hierarchy */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  transition: all var(--transition-base);
+  cursor: pointer;
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Button Sizes with Clear Hierarchy */
+.btn-xs {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+}
+
+.btn-sm {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.btn-md {
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--font-size-base);
+}
+
+.btn-lg {
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.btn-xl {
+  padding: var(--space-5) var(--space-10);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-xl);
+}
+
+/* Primary Action Buttons (Most Important) */
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-secondary-500) 100%);
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-secondary-600) 100%);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-md);
+}
+
+/* Secondary Action Buttons */
+.btn-secondary {
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+  border-color: var(--color-neutral-300);
+}
+
+.btn-secondary:hover {
+  background: var(--color-neutral-200);
+  border-color: var(--color-neutral-400);
+}
+
+/* Ghost Buttons (Tertiary Actions) */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-neutral-600);
+  border: none;
+}
+
+.btn-ghost:hover {
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+}
+
+/* Outline Buttons */
+.btn-outline {
+  background: transparent;
+  color: var(--color-primary-600);
+  border-color: var(--color-primary-300);
+}
+
+.btn-outline:hover {
+  background: var(--color-primary-50);
+  border-color: var(--color-primary-400);
+}
+
+/* Success Buttons */
+.btn-success {
+  background: var(--color-success-500);
+  color: white;
+}
+
+.btn-success:hover {
+  background: var(--color-success-600);
+}
+
+/* Warning Buttons */
+.btn-warning {
+  background: var(--color-warning-500);
+  color: white;
+}
+
+.btn-warning:hover {
+  background: var(--color-warning-600);
+}
+
+/* Error Buttons */
+.btn-error {
+  background: var(--color-error-500);
+  color: white;
+}
+
+.btn-error:hover {
+  background: var(--color-error-600);
+}
+
+/* Enhanced Card System */
+.card {
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-neutral-200);
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.card-hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-hover:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-2px);
+  border-color: var(--color-primary-200);
+}
+
+.card-interactive {
+  cursor: pointer;
+}
+
+.card-header {
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--color-neutral-200);
+  background: var(--color-neutral-50);
+}
+
+.card-body {
+  padding: var(--space-6);
+}
+
+.card-footer {
+  padding: var(--space-6);
+  border-top: 1px solid var(--color-neutral-200);
+  background: var(--color-neutral-50);
+}
+
+/* Typography Hierarchy */
+.text-display {
+  font-size: var(--font-size-6xl);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+  letter-spacing: -0.025em;
+}
+
+.text-headline {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.text-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+}
+
+.text-subtitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+}
+
+.text-body {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.6;
+}
+
+.text-caption {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.5;
+  color: var(--color-neutral-500);
+}
+
+.text-micro {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.4;
+  color: var(--color-neutral-400);
+}
+
+/* Enhanced Form Elements */
+.form-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-base);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgb(147 51 234 / 0.1);
+}
+
+.form-input:invalid {
+  border-color: var(--color-error-500);
+  box-shadow: 0 0 0 3px rgb(239 68 68 / 0.1);
+}
+
+.form-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-neutral-700);
+  margin-bottom: var(--space-2);
+}
+
+.form-help {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-500);
+  margin-top: var(--space-1);
+}
+
+.form-error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error-600);
+  margin-top: var(--space-1);
+}
+
+/* Status Colors */
+.status-success {
+  color: var(--color-success-600);
+  background-color: var(--color-success-50);
+  border-color: var(--color-success-200);
+}
+
+.status-warning {
+  color: var(--color-warning-600);
+  background-color: var(--color-warning-50);
+  border-color: var(--color-warning-200);
+}
+
+.status-error {
+  color: var(--color-error-600);
+  background-color: var(--color-error-50);
+  border-color: var(--color-error-200);
+}
+
+.status-info {
+  color: var(--color-primary-600);
+  background-color: var(--color-primary-50);
+  border-color: var(--color-primary-200);
+}
+
+/* Enhanced Spacing Utilities */
+.space-y-xs > * + * { margin-top: var(--space-1); }
+.space-y-sm > * + * { margin-top: var(--space-2); }
+.space-y-md > * + * { margin-top: var(--space-4); }
+.space-y-lg > * + * { margin-top: var(--space-6); }
+.space-y-xl > * + * { margin-top: var(--space-8); }
+
+/* Mobile-First Responsive Design */
+.mobile-hidden {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mobile-hidden {
+    display: flex;
+  }
+  
+  .desktop-hidden {
+    display: none;
+  }
+}
+
+/* Improved Focus States */
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-ring:focus {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Enhanced Animations */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+/* Accessibility Improvements */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.reduced-motion {
+  transition: none !important;
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-neutral-50: #0f172a;
+    --color-neutral-100: #1e293b;
+    --color-neutral-200: #334155;
+    --color-neutral-300: #475569;
+    --color-neutral-400: #64748b;
+    --color-neutral-500: #94a3b8;
+    --color-neutral-600: #cbd5e1;
+    --color-neutral-700: #e2e8f0;
+    --color-neutral-800: #f1f5f9;
+    --color-neutral-900: #f8fafc;
+  }
+
+  .card {
+    background: var(--color-neutral-100);
+    border-color: var(--color-neutral-300);
+  }
+}

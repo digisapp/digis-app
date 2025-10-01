@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        #video {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 10px;
+            transform: scaleX(-1);
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #6b46c1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #553c9a;
+        }
+        button:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            background: #2d3748;
+            border-radius: 5px;
+            min-width: 300px;
+            text-align: center;
+        }
+        .success {
+            color: #48bb78;
+        }
+        .error {
+            color: #f56565;
+        }
+    </style>
+</head>
+<body>
+    <h1>Camera Test Page</h1>
+    <video id="video" autoplay playsinline muted></video>
+    
+    <div class="controls">
+        <button id="startBtn">Start Camera</button>
+        <button id="stopBtn" disabled>Stop Camera</button>
+        <button id="agoraBtn">Test with Agora</button>
+    </div>
+    
+    <div id="status">Click "Start Camera" to test your camera</div>
+
+    <script>
+        const video = document.getElementById('video');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const agoraBtn = document.getElementById('agoraBtn');
+        const status = document.getElementById('status');
+        let stream = null;
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                status.innerHTML = 'Requesting camera access...';
+                status.className = '';
+                
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    },
+                    audio: true
+                });
+                
+                video.srcObject = stream;
+                await video.play();
+                
+                status.innerHTML = '✅ Camera is working!';
+                status.className = 'success';
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                
+                // Log device info
+                const videoTrack = stream.getVideoTracks()[0];
+                const settings = videoTrack.getSettings();
+                console.log('Camera settings:', settings);
+                status.innerHTML += `<br>Resolution: ${settings.width}x${settings.height}`;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                status.innerHTML = `❌ Error: ${error.message}`;
+                status.className = 'error';
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                stream = null;
+                
+                status.innerHTML = 'Camera stopped';
+                status.className = '';
+                
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        });
+
+        agoraBtn.addEventListener('click', async () => {
+            // Load Agora SDK
+            const script = document.createElement('script');
+            script.src = 'https://download.agora.io/sdk/release/AgoraRTC_N.js';
+            document.head.appendChild(script);
+            
+            script.onload = async () => {
+                try {
+                    status.innerHTML = 'Testing with Agora SDK...';
+                    const AgoraRTC = window.AgoraRTC;
+                    
+                    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    const [videoTrack, audioTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+                    
+                    await videoTrack.play(video);
+                    
+                    status.innerHTML = '✅ Agora camera working!';
+                    status.className = 'success';
+                    
+                    // Cleanup after 5 seconds
+                    setTimeout(() => {
+                        videoTrack.stop();
+                        videoTrack.close();
+                        audioTrack.stop();
+                        audioTrack.close();
+                        status.innerHTML = 'Agora test completed';
+                    }, 5000);
+                    
+                } catch (error) {
+                    console.error('Agora error:', error);
+                    status.innerHTML = `❌ Agora Error: ${error.message}`;
+                    status.className = 'error';
+                }
+            };
+        });
+
+        // Auto-start on page load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, ready to test camera');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "framework": null,
+  "functions": {
+    "backend/api/index.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/backend/api/index.js"
+    }
+  ]
+}

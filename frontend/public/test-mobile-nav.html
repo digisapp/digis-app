@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Mobile Navigation Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .test-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: #333;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .test-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .test-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status.success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status.warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .status.error {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .feature-item {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(244, 114, 182, 0.1) 100%);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .feature-label {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="test-card">
+            <h1 class="test-title">📱 Mobile Navigation Test</h1>
+            <p style="color: #666; margin-bottom: 20px;">Testing enhanced mobile navigation features</p>
+            
+            <div class="test-item">
+                Viewport Detection
+                <span class="status success" id="viewport-status">Mobile</span>
+            </div>
+            
+            <div class="test-item">
+                Touch Support
+                <span class="status success" id="touch-status">Enabled</span>
+            </div>
+            
+            <div class="test-item">
+                Safe Area Support
+                <span class="status warning" id="safe-area-status">Testing...</span>
+            </div>
+            
+            <div class="test-item">
+                Backdrop Filter Support
+                <span class="status warning" id="backdrop-status">Testing...</span>
+            </div>
+        </div>
+        
+        <div class="test-card">
+            <h2 class="test-title">✨ Enhanced Features</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">🎨</div>
+                    <div class="feature-label">Glass Morphism</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🌈</div>
+                    <div class="feature-label">Gradients</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✨</div>
+                    <div class="feature-label">Animations</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🌙</div>
+                    <div class="feature-label">Dark Mode</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📱</div>
+                    <div class="feature-label">Touch Optimized</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🔔</div>
+                    <div class="feature-label">Haptic Feedback</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-card">
+            <h2 class="test-title">🔍 CSS Features Test</h2>
+            <div id="css-tests"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Test viewport
+        const viewportStatus = document.getElementById('viewport-status');
+        const isMobile = window.innerWidth <= 768;
+        viewportStatus.textContent = isMobile ? 'Mobile' : 'Desktop';
+        viewportStatus.className = `status ${isMobile ? 'success' : 'warning'}`;
+        
+        // Test touch support
+        const touchStatus = document.getElementById('touch-status');
+        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        touchStatus.textContent = hasTouch ? 'Enabled' : 'Disabled';
+        touchStatus.className = `status ${hasTouch ? 'success' : 'warning'}`;
+        
+        // Test safe area
+        const safeAreaStatus = document.getElementById('safe-area-status');
+        const testEl = document.createElement('div');
+        testEl.style.paddingBottom = 'env(safe-area-inset-bottom)';
+        document.body.appendChild(testEl);
+        const hasSafeArea = getComputedStyle(testEl).paddingBottom !== '0px';
+        document.body.removeChild(testEl);
+        safeAreaStatus.textContent = hasSafeArea ? 'Supported' : 'Not Detected';
+        safeAreaStatus.className = `status ${hasSafeArea ? 'success' : 'warning'}`;
+        
+        // Test backdrop filter
+        const backdropStatus = document.getElementById('backdrop-status');
+        const supportsBackdrop = CSS.supports('backdrop-filter', 'blur(10px)') || 
+                                CSS.supports('-webkit-backdrop-filter', 'blur(10px)');
+        backdropStatus.textContent = supportsBackdrop ? 'Supported' : 'Not Supported';
+        backdropStatus.className = `status ${supportsBackdrop ? 'success' : 'error'}`;
+        
+        // CSS Features test
+        const cssTests = document.getElementById('css-tests');
+        const features = [
+            { name: 'Backdrop Blur', test: 'backdrop-filter: blur(10px)' },
+            { name: 'CSS Grid', test: 'display: grid' },
+            { name: 'CSS Variables', test: '--test: 1' },
+            { name: 'Flexbox', test: 'display: flex' },
+            { name: 'Transform', test: 'transform: scale(1)' },
+            { name: 'Transition', test: 'transition: all 0.3s' }
+        ];
+        
+        features.forEach(feature => {
+            const supported = CSS.supports(feature.test);
+            const item = document.createElement('div');
+            item.className = 'test-item';
+            item.innerHTML = `
+                ${feature.name}
+                <span class="status ${supported ? 'success' : 'error'}">${supported ? 'Yes' : 'No'}</span>
+            `;
+            cssTests.appendChild(item);
+        });
+        
+        // Add timestamp
+        const timestamp = document.createElement('div');
+        timestamp.style.cssText = 'text-align: center; padding: 20px; color: rgba(255,255,255,0.8); font-size: 12px;';
+        timestamp.textContent = `Tested at ${new Date().toLocaleTimeString()}`;
+        document.querySelector('.container').appendChild(timestamp);
+    </script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+/* Mobile Loading Screen Styles */
+
+.mobile-loading-default {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.loading-spinner svg {
+  stroke: url(#gradient);
+}
+
+.loading-circle {
+  stroke-dasharray: 62.83;
+  stroke-dashoffset: 62.83;
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes dash {
+  0% {
+    stroke-dashoffset: 62.83;
+  }
+  50% {
+    stroke-dashoffset: 15.71;
+  }
+  100% {
+    stroke-dashoffset: 62.83;
+  }
+}
+
+.loading-text {
+  margin-top: 20px;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+/* Skeleton styles */
+.mobile-loading-creators,
+.mobile-loading-messages,
+.mobile-loading-profile {
+  padding: 20px;
+}
+
+.mobile-skeleton-creator-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+}
+
+.skeleton-avatar-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+}
+
+.skeleton-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  margin: -40px auto 20px;
+}
+
+.skeleton-info {
+  flex: 1;
+}
+
+.skeleton-name {
+  height: 16px;
+  width: 120px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.skeleton-username {
+  height: 12px;
+  width: 80px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+}
+
+.skeleton-bio {
+  height: 40px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.skeleton-button {
+  flex: 1;
+  height: 36px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+}
+
+.skeleton-conversation {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+
+.skeleton-message {
+  flex: 1;
+}
+
+.skeleton-content {
+  height: 32px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.skeleton-time {
+  height: 12px;
+  width: 60px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+}
+
+.skeleton-banner {
+  height: 120px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+}
+
+.skeleton-profile-info {
+  text-align: center;
+  padding: 20px;
+}
+
+.skeleton-profile-name {
+  height: 20px;
+  width: 150px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 10px;
+  margin: 0 auto 8px;
+}
+
+.skeleton-profile-bio {
+  height: 60px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.skeleton-profile-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.skeleton-stat {
+  flex: 1;
+  text-align: center;
+}
+
+.skeleton-stat-value {
+  height: 24px;
+  width: 40px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 12px;
+  margin: 0 auto 4px;
+}
+
+.skeleton-stat-label {
+  height: 12px;
+  width: 60px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  margin: 0 auto;
+}

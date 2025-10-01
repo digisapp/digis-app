@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache - Digis</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            max-width: 500px;
+        }
+        h1 {
+            margin-bottom: 1.5rem;
+        }
+        button {
+            background: white;
+            color: #764ba2;
+            border: none;
+            padding: 12px 32px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 0.5rem;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        .status {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+        }
+        .status.success {
+            background: rgba(34, 197, 94, 0.2);
+            display: block;
+        }
+        .status.error {
+            background: rgba(239, 68, 68, 0.2);
+            display: block;
+        }
+        .log {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            text-align: left;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Clear Cache & Service Workers</h1>
+        <p>Click below to clear all cached data and unregister service workers</p>
+
+        <button onclick="clearEverything()">Clear All Caches</button>
+        <button onclick="unregisterServiceWorkers()">Unregister Service Workers</button>
+        <button onclick="clearAndReload()">Clear Everything & Reload</button>
+
+        <div id="status" class="status"></div>
+        <div id="log" class="log" style="display: none;"></div>
+    </div>
+
+    <script>
+        const log = (message) => {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            logDiv.innerHTML += message + '<br>';
+            console.log(message);
+        };
+
+        const showStatus = (message, isSuccess = true) => {
+            const status = document.getElementById('status');
+            status.className = `status ${isSuccess ? 'success' : 'error'}`;
+            status.textContent = message;
+        };
+
+        async function clearEverything() {
+            try {
+                log('🧹 Starting cache cleanup...');
+
+                // Clear all caches
+                const cacheNames = await caches.keys();
+                log(`Found ${cacheNames.length} cache(s)`);
+
+                for (const cacheName of cacheNames) {
+                    await caches.delete(cacheName);
+                    log(`✅ Deleted cache: ${cacheName}`);
+                }
+
+                // Clear localStorage
+                localStorage.clear();
+                log('✅ Cleared localStorage');
+
+                // Clear sessionStorage
+                sessionStorage.clear();
+                log('✅ Cleared sessionStorage');
+
+                // Clear IndexedDB (if any)
+                if ('indexedDB' in window) {
+                    const databases = await indexedDB.databases();
+                    for (const db of databases) {
+                        indexedDB.deleteDatabase(db.name);
+                        log(`✅ Deleted IndexedDB: ${db.name}`);
+                    }
+                }
+
+                showStatus('✅ All caches cleared successfully!');
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                showStatus('❌ Error clearing caches', false);
+            }
+        }
+
+        async function unregisterServiceWorkers() {
+            try {
+                log('🔧 Unregistering service workers...');
+
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    log(`Found ${registrations.length} service worker(s)`);
+
+                    for (const registration of registrations) {
+                        await registration.unregister();
+                        log(`✅ Unregistered: ${registration.scope}`);
+                    }
+
+                    showStatus('✅ All service workers unregistered!');
+                } else {
+                    log('ℹ️ Service workers not supported');
+                    showStatus('ℹ️ No service workers to unregister');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                showStatus('❌ Error unregistering service workers', false);
+            }
+        }
+
+        async function clearAndReload() {
+            await clearEverything();
+            await unregisterServiceWorkers();
+
+            log('🔄 Reloading in 2 seconds...');
+            showStatus('✅ Everything cleared! Reloading...');
+
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        }
+
+        // Auto-detect and show current status on load
+        window.addEventListener('load', async () => {
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                if (registrations.length > 0) {
+                    log(`⚠️ Found ${registrations.length} active service worker(s)`);
+                }
+            }
+
+            const cacheNames = await caches.keys();
+            if (cacheNames.length > 0) {
+                log(`⚠️ Found ${cacheNames.length} active cache(s)`);
+            }
+        });
+    </script>
+</body>
+</html>

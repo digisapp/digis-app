@@ -1,0 +1,289 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  # Linting and formatting checks
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint and Format Check
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && npm ci
+      
+      - name: Run backend linting
+        run: cd backend && npm run lint
+      
+      - name: Run frontend linting
+        run: cd frontend && npm run lint
+      
+      - name: Check formatting
+        run: |
+          cd backend && npm run format:check
+          cd ../frontend && npm run format
+
+  # Security audit
+  security:
+    runs-on: ubuntu-latest
+    name: Security Audit
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Run backend security audit
+        run: |
+          cd backend
+          npm audit --audit-level=high
+        continue-on-error: true
+      
+      - name: Run frontend security audit
+        run: |
+          cd frontend
+          npm audit --audit-level=high
+        continue-on-error: true
+      
+      - name: Upload security results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-results
+          path: |
+            backend/npm-audit.json
+            frontend/npm-audit.json
+
+  # Backend tests
+  test-backend:
+    runs-on: ubuntu-latest
+    name: Backend Tests
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: digis_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+      
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/digis_test
+        run: cd backend && npm run migrate
+      
+      - name: Run backend tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/digis_test
+          REDIS_URL: redis://localhost:6379
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: cd backend && npm test -- --coverage
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./backend/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+
+  # Frontend tests
+  test-frontend:
+    runs-on: ubuntu-latest
+    name: Frontend Tests
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+      
+      - name: Run frontend tests
+        env:
+          CI: true
+        run: cd frontend && npm test -- --coverage
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+  # Build checks
+  build:
+    runs-on: ubuntu-latest
+    name: Build Check
+    needs: [lint, test-backend, test-frontend]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && npm ci
+      
+      - name: Build frontend
+        env:
+          VITE_BACKEND_URL: https://api.digis.app
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: cd frontend && npm run build
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+  # Deploy to staging (only on develop branch)
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    needs: [build]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy Backend to Vercel (Staging)
+        run: |
+          npm i -g vercel
+          cd backend
+          vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --env=staging
+      
+      - name: Deploy Frontend to Vercel (Staging)
+        run: |
+          cd frontend
+          vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --env=staging
+
+  # Deploy to production (only on main branch)
+  deploy-production:
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    needs: [build, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://digis.app
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy Backend to Vercel (Production)
+        run: |
+          npm i -g vercel
+          cd backend
+          vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+      
+      - name: Deploy Frontend to Vercel (Production)  
+        run: |
+          cd frontend
+          vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+      
+      - name: Notify deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Deployed to production!'
+            })
+
+  # E2E tests (optional, runs after deployment)
+  e2e-tests:
+    runs-on: ubuntu-latest
+    name: E2E Tests
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Install Playwright
+        run: |
+          cd frontend
+          npm ci
+          npx playwright install --with-deps
+      
+      - name: Run E2E tests
+        env:
+          PLAYWRIGHT_BASE_URL: https://staging.digis.app
+        run: |
+          cd frontend
+          npm run test:e2e
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: frontend/test-results

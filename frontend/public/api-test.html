@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Endpoint Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { color: green; }
+        .error { color: red; }
+        .pending { color: orange; }
+        .info { color: blue; }
+        h2 { margin-top: 0; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .results { margin-top: 10px; font-family: monospace; white-space: pre-wrap; }
+        .endpoint { margin: 10px 0; }
+        .status { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Digis API Endpoint Test</h1>
+    <p>This page tests various API endpoints to ensure they're working correctly.</p>
+    
+    <div class="test-section">
+        <h2>Authentication Status</h2>
+        <div id="auth-status" class="pending">Checking authentication...</div>
+        <button onclick="testAuth()">Refresh Auth Status</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>API Endpoints</h2>
+        <button onclick="testAllEndpoints()">Test All Endpoints</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <div id="endpoint-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>WebSocket Connection</h2>
+        <div id="socket-status" class="pending">Not connected</div>
+        <button onclick="testSocketConnection()">Test Socket Connection</button>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:3001';
+        const resultsDiv = document.getElementById('endpoint-results');
+        const authStatusDiv = document.getElementById('auth-status');
+        const socketStatusDiv = document.getElementById('socket-status');
+        let authToken = null;
+
+        // Endpoints to test
+        const endpoints = [
+            { name: 'Health Check', method: 'GET', path: '/health', requiresAuth: false },
+            { name: 'User Profile', method: 'GET', path: '/api/users/profile', requiresAuth: true },
+            { name: 'Token Balance', method: 'GET', path: '/api/tokens/balance', requiresAuth: true },
+            { name: 'Public Creators', method: 'GET', path: '/api/users/public/creators?limit=5', requiresAuth: false },
+            { name: 'Notifications', method: 'GET', path: '/api/notifications?limit=5', requiresAuth: true },
+            { name: 'Classes', method: 'GET', path: '/api/classes', requiresAuth: false },
+            { name: 'TV Subscription Status', method: 'GET', path: '/api/tv-subscription/status', requiresAuth: true },
+            { name: 'Wallet Data', method: 'GET', path: '/api/wallet', requiresAuth: true },
+            { name: 'Bank Account', method: 'GET', path: '/api/payments/bank-account', requiresAuth: true },
+            { name: 'Earnings', method: 'GET', path: '/api/payments/earnings', requiresAuth: true },
+        ];
+
+        // Check Supabase auth
+        async function testAuth() {
+            authStatusDiv.className = 'pending';
+            authStatusDiv.textContent = 'Checking authentication...';
+            
+            try {
+                // Import Supabase
+                const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+                const supabaseUrl = 'https://lpphsjowsivjtcmafxnj.supabase.co';
+                const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwcGhzam93c2l2anRjbWFmeG5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NDg5ODQsImV4cCI6MjA2ODEyNDk4NH0.QnkIphnDGyB5jsO1IEq3p2ZQYSrRbPhXI8Me9lnC-SM';
+                
+                const supabase = createClient(supabaseUrl, supabaseAnonKey);
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session) {
+                    authToken = session.access_token;
+                    authStatusDiv.className = 'success';
+                    authStatusDiv.textContent = `✅ Authenticated as: ${session.user.email}`;
+                } else {
+                    authStatusDiv.className = 'error';
+                    authStatusDiv.textContent = '❌ Not authenticated - some endpoints will fail';
+                }
+            } catch (error) {
+                authStatusDiv.className = 'error';
+                authStatusDiv.textContent = `❌ Auth check failed: ${error.message}`;
+            }
+        }
+
+        // Test a single endpoint
+        async function testEndpoint(endpoint) {
+            const startTime = Date.now();
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'endpoint';
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                if (endpoint.requiresAuth && authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${BACKEND_URL}${endpoint.path}`, {
+                    method: endpoint.method,
+                    headers
+                });
+                
+                const responseTime = Date.now() - startTime;
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">✅ ${endpoint.name}</div>
+                        <div class="info">Status: ${response.status} | Time: ${responseTime}ms</div>
+                        <div class="results">${JSON.stringify(data, null, 2).substring(0, 200)}...</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status error">❌ ${endpoint.name}</div>
+                        <div class="info">Status: ${response.status} | Time: ${responseTime}ms</div>
+                        <div class="results">${JSON.stringify(data, null, 2)}</div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">❌ ${endpoint.name}</div>
+                    <div class="error">Error: ${error.message}</div>
+                `;
+            }
+            
+            return resultDiv;
+        }
+
+        // Test all endpoints
+        async function testAllEndpoints() {
+            resultsDiv.innerHTML = '<div class="pending">Testing endpoints...</div>';
+            
+            // First ensure we have auth
+            await testAuth();
+            
+            resultsDiv.innerHTML = '';
+            
+            for (const endpoint of endpoints) {
+                const result = await testEndpoint(endpoint);
+                resultsDiv.appendChild(result);
+            }
+        }
+
+        // Test Socket.IO connection
+        async function testSocketConnection() {
+            socketStatusDiv.className = 'pending';
+            socketStatusDiv.textContent = 'Connecting to Socket.IO...';
+            
+            try {
+                // Dynamically load Socket.IO client
+                const script = document.createElement('script');
+                script.src = 'https://cdn.socket.io/4.5.4/socket.io.min.js';
+                document.head.appendChild(script);
+                
+                script.onload = () => {
+                    const socket = io(BACKEND_URL, {
+                        auth: {
+                            token: authToken
+                        },
+                        transports: ['websocket', 'polling']
+                    });
+                    
+                    socket.on('connect', () => {
+                        socketStatusDiv.className = 'success';
+                        socketStatusDiv.textContent = `✅ Connected to Socket.IO (ID: ${socket.id})`;
+                    });
+                    
+                    socket.on('connect_error', (error) => {
+                        socketStatusDiv.className = 'error';
+                        socketStatusDiv.textContent = `❌ Socket connection error: ${error.message}`;
+                    });
+                    
+                    // Cleanup after 5 seconds
+                    setTimeout(() => {
+                        socket.disconnect();
+                    }, 5000);
+                };
+            } catch (error) {
+                socketStatusDiv.className = 'error';
+                socketStatusDiv.textContent = `❌ Socket test failed: ${error.message}`;
+            }
+        }
+
+        // Clear results
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            testAuth();
+        };
+    </script>
+</body>
+</html>

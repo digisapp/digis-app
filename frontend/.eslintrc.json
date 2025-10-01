@@ -1,0 +1,56 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2020": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:react/jsx-runtime",
+    "plugin:@tanstack/eslint-plugin-query/recommended",
+    "plugin:jsx-a11y/recommended",
+    "prettier"
+  ],
+  "ignorePatterns": ["dist", "node_modules", "*.config.js", "*.config.ts"],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "plugins": ["react-refresh", "@typescript-eslint", "react", "react-hooks", "jsx-a11y"],
+  "rules": {
+    "react-refresh/only-export-components": [
+      "warn",
+      { "allowConstantExport": true }
+    ],
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+    ],
+    "react/prop-types": "off",
+    "react/display-name": "off",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "jsx-a11y/alt-text": "error",
+    "jsx-a11y/img-redundant-alt": "error",
+    "jsx-a11y/aria-props": "error",
+    "jsx-a11y/aria-proptypes": "error",
+    "jsx-a11y/aria-unsupported-elements": "error",
+    "jsx-a11y/role-has-required-aria-props": "error",
+    "jsx-a11y/role-supports-aria-props": "error",
+    "no-console": ["warn", { "allow": ["error"] }]
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
+}

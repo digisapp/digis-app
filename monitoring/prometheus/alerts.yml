@@ -1,0 +1,152 @@
+groups:
+  - name: database_alerts
+    interval: 30s
+    rules:
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends{datname="postgres"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High number of database connections ({{ $value }})"
+          description: "Database {{ $labels.datname }} has {{ $value }} active connections"
+
+      - alert: LowCacheHitRatio
+        expr: pg_stat_database_blks_hit{datname="postgres"} / (pg_stat_database_blks_hit{datname="postgres"} + pg_stat_database_blks_read{datname="postgres"}) < 0.95
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Low cache hit ratio ({{ $value | humanizePercentage }})"
+          description: "Database cache hit ratio is below 95%"
+
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "Cannot connect to PostgreSQL database"
+
+      - alert: SlowQueries
+        expr: rate(pg_stat_statements_mean_exec_time_seconds[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query execution time is above 1 second"
+
+  - name: application_alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: rate(digis_api_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API error rate ({{ $value | humanizePercentage }})"
+          description: "API error rate is above 5%"
+
+      - alert: SlowAPIResponse
+        expr: histogram_quantile(0.95, rate(digis_api_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Slow API response times"
+          description: "95th percentile API response time is above 2 seconds"
+
+      - alert: LowTokenBalance
+        expr: digis_platform_token_balance < 1000
+        for: 1m
+        labels:
+          severity: warning
+          component: platform
+        annotations:
+          summary: "Low platform token balance"
+          description: "Platform token balance is below 1000"
+
+      - alert: HighActiveSessionCount
+        expr: digis_active_sessions > 100
+        for: 5m
+        labels:
+          severity: info
+          component: platform
+        annotations:
+          summary: "High number of active sessions ({{ $value }})"
+          description: "There are {{ $value }} active video/voice sessions"
+
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High CPU usage ({{ $value | humanize }}%)"
+          description: "CPU usage is above 80%"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High memory usage ({{ $value | humanize }}%)"
+          description: "Memory usage is above 90%"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Low disk space ({{ $value | humanize }}% remaining)"
+          description: "Less than 10% disk space remaining"
+
+  - name: business_alerts
+    interval: 60s
+    rules:
+      - alert: LowCreatorAvailability
+        expr: digis_online_creators < 5
+        for: 30m
+        labels:
+          severity: info
+          component: business
+        annotations:
+          summary: "Low creator availability"
+          description: "Less than 5 creators are currently online"
+
+      - alert: HighRefundRate
+        expr: rate(digis_refunds_total[24h]) / rate(digis_purchases_total[24h]) > 0.1
+        for: 1h
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "High refund rate"
+          description: "Refund rate is above 10% in the last 24 hours"
+
+      - alert: LowConversionRate
+        expr: rate(digis_token_purchases_total[1h]) / rate(digis_user_signups_total[1h]) < 0.05
+        for: 2h
+        labels:
+          severity: info
+          component: business
+        annotations:
+          summary: "Low conversion rate"
+          description: "Token purchase conversion rate is below 5%"

@@ -1,0 +1,145 @@
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { MobileUIProvider } from './MobileUIProvider';
+import MobileErrorBoundary from './MobileErrorBoundary';
+import MobileSplashScreen from './MobileSplashScreen';
+import MobileNetworkStatus from './MobileNetworkStatus';
+import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
+import { usePlatformDetection } from '../../hooks/usePlatformDetection';
+
+// Lazy load heavy components for better initial load
+const MobileRouter = lazy(() => import('./MobileRouter'));
+const MobileOfflineQueue = lazy(() => import('./MobileOfflineQueue'));
+
+const MobileApp = ({ user, profile, isCreator, isAdmin, logout, setCurrentView, onShowGoLive }) => {
+  const [isReady, setIsReady] = useState(false);
+  const { platform, isStandalone } = usePlatformDetection();
+  const { reportMetric } = usePerformanceMonitor();
+
+  useEffect(() => {
+    // Report initial load time
+    reportMetric('mobile_app_init', performance.now());
+    
+    // Platform-specific optimizations
+    if (platform.ios) {
+      // iOS-specific optimizations
+      document.body.style.webkitTouchCallout = 'none';
+      document.body.style.webkitUserSelect = 'none';
+      
+      // Handle iOS safe areas
+      const updateSafeAreas = () => {
+        const root = document.documentElement;
+        root.style.setProperty('--sat', `${window.safeAreaInsets?.top || 0}px`);
+        root.style.setProperty('--sar', `${window.safeAreaInsets?.right || 0}px`);
+        root.style.setProperty('--sab', `${window.safeAreaInsets?.bottom || 0}px`);
+        root.style.setProperty('--sal', `${window.safeAreaInsets?.left || 0}px`);
+      };
+      
+      updateSafeAreas();
+      window.addEventListener('resize', updateSafeAreas);
+      
+      // Prevent bounce scrolling
+      document.body.addEventListener('touchmove', (e) => {
+        if (e.target.closest('.scrollable')) return;
+        e.preventDefault();
+      }, { passive: false });
+    }
+    
+    if (platform.android) {
+      // Android-specific optimizations
+      document.body.style.userSelect = 'none';
+      
+      // Handle Android back button in PWA
+      if (isStandalone) {
+        window.addEventListener('popstate', (e) => {
+          // Custom back navigation logic
+          e.preventDefault();
+        });
+      }
+    }
+    
+    // Optimize for PWA mode
+    if (isStandalone) {
+      document.body.classList.add('pwa-mode');
+      
+      // Hide browser UI elements
+      const meta = document.createElement('meta');
+      meta.name = 'apple-mobile-web-app-capable';
+      meta.content = 'yes';
+      document.head.appendChild(meta);
+      
+      const statusBar = document.createElement('meta');
+      statusBar.name = 'apple-mobile-web-app-status-bar-style';
+      statusBar.content = 'black-translucent';
+      document.head.appendChild(statusBar);
+    }
+    
+    // Preload critical assets
+    const preloadAssets = async () => {
+      const criticalAssets = [
+        '/fonts/Inter-var.woff2',
+        '/images/logo.svg',
+        '/sounds/notification.mp3'
+      ];
+      
+      await Promise.all(
+        criticalAssets.map(asset => 
+          fetch(asset, { priority: 'high' }).catch(() => {})
+        )
+      );
+      
+      setIsReady(true);
+    };
+    
+    preloadAssets();
+    
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      navigator.serviceWorker.register('/sw.js').then(registration => {
+        console.log('SW registered:', registration);
+      }).catch(error => {
+        console.error('SW registration failed:', error);
+      });
+    }
+    
+    return () => {
+      if (platform.ios) {
+        window.removeEventListener('resize', updateSafeAreas);
+      }
+    };
+  }, [platform, isStandalone, reportMetric]);
+
+  if (!isReady) {
+    return <MobileSplashScreen />;
+  }
+
+  return (
+    <MobileErrorBoundary>
+      <MobileUIProvider>
+        <div className="mobile-app-container">
+          <MobileNetworkStatus />
+          
+          <AnimatePresence mode="wait">
+            <Suspense fallback={<MobileSplashScreen />}>
+              <MobileRouter 
+                user={user} 
+                profile={profile}
+                isCreator={isCreator}
+                isAdmin={isAdmin}
+                logout={logout}
+                setCurrentView={setCurrentView}
+                onShowGoLive={onShowGoLive}
+              />
+            </Suspense>
+          </AnimatePresence>
+          
+          <Suspense fallback={null}>
+            <MobileOfflineQueue />
+          </Suspense>
+        </div>
+      </MobileUIProvider>
+    </MobileErrorBoundary>
+  );
+};
+
+export default MobileApp;

@@ -1,0 +1,133 @@
+/* Mobile Navigation Override - Fix conflicting styles */
+/* This file ensures the modern navigation bar displays correctly */
+
+/* Allow modern navigation to show */
+/* Removed the hiding of navigation components since we want MobileNavigationEnhanced to work */
+
+/* Ensure only the NextLevelMobileApp navigation shows */
+.mobile-nav-next {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: calc(65px + env(safe-area-inset-bottom)) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-around !important;
+  padding: 8px 0 env(safe-area-inset-bottom) !important;
+  z-index: 1000 !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Keep white background always - no dark mode */
+.mobile-nav-next {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Navigation items */
+.mobile-nav-next .mobile-nav-item {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  padding: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  background: transparent !important;
+  border: none !important;
+  color: #6b7280 !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Active navigation item */
+.mobile-nav-next .mobile-nav-item.active {
+  color: #8b5cf6 !important;
+}
+
+/* Navigation item indicator */
+.mobile-nav-next .mobile-nav-item::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) scale(0) !important;
+  width: 40px !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, #8b5cf6 0%, #ec4899 100%) !important;
+  border-radius: 2px !important;
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+}
+
+.mobile-nav-next .mobile-nav-item.active::before {
+  transform: translateX(-50%) scale(1) !important;
+}
+
+/* Navigation icons */
+.mobile-nav-next .mobile-nav-icon {
+  width: 24px !important;
+  height: 24px !important;
+  margin-bottom: 4px !important;
+  transition: transform 0.2s ease !important;
+}
+
+.mobile-nav-next .mobile-nav-item.active .mobile-nav-icon {
+  transform: scale(1.1) !important;
+}
+
+/* Navigation labels */
+.mobile-nav-next .mobile-nav-label {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Hide navigation when scrolling */
+.mobile-nav-next.hidden {
+  transform: translateY(100%) !important;
+}
+
+/* Ensure proper spacing for content above navigation */
+.pb-24 {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+}
+
+/* Remove any duplicate bottom bars - DISABLED to allow MobileNav to show */
+/* nav:not(.mobile-nav-next),
+.fixed.bottom-0:not(.mobile-nav-next) {
+  display: none !important;
+} */
+
+/* Ensure the actual mobile navigation is visible */
+nav[role="navigation"][aria-label="Primary navigation"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 100 !important;
+}
+
+/* Ensure equal button distribution */
+nav[role="navigation"][aria-label="Primary navigation"] > div {
+  display: flex !important;
+  width: 100% !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+nav[role="navigation"][aria-label="Primary navigation"] button {
+  flex: 1 1 0 !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}

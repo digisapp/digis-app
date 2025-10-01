@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digis - Working Test</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: #f5f5f5;
+        }
+        .app {
+            text-align: center;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div style="padding: 20px; text-align: center;">
+            <h1>Loading...</h1>
+        </div>
+    </div>
+
+    <script>
+        // Wait for React to load
+        window.onload = function() {
+            const { useState, useEffect } = React;
+            
+            function App() {
+                const [count, setCount] = useState(0);
+                const [time, setTime] = useState(new Date().toLocaleTimeString());
+                const [message, setMessage] = useState('');
+
+                useEffect(() => {
+                    const timer = setInterval(() => {
+                        setTime(new Date().toLocaleTimeString());
+                    }, 1000);
+                    return () => clearInterval(timer);
+                }, []);
+
+                const testBackend = async () => {
+                    setMessage('Testing backend...');
+                    try {
+                        const response = await fetch('http://localhost:3001/health');
+                        const data = await response.json();
+                        setMessage(`Backend Status: ${data.status || 'Connected!'}`);
+                    } catch (error) {
+                        setMessage(`Backend Error: ${error.message}`);
+                    }
+                };
+
+                return React.createElement('div', { className: 'app' },
+                    React.createElement('div', { className: 'header' },
+                        React.createElement('h1', null, '🎭 Digis Platform'),
+                        React.createElement('p', null, 'Creator Economy Platform - Working Test'),
+                        React.createElement('p', null, `Time: ${time}`)
+                    ),
+                    React.createElement('div', { className: 'card' },
+                        React.createElement('h2', null, 'React is Working! 🎉'),
+                        React.createElement('div', { className: 'status success' }, '✅ React Loaded Successfully'),
+                        React.createElement('div', { className: 'status info' }, `React Version: ${React.version}`),
+                        React.createElement('p', null, `Button clicked ${count} times`),
+                        React.createElement('button', {
+                            className: 'button',
+                            onClick: () => setCount(count + 1)
+                        }, 'Click Me!')
+                    ),
+                    React.createElement('div', { className: 'card' },
+                        React.createElement('h3', null, 'Backend Connection Test'),
+                        React.createElement('button', {
+                            className: 'button',
+                            onClick: testBackend
+                        }, 'Test Backend'),
+                        message && React.createElement('div', { 
+                            className: `status ${message.includes('Error') ? 'error' : 'success'}`
+                        }, message)
+                    ),
+                    React.createElement('div', { className: 'card' },
+                        React.createElement('h3', null, 'Next Steps'),
+                        React.createElement('p', null, 'If you can see this page working:'),
+                        React.createElement('ul', { style: { textAlign: 'left' } },
+                            React.createElement('li', null, 'React is loading correctly'),
+                            React.createElement('li', null, 'JavaScript is executing'),
+                            React.createElement('li', null, 'The issue is with the module bundling or imports')
+                        ),
+                        React.createElement('p', null, 'Access the app on mobile at:'),
+                        React.createElement('code', {
+                            style: { 
+                                background: '#f0f0f0', 
+                                padding: '4px 8px', 
+                                borderRadius: '4px',
+                                fontSize: '14px'
+                            }
+                        }, 'http://10.0.0.12:3002/working.html')
+                    )
+                );
+            }
+
+            // Mount the app
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(App));
+            
+            console.log('✅ React app mounted successfully');
+        };
+    </script>
+</body>
+</html>

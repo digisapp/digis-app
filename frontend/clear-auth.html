@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Auth</title>
+</head>
+<body>
+    <h1>Clearing Authentication...</h1>
+    <script>
+        // Clear all localStorage
+        localStorage.clear();
+        
+        // Clear all sessionStorage
+        sessionStorage.clear();
+        
+        // Clear all cookies
+        document.cookie.split(";").forEach(function(c) { 
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+        });
+        
+        // Clear IndexedDB if it exists
+        if (window.indexedDB) {
+            indexedDB.databases().then(dbs => {
+                dbs.forEach(db => indexedDB.deleteDatabase(db.name));
+            });
+        }
+        
+        alert('Authentication cleared! Redirecting to homepage...');
+        window.location.href = 'http://localhost:3003/';
+    </script>
+</body>
+</html>

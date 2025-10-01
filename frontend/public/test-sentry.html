@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentry Test - Direct</title>
+    <!-- Load Sentry SDK directly -->
+    <script
+      src="https://browser.sentry-cdn.com/7.119.2/bundle.tracing.min.js"
+      crossorigin="anonymous"
+    ></script>
+</head>
+<body>
+    <div style="padding: 20px; font-family: system-ui, -apple-system, sans-serif;">
+        <h1>Direct Sentry Test</h1>
+        <p>This page tests Sentry directly without React.</p>
+
+        <div id="status" style="margin: 20px 0; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+            Status will appear here...
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onclick="initializeSentry()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Initialize Sentry
+            </button>
+
+            <button onclick="testError()" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Send Test Error
+            </button>
+
+            <button onclick="testMessage()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Send Test Message
+            </button>
+
+            <button onclick="testCrash()" style="padding: 10px 20px; background: #ffc107; color: black; border: none; border-radius: 5px; cursor: pointer;">
+                Trigger Crash
+            </button>
+        </div>
+
+        <div style="margin-top: 40px; padding: 20px; background: #e3f2fd; border-radius: 5px;">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Click "Initialize Sentry" first</li>
+                <li>Then click any test button</li>
+                <li>Check your Sentry dashboard at: <a href="https://sentry.io" target="_blank">sentry.io</a></li>
+                <li>Look for the "digis-frontend" project</li>
+            </ol>
+        </div>
+
+        <div style="margin-top: 20px; padding: 20px; background: #fff3cd; border-radius: 5px;">
+            <h3>Console Output:</h3>
+            <pre id="console" style="background: black; color: #00ff00; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto;">
+Console logs will appear here...
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const consoleEl = document.getElementById('console');
+        let sentryInitialized = false;
+
+        // Override console.log to show in page
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog(...args);
+            const timestamp = new Date().toLocaleTimeString();
+            consoleEl.textContent += `[${timestamp}] ${args.join(' ')}\n`;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        };
+
+        function initializeSentry() {
+            if (sentryInitialized) {
+                updateStatus('Sentry already initialized!', 'warning');
+                return;
+            }
+
+            const DSN = 'https://39643d408b9ed97b88abb63fb81cfeb6@o4510043742994432.ingest.us.sentry.io/4510043876229120';
+
+            console.log('Initializing Sentry with DSN:', DSN);
+
+            try {
+                Sentry.init({
+                    dsn: DSN,
+                    integrations: [
+                        Sentry.browserTracingIntegration(),
+                        Sentry.replayIntegration({
+                            maskAllText: false,
+                            blockAllMedia: false,
+                        }),
+                    ],
+                    tracesSampleRate: 1.0,
+                    replaysSessionSampleRate: 1.0,
+                    replaysOnErrorSampleRate: 1.0,
+                    environment: 'test',
+                    beforeSend: (event) => {
+                        console.log('Sending event to Sentry:', event.event_id);
+                        return event;
+                    }
+                });
+
+                sentryInitialized = true;
+                updateStatus('✅ Sentry initialized successfully!', 'success');
+                console.log('Sentry initialized successfully');
+
+                // Send initialization confirmation
+                Sentry.captureMessage('Sentry test page initialized', 'info');
+
+            } catch (error) {
+                updateStatus('❌ Failed to initialize Sentry: ' + error.message, 'error');
+                console.error('Failed to initialize:', error);
+            }
+        }
+
+        function testError() {
+            if (!sentryInitialized) {
+                updateStatus('⚠️ Initialize Sentry first!', 'warning');
+                return;
+            }
+
+            try {
+                throw new Error('Test error from manual test page - ' + new Date().toISOString());
+            } catch (error) {
+                const eventId = Sentry.captureException(error);
+                updateStatus(`📤 Error sent! Event ID: ${eventId}`, 'success');
+                console.log('Error sent with ID:', eventId);
+            }
+        }
+
+        function testMessage() {
+            if (!sentryInitialized) {
+                updateStatus('⚠️ Initialize Sentry first!', 'warning');
+                return;
+            }
+
+            const message = 'Test message from manual test page - ' + new Date().toISOString();
+            const eventId = Sentry.captureMessage(message, 'info');
+            updateStatus(`📤 Message sent! Event ID: ${eventId}`, 'success');
+            console.log('Message sent with ID:', eventId);
+        }
+
+        function testCrash() {
+            if (!sentryInitialized) {
+                updateStatus('⚠️ Initialize Sentry first!', 'warning');
+                return;
+            }
+
+            updateStatus('💥 Triggering crash in 2 seconds...', 'warning');
+            console.log('Crash will trigger in 2 seconds...');
+
+            setTimeout(() => {
+                throw new Error('Intentional crash for testing - ' + new Date().toISOString());
+            }, 2000);
+        }
+
+        function updateStatus(message, type = 'info') {
+            const colors = {
+                success: '#28a745',
+                error: '#dc3545',
+                warning: '#ffc107',
+                info: '#17a2b8'
+            };
+
+            statusEl.textContent = message;
+            statusEl.style.backgroundColor = colors[type] + '20';
+            statusEl.style.color = colors[type];
+            statusEl.style.fontWeight = 'bold';
+        }
+
+        // Auto-initialize on page load
+        window.addEventListener('load', () => {
+            console.log('Page loaded - ready to test Sentry');
+            updateStatus('Ready - click "Initialize Sentry" to begin', 'info');
+        });
+    </script>
+</body>
+</html>

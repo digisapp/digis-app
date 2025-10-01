@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: 'Digis Dashboards'
+    orgId: 1
+    folder: 'Digis Platform'
+    folderUid: 'digis'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

@@ -1,0 +1,86 @@
+/* Mobile Landing Page Viewport Fix */
+/* Ensures the landing page fills the entire screen on iPhones */
+
+/* Force full viewport height on mobile */
+@supports (height: 100dvh) {
+  .mobile-landing-container {
+    height: 100dvh !important;
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Fallback for older browsers */
+.mobile-landing-container {
+  height: 100vh;
+  min-height: -webkit-fill-available;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Ensure no scrolling */
+.mobile-landing-container {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe area padding for iPhone notch and home indicator */
+.mobile-landing-safe-top {
+  padding-top: max(env(safe-area-inset-top, 20px), 40px);
+}
+
+.mobile-landing-safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 20px), 20px);
+}
+
+/* Form container positioning */
+.mobile-landing-form {
+  flex: 0 0 auto;
+  margin: auto 0;
+}
+
+/* Ensure proper flex layout */
+.mobile-landing-flex {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Logo section spacing */
+.mobile-landing-logo {
+  flex: 0 0 auto;
+  margin-top: 20px;
+  padding-top: max(env(safe-area-inset-top, 0px), 20px);
+}
+
+/* Prevent any margin collapse */
+* {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Fix for iOS rubber band scrolling */
+@supports (-webkit-touch-callout: none) {
+  .mobile-landing-container {
+    position: fixed;
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+}
+
+/* Ensure body doesn't add extra space */
+body.mobile-landing-active {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Disable pull-to-refresh on mobile landing */
+.mobile-landing-container {
+  overscroll-behavior-y: contain;
+}

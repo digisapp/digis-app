@@ -1,0 +1,887 @@
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  UserGroupIcon,
+  SparklesIcon,
+  StarIcon as StarIconSolid,
+  ChevronDownIcon,
+  VideoCameraIcon,
+  PhoneIcon,
+  ChatBubbleLeftRightIcon,
+  CalendarDaysIcon,
+  GiftIcon,
+  CurrencyDollarIcon,
+  LanguageIcon,
+  XMarkIcon,
+  Squares2X2Icon,
+  ListBulletIcon,
+  BarsArrowUpIcon,
+  AdjustmentsHorizontalIcon
+} from '@heroicons/react/24/solid';
+import { StarIcon } from '@heroicons/react/24/outline';
+import { fetchWithRetry } from '../../utils/fetchWithRetry';
+import { normalizeCreator } from '../../utils/normalizeCreator';
+import MobileLandingPage from '../mobile/MobileLandingPage';
+import MobileCreatorCard from '../mobile/MobileCreatorCard';
+import CreatorCard from '../CreatorCard';
+
+const ExplorePage = ({ 
+  onCreatorSelect, 
+  onStartVideoCall, 
+  onStartVoiceCall, 
+  onScheduleSession, 
+  onTipCreator, 
+  onSendMessage, 
+  onMakeOffer,
+  ...props 
+}) => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const observerRef = useRef();
+  const loadMoreRef = useRef();
+  
+  // State management
+  const [creators, setCreators] = useState([]);
+  const [filteredCreators, setFilteredCreators] = useState([]);
+  const [liveCreators, setLiveCreators] = useState([]);
+  const [savedCreators, setSavedCreators] = useState(() => {
+    const saved = localStorage.getItem('savedCreators');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  // Filters - Initialize selectedCategory from URL params
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    const categoryFromUrl = searchParams.get('category');
+    return categoryFromUrl || 'all';
+  });
+  const [selectedLanguages, setSelectedLanguages] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState('card'); // 'card', 'compact', 'grid'
+  const [sortBy, setSortBy] = useState('popular'); // 'popular', 'newest', 'price-low', 'price-high'
+  const [onlineOnly, setOnlineOnly] = useState(false);
+
+  // UI State
+  const [loading, setLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  // QuickView removed - using CallConfirmationModal directly from creator cards
+  // const [showQuickView, setShowQuickView] = useState(false);
+  // const [quickViewCreator, setQuickViewCreator] = useState(null);
+  
+  // Mobile detection - responsive design instead of separate mobile view
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Handle URL parameter changes for category filtering
+  useEffect(() => {
+    const categoryFromUrl = searchParams.get('category');
+    if (categoryFromUrl) {
+      // Check if the category exists in our categories list
+      const categoryExists = categories.some(cat => cat.id === categoryFromUrl);
+      if (categoryExists) {
+        setSelectedCategory(categoryFromUrl);
+      } else {
+        // If category doesn't exist, default to 'all'
+        setSelectedCategory('all');
+        searchParams.delete('category');
+        setSearchParams(searchParams);
+      }
+    } else {
+      setSelectedCategory('all');
+    }
+  }, [searchParams]);
+
+  // Categories - matches the categories available in creator profiles
+  const categories = [
+    { id: 'all', label: 'All', icon: SparklesIcon },
+    { id: 'Gaming', label: 'Gaming', icon: () => <span>🎮</span> },
+    { id: 'Music', label: 'Music', icon: () => <span>🎵</span> },
+    { id: 'Art', label: 'Art', icon: () => <span>🎨</span> },
+    { id: 'Model', label: 'Model', icon: () => <span>👗</span> },
+    { id: 'Fitness', label: 'Fitness', icon: () => <span>💪</span> },
+    { id: 'Cooking', label: 'Cooking', icon: () => <span>👨‍🍳</span> },
+    { id: 'Dance', label: 'Dance', icon: () => <span>💃</span> },
+    { id: 'Comedy', label: 'Comedy', icon: () => <span>😄</span> },
+    { id: 'Education', label: 'Education', icon: () => <span>📚</span> },
+    { id: 'Lifestyle', label: 'Lifestyle', icon: () => <span>✨</span> },
+    { id: 'Fashion', label: 'Fashion', icon: () => <span>👗</span> },
+    { id: 'Tech', label: 'Tech', icon: () => <span>💻</span> },
+    { id: 'Sports', label: 'Sports', icon: () => <span>⚽</span> },
+    { id: 'Travel', label: 'Travel', icon: () => <span>✈️</span> },
+    { id: 'Photography', label: 'Photography', icon: () => <span>📷</span> },
+    { id: 'Crafts', label: 'Crafts', icon: () => <span>🎨</span> },
+    { id: 'Beauty', label: 'Beauty', icon: () => <span>💄</span> },
+    { id: 'Business', label: 'Business', icon: () => <span>💼</span> },
+    { id: 'Meditation', label: 'Meditation', icon: () => <span>🧘</span> },
+    { id: 'ASMR', label: 'ASMR', icon: () => <span>🎧</span> },
+    { id: 'Wellness', label: 'Wellness', icon: () => <span>🌿</span> },
+    { id: 'comedy', label: 'Comedy', icon: () => <span>😂</span> },
+    { id: 'other', label: 'Other', icon: () => <span>🌟</span> }
+  ];
+  
+  // Languages
+  const languages = [
+    'English', 'Spanish', 'French', 'German', 'Italian', 
+    'Portuguese', 'Russian', 'Japanese', 'Korean', 'Chinese',
+    'Arabic', 'Hindi', 'Dutch', 'Swedish', 'Polish'
+  ];
+
+  // Fetch creators from API with pagination, filters, and retry logic
+  const fetchCreators = useCallback(async (pageNum = 1, append = false, isRetry = false) => {
+    try {
+      if (!isRetry) {
+        setIsLoadingMore(append);
+        setLoading(!append);
+        setError(null);
+      }
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: pageNum,
+        limit: 20,
+        category: selectedCategory,
+        sortBy: sortBy,
+        onlineOnly: onlineOnly
+      });
+
+      // Add selected languages
+      if (selectedLanguages.length > 0) {
+        params.append('languages', selectedLanguages.join(','));
+      }
+
+      // Fetch real creators from database with retry logic
+      const backendUrl = import.meta.env.VITE_BACKEND_URL ||
+        (window.location.hostname === 'localhost' ? 'http://localhost:3005' : `http://${window.location.hostname}:3005`);
+
+      const response = await fetchWithRetry(
+        `${backendUrl}/api/users/creators?${params.toString()}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          retries: 3,
+          retryDelay: 1000
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Only show real creators, no fallback data
+        if (!data.creators || data.creators.length === 0) {
+          if (pageNum === 1) {
+            setCreators([]);
+          }
+          setHasMore(false);
+          return;
+        }
+        
+        // Use normalized creator data
+        const transformedCreators = data.creators.map(normalizeCreator).filter(Boolean);
+        
+        console.log('Fetched creators from API:', transformedCreators.length, 'creators');
+        console.log('Sample creator data:', transformedCreators[0]);
+        
+        if (pageNum === 1) {
+          setCreators(transformedCreators);
+        } else {
+          setCreators(prev => [...prev, ...transformedCreators]);
+        }
+        
+        setHasMore(data.hasMore || transformedCreators.length === 20);
+        setPage(pageNum);
+      } else {
+        // API error - show empty state instead of mock data
+        console.error('Failed to fetch creators:', response.status);
+        if (pageNum === 1) {
+          setCreators([]);
+        }
+        setHasMore(false);
+        toast.error('Failed to load creators. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching creators:', error);
+      
+      // Show empty state instead of mock data
+      if (pageNum === 1) {
+        setCreators([]);
+      }
+      setHasMore(false);
+      
+      // Auto-retry logic with exponential backoff
+      if (!isRetry && retryCount < 3) {
+        const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          fetchCreators(pageNum, append, true);
+        }, retryDelay);
+      } else if (retryCount >= 3) {
+        toast.error('Unable to connect to server. Please check your connection.');
+      }
+    } finally {
+      if (!isRetry) {
+        setLoading(false);
+        setIsLoadingMore(false);
+      }
+    }
+  }, [selectedCategory, selectedLanguages, sortBy, onlineOnly, retryCount]);
+
+
+  // Fetch live creators
+  const fetchLiveCreators = useCallback(async () => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL ||
+        (window.location.hostname === 'localhost' ? 'http://localhost:3005' : `http://${window.location.hostname}:3005`);
+      const response = await fetch(`${backendUrl}/api/streaming/public/streams/live`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.streams && data.streams.length > 0) {
+          // Transform stream data to creator format for display
+          const liveCreatorsList = data.streams.map(stream => ({
+            id: stream.creator_id,
+            username: stream.creator_username,
+            display_name: stream.creator_name,
+            profile_pic_url: stream.creator_avatar,
+            is_live: true,
+            stream_title: stream.title,
+            viewer_count: stream.viewer_count,
+            category: stream.category,
+            is_free: stream.is_free,
+            stream_id: stream.id
+          }));
+          setLiveCreators(liveCreatorsList);
+        } else {
+          setLiveCreators([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching live creators:', error);
+    }
+  }, []);
+
+  // Initial load with retry mechanism
+  useEffect(() => {
+    // Add a small delay to allow backend to be ready
+    const loadInitialData = async () => {
+      // Try initial load silently
+      await fetchCreators(1, false, true);
+      
+      // If no creators loaded, retry once after a delay
+      if (creators.length === 0) {
+        setTimeout(() => {
+          fetchCreators(1, false, true);
+        }, 2000);
+      }
+    };
+    
+    loadInitialData();
+    fetchLiveCreators();
+    
+    // Refresh live creators every 30 seconds
+    const interval = setInterval(fetchLiveCreators, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Filter and sort creators
+  const filterAndSortCreators = useCallback(() => {
+    let filtered = [...creators];
+    
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(creator => 
+        creator.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        creator.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        creator.bio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        creator.specialties?.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    // Apply online filter
+    if (onlineOnly) {
+      filtered = filtered.filter(creator => creator.isOnline || creator.isLive);
+    }
+
+    // Category filter - check if creator's interests include the selected category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(creator => {
+        // Check both interests and specialties for backward compatibility
+        const creatorCategories = creator.interests || creator.specialties || [];
+        return creatorCategories.some(cat =>
+          cat.toLowerCase() === selectedCategory.toLowerCase()
+        );
+      });
+    }
+
+    // Language filter
+    if (selectedLanguages.length > 0) {
+      filtered = filtered.filter(creator =>
+        creator.languages?.some(lang => selectedLanguages.includes(lang))
+      );
+    }
+
+    // Apply sorting based on sortBy state
+    switch(sortBy) {
+      case 'newest':
+        filtered.sort((a, b) => {
+          // If we have createdAt, use it; otherwise sort by ID
+          const aTime = a.createdAt || 0;
+          const bTime = b.createdAt || 0;
+          return bTime - aTime;
+        });
+        break;
+      case 'price-low':
+        filtered.sort((a, b) => (a.videoPrice || 0) - (b.videoPrice || 0));
+        break;
+      case 'price-high':
+        filtered.sort((a, b) => (b.videoPrice || 0) - (a.videoPrice || 0));
+        break;
+      case 'popular':
+      default:
+        // Priority sorting: Live > Online > Popularity
+        filtered.sort((a, b) => {
+          if (a.isLive && !b.isLive) return -1;
+          if (!a.isLive && b.isLive) return 1;
+
+          if (!a.isLive && !b.isLive) {
+            if (a.isOnline && !b.isOnline) return -1;
+            if (!a.isOnline && b.isOnline) return 1;
+          }
+
+          const aPopularity = (a.followerCount || 0) + (a.totalSessions || 0) + ((a.rating || 0) * 10);
+          const bPopularity = (b.followerCount || 0) + (b.totalSessions || 0) + ((b.rating || 0) * 10);
+          return bPopularity - aPopularity;
+        });
+        break;
+    }
+
+    setFilteredCreators(filtered);
+  }, [creators, searchTerm, selectedCategory, selectedLanguages, sortBy, onlineOnly]);
+
+  // Apply filters when dependencies change
+  useEffect(() => {
+    console.log('Creators state updated:', creators.length, 'creators');
+    if (creators.length > 0) {
+      console.log('Applying filters to creators');
+      filterAndSortCreators();
+    } else if (!loading) {
+      console.log('No creators and not loading, clearing filtered list');
+      setFilteredCreators([]);
+    }
+  }, [creators, searchTerm, selectedCategory, selectedLanguages, loading]);
+
+  // Toggle save creator
+  const toggleSaveCreator = (creatorId) => {
+    setSavedCreators(prev => {
+      const newSaved = prev.includes(creatorId) 
+        ? prev.filter(id => id !== creatorId)
+        : [...prev, creatorId];
+      
+      localStorage.setItem('savedCreators', JSON.stringify(newSaved));
+      toast.success(prev.includes(creatorId) ? 'Removed from saved' : 'Added to saved');
+      return newSaved;
+    });
+  };
+
+  // Load more creators
+  const loadMoreCreators = () => {
+    if (!isLoadingMore && hasMore) {
+      fetchCreators(page + 1, true);
+    }
+  };
+
+  // Infinite scroll
+  useEffect(() => {
+    if (!hasMore || isLoadingMore) return;
+    
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          loadMoreCreators();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+    
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [hasMore, isLoadingMore, page]);
+
+  // Skeleton loader component
+  const CreatorCardSkeleton = () => (
+    <div className="animate-pulse">
+      <div className="bg-gray-200 dark:bg-gray-700 rounded-[1.5rem] h-[380px] relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-300 dark:from-gray-600 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <div className="bg-gray-300 dark:bg-gray-600 rounded-xl p-3 space-y-2">
+            <div className="h-5 bg-gray-400 dark:bg-gray-500 rounded w-3/4" />
+            <div className="h-4 bg-gray-400 dark:bg-gray-500 rounded w-1/2" />
+            <div className="flex gap-2 mt-3">
+              <div className="h-8 bg-gray-400 dark:bg-gray-500 rounded flex-1" />
+              <div className="h-8 bg-gray-400 dark:bg-gray-500 rounded flex-1" />
+              <div className="h-8 bg-gray-400 dark:bg-gray-500 rounded flex-1" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+  
+  // Inline CreatorCard replaced with CreatorCardEnhanced component - removed
+  // All old CreatorCard code has been removed - using CreatorCardEnhanced instead
+
+  // QuickViewModal removed - using CallConfirmationModal directly from creator cards
+  // The confirmation modal is now handled within CreatorCardEnhanced
+
+  // Return mobile landing page for non-logged-in mobile users
+  if (isMobile && !props.user) {
+    return <MobileLandingPage onLogin={props.onLogin} />;
+  }
+
+  // Main render
+  return (
+    <div className={`min-h-screen ${isMobile ? 'bg-gradient-to-br from-purple-50 via-white to-pink-50' : 'bg-gray-50 dark:bg-gray-900'}`}>
+      {/* Filters Bar */}
+      <div className="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
+          {/* Header Row */}
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="flex-1">
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{isMobile ? 'Explore' : 'Explore Creators'}</h1>
+            </div>
+            
+            {/* View Toggle - Hide on mobile */}
+            {!isMobile && (
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('card')}
+                  className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 text-sm font-medium ${
+                    viewMode === 'card' 
+                      ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm' 
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                  title="Card View"
+                >
+                  <Squares2X2Icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">Card</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('compact')}
+                  className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 text-sm font-medium ${
+                    viewMode === 'compact' 
+                      ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm' 
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                  title="Compact View"
+                >
+                  <ListBulletIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">Compact</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 text-sm font-medium ${
+                    viewMode === 'grid' 
+                      ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm' 
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                  title="Grid View"
+                >
+                  <BarsArrowUpIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">Grid</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Search and Filters Row */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            {/* Search Bar */}
+            <div className="flex-1 relative min-w-0">
+              <input
+                type="search"
+                inputMode="search"
+                enterKeyHint="search"
+                placeholder="Search creators..."
+                defaultValue={searchTerm}
+                onChange={(e) => debouncedSearch(e.target.value)}
+                className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-sm"
+                aria-label="Search creators"
+              />
+              <MagnifyingGlassIcon className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            </div>
+
+            {/* Filter Buttons */}
+            <div className="flex gap-1 sm:gap-2">
+              {/* Sort Dropdown */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-2 sm:px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-xs sm:text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="popular">Popular</option>
+                <option value="newest">Newest</option>
+                <option value="price-low">Price ↑</option>
+                <option value="price-high">Price ↓</option>
+              </select>
+
+              {/* Online Only Toggle */}
+              <button
+                onClick={() => setOnlineOnly(!onlineOnly)}
+                className={`px-2 sm:px-3 py-2 rounded-lg transition-colors text-xs sm:text-sm font-medium flex items-center gap-1 ${
+                  onlineOnly
+                    ? 'bg-green-500 text-white'
+                    : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full ${onlineOnly ? 'bg-white animate-pulse' : 'bg-green-500'}`} />
+                <span className="hidden sm:inline">Online</span>
+              </button>
+
+              {/* Filter Button */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                <AdjustmentsHorizontalIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Filters</span>
+                {(selectedLanguages.length > 0 || selectedCategory !== 'all' || onlineOnly) && (
+                  <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {selectedLanguages.length + (selectedCategory !== 'all' ? 1 : 0) + (onlineOnly ? 1 : 0)}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Expanded Filters */}
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-4 pb-2 border-t border-gray-200 dark:border-gray-700 mt-3">
+                  {/* Categories */}
+                  <div className="mb-4">
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Categories</h3>
+                    <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
+                      {categories.map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setSelectedCategory(cat.id);
+                            // Update URL params when category is selected
+                            if (cat.id === 'all') {
+                              searchParams.delete('category');
+                            } else {
+                              searchParams.set('category', cat.id);
+                            }
+                            setSearchParams(searchParams);
+                          }}
+                          className={`flex items-center justify-center sm:justify-start gap-1 px-2 sm:px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                            selectedCategory === cat.id
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {typeof cat.icon === 'function' ? <cat.icon /> : <cat.icon className="w-4 h-4" />}
+                          <span className="truncate">{cat.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Languages */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Languages</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {languages.map(lang => (
+                        <button
+                          key={lang}
+                          onClick={() => {
+                            setSelectedLanguages(prev =>
+                              prev.includes(lang)
+                                ? prev.filter(l => l !== lang)
+                                : [...prev, lang]
+                            );
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                            selectedLanguages.includes(lang)
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {lang}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Live Now Section */}
+      {liveCreators.length > 0 && (
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-800 dark:to-pink-800">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <h2 className="text-lg sm:text-xl font-bold text-white">Live Now</h2>
+                </div>
+                <span className="text-white/80 text-sm">
+                  {liveCreators.length} creator{liveCreators.length !== 1 ? 's' : ''} streaming
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedCategory('all');
+                  setSearchTerm('');
+                  // Scroll to main content
+                  document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="text-white/80 hover:text-white text-sm font-medium transition-colors"
+              >
+                View All
+              </button>
+            </div>
+            
+            {/* Horizontal scrollable list of live creators */}
+            <div className="overflow-x-auto pb-2 -mx-3 px-3">
+              <div className="flex gap-3 sm:gap-4" style={{ minWidth: 'max-content' }}>
+                {liveCreators.map((creator) => (
+                  <motion.div
+                    key={creator.id}
+                    whileHover={{ scale: 1.05 }}
+                    className="bg-white dark:bg-gray-800 rounded-xl p-3 cursor-pointer shadow-md hover:shadow-lg transition-shadow w-48 sm:w-56"
+                    onClick={() => {
+                      if (onCreatorSelect) {
+                        onCreatorSelect(creator);
+                      } else {
+                        navigate(`/stream/${creator.username}`);
+                      }
+                    }}
+                  >
+                    <div className="relative mb-2">
+                      <img
+                        src={creator.profile_pic_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.username}`}
+                        alt={creator.display_name}
+                        className="w-full h-32 sm:h-40 object-cover rounded-lg"
+                      />
+                      <div className="absolute top-2 left-2 flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                        LIVE
+                      </div>
+                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 text-white px-2 py-1 rounded text-xs">
+                        <UserGroupIcon className="w-3 h-3" />
+                        {creator.viewer_count}
+                      </div>
+                      {creator.category && (
+                        <div className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
+                          {creator.category}
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                      {creator.display_name || creator.username}
+                    </h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                      {creator.stream_title || 'Live Stream'}
+                    </p>
+                    {creator.is_free === false && (
+                      <div className="mt-2 flex items-center gap-1">
+                        <CurrencyDollarIcon className="w-3 h-3 text-purple-600" />
+                        <span className="text-xs text-purple-600 font-medium">Premium Stream</span>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {loading && filteredCreators.length === 0 ? (
+          /* Loading Skeleton */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <CreatorCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : filteredCreators.length === 0 ? (
+          /* No Results */
+          <div className="text-center py-12">
+            <UserGroupIcon className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No creators found</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              {searchTerm || selectedCategory !== 'all' || selectedLanguages.length > 0
+                ? 'Try adjusting your filters or search terms'
+                : 'No creators have registered yet. Check back later or become a creator yourself!'}
+            </p>
+            {(searchTerm || selectedCategory !== 'all' || selectedLanguages.length > 0) && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('all');
+                  setSelectedLanguages([]);
+                  // Clear URL parameters
+                  searchParams.delete('category');
+                  setSearchParams(searchParams);
+                  // Refetch creators after clearing filters
+                  fetchCreators(1);
+                }}
+                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        ) : (
+          /* Creator Cards Grid/List/Compact */
+          <div className={
+            viewMode === 'compact' 
+              ? 'space-y-2' 
+              : viewMode === 'grid'
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+              : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4'
+          }>
+            {filteredCreators.map((creator, index) => (
+              isMobile ? (
+                <CreatorCard
+                  key={creator.id || creator.uid || `creator-${index}`}
+                  creator={{
+                    ...creator,
+                    specialties: creator.specialties || creator.tags || (creator.creator_type ? [creator.creator_type] : ['General']),
+                    languages: creator.languages || ['English']
+                  }}
+                  onSelect={() => {
+                    if (onCreatorSelect) {
+                      onCreatorSelect(creator);
+                    } else {
+                      const identifier = creator.username || creator.id || creator.supabase_id;
+                      if (identifier) {
+                        navigate(`/creator/${identifier}`);
+                      }
+                    }
+                  }}
+                  onCall={(creator) => onStartVoiceCall && onStartVoiceCall(creator)}
+                  onMessage={(creator) => onSendMessage && onSendMessage(creator)}
+                  variant="default"
+                />
+              ) : (
+                <CreatorCard
+                  key={creator.id || creator.uid || `creator-${index}`}
+                  creator={{
+                    ...creator,
+                    specialties: creator.specialties || creator.tags || (creator.creator_type ? [creator.creator_type] : ['General']),
+                    languages: creator.languages || ['English']
+                  }}
+                  onJoinSession={(serviceType, confirmationData) => {
+                  console.log('ExplorePage onJoinSession:', serviceType, confirmationData);
+                  
+                  // The confirmation modal has already been shown and accepted
+                  // Now we can proceed with the actual call/message
+                  if (serviceType === 'video' && onStartVideoCall) {
+                    console.log('Video call request accepted for:', creator.username);
+                    // Pass the session data from confirmation
+                    onStartVideoCall(creator, confirmationData);
+                  } else if (serviceType === 'voice' && onStartVoiceCall) {
+                    console.log('Voice call request accepted for:', creator.username);
+                    onStartVoiceCall(creator, confirmationData);
+                  } else if (serviceType === 'message' && onSendMessage) {
+                    console.log('Message request accepted for:', creator.username);
+                    onSendMessage(creator, confirmationData);
+                  } else {
+                    console.warn('No handler for service type:', serviceType);
+                  }
+                }}
+                onTip={onTipCreator}
+                onMessage={onSendMessage}
+                isSaved={savedCreators.includes(creator.id)}
+                onToggleSave={(creatorId) => toggleSaveCreator(creatorId)}
+                onCardClick={() => {
+                  if (onCreatorSelect) {
+                    onCreatorSelect(creator);
+                  } else {
+                    // Use username or fallback to id
+                    const identifier = creator.username || creator.id || creator.supabase_id;
+                    if (identifier) {
+                      console.log('Navigating to creator:', identifier, creator);
+                      navigate(`/creator/${identifier}`);
+                    } else {
+                      console.error('No identifier found for creator:', creator);
+                    }
+                  }
+                }}
+                viewMode={viewMode}
+                isLazyLoaded={true}
+                currentUserId={props.currentUserId || props.user?.id}
+                tokenBalance={props.tokenBalance || 0}
+              />
+              )
+            ))}
+          </div>
+        )}
+
+        {/* Load More */}
+        {hasMore && !loading && (
+          <div ref={loadMoreRef} className="mt-8 text-center">
+            {isLoadingMore ? (
+              <div className="inline-flex items-center gap-2 text-gray-500">
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading more creators...
+              </div>
+            ) : (
+              <button
+                onClick={loadMoreCreators}
+                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                Load More
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Quick View Modal removed - confirmation handled in CreatorCardEnhanced */}
+    </div>
+  );
+};
+
+export default ExplorePage;

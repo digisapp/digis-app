@@ -1,0 +1,73 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'digis-monitoring'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Node Exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+
+  # PostgreSQL Exporter
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgresql'
+          database: 'supabase'
+
+  # Supabase Metrics (Official)
+  - job_name: 'supabase'
+    scheme: https
+    metrics_path: '/customer/v1/privileged/metrics'
+    basic_auth:
+      username: 'service_role'
+      password: '${SUPABASE_SERVICE_ROLE_KEY}'
+    static_configs:
+      - targets: ['${SUPABASE_PROJECT_REF}.supabase.co']
+        labels:
+          project: '${SUPABASE_PROJECT_REF}'
+          service: 'supabase'
+
+  # Application Metrics (from your backend)
+  - job_name: 'digis-backend'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['host.docker.internal:${BACKEND_PORT:-3001}']
+        labels:
+          service: 'digis-api'
+          component: 'backend'
+    metrics_path: '/api/metrics/prometheus'
+
+  # Custom Database Queries via SQL Exporter
+  - job_name: 'digis-business-metrics'
+    scrape_interval: 60s
+    static_configs:
+      - targets: ['host.docker.internal:${BACKEND_PORT:-3001}']
+        labels:
+          service: 'digis-business'
+          component: 'analytics'
+    metrics_path: '/api/metrics/business'

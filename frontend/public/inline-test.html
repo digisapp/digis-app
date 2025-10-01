@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inline Test - No Dependencies</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Digis - Inline JavaScript Test</h1>
+        <div id="status"></div>
+        <div id="content"></div>
+    </div>
+
+    <script>
+        // Pure JavaScript - no external dependencies
+        (function() {
+            const status = document.getElementById('status');
+            const content = document.getElementById('content');
+            
+            // Test 1: Basic JavaScript
+            status.innerHTML = '<div class="status success">✅ JavaScript is executing</div>';
+            
+            // Test 2: DOM Manipulation
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'status info';
+            timeDiv.id = 'time';
+            status.appendChild(timeDiv);
+            
+            function updateTime() {
+                document.getElementById('time').textContent = 'Current Time: ' + new Date().toLocaleTimeString();
+            }
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            // Test 3: Interactive Elements
+            content.innerHTML = `
+                <h2>Interactive Test</h2>
+                <p>Click counter: <span id="counter">0</span></p>
+                <button onclick="incrementCounter()">Click Me</button>
+                <button onclick="testFetch()">Test Fetch API</button>
+                <div id="fetch-result"></div>
+                
+                <h3>Browser Info</h3>
+                <div class="status info">
+                    <p>User Agent: ${navigator.userAgent}</p>
+                    <p>Screen: ${screen.width}x${screen.height}</p>
+                    <p>Window: ${window.innerWidth}x${window.innerHeight}</p>
+                    <p>Protocol: ${location.protocol}</p>
+                    <p>Host: ${location.host}</p>
+                </div>
+                
+                <h3>What This Tells Us</h3>
+                <p>If you can see this page and interact with it:</p>
+                <ul>
+                    <li>✅ HTML is loading</li>
+                    <li>✅ CSS is working</li>
+                    <li>✅ JavaScript is executing</li>
+                    <li>✅ DOM manipulation works</li>
+                </ul>
+                <p>The issue with the main app is likely:</p>
+                <ul>
+                    <li>Module loading/bundling issue</li>
+                    <li>Import/export syntax problem</li>
+                    <li>Vite configuration issue</li>
+                </ul>
+            `;
+            
+            // Global functions for onclick handlers
+            window.incrementCounter = function() {
+                const counter = document.getElementById('counter');
+                counter.textContent = parseInt(counter.textContent) + 1;
+            };
+            
+            window.testFetch = function() {
+                const resultDiv = document.getElementById('fetch-result');
+                resultDiv.innerHTML = '<div class="status info">Testing fetch...</div>';
+                
+                // Test if we can fetch from the server
+                fetch('/test.txt')
+                    .then(response => response.text())
+                    .then(text => {
+                        resultDiv.innerHTML = '<div class="status success">✅ Fetch API works: ' + text + '</div>';
+                    })
+                    .catch(error => {
+                        resultDiv.innerHTML = '<div class="status error">❌ Fetch failed: ' + error.message + '</div>';
+                    });
+            };
+            
+            // Log to console
+            console.log('Inline test page loaded successfully');
+            console.log('If you see this in console, JavaScript is working');
+        })();
+    </script>
+</body>
+</html>

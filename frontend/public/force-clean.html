@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Force Clean Service Workers</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Force Clean All Service Workers & Cache</h1>
+    <button onclick="cleanEverything()">Clean Everything</button>
+    <div id="status"></div>
+
+    <script>
+        async function cleanEverything() {
+            const status = document.getElementById('status');
+            status.innerHTML = '<div class="status">Starting cleanup...</div>';
+            
+            try {
+                // 1. Unregister ALL service workers from all scopes
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    
+                    for (let registration of registrations) {
+                        const success = await registration.unregister();
+                        status.innerHTML += `<div class="status ${success ? 'success' : 'error'}">
+                            ${success ? '✅' : '❌'} Unregistered: ${registration.scope}
+                        </div>`;
+                    }
+                }
+                
+                // 2. Clear ALL caches
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    for (let cacheName of cacheNames) {
+                        const success = await caches.delete(cacheName);
+                        status.innerHTML += `<div class="status ${success ? 'success' : 'error'}">
+                            ${success ? '✅' : '❌'} Deleted cache: ${cacheName}
+                        </div>`;
+                    }
+                }
+                
+                // 3. Clear localStorage
+                try {
+                    localStorage.clear();
+                    status.innerHTML += '<div class="status success">✅ Cleared localStorage</div>';
+                } catch (e) {
+                    status.innerHTML += '<div class="status error">❌ Failed to clear localStorage: ' + e.message + '</div>';
+                }
+                
+                // 4. Clear sessionStorage
+                try {
+                    sessionStorage.clear();
+                    status.innerHTML += '<div class="status success">✅ Cleared sessionStorage</div>';
+                } catch (e) {
+                    status.innerHTML += '<div class="status error">❌ Failed to clear sessionStorage: ' + e.message + '</div>';
+                }
+                
+                // 5. Clear IndexedDB (if any)
+                if ('indexedDB' in window) {
+                    try {
+                        const databases = await indexedDB.databases();
+                        for (let db of databases) {
+                            indexedDB.deleteDatabase(db.name);
+                            status.innerHTML += `<div class="status success">✅ Deleted IndexedDB: ${db.name}</div>`;
+                        }
+                    } catch (e) {
+                        // Older browsers don't support indexedDB.databases()
+                        status.innerHTML += '<div class="status">⚠️ Could not enumerate IndexedDB databases</div>';
+                    }
+                }
+                
+                status.innerHTML += '<div class="status success"><strong>✨ Cleanup complete! Redirecting in 3 seconds...</strong></div>';
+                
+                // Redirect after 3 seconds
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+                
+            } catch (error) {
+                status.innerHTML += `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-run on page load
+        window.onload = () => {
+            cleanEverything();
+        };
+    </script>
+</body>
+</html>

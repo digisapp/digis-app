@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Static Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <h1>Static HTML Test</h1>
+    <p>If you can see this, the server is working and serving HTML files correctly.</p>
+    
+    <div id="test-root"></div>
+    
+    <script type="module">
+        console.log('Script loaded');
+        document.getElementById('test-root').innerHTML = '<p>JavaScript is working!</p>';
+        
+        // Try to load React
+        import('https://unpkg.com/react@18/umd/react.development.js')
+            .then(() => {
+                console.log('React loaded from CDN');
+                document.getElementById('test-root').innerHTML += '<p>React CDN loaded!</p>';
+            })
+            .catch(err => {
+                console.error('Failed to load React:', err);
+                document.getElementById('test-root').innerHTML += '<p style="color:red">Failed to load React from CDN</p>';
+            });
+    </script>
+</body>
+</html>

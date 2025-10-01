@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mobile</title>
+</head>
+<body>
+    <h1>Testing Mobile App</h1>
+    <div id="error-log" style="background: #fee; padding: 20px; margin: 20px; white-space: pre-wrap; font-family: monospace;"></div>
+    <script type="module">
+        const errorLog = document.getElementById('error-log');
+        
+        // Capture all errors
+        window.addEventListener('error', (e) => {
+            errorLog.innerHTML += `ERROR: ${e.message} at ${e.filename}:${e.lineno}:${e.colno}\n`;
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            errorLog.innerHTML += `PROMISE REJECTION: ${e.reason}\n`;
+        });
+        
+        try {
+            // Test if we can access the app
+            const response = await fetch('/');
+            const html = await response.text();
+            
+            // Check for common error patterns
+            if (html.includes('Uncaught')) {
+                errorLog.innerHTML += 'Found uncaught error in HTML\n';
+            }
+            
+            // Try to import the app module
+            errorLog.innerHTML += 'Attempting to load app...\n';
+            
+            // Create a temporary container
+            const appContainer = document.createElement('div');
+            appContainer.id = 'root';
+            document.body.appendChild(appContainer);
+            
+            // Try to load the app
+            const module = await import('/src/main.jsx');
+            errorLog.innerHTML += 'App module loaded successfully\n';
+            
+        } catch (error) {
+            errorLog.innerHTML += `CATCH: ${error.message}\n${error.stack}\n`;
+        }
+    </script>
+</body>
+</html>

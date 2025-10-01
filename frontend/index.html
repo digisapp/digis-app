@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/digis-logo-black.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="description" content="Digis - Connect with your favorite creators through video calls, voice calls, and live streaming" />
+    <meta name="theme-color" content="#7c3aed" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/digis-logo-black.png" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <title>Digis - Content Creators</title>
+    
+    <script>
+      // AGGRESSIVE SERVICE WORKER CLEANUP
+      // This will run before anything else loads
+      (async function() {
+        console.log('🧹 Starting aggressive service worker cleanup...');
+        
+        if ('serviceWorker' in navigator) {
+          // Get all registrations
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          
+          // Unregister everything
+          for (let registration of registrations) {
+            try {
+              const success = await registration.unregister();
+              console.log(`🗑️ Unregistered SW: ${registration.scope} - Success: ${success}`);
+            } catch (e) {
+              console.error('Failed to unregister:', e);
+            }
+          }
+        }
+        
+        // Clear all caches
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          for (let cacheName of cacheNames) {
+            try {
+              await caches.delete(cacheName);
+              console.log(`🗑️ Deleted cache: ${cacheName}`);
+            } catch (e) {
+              console.error('Failed to delete cache:', e);
+            }
+          }
+        }
+        
+        console.log('✅ Service worker cleanup complete');
+      })();
+    </script>
+    <style>
+      /* Base styles */
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #root {
+        min-height: 100vh;
+      }
+      #root:empty::after {
+        content: "";
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <div style="padding: 20px; text-align: center; background: #ff6b6b; color: white;">
+        You need to enable JavaScript to run this app.
+      </div>
+    </noscript>
+    <div id="root"></div>
+    <div id="modal-root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

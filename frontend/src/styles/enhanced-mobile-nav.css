@@ -1,0 +1,165 @@
+/* Enhanced Mobile Navigation Styles */
+
+/* Modern glass morphism navigation bar */
+.mobile-nav-modern {
+  /* Smooth transitions */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mobile-nav-modern {
+    background: linear-gradient(180deg, rgba(17, 24, 39, 0.85) 0%, rgba(17, 24, 39, 0.95) 100%) !important;
+    border-top: 0.5px solid rgba(255, 255, 255, 0.1) !important;
+  }
+}
+
+/* Special navigation item (Create button) - simplified without animation */
+.special-nav-item {
+  /* No floating animation for cleaner design */
+}
+
+/* Gradient text support for older browsers */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+/* Enhanced touch targets for better mobile UX */
+@media (max-width: 768px) {
+  .mobile-nav-modern button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    will-change: transform;
+  }
+  
+  /* Increase touch target size */
+  .mobile-nav-modern button::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    bottom: -8px;
+    left: -8px;
+  }
+}
+
+/* Active state - simplified */
+.nav-item-active {
+  position: relative;
+}
+
+/* Badge - static design */
+.badge-notification {
+  /* No animation for cleaner look */
+}
+
+/* Quick actions backdrop with better blur */
+.quick-actions-backdrop {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Quick actions menu with modern design */
+.quick-actions-menu {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 0 0 0.5px rgba(255, 255, 255, 0.2) inset;
+}
+
+@media (prefers-color-scheme: dark) {
+  .quick-actions-menu {
+    background: rgba(31, 41, 55, 0.95);
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Smooth icon transitions */
+.nav-icon {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-icon-active {
+  filter: drop-shadow(0 4px 6px rgba(102, 126, 234, 0.25));
+}
+
+/* Removed glow effects for simpler design */
+
+/* Improved accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .special-nav-item,
+  .badge-notification,
+  .create-button-glow {
+    animation: none !important;
+  }
+  
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .mobile-nav-modern {
+    border-top: 2px solid currentColor !important;
+    background: white !important;
+  }
+  
+  .mobile-nav-modern button {
+    border: 1px solid transparent;
+  }
+  
+  .mobile-nav-modern button:focus {
+    border-color: currentColor;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-nav-modern {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+  
+  .mobile-nav-modern .nav-icon {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  
+  .mobile-nav-modern .nav-label {
+    font-size: 10px !important;
+  }
+}
+
+/* iOS safe area with modern design */
+.mobile-nav-modern {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+}
+
+/* Ripple effect on tap */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.nav-button-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.3);
+  animation: ripple 0.6s ease-out;
+  pointer-events: none;
+}

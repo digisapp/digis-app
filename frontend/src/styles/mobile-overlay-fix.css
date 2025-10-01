@@ -1,0 +1,74 @@
+/* Mobile Overlay Fix - Ensures no black overlays on mobile dashboards */
+
+/* Remove any accidental fixed overlays that shouldn't be there */
+@media (max-width: 768px) {
+  /* Ensure main content is not covered by overlays */
+  main {
+    position: relative !important;
+    z-index: 1 !important;
+    background: transparent !important;
+    padding: 0 !important; /* Remove default padding on mobile */
+  }
+  
+  /* Fix for any overlay that might be showing incorrectly */
+  .fixed.inset-0:not(.mobile-nav):not(.modal-backdrop) {
+    display: none !important;
+  }
+  
+  /* Ensure dashboard content is visible */
+  .min-h-screen {
+    position: relative !important;
+    z-index: 1 !important;
+  }
+  
+  /* Remove any dark overlays that are not modals */
+  .bg-black\/50:not(.modal-backdrop):not(.quick-actions-backdrop) {
+    background: transparent !important;
+  }
+  
+  /* Ensure mobile dashboards have proper background */
+  .mobile-dashboard {
+    position: relative !important;
+    z-index: 1 !important;
+    background: inherit !important;
+  }
+  
+  /* Fix backdrop blur on non-modal elements */
+  .backdrop-blur-sm:not(.modal):not(.modal-backdrop) {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Ensure navigation stays on top */
+.mobile-navigation {
+  z-index: 9999 !important;
+}
+
+/* Fix for MobileCreatorDashboard and MobileFanDashboard */
+@media (max-width: 768px) {
+  [class*="Dashboard"] {
+    position: relative !important;
+    z-index: 2 !important;
+  }
+}
+
+/* Remove any overlay from PullToRefresh container */
+.pull-to-refresh-container {
+  background: transparent !important;
+  position: relative !important;
+}
+
+/* Ensure mobile views take full viewport without parent backgrounds */
+@media (max-width: 768px) {
+  /* Mobile pages should be the main layer */
+  div[class*="MobileFanDashboard"],
+  div[class*="MobileCreatorDashboard"],
+  div[class*="MobileProfile"],
+  div[class*="MobileMessages"],
+  main > div:first-child {
+    width: 100vw !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+  }
+}

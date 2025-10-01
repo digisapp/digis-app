@@ -1,0 +1,549 @@
+/* Critical Mobile Styles - Ensures perfect mobile experience */
+
+/* ========== Base Mobile Reset ========== */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Only disable selection on interactive elements */
+button,
+.mobile-bottom-nav,
+.fab-button,
+.touch-target,
+[role="button"],
+.nav-item,
+.action-button {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection for content */
+p, span, div, h1, h2, h3, h4, h5, h6,
+.message-text, .bio-text, .content-text {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Prevent zoom on input focus (iOS Safari) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+/* ========== Safe Area Support ========== */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ========== Mobile Navigation ========== */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
+  transition: transform 0.3s ease;
+}
+
+.dark .mobile-bottom-nav {
+  background: rgba(17, 24, 39, 0.98);
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-nav-hidden {
+  transform: translateY(100%);
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  min-width: 64px;
+  min-height: 56px;
+  position: relative;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.95);
+  opacity: 0.7;
+}
+
+.mobile-nav-item.active {
+  color: #8b5cf6;
+}
+
+.dark .mobile-nav-item {
+  color: #9ca3af;
+}
+
+.dark .mobile-nav-item.active {
+  color: #a78bfa;
+}
+
+.mobile-nav-icon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 2px;
+}
+
+.mobile-nav-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1;
+}
+
+/* Badge for notifications */
+.mobile-nav-badge {
+  position: absolute;
+  top: 4px;
+  right: 18px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+}
+
+/* ========== Floating Action Button ========== */
+.fab-container {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  z-index: 999;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.fab-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.fab-button:active {
+  transform: scale(0.95);
+}
+
+.fab-button.expanded {
+  transform: rotate(45deg);
+}
+
+.fab-menu {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.fab-menu.visible {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.dark .fab-menu-item {
+  background: #1f2937;
+  color: #f3f4f6;
+}
+
+.fab-menu-item:active {
+  transform: scale(0.95);
+}
+
+/* ========== Touch Target Optimization ========== */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.touch-target-large {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.touch-target-xl {
+  min-width: 56px;
+  min-height: 56px;
+}
+
+/* Expand touch area without visual change */
+.touch-expand::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  bottom: -8px;
+  left: -8px;
+}
+
+/* ========== Mobile Forms ========== */
+.mobile-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+}
+
+.dark .mobile-input {
+  background: #1f2937;
+  border-color: #374151;
+  color: white;
+}
+
+.mobile-input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.mobile-input-error {
+  border-color: #ef4444;
+}
+
+.mobile-input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Mobile-optimized buttons */
+.mobile-button {
+  min-height: 48px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-button:active {
+  transform: scale(0.98);
+}
+
+.mobile-button-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.mobile-button-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.dark .mobile-button-secondary {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+/* ========== Mobile Modals ========== */
+.mobile-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+  display: flex;
+  align-items: flex-end;
+  padding: 0;
+}
+
+.mobile-modal-content {
+  background: white;
+  width: 100%;
+  max-height: 90vh;
+  border-radius: 24px 24px 0 0;
+  padding: 20px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dark .mobile-modal-content {
+  background: #1f2937;
+}
+
+.mobile-modal-handle {
+  width: 40px;
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+/* ========== Pull to Refresh ========== */
+.pull-to-refresh-container {
+  position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pull-to-refresh-indicator {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.pull-to-refresh-indicator.visible {
+  top: 20px;
+}
+
+.pull-to-refresh-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ========== Mobile Loading States ========== */
+.mobile-skeleton {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.dark .mobile-skeleton {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ========== Mobile Scroll Optimization ========== */
+.mobile-scroll-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+}
+
+.mobile-horizontal-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mobile-horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-scroll-item {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* ========== Mobile Typography ========== */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+  
+  h1 {
+    font-size: 1.75rem;
+    line-height: 2rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    line-height: 1.75rem;
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.5rem;
+  }
+  
+  body {
+    line-height: 1.5;
+  }
+}
+
+/* ========== Mobile Performance ========== */
+.mobile-performance {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* ========== Mobile Gestures ========== */
+.swipeable {
+  touch-action: pan-y;
+}
+
+.draggable {
+  touch-action: none;
+  cursor: grab;
+}
+
+.dragging {
+  cursor: grabbing;
+}
+
+/* ========== Mobile Utilities ========== */
+@media (max-width: 640px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .mobile-only {
+    display: block !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* ========== Mobile Dark Mode Support ========== */
+@media (prefers-color-scheme: dark) {
+  .auto-dark {
+    background: #111827;
+    color: #f3f4f6;
+  }
+}
+
+/* ========== Haptic Feedback Simulation ========== */
+.haptic-light:active {
+  animation: haptic-light 0.1s ease;
+}
+
+.haptic-medium:active {
+  animation: haptic-medium 0.15s ease;
+}
+
+.haptic-heavy:active {
+  animation: haptic-heavy 0.2s ease;
+}
+
+@keyframes haptic-light {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.98); }
+}
+
+@keyframes haptic-medium {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.96); }
+}
+
+@keyframes haptic-heavy {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.94); }
+}

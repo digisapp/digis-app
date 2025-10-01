@@ -1,0 +1,76 @@
+/* Gifter Tier System - Medieval Nobility Theme */
+
+:root {
+  /* Tier Colors */
+  --tier-supporter: #5C4033;    /* Earthy Brown */
+  --tier-squire: #008080;        /* Teal */
+  --tier-knight: #B22222;        /* Firebrick Red */
+  --tier-baron: #FFD700;         /* Golden Yellow */
+  --tier-count: #4169E1;         /* Royal Blue */
+  --tier-duke: #9B59B6;          /* Amethyst Purple */
+  --tier-crown: #FF4500;         /* Orange Red */
+  
+  /* Tier Background Colors (with transparency) */
+  --tier-supporter-bg: rgba(92, 64, 51, 0.1);
+  --tier-squire-bg: rgba(0, 128, 128, 0.1);
+  --tier-knight-bg: rgba(178, 34, 34, 0.1);
+  --tier-baron-bg: rgba(255, 215, 0, 0.1);
+  --tier-count-bg: rgba(65, 105, 225, 0.1);
+  --tier-duke-bg: rgba(155, 89, 182, 0.1);
+  --tier-crown-bg: rgba(255, 69, 0, 0.1);
+}
+
+/* Dark mode tier colors (slightly brighter for better visibility) */
+.dark {
+  --tier-supporter: #7A5B4A;
+  --tier-squire: #00A0A0;
+  --tier-knight: #DC143C;
+  --tier-baron: #FFD700;
+  --tier-count: #5B7FDB;
+  --tier-duke: #B47EB8;
+  --tier-crown: #FF6347;
+}
+
+/* Gifter Username Styling */
+.gifter-username {
+  transition: opacity 0.2s ease;
+  font-weight: 500;
+}
+
+.gifter-username:hover {
+  opacity: 0.85;
+}
+
+/* Optional tier badge styling */
+.tier-badge {
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tier-based message backgrounds in chat */
+.chat-message.tier-supporter { background-color: var(--tier-supporter-bg); }
+.chat-message.tier-squire { background-color: var(--tier-squire-bg); }
+.chat-message.tier-knight { background-color: var(--tier-knight-bg); }
+.chat-message.tier-baron { background-color: var(--tier-baron-bg); }
+.chat-message.tier-count { background-color: var(--tier-count-bg); }
+.chat-message.tier-duke { background-color: var(--tier-duke-bg); }
+.chat-message.tier-crown { background-color: var(--tier-crown-bg); }
+
+/* Tier indicator in user lists */
+.user-list-item .tier-indicator {
+  width: 3px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.user-list-item.tier-supporter .tier-indicator { background-color: var(--tier-supporter); }
+.user-list-item.tier-squire .tier-indicator { background-color: var(--tier-squire); }
+.user-list-item.tier-knight .tier-indicator { background-color: var(--tier-knight); }
+.user-list-item.tier-baron .tier-indicator { background-color: var(--tier-baron); }
+.user-list-item.tier-count .tier-indicator { background-color: var(--tier-count); }
+.user-list-item.tier-duke .tier-indicator { background-color: var(--tier-duke); }
+.user-list-item.tier-crown .tier-indicator { background-color: var(--tier-crown); }

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test App Loading</title>
+    <script>
+        // Check if the app is loading correctly
+        window.addEventListener('load', async () => {
+            console.log('Testing API endpoints...');
+            
+            // Test backend health
+            try {
+                const healthRes = await fetch('http://localhost:3001/health');
+                const health = await healthRes.json();
+                console.log('Backend health:', health);
+                document.getElementById('backend-status').textContent = 'Backend: ✅ Running';
+            } catch (err) {
+                console.error('Backend error:', err);
+                document.getElementById('backend-status').textContent = 'Backend: ❌ Error';
+            }
+            
+            // Test creators endpoint
+            try {
+                const creatorsRes = await fetch('http://localhost:3001/api/creators');
+                const creators = await creatorsRes.json();
+                console.log('Creators response:', creators);
+                document.getElementById('creators-status').textContent = `Creators: ${creators.success ? '✅' : '❌'} ${creators.creators ? creators.creators.length + ' found' : 'Error'}`;
+            } catch (err) {
+                console.error('Creators error:', err);
+                document.getElementById('creators-status').textContent = 'Creators: ❌ Error';
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>Digis App Status Check</h1>
+    <div id="backend-status">Backend: Checking...</div>
+    <div id="creators-status">Creators: Checking...</div>
+    <div id="frontend-status">
+        <p>Frontend URL: <a href="http://localhost:3000">http://localhost:3000</a></p>
+    </div>
+</body>
+</html>

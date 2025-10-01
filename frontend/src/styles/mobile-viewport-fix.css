@@ -1,0 +1,94 @@
+/* Mobile Viewport Height Fix */
+/* Handles iOS Safari's viewport height issues */
+
+:root {
+  --vh: 1vh;
+  --app-height: 100vh;
+}
+
+/* Set actual viewport height */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific */
+  :root {
+    --app-height: -webkit-fill-available;
+  }
+}
+
+/* Apply to full-height containers */
+.h-screen-mobile {
+  height: 100vh;
+  height: var(--app-height);
+  min-height: -webkit-fill-available;
+}
+
+.min-h-screen-mobile {
+  min-height: 100vh;
+  min-height: var(--app-height);
+  min-height: -webkit-fill-available;
+}
+
+/* Fix for mobile landscape orientation */
+@media screen and (orientation: landscape) and (max-width: 1024px) {
+  .h-screen-mobile {
+    height: 100vh;
+    max-height: 100vh;
+  }
+  
+  .min-h-screen-mobile {
+    min-height: 100vh;
+    max-height: none;
+  }
+}
+
+/* Fix for mobile portrait orientation */
+@media screen and (orientation: portrait) and (max-width: 768px) {
+  .h-screen-mobile {
+    height: 100vh;
+    height: var(--app-height);
+  }
+  
+  .min-h-screen-mobile {
+    min-height: 100vh;
+    min-height: var(--app-height);
+  }
+}
+
+/* Prevent body scroll on mobile */
+@media (max-width: 1024px) {
+  body {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Fix for mobile safe areas */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Debug helper classes */
+.debug-viewport::after {
+  content: attr(data-viewport);
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  z-index: 9999;
+  pointer-events: none;
+}

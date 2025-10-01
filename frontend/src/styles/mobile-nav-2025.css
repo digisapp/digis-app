@@ -1,0 +1,331 @@
+/* Mobile Navigation 2025 - Ultra Modern Design System */
+
+/* Base navigation container with advanced glassmorphism */
+.mobile-nav-2025 {
+  /* Performance optimizations */
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  
+  /* Smooth iOS bounce scroll prevention */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Enhanced touch responsiveness */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Ensure buttons take equal space */
+.mobile-nav-2025 button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Adaptive background for light/dark themes */
+.mobile-nav-2025 {
+  /* Light mode default */
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.01) 0%,
+    rgba(255,255,255,0.85) 30%,
+    rgba(255,255,255,0.95) 100%
+  );
+  border-top: 0.5px solid rgba(0,0,0,0.1);
+  box-shadow:
+    0 -10px 40px -10px rgba(0,0,0,0.1),
+    inset 0 1px 0 0 rgba(255,255,255,0.5);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mobile-nav-2025 {
+    background: linear-gradient(
+      180deg,
+      rgba(17,24,39,0.01) 0%,
+      rgba(17,24,39,0.85) 30%,
+      rgba(17,24,39,0.95) 100%
+    );
+    border-top: 0.5px solid rgba(255,255,255,0.1);
+    box-shadow:
+      0 -10px 40px -10px rgba(0,0,0,0.3),
+      inset 0 1px 0 0 rgba(255,255,255,0.1);
+  }
+}
+
+/* Manual dark mode class support */
+.dark .mobile-nav-2025 {
+  background: linear-gradient(
+    180deg,
+    rgba(17,24,39,0.01) 0%,
+    rgba(17,24,39,0.85) 30%,
+    rgba(17,24,39,0.95) 100%
+  );
+  border-top: 0.5px solid rgba(255,255,255,0.1);
+  box-shadow:
+    0 -10px 40px -10px rgba(0,0,0,0.3),
+    inset 0 1px 0 0 rgba(255,255,255,0.1);
+}
+
+/* Animated gradient border effect */
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 4s ease infinite;
+}
+
+/* Gradient shift for active indicators */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Enhanced touch feedback */
+.touch-manipulation {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+  /* iOS specific enhancements */
+  -webkit-touch-callout: none;
+}
+
+/* Ripple effect optimization */
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Smooth height transitions for different device safe areas */
+.mobile-nav-2025 {
+  min-height: 72px;
+  height: calc(72px + env(safe-area-inset-bottom));
+  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Icon container hover/active states */
+.mobile-nav-2025 button:active {
+  transition-duration: 0.1s;
+}
+
+/* Badge pulse animation */
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}
+
+/* Floating action button enhanced shadow */
+@keyframes fab-float {
+  0%, 100% {
+    transform: translateY(0) translateX(-50%);
+  }
+  50% {
+    transform: translateY(-3px) translateX(-50%);
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav-2025,
+  .mobile-nav-2025 * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .mobile-nav-2025 {
+    border-top: 2px solid currentColor !important;
+  }
+  
+  .mobile-nav-2025 button {
+    border: 1px solid transparent;
+  }
+  
+  .mobile-nav-2025 button:focus {
+    border-color: currentColor;
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+}
+
+/* Landscape mode adjustments */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-nav-2025 {
+    height: calc(60px + env(safe-area-inset-bottom));
+    min-height: 60px;
+  }
+  
+  .mobile-nav-2025 .flex {
+    height: 60px;
+  }
+}
+
+/* Focus visible for keyboard navigation */
+.mobile-nav-2025 button:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+/* Smooth scroll behavior for nav interactions */
+.mobile-nav-2025 {
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .mobile-nav-2025 {
+    /* Prevent iOS rubber band scrolling */
+    position: fixed;
+    position: -webkit-sticky;
+  }
+}
+
+/* Android specific enhancements */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-nav-2025 button {
+    min-height: 48px; /* Android touch target minimum */
+    min-width: 48px;
+  }
+}
+
+/* Gradient text enhancement for labels */
+.bg-clip-text {
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Adaptive blur for different performance tiers */
+@media (prefers-reduced-data: reduce) {
+  .mobile-nav-2025 {
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+  }
+}
+
+/* Enhanced shadow layering */
+.mobile-nav-2025::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to top, rgba(0,0,0,0.05), transparent);
+  pointer-events: none;
+}
+
+/* Micro-interaction feedback - removed purple overlay */
+.mobile-nav-2025 button {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ultra-smooth transitions */
+.mobile-nav-2025 * {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Particle animation for special effects */
+@keyframes particle-float {
+  0% {
+    transform: translateY(0) translateX(0) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(-10px) translateX(5px) scale(1);
+  }
+  100% {
+    transform: translateY(-50px) translateX(20px) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Navigation item subtle scale effect when active */
+.mobile-nav-2025 button[aria-current="page"] > div:first-child {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+
+/* Modern tooltip styling for long press actions */
+.mobile-nav-2025 .tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.mobile-nav-2025 button:active .tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-12px);
+}
+
+/* Easter egg: Rainbow mode for special occasions */
+@keyframes rainbow {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+.mobile-nav-2025.rainbow-mode {
+  animation: rainbow 10s linear infinite;
+}
+
+/* Performance monitoring class */
+.mobile-nav-2025.gpu-accelerated {
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+}
+
+/* Adaptive spacing for different screen sizes */
+@media (min-width: 390px) and (max-width: 430px) {
+  /* iPhone Pro models */
+  .mobile-nav-2025 {
+    padding-left: env(safe-area-inset-left, 8px);
+    padding-right: env(safe-area-inset-right, 8px);
+  }
+}
+
+@media (min-width: 768px) {
+  /* Tablet mode - hide or adjust */
+  .mobile-nav-2025 {
+    display: none;
+  }
+}

@@ -1,0 +1,83 @@
+/* Mobile Typography System - Consistent font sizes across the app */
+
+/* Mobile-specific typography overrides */
+@media (max-width: 768px) {
+  /* Page headers - Always 24px (text-2xl) */
+  .mobile-page-header,
+  h1 {
+    font-size: 1.5rem !important; /* 24px */
+    font-weight: 700 !important;
+  }
+
+  /* Usernames - Always 18px (text-lg) */
+  .mobile-username {
+    font-size: 1.125rem !important; /* 18px */
+    font-weight: 600 !important;
+  }
+
+  /* Section headers - Always 18px (text-lg) */
+  .mobile-section-header,
+  h2 {
+    font-size: 1.125rem !important; /* 18px */
+    font-weight: 600 !important;
+  }
+
+  /* Sub-headers - Always 16px (text-base) */
+  .mobile-subheader,
+  h3 {
+    font-size: 1rem !important; /* 16px */
+    font-weight: 600 !important;
+  }
+
+  /* Body text - 16px (text-base) */
+  .mobile-body {
+    font-size: 1rem !important; /* 16px */
+  }
+
+  /* Small text - 14px (text-sm) */
+  .mobile-small {
+    font-size: 0.875rem !important; /* 14px */
+  }
+
+  /* Buttons and CTAs - Consistent sizing */
+  button {
+    font-size: 1rem !important; /* 16px */
+    font-weight: 500 !important;
+  }
+
+  /* Navigation items */
+  .nav-item {
+    font-size: 0.875rem !important; /* 14px */
+    font-weight: 500 !important;
+  }
+
+  /* Ensure consistency in mobile headers */
+  .mobile-profile-header h1,
+  .mobile-dashboard h1,
+  .mobile-explore h1,
+  .mobile-messages h1,
+  .mobile-wallet h1,
+  .mobile-settings h1 {
+    font-size: 1.5rem !important; /* 24px */
+    font-weight: 700 !important;
+  }
+
+  /* Stat numbers */
+  .stat-number {
+    font-size: 1.125rem !important; /* 18px */
+    font-weight: 700 !important;
+  }
+
+  /* Stat labels */
+  .stat-label {
+    font-size: 0.75rem !important; /* 12px */
+    font-weight: 500 !important;
+  }
+}
+
+/* Dark mode adjustments */
+@media (max-width: 768px) and (prefers-color-scheme: dark) {
+  h1, h2, h3 {
+    color: white;
+  }
+}

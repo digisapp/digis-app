@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .error {
+            background: #fee;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #f00;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #efe;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+        }
+        .info {
+            background: #eef;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #00f;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Digis App Error Check</h1>
+    <div id="status"></div>
+    
+    <script>
+        const status = document.getElementById('status');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            status.appendChild(div);
+        }
+        
+        // Capture all errors
+        window.addEventListener('error', (e) => {
+            log(`JS Error: ${e.message} at ${e.filename}:${e.lineno}:${e.colno}`, 'error');
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            log(`Promise Rejection: ${e.reason}`, 'error');
+        });
+        
+        // Check if the root element exists
+        log('Checking for root element...');
+        const root = document.getElementById('root');
+        if (!root) {
+            log('ERROR: No root element found! Creating one...', 'error');
+            const newRoot = document.createElement('div');
+            newRoot.id = 'root';
+            document.body.appendChild(newRoot);
+        } else {
+            log('✓ Root element exists', 'success');
+        }
+        
+        // Try to load the app
+        log('Attempting to load React app...');
+        
+        // First check if React is available
+        setTimeout(() => {
+            if (typeof React === 'undefined') {
+                log('React is not loaded - checking module imports...', 'error');
+            }
+            
+            // Create a script to load the main app
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.textContent = `
+                import('/src/main.jsx').then(() => {
+                    console.log('App loaded successfully');
+                    document.getElementById('status').innerHTML += '<div class="success">✓ App module loaded successfully</div>';
+                }).catch(error => {
+                    console.error('Failed to load app:', error);
+                    document.getElementById('status').innerHTML += '<div class="error">Failed to load app: ' + error.message + '</div>';
+                });
+            `;
+            document.body.appendChild(script);
+        }, 100);
+    </script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+/* Mobile Header Styles - Consistent Typography Across All Mobile Pages */
+
+/* Main page headers */
+.mobile-page-header {
+  @apply text-2xl font-bold text-gray-900 dark:text-white;
+}
+
+/* Section headers */
+.mobile-section-header {
+  @apply text-lg font-semibold text-gray-900 dark:text-white;
+}
+
+/* Subsection headers */
+.mobile-subsection-header {
+  @apply text-base font-semibold text-gray-800 dark:text-gray-200;
+}
+
+/* Card titles */
+.mobile-card-title {
+  @apply text-base font-medium text-gray-900 dark:text-white;
+}
+
+/* Small labels and captions */
+.mobile-label {
+  @apply text-sm font-medium text-gray-700 dark:text-gray-300;
+}
+
+/* Helper text */
+.mobile-helper-text {
+  @apply text-xs font-normal text-gray-500 dark:text-gray-400;
+}
+
+/*
+  Usage Guide:
+
+  Page Headers (24px bold):
+  <h1 className="mobile-page-header">Settings</h1>
+  or <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+
+  Section Headers (18px semibold):
+  <h2 className="mobile-section-header">Account Settings</h2>
+  or <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Account Settings</h2>
+
+  Subsection Headers (16px semibold):
+  <h3 className="mobile-subsection-header">Privacy Options</h3>
+  or <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">Privacy Options</h3>
+
+  Card Titles (16px medium):
+  <h4 className="mobile-card-title">Creator Name</h4>
+  or <h4 className="text-base font-medium text-gray-900 dark:text-white">Creator Name</h4>
+
+  Labels (14px medium):
+  <span className="mobile-label">Email Address</span>
+  or <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</span>
+
+  Helper Text (12px normal):
+  <p className="mobile-helper-text">Last updated 5 mins ago</p>
+  or <p className="text-xs font-normal text-gray-500 dark:text-gray-400">Last updated 5 mins ago</p>
+*/

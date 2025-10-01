@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanilla JS Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vanilla JavaScript Test</h1>
+        <div id="status"></div>
+        <div id="react-test"></div>
+        <div id="app-test"></div>
+    </div>
+
+    <script>
+        const status = document.getElementById('status');
+        const reactTest = document.getElementById('react-test');
+        const appTest = document.getElementById('app-test');
+
+        // Test 1: Basic JavaScript
+        status.innerHTML = '<div class="status success">✅ Basic JavaScript is working</div>';
+
+        // Test 2: Check if we can access the main app
+        fetch('/')
+            .then(res => res.text())
+            .then(html => {
+                const hasRoot = html.includes('id="root"');
+                const hasMainScript = html.includes('src="/src/main.jsx');
+                appTest.innerHTML = `
+                    <div class="status ${hasRoot && hasMainScript ? 'success' : 'error'}">
+                        ${hasRoot && hasMainScript ? '✅' : '❌'} Main app HTML structure
+                        <br>- Root element: ${hasRoot ? 'Found' : 'Missing'}
+                        <br>- Main script: ${hasMainScript ? 'Found' : 'Missing'}
+                    </div>
+                `;
+            })
+            .catch(err => {
+                appTest.innerHTML = `<div class="status error">❌ Failed to fetch main app: ${err.message}</div>`;
+            });
+
+        // Test 3: Try to load React module
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.textContent = `
+            try {
+                // Try to import React from the app
+                import React from '/node_modules/react/index.js';
+                document.getElementById('react-test').innerHTML = '<div class="status success">✅ React module can be imported</div>';
+            } catch (err) {
+                document.getElementById('react-test').innerHTML = '<div class="status error">❌ React import failed: ' + err.message + '</div>';
+                
+                // Try alternative import
+                import('https://unpkg.com/react@18/umd/react.development.js')
+                    .then(() => {
+                        document.getElementById('react-test').innerHTML += '<div class="status info">ℹ️ But React CDN works</div>';
+                    })
+                    .catch(() => {
+                        document.getElementById('react-test').innerHTML += '<div class="status error">❌ React CDN also failed</div>';
+                    });
+            }
+        `;
+        document.body.appendChild(script);
+
+        // Test 4: Check console for errors
+        window.addEventListener('error', (e) => {
+            status.innerHTML += `<div class="status error">❌ JavaScript Error: ${e.message}</div>`;
+        });
+    </script>
+</body>
+</html>
