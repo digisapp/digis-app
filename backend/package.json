@@ -59,6 +59,7 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "@supabase/supabase-js": "^2.51.0",
     "@upstash/redis": "^1.35.3",
+    "ably": "^2.14.0",
     "agora-token": "^2.0.5",
     "argon2": "^0.43.1",
     "axios": "^1.11.0",

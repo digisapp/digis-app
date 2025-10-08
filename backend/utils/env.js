@@ -31,6 +31,9 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL'),
 
+  // Ably (real-time messaging - required for Vercel deployment)
+  ABLY_API_KEY: z.string().min(1, 'ABLY_API_KEY is required for real-time features').optional(),
+
   // Optional but recommended
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
