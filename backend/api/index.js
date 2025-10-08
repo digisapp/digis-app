@@ -27,9 +27,9 @@ try {
     throw new Error(`Failed to load .env file: ${dotenvResult.error.message}`);
   }
   
-  // Validate all environment variables
-  const { validateEnvironmentVariables } = require('../utils/env-validator');
-  validateEnvironmentVariables();
+  // Validate all environment variables with Zod (crash early if invalid)
+  const { validateEnv } = require('../utils/env');
+  validateEnv();
   
 } catch (envError) {
   logger.error('Environment configuration error:', { error: envError.message });
