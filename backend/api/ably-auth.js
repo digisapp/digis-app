@@ -6,7 +6,7 @@
  * fine-grained access control per user.
  */
 
-const Ably = require('ably/promises');
+const Ably = require('ably');
 const { verifySupabaseToken } = require('../utils/supabase-admin');
 
 /**

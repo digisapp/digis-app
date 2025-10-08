@@ -263,6 +263,11 @@ try {
   const authLimiter = process.env.NODE_ENV === 'production' ? (rateLimiters.auth || ((req, res, next) => next())) : ((req, res, next) => next());
   app.use('/api/auth', authLimiter, authRoutes);
   app.use('/api/auth/v2', authLimiter, authEnhancedRoutes); // New auth endpoints with refresh tokens
+
+  // Ably token authentication endpoint (for Vercel real-time)
+  const ablyAuth = require('./ably-auth');
+  app.post('/api/ably-auth', ablyAuth);
+  app.get('/api/ably-auth', ablyAuth);
   // Use enhanced payment routes with idempotency and rate limiting
   const paymentsEnhanced = require('../routes/payments-enhanced');
   app.use('/api/v1/payments', paymentsEnhanced); // New enhanced version
