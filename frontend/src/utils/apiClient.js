@@ -10,7 +10,7 @@ const RETRY_DELAY = 1000; // 1 second base delay
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL ||
                      process.env.VITE_BACKEND_URL ||
                      process.env.REACT_APP_BACKEND_URL ||
-                     'http://localhost:3005';
+                     'http://localhost:3001';
 
 // Custom error class for API errors
 class ApiError extends Error {

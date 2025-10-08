@@ -80,7 +80,7 @@ const ProfileDropdown = ({
 
   // TEMPORARY: Force show creator tools for testing
   // Remove this line once creator role is properly set in the database
-  const FORCE_SHOW_CREATOR_TOOLS = true; // Set to false to use normal detection
+  const FORCE_SHOW_CREATOR_TOOLS = false; // Set to false to use normal detection
 
   const isActuallyCreator = FORCE_SHOW_CREATOR_TOOLS || isCreator ||
     profile?.is_creator === true ||
@@ -238,7 +238,7 @@ const ProfileDropdown = ({
     {
       label: 'Manage Calls',
       icon: PhoneIcon,
-      path: '/call-management',
+      path: '/call-requests',
       creatorOnly: true,
       color: 'text-blue-600 dark:text-blue-400'
     },
@@ -270,7 +270,7 @@ const ProfileDropdown = ({
     {
       label: 'Edit Profile',
       icon: UserCircleIcon,
-      path: '/profile?tab=profile',
+      path: '/settings',
       color: 'text-gray-600 dark:text-gray-400'
     },
     
@@ -307,6 +307,9 @@ const ProfileDropdown = ({
   ];
 
   const handleNavigation = (path) => {
+    // Always close the menu first
+    setIsOpen(false);
+
     // Prevent fans from accessing wallet page
     if (path === '/wallet' && !isActuallyCreator) {
       path = '/explore'; // Redirect to explore instead
@@ -317,7 +320,6 @@ const ProfileDropdown = ({
       if (onShowGoLive) {
         onShowGoLive();
       }
-      setIsOpen(false);
       return;
     }
 
@@ -333,7 +335,6 @@ const ProfileDropdown = ({
       '/shop': 'shop',
       '/schedule': 'schedule',
       '/call-requests': 'call-requests',
-      '/call-management': 'call-management',
       '/calls': 'calls',
       '/messages': 'messages',
       '/classes': 'classes',
@@ -350,11 +351,11 @@ const ProfileDropdown = ({
 
     const view = viewMap[basePath];
 
-    // Update the view using setCurrentView (which is actually onNavigate)
-    // setCurrentView expects a path, not a view name
+    // Update the view using setCurrentView (which is actually onNavigate from NavigationContext)
+    // onNavigate expects a path, not a view name
     if (setCurrentView) {
-      console.log('ProfileDropdown: Navigating to', path);
-      setCurrentView(path); // Pass the path, not the view name
+      console.log('ProfileDropdown: Navigating to path:', path);
+      setCurrentView(path); // Pass the full path with slash
 
       // Handle tab parameters for profile page
       if (basePath === '/profile' && queryParams) {
@@ -380,8 +381,6 @@ const ProfileDropdown = ({
     } else {
       console.warn('ProfileDropdown: Cannot navigate to', path, '- setCurrentView not available');
     }
-
-    setIsOpen(false);
   };
 
   const filteredNavItems = navigationItems.filter(item => 
@@ -440,12 +439,12 @@ const ProfileDropdown = ({
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Backdrop for mobile */}
+            {/* Backdrop for all devices */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/20 z-[9998] md:hidden"
+              className="fixed inset-0 z-[9998]"
               onClick={() => setIsOpen(false)}
             />
 
@@ -576,7 +575,7 @@ const ProfileDropdown = ({
                         { label: 'Dashboard', icon: HomeIcon, path: '/dashboard', color: 'text-purple-600 dark:text-purple-400' },
                         { label: 'Offers', icon: GiftIcon, onClick: () => { setShowOfferModal(true); setIsOpen(false); }, color: 'text-pink-600 dark:text-pink-400' },
                         { label: 'Schedule', icon: CalendarIcon, path: '/schedule', color: 'text-indigo-600 dark:text-indigo-400' },
-                        { label: 'Calls', icon: PhoneIcon, path: '/call-management', color: 'text-blue-600 dark:text-blue-400' },
+                        { label: 'Calls', icon: PhoneIcon, onClick: () => { navigate('/call-requests'); setIsOpen(false); }, color: 'text-blue-600 dark:text-blue-400' },
                         { label: 'Shop', icon: ShoppingBagIcon, path: '/shop', color: 'text-emerald-600 dark:text-emerald-400' },
                         { label: 'Pricing Rates', icon: CurrencyDollarIcon, onClick: () => { setShowPricingRatesModal(true); setIsOpen(false); }, color: 'text-green-600 dark:text-green-400' }
                       ].map((item) => {
@@ -586,12 +585,21 @@ const ProfileDropdown = ({
                         return (
                           <button
                             key={item.path || item.label}
-                            onClick={() => item.action ? item.action() : item.onClick ? item.onClick() : handleNavigation(item.path)}
+                            onClick={() => {
+                              if (item.action) {
+                                item.action();
+                                setIsOpen(false);
+                              } else if (item.onClick) {
+                                item.onClick();
+                              } else {
+                                handleNavigation(item.path);
+                              }
+                            }}
                             className={`
                               w-full flex items-center gap-2 px-2 py-2 rounded-lg
                               transition-all duration-200 group
-                              ${isActive 
-                                ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' 
+                              ${isActive
+                                ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400'
                                 : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                               }
                             `}
@@ -668,7 +676,17 @@ const ProfileDropdown = ({
                         return (
                           <button
                             key={item.path || item.label}
-                            onClick={() => item.action ? item.action() : item.onClick ? item.onClick() : handleNavigation(item.path)}
+                            onClick={() => {
+                              if (item.action) {
+                                item.action();
+                                setIsOpen(false);
+                              } else if (item.onClick) {
+                                item.onClick();
+                                if (!item.isToggle) setIsOpen(false);
+                              } else {
+                                handleNavigation(item.path);
+                              }
+                            }}
                             className="
                               w-full flex items-center gap-2 px-2 py-2 rounded-lg
                               hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300

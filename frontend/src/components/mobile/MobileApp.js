@@ -1,8 +1,2 @@
-import React from 'react';
-
-// Placeholder component for mobile app
-const MobileApp = () => {
-  return null; // Mobile app implementation is in progress
-};
-
-export default MobileApp;
+// Re-export NextLevelMobileApp as the main mobile entry point
+export { default } from './NextLevelMobileApp';

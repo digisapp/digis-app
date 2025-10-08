@@ -47,7 +47,7 @@ const FollowingSystem = lazy(() => import('./components/FollowingSystem'));
 const WalletPage = lazy(() => import('./components/pages/WalletPage'));
 const EnhancedAdminDashboard = lazy(() => import('./components/EnhancedAdminDashboard'));
 import InstantChatWidget from './components/InstantChatWidget';
-const DashboardPage = lazy(() => import('./components/pages/DashboardPage'));
+const DashboardRouter = lazy(() => import('./components/pages/DashboardRouter')); // Smart router for role-based dashboards
 const ClassesPage = lazy(() => import('./components/pages/ClassesPage'));
 const MessagesPage = lazy(() => import('./components/pages/MessagesPage'));
 const ShopPage = lazy(() => import('./components/pages/ShopPage'));
@@ -72,7 +72,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { MobileUIProvider } from './components/mobile/MobileUIProvider';
 const FloatingActionButton = lazy(() => import('./components/mobile/FloatingActionButton'));
 const MobileBottomSheet = lazy(() => import('./components/mobile/MobileBottomSheet'));
-const MobileProfile = lazy(() => import('./components/mobile/MobileProfile'));
 const MobileMessages = lazy(() => import('./components/mobile/MobileMessages'));
 const MobileCreatorDashboard = lazy(() => import('./components/mobile/MobileCreatorDashboard'));
 const MobileFanDashboard = lazy(() => import('./components/mobile/MobileFanDashboard'));
@@ -98,7 +97,6 @@ const IncomingCallModal = lazy(() => import('./components/IncomingCallModal'));
 const ExplorePage = lazy(() => import('./components/pages/ExplorePage'));
 const TVPage = lazy(() => import('./components/pages/TVPage'));
 const CallRequestsPage = lazy(() => import('./components/pages/CallRequestsPage'));
-const CallManagementPage = lazy(() => import('./components/pages/CallManagementPage'));
 const CollectionsPage = lazy(() => import('./components/pages/CollectionsPage'));
 const AnalyticsDashboard = lazy(() => import('./components/AnalyticsDashboard'));
 const SchedulePage = lazy(() => import('./components/pages/SchedulePage'));
@@ -188,21 +186,39 @@ const App = () => {
   // Track last view with a ref to avoid re-render loops
   const lastViewRef = useRef(currentView);
   
-  // Fallback for creator status using localStorage
+  // Determine creator status - prioritize profile data over localStorage
   const isCreator = React.useMemo(() => {
-    // Check localStorage fallback for both mobile AND desktop
-    if (!storeIsCreator && localStorage.getItem('userIsCreator') === 'true') {
-      console.log('🔄 Using localStorage fallback for creator status (mobile:', isMobile, ')');
-      return true;
-    }
-    // Also check profile directly
+    // First check profile directly (most reliable source)
     if (profile?.is_creator === true) {
       console.log('🔄 Using profile.is_creator for creator status');
       return true;
     }
-    return storeIsCreator;
-  }, [isMobile, storeIsCreator, profile?.is_creator]);
-  
+    // Then check store
+    if (storeIsCreator) {
+      return true;
+    }
+    // Only use localStorage as last fallback if no profile data exists
+    if (!profile && localStorage.getItem('userIsCreator') === 'true') {
+      console.log('🔄 Using localStorage fallback for creator status (mobile:', isMobile, ')');
+      return true;
+    }
+    return false;
+  }, [isMobile, storeIsCreator, profile?.is_creator, profile]);
+
+  // Sync localStorage when profile changes to ensure consistency
+  useEffect(() => {
+    if (profile) {
+      const profileIsCreator = profile.is_creator === true;
+      const currentLocalStorage = localStorage.getItem('userIsCreator');
+
+      // Only update if different to avoid unnecessary writes
+      if (currentLocalStorage !== String(profileIsCreator)) {
+        console.log('🔄 Syncing localStorage: userIsCreator =', profileIsCreator);
+        localStorage.setItem('userIsCreator', String(profileIsCreator));
+      }
+    }
+  }, [profile?.is_creator, profile]);
+
   // Sync URL changes with currentView in store - using direct store access to prevent loops
   useEffect(() => {
     const pathToView = {
@@ -808,20 +824,20 @@ const App = () => {
         // Redirect authenticated users away from homepage
         if (isAdmin) {
           console.log('➡️ Redirecting to ADMIN from homepage');
-          navigate('/admin');
           startTransition(() => {
+            navigate('/admin');
             setCurrentView('admin');
           });
         } else if (isCreator) {
           console.log('➡️ Redirecting to DASHBOARD from homepage');
-          navigate('/dashboard');
           startTransition(() => {
+            navigate('/dashboard');
             setCurrentView('dashboard');
           });
         } else {
           console.log('➡️ Redirecting to EXPLORE from homepage');
-          navigate('/explore');
           startTransition(() => {
+            navigate('/explore');
             setCurrentView('explore');
           });
         }
@@ -1101,9 +1117,11 @@ const App = () => {
       'content': '/content',
       'offers': '/offers'
     };
-    
+
     const path = viewToPath[view] || '/';
-    navigate(path);
+    startTransition(() => {
+      navigate(path);
+    });
   };
 
   // Debug currentView changes
@@ -1122,7 +1140,9 @@ const App = () => {
       setUser(null);
       logout(); // This will clear isCreator and isAdmin through Zustand
       // Stay on the same site after logout
-      navigate('/');
+      startTransition(() => {
+        navigate('/');
+      });
       toast.success('Signed out successfully');
     } catch (error) {
       console.error('Sign out error:', error);
@@ -1253,6 +1273,7 @@ const App = () => {
   if (viewingCreator) {
     if (isMobile) {
       return (
+        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>
         <MobileUIProvider>
           <MobileCreatorProfile
             creatorId={viewingCreator}
@@ -1286,6 +1307,7 @@ const App = () => {
             }}
           />
         </MobileUIProvider>
+        </Suspense>
       );
     } else {
       return (
@@ -1307,6 +1329,7 @@ const App = () => {
     if (isMobile) {
       console.log('📱 Rendering mobile landing for unauthenticated user');
       return (
+        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>
         <MobileUIProvider>
           <MobileLandingPage 
             onLogin={(user) => {
@@ -1323,23 +1346,32 @@ const App = () => {
                 const isAdminUser = profileData.is_super_admin === true || profileData.role === 'admin';
 
                 if (isAdminUser) {
-                  setCurrentView('dashboard');
-                  navigate('/admin');
+                  startTransition(() => {
+                    setCurrentView('dashboard');
+                    navigate('/admin');
+                  });
                 } else if (isCreatorUser) {
-                  setCurrentView('dashboard');
-                  navigate('/dashboard');
+                  startTransition(() => {
+                    setCurrentView('dashboard');
+                    navigate('/dashboard');
+                  });
                 } else {
-                  setCurrentView('explore');
-                  navigate('/explore');
+                  startTransition(() => {
+                    setCurrentView('explore');
+                    navigate('/explore');
+                  });
                 }
               } else {
                 // Default to explore if no profile data
-                setCurrentView('explore');
-                navigate('/explore');
+                startTransition(() => {
+                  setCurrentView('explore');
+                  navigate('/explore');
+                });
               }
             }}
           />
         </MobileUIProvider>
+        </Suspense>
       );
     }
     
@@ -1379,6 +1411,7 @@ const App = () => {
   // Desktop layout continues below
   return (
     <ErrorBoundary>
+      <Suspense fallback={<Skeleton className="h-screen" />}>
       <NavigationProvider
         user={user}
         badges={{
@@ -1388,7 +1421,6 @@ const App = () => {
         tokenBalance={tokenBalance}
         onGoLive={openGoLive}
       >
-        <Suspense fallback={<Skeleton className="h-screen" />}>
         {/* Navigation Component - Outside main content for proper fixed positioning */}
         {user && (
           <Navigation 
@@ -1526,13 +1558,10 @@ const App = () => {
                 profile_role: profile?.role,
                 localStorage_creator: localStorage.getItem('userIsCreator')
               })}
-              <MobileProfile 
+              <ImprovedProfile
                 user={{...user, ...profile}} // Merge auth user with profile data
-                isCreator={isCreator} 
-                onSignOut={handleSignOut}
-                onEditProfile={() => toast.info('Edit profile coming soon!')}
-                onBecomeCreator={() => setShowCreatorApplication(true)}
-                onRefreshProfile={async () => {
+                isCreator={isCreator}
+                onProfileUpdate={async () => {
                   console.log('📱 Manual profile refresh triggered');
                   await fetchUserProfile(user);
                   toast.success('Profile refreshed!');
@@ -1621,7 +1650,9 @@ const App = () => {
                   onSessionEnd={() => {
                     setChannel('');
                     setStreamConfig(null);
-                    navigate('/explore');
+                    startTransition(() => {
+                      navigate('/explore');
+                    });
                   }}
                   />
                 </Suspense>
@@ -1638,7 +1669,8 @@ const App = () => {
         ) : currentView === 'dashboard' && isMobile ? (
           // Mobile Dashboard - Creator or Fan
           (() => {
-            const isCreatorUser = profile?.is_creator === true || isCreator || localStorage.getItem('userIsCreator') === 'true';
+            // Prioritize profile data over store/localStorage
+            const isCreatorUser = profile?.is_creator === true || (isCreator && profile?.is_creator !== false);
             
             console.log('📱 Mobile Dashboard Render:', {
               isCreatorUser,
@@ -1727,7 +1759,7 @@ const App = () => {
             }
           })()
         ) : currentView === 'dashboard' ? (
-          <DashboardPage 
+          <DashboardRouter 
             user={user}
             isCreator={effectiveIsCreator}
             isAdmin={effectiveIsAdmin}
@@ -1763,7 +1795,9 @@ const App = () => {
               onStartVoiceCall={handleStartVoiceCall}
               onScheduleSession={(creator) => {
                 sessionStorage.setItem('scheduleCreator', JSON.stringify(creator));
-                navigate('/schedule');
+                startTransition(() => {
+                  navigate('/schedule');
+                });
               }}
               onSendMessage={(creator) => {
                 sessionStorage.setItem('messageCreator', JSON.stringify(creator));
@@ -1772,7 +1806,9 @@ const App = () => {
               }}
               onMakeOffer={(creator) => {
                 sessionStorage.setItem('offerCreator', JSON.stringify(creator));
-                navigate('/offers');
+                startTransition(() => {
+                  navigate('/offers');
+                });
               }}
             />
           )
@@ -1884,14 +1920,10 @@ const App = () => {
           )
         ) : currentView === 'profile' ? (
           isMobile ? (
-            <MobileProfile
+            <ImprovedProfile
               user={user}
-              profile={profile}
               isCreator={isCreator}
-              onNavigate={setCurrentView}
-              onEditProfile={() => setCurrentView('settings')}
-              onSettings={() => setCurrentView('settings')}
-              onLogout={handleSignOut}
+              onProfileUpdate={() => fetchUserProfile(user)}
             />
           ) : (
             <ImprovedProfile
@@ -1918,7 +1950,7 @@ const App = () => {
               onNavigate={setCurrentView}
             />
           ) : (
-            <DashboardPage 
+            <DashboardRouter 
               user={user}
               isCreator={isCreator}
               isAdmin={isAdmin}
@@ -1926,7 +1958,7 @@ const App = () => {
               onNavigate={(view) => setCurrentView(view)}
             />
           )
-        ) : currentView === 'calls' || currentView === 'callManagement' ? (
+        ) : currentView === 'calls' || currentView === 'call-requests' ? (
           isMobile ? (
             <MobileCalls
               user={user}
@@ -1936,7 +1968,7 @@ const App = () => {
           ) : (
             <>
               {isCreator ? (
-                <DashboardPage 
+                <DashboardRouter 
                 user={user}
                 isCreator={isCreator}
                 isAdmin={isAdmin}
@@ -1964,10 +1996,6 @@ const App = () => {
           )
         ) : currentView === 'call-requests' ? (
           <CallRequestsPage 
-            user={user}
-          />
-        ) : currentView === 'call-management' ? (
-          <CallManagementPage 
             user={user}
           />
         ) : currentView === 'followers' ? (
@@ -2009,7 +2037,7 @@ const App = () => {
           )
         ) : (
           <div className="space-y-8">
-            <DashboardPage 
+            <DashboardRouter 
               user={user}
               isCreator={isCreator}
               isAdmin={isAdmin}
@@ -2165,8 +2193,8 @@ const App = () => {
         />
 
         </div>
-        </Suspense>
       </NavigationProvider>
+      </Suspense>
       
       {/* Go Live Setup Modal - Desktop only */}
       {showGoLiveSetup && !isMobile && (

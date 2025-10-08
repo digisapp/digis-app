@@ -5,7 +5,8 @@ import { RESERVED_ROUTES } from '../utils/reservedRoutes';
 
 // Lazy load page components for better performance
 const HomePage = lazy(() => import('./HomePage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const DashboardRouter = lazy(() => import('./pages/DashboardRouter')); // Routes to appropriate dashboard
+const ExplorePage = lazy(() => import('./pages/ExplorePage'));
 const ClassesPage = lazy(() => import('./pages/ClassesPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const WalletPage = lazy(() => import('./pages/WalletPage'));
@@ -45,13 +46,17 @@ const AppRouter = ({ user, isCreator, isAdmin, ...props }) => {
         />
         
         {/* Main Pages */}
-        <Route 
-          path="/dashboard" 
-          element={<DashboardPage user={user} isCreator={isCreator} isAdmin={isAdmin} {...props} />} 
+        <Route
+          path="/dashboard"
+          element={<DashboardRouter user={user} isCreator={isCreator} isAdmin={isAdmin} {...props} />}
         />
-        <Route 
-          path="/classes" 
-          element={<ClassesPage user={user} isCreator={isCreator} isAdmin={isAdmin} {...props} />} 
+        <Route
+          path="/explore"
+          element={<ExplorePage user={user} {...props} />}
+        />
+        <Route
+          path="/classes"
+          element={<ClassesPage user={user} isCreator={isCreator} isAdmin={isAdmin} {...props} />}
         />
         <Route 
           path="/messages" 
@@ -61,9 +66,15 @@ const AppRouter = ({ user, isCreator, isAdmin, ...props }) => {
           path="/tokens" 
           element={<TokenPurchasePage user={user} {...props} />} 
         />
-        <Route 
-          path="/wallet" 
-          element={<WalletPage user={user} isCreator={isCreator} {...props} />} 
+        <Route
+          path="/wallet"
+          element={
+            isCreator || isAdmin ? (
+              <WalletPage user={user} isCreator={isCreator} {...props} />
+            ) : (
+              <Navigate to="/explore" replace />
+            )
+          }
         />
         <Route 
           path="/profile" 

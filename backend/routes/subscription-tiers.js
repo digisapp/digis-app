@@ -22,8 +22,8 @@ router.get('/creator/:creatorId', authenticateToken, async (req, res) => {
       `SELECT
         subscription_price,
         text_message_price as message_price,
-        video_call_price,
-        voice_call_price
+        video_message_price as video_call_price,
+        audio_message_price as voice_call_price
        FROM users
        WHERE supabase_id = $1 OR id = $1`,
       [creatorId]

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, startTransition } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,10 +17,8 @@ import {
   CurrencyDollarIcon,
   LanguageIcon,
   XMarkIcon,
-  Squares2X2Icon,
-  ListBulletIcon,
-  BarsArrowUpIcon,
-  AdjustmentsHorizontalIcon
+  AdjustmentsHorizontalIcon,
+  BarsArrowUpIcon
 } from '@heroicons/react/24/solid';
 import { StarIcon } from '@heroicons/react/24/outline';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
@@ -61,9 +59,8 @@ const ExplorePage = ({
   });
   const [selectedLanguages, setSelectedLanguages] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState('card'); // 'card', 'compact', 'grid'
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [sortBy, setSortBy] = useState('popular'); // 'popular', 'newest', 'price-low', 'price-high'
-  const [onlineOnly, setOnlineOnly] = useState(false);
 
   // UI State
   const [loading, setLoading] = useState(true);
@@ -157,7 +154,7 @@ const ExplorePage = ({
         limit: 20,
         category: selectedCategory,
         sortBy: sortBy,
-        onlineOnly: onlineOnly
+        onlineOnly: false
       });
 
       // Add selected languages
@@ -241,7 +238,7 @@ const ExplorePage = ({
         setIsLoadingMore(false);
       }
     }
-  }, [selectedCategory, selectedLanguages, sortBy, onlineOnly, retryCount]);
+  }, [selectedCategory, selectedLanguages, sortBy, retryCount]);
 
 
   // Fetch live creators
@@ -314,11 +311,6 @@ const ExplorePage = ({
       );
     }
     
-    // Apply online filter
-    if (onlineOnly) {
-      filtered = filtered.filter(creator => creator.isOnline || creator.isLive);
-    }
-
     // Category filter - check if creator's interests include the selected category
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(creator => {
@@ -373,7 +365,7 @@ const ExplorePage = ({
     }
 
     setFilteredCreators(filtered);
-  }, [creators, searchTerm, selectedCategory, selectedLanguages, sortBy, onlineOnly]);
+  }, [creators, searchTerm, selectedCategory, selectedLanguages, sortBy]);
 
   // Apply filters when dependencies change
   useEffect(() => {
@@ -406,6 +398,18 @@ const ExplorePage = ({
       fetchCreators(page + 1, true);
     }
   };
+
+  // Close sort menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showSortMenu && !e.target.closest('.sort-menu-container')) {
+        setShowSortMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSortMenu]);
 
   // Infinite scroll
   useEffect(() => {
@@ -467,55 +471,7 @@ const ExplorePage = ({
     <div className={`min-h-screen ${isMobile ? 'bg-gradient-to-br from-purple-50 via-white to-pink-50' : 'bg-gray-50 dark:bg-gray-900'}`}>
       {/* Filters Bar */}
       <div className="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
-          {/* Header Row */}
-          <div className="flex items-center justify-between mb-2 sm:mb-3">
-            <div className="flex-1">
-              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{isMobile ? 'Explore' : 'Explore Creators'}</h1>
-            </div>
-            
-            {/* View Toggle - Hide on mobile */}
-            {!isMobile && (
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode('card')}
-                  className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 text-sm font-medium ${
-                    viewMode === 'card' 
-                      ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
-                  title="Card View"
-                >
-                  <Squares2X2Icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Card</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('compact')}
-                  className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 text-sm font-medium ${
-                    viewMode === 'compact' 
-                      ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
-                  title="Compact View"
-                >
-                  <ListBulletIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Compact</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 text-sm font-medium ${
-                    viewMode === 'grid' 
-                      ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
-                  title="Grid View"
-                >
-                  <BarsArrowUpIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Grid</span>
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-5">
 
           {/* Search and Filters Row */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
@@ -528,49 +484,65 @@ const ExplorePage = ({
                 placeholder="Search creators..."
                 defaultValue={searchTerm}
                 onChange={(e) => debouncedSearch(e.target.value)}
-                className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-sm"
+                className="w-full h-10 pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                 aria-label="Search creators"
               />
               <MagnifyingGlassIcon className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
 
             {/* Filter Buttons */}
-            <div className="flex gap-1 sm:gap-2">
-              {/* Sort Dropdown */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-2 sm:px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-xs sm:text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              >
-                <option value="popular">Popular</option>
-                <option value="newest">Newest</option>
-                <option value="price-low">Price ↑</option>
-                <option value="price-high">Price ↓</option>
-              </select>
+            <div className="flex gap-1 sm:gap-2 relative">
+              {/* Sort Button */}
+              <div className="relative sort-menu-container">
+                <button
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                  className="h-10 w-10 flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800"
+                  title="Sort by"
+                >
+                  <BarsArrowUpIcon className="w-5 h-5" />
+                </button>
 
-              {/* Online Only Toggle */}
-              <button
-                onClick={() => setOnlineOnly(!onlineOnly)}
-                className={`px-2 sm:px-3 py-2 rounded-lg transition-colors text-xs sm:text-sm font-medium flex items-center gap-1 ${
-                  onlineOnly
-                    ? 'bg-green-500 text-white'
-                    : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <div className={`w-2 h-2 rounded-full ${onlineOnly ? 'bg-white animate-pulse' : 'bg-green-500'}`} />
-                <span className="hidden sm:inline">Online</span>
-              </button>
+                {/* Sort Dropdown Menu */}
+                {showSortMenu && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50">
+                    <button
+                      onClick={() => { setSortBy('popular'); setShowSortMenu(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${sortBy === 'popular' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-medium' : 'text-gray-700 dark:text-gray-300'} first:rounded-t-lg`}
+                    >
+                      Popular
+                    </button>
+                    <button
+                      onClick={() => { setSortBy('newest'); setShowSortMenu(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${sortBy === 'newest' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
+                    >
+                      Newest
+                    </button>
+                    <button
+                      onClick={() => { setSortBy('price-low'); setShowSortMenu(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${sortBy === 'price-low' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
+                    >
+                      Price: Low to High
+                    </button>
+                    <button
+                      onClick={() => { setSortBy('price-high'); setShowSortMenu(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${sortBy === 'price-high' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-medium' : 'text-gray-700 dark:text-gray-300'} last:rounded-b-lg`}
+                    >
+                      Price: High to Low
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Filter Button */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="h-10 w-10 relative flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800"
+                title="Filters"
               >
-                <AdjustmentsHorizontalIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">Filters</span>
-                {(selectedLanguages.length > 0 || selectedCategory !== 'all' || onlineOnly) && (
-                  <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full">
-                    {selectedLanguages.length + (selectedCategory !== 'all' ? 1 : 0) + (onlineOnly ? 1 : 0)}
+                <AdjustmentsHorizontalIcon className="w-5 h-5" />
+                {(selectedLanguages.length > 0 || selectedCategory !== 'all') && (
+                  <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-medium">
+                    {selectedLanguages.length + (selectedCategory !== 'all' ? 1 : 0)}
                   </span>
                 )}
               </button>
@@ -584,12 +556,13 @@ const ExplorePage = ({
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="pt-4 pb-2 border-t border-gray-200 dark:border-gray-700 mt-3">
+                <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700 mt-3">
                   {/* Categories */}
-                  <div className="mb-4">
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Categories</h3>
+                  <div className="mb-5">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Categories</h3>
                     <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
                       {categories.map(cat => (
                         <button
@@ -604,10 +577,10 @@ const ExplorePage = ({
                             }
                             setSearchParams(searchParams);
                           }}
-                          className={`flex items-center justify-center sm:justify-start gap-1 px-2 sm:px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          className={`flex items-center justify-center sm:justify-start gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-medium transition-all ${
                             selectedCategory === cat.id
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                              ? 'bg-purple-600 text-white shadow-md hover:bg-purple-700'
+                              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-purple-300 dark:hover:border-purple-500'
                           }`}
                         >
                           {typeof cat.icon === 'function' ? <cat.icon /> : <cat.icon className="w-4 h-4" />}
@@ -616,10 +589,10 @@ const ExplorePage = ({
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Languages */}
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Languages</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Languages</h3>
                     <div className="flex flex-wrap gap-2">
                       {languages.map(lang => (
                         <button
@@ -631,10 +604,10 @@ const ExplorePage = ({
                                 : [...prev, lang]
                             );
                           }}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
                             selectedLanguages.includes(lang)
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                              ? 'bg-purple-600 text-white shadow-md hover:bg-purple-700'
+                              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-purple-300 dark:hover:border-purple-500'
                           }`}
                         >
                           {lang}
@@ -688,7 +661,9 @@ const ExplorePage = ({
                       if (onCreatorSelect) {
                         onCreatorSelect(creator);
                       } else {
-                        navigate(`/stream/${creator.username}`);
+                        startTransition(() => {
+                          navigate(`/stream/${creator.username}`);
+                        });
                       }
                     }}
                   >
@@ -770,14 +745,8 @@ const ExplorePage = ({
             )}
           </div>
         ) : (
-          /* Creator Cards Grid/List/Compact */
-          <div className={
-            viewMode === 'compact' 
-              ? 'space-y-2' 
-              : viewMode === 'grid'
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-              : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4'
-          }>
+          /* Creator Cards Grid */
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
             {filteredCreators.map((creator, index) => (
               isMobile ? (
                 <CreatorCard
@@ -793,7 +762,9 @@ const ExplorePage = ({
                     } else {
                       const identifier = creator.username || creator.id || creator.supabase_id;
                       if (identifier) {
-                        navigate(`/creator/${identifier}`);
+                        startTransition(() => {
+                          navigate(`/creator/${identifier}`);
+                        });
                       }
                     }
                   }}
@@ -840,13 +811,14 @@ const ExplorePage = ({
                     const identifier = creator.username || creator.id || creator.supabase_id;
                     if (identifier) {
                       console.log('Navigating to creator:', identifier, creator);
-                      navigate(`/creator/${identifier}`);
+                      startTransition(() => {
+                        navigate(`/creator/${identifier}`);
+                      });
                     } else {
                       console.error('No identifier found for creator:', creator);
                     }
                   }
                 }}
-                viewMode={viewMode}
                 isLazyLoaded={true}
                 currentUserId={props.currentUserId || props.user?.id}
                 tokenBalance={props.tokenBalance || 0}

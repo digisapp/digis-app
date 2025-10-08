@@ -109,9 +109,15 @@ async function buildLimiters() {
     // Authentication endpoints (general)
     auth: await createLimiter({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 30, // 30 requests per window
+      max: process.env.NODE_ENV === 'production' ? 200 : 10000, // Much higher limit in dev
       message: 'Too many authentication requests, please try again later',
-      skipSuccessfulRequests: false
+      skipSuccessfulRequests: false,
+      // Skip rate limiting for critical auth endpoints in development
+      skip: (req) => {
+        if (process.env.NODE_ENV !== 'production') return true; // Disable in dev
+        const skipPaths = ['/session', '/verify-role', '/sync-user'];
+        return skipPaths.some(path => req.path.includes(path) || req.url.includes(path));
+      }
     }),
 
     // Login attempts (strict)
@@ -132,7 +138,7 @@ async function buildLimiters() {
     // Token verification (lenient - used frequently)
     verify: await createLimiter({
       windowMs: 60 * 1000, // 1 minute
-      max: 30, // 30 verification requests per minute
+      max: process.env.NODE_ENV === 'production' ? 30 : 1000, // Higher limit in dev
       message: 'Too many verification requests. Please slow down.'
     }),
 

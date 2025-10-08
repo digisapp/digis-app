@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   XMarkIcon,
-  VideoCameraIcon,
-  ClockIcon
+  VideoCameraIcon
 } from '@heroicons/react/24/outline';
 
 const VideoCallModal = ({
@@ -17,14 +16,15 @@ const VideoCallModal = ({
   onCallStart
 }) => {
   const navigate = useNavigate();
-  const [selectedMinutes, setSelectedMinutes] = useState(5);
-  const presetMinutes = [5, 10, 15];
-  const minimumMinutes = 5;
-  const estimatedCost = tokenCost * selectedMinutes;
-  const hasEnoughTokens = tokenBalance >= estimatedCost;
+  const [showInsufficientTokens, setShowInsufficientTokens] = useState(false);
 
   const handleStartCall = () => {
-    if (!hasEnoughTokens) return;
+    // Check if user has any tokens (minimum check)
+    if (tokenBalance < tokenCost) {
+      setShowInsufficientTokens(true);
+      return;
+    }
+
     if (onCallStart) {
       onCallStart();
     }
@@ -82,7 +82,7 @@ const VideoCallModal = ({
               </button>
 
               {/* Body with padding */}
-              <div className="p-6 relative" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+              <div className="p-6 pb-8 relative" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
                 {/* Mini avatar and name at top */}
                 <div className="flex items-center gap-2 mb-4">
                   <div className="relative">
@@ -109,7 +109,7 @@ const VideoCallModal = ({
 
                 {/* Call info card */}
                 <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-4 mb-4 border border-violet-200/50 dark:border-violet-700/30">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <VideoCameraIcon className="w-5 h-5 text-violet-600 dark:text-violet-400" />
                       <span className="font-medium text-gray-900 dark:text-white">Video Call</span>
@@ -118,47 +118,13 @@ const VideoCallModal = ({
                       {tokenCost} tokens/min
                     </span>
                   </div>
-
-                  <div className="space-y-2">
-                    {/* Duration selector */}
-                    <div className="mb-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Select duration</p>
-                      <div className="flex gap-2">
-                        {presetMinutes.map(mins => (
-                          <button
-                            key={mins}
-                            onClick={() => setSelectedMinutes(mins)}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                              selectedMinutes === mins
-                                ? 'bg-violet-600 text-white'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                            }`}
-                          >
-                            {mins} min
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Estimated charge:</span>
-                      <span className="font-semibold text-violet-600 dark:text-violet-400">
-                        {estimatedCost} tokens
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm pt-2 border-t border-violet-200/50 dark:border-violet-700/30">
-                      <span className="text-gray-600 dark:text-gray-400">Your balance:</span>
-                      <span className={`font-semibold ${hasEnoughTokens ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {tokenBalance} tokens
-                      </span>
-                    </div>
-                  </div>
                 </div>
 
-                {/* Warning if insufficient tokens */}
-                {!hasEnoughTokens && (
+                {/* Warning if insufficient tokens - only shown after clicking Start Call */}
+                {showInsufficientTokens && (
                   <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg mb-4">
                     <p className="font-medium">Insufficient tokens</p>
-                    <p className="text-xs mt-1">You need at least {estimatedCost} tokens to start this call.</p>
+                    <p className="text-xs mt-1">You need tokens to start this call.</p>
                     <button
                       onClick={() => navigate('/tokens')}
                       className="mt-2 w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition-all"
@@ -178,17 +144,10 @@ const VideoCallModal = ({
                   </button>
                   <button
                     onClick={handleStartCall}
-                    disabled={!hasEnoughTokens}
-                    className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden group ${
-                      hasEnoughTokens
-                        ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:from-violet-700 hover:to-purple-700 transform hover:-translate-y-0.5'
-                        : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-60'
-                    }`}
+                    className="flex-1 px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden group bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:from-violet-700 hover:to-purple-700 transform hover:-translate-y-0.5"
                   >
                     {/* Button shimmer animation on hover */}
-                    {hasEnoughTokens && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[length:200%_100%] group-hover:animate-shimmer"></div>
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[length:200%_100%] group-hover:animate-shimmer"></div>
 
                     <div className="relative flex items-center gap-2">
                       <VideoCameraIcon className="w-5 h-5" />

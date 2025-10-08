@@ -145,7 +145,7 @@ const Settings = ({ user, onClose, onSettingsUpdate, onLogout }) => {
         {/* Quick Actions */}
         <div className="space-y-2">
           <button
-            onClick={() => navigate('/profile?section=profile')}
+            onClick={() => navigate('/settings')}
             className="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <div className="flex items-center gap-3">

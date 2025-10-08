@@ -125,52 +125,11 @@ const MobileCreatorDashboard = ({
 
   const fetchTopFans = async () => {
     try {
-      // TODO: Replace with actual API call
+      // TODO: Replace with actual API call when endpoint is ready
       // const response = await api.analytics.getTopFans({ period: 'week' });
+      // setTopFans(response.data || []);
 
-      // Mock data for demonstration - remove when API is ready
-      setTopFans([
-        {
-          id: 1,
-          username: 'alexsmith23',
-          avatar_url: null,
-          total_spent: 1250,
-          is_online: true,
-          last_interaction: '2 hours ago'
-        },
-        {
-          id: 2,
-          username: 'mikejones',
-          avatar_url: null,
-          total_spent: 980,
-          is_online: false,
-          last_interaction: '5 hours ago'
-        },
-        {
-          id: 3,
-          username: 'sarah_m',
-          avatar_url: null,
-          total_spent: 750,
-          is_online: true,
-          last_interaction: '1 day ago'
-        },
-        {
-          id: 4,
-          username: 'john_doe',
-          avatar_url: null,
-          total_spent: 650,
-          is_online: false,
-          last_interaction: '2 days ago'
-        },
-        {
-          id: 5,
-          username: 'emma_wilson',
-          avatar_url: null,
-          total_spent: 500,
-          is_online: false,
-          last_interaction: '3 days ago'
-        }
-      ]);
+      setTopFans([]);
     } catch (error) {
       console.error('Error fetching top fans:', error);
       setTopFans([]);
@@ -179,52 +138,11 @@ const MobileCreatorDashboard = ({
 
   const fetchUpcomingSchedule = async () => {
     try {
-      // TODO: Replace with actual API call
+      // TODO: Replace with actual API call when endpoint is ready
       // const response = await api.schedule.getUpcoming();
+      // setUpcomingSchedule(response.data || []);
 
-      // Mock data for demonstration
-      const now = new Date();
-      setUpcomingSchedule([
-        {
-          id: 1,
-          title: 'Live Q&A Session',
-          type: 'stream',
-          startTime: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2 hours from now
-          duration: 60,
-          expectedViewers: 150
-        },
-        {
-          id: 2,
-          title: 'Private Call - Emma W.',
-          type: 'video-call',
-          startTime: new Date(now.getTime() + 4 * 60 * 60 * 1000), // 4 hours from now
-          duration: 30,
-          tokens: 200
-        },
-        {
-          id: 3,
-          title: 'Exclusive Content Drop',
-          type: 'content',
-          startTime: new Date(now.getTime() + 24 * 60 * 60 * 1000), // Tomorrow
-          contentCount: 5
-        },
-        {
-          id: 4,
-          title: 'Weekly Live Show',
-          type: 'stream',
-          startTime: new Date(now.getTime() + 48 * 60 * 60 * 1000), // 2 days from now
-          duration: 120,
-          expectedViewers: 300
-        },
-        {
-          id: 5,
-          title: 'Voice Chat Session',
-          type: 'voice-call',
-          startTime: new Date(now.getTime() + 72 * 60 * 60 * 1000), // 3 days from now
-          duration: 45,
-          tokens: 100
-        }
-      ]);
+      setUpcomingSchedule([]);
     } catch (error) {
       console.error('Error fetching upcoming schedule:', error);
       setUpcomingSchedule([]);
@@ -238,16 +156,16 @@ const MobileCreatorDashboard = ({
       // TODO: Update when backend routes are properly configured
       
       setStats({
-        todayEarnings: 125,
-        weekEarnings: 850,
-        monthEarnings: 3200,
-        totalFans: 42,
-        activeFans: 15,
-        pendingMessages: 3,
-        scheduledCalls: 2,
-        upcomingStreams: 1,
-        subscribers: 128,
-        followers: 1542
+        todayEarnings: 0,
+        weekEarnings: 0,
+        monthEarnings: 0,
+        totalFans: 0,
+        activeFans: 0,
+        pendingMessages: 0,
+        scheduledCalls: 0,
+        upcomingStreams: 0,
+        subscribers: 0,
+        followers: 0
       });
       console.log('✅ Stats updated successfully');
     } catch (error) {
@@ -905,48 +823,7 @@ const MobileCreatorDashboard = ({
                 <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Today</p>
               </div>
               <div className="divide-y divide-gray-100">
-                {[
-                  {
-                    type: 'subscriber',
-                    icon: <UsersIcon className="w-4 h-4" />,
-                    iconBg: 'bg-purple-500',
-                    title: 'New subscriber',
-                    detail: '@alexsmith23',
-                    time: 'just now',
-                    value: '+50 tokens',
-                    valueColor: 'text-green-600'
-                  },
-                  {
-                    type: 'tip',
-                    icon: <StarIcon className="w-4 h-4" />,
-                    iconBg: 'bg-yellow-500',
-                    title: 'Tip received',
-                    detail: 'from @mikejones',
-                    time: '5 min ago',
-                    value: '100 tokens',
-                    valueColor: 'text-purple-600'
-                  },
-                  {
-                    type: 'call',
-                    icon: <VideoCameraIcon className="w-4 h-4" />,
-                    iconBg: 'bg-green-500',
-                    title: 'Call completed',
-                    detail: 'with @sarah_m',
-                    time: '1 hr ago',
-                    value: '+250 tokens',
-                    valueColor: 'text-green-600'
-                  },
-                  {
-                    type: 'stream',
-                    icon: <VideoCameraIcon className="w-4 h-4" />,
-                    iconBg: 'bg-red-500',
-                    title: 'Stream ended',
-                    detail: '45 viewers',
-                    time: '2 hrs ago',
-                    value: '+500 tokens',
-                    valueColor: 'text-green-600'
-                  }
-                ].map((activity, index) => (
+                {[].map((activity, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: -10 }}
@@ -1072,7 +949,7 @@ const MobileCreatorDashboard = ({
                       {/* Rank Badge and Fan Info */}
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         {/* Rank Badge */}
-                        <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
+                        <div className={`flex items-center justify-center p-2 rounded-full font-bold text-sm ${
                           index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white shadow-lg' :
                           index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white shadow-md' :
                           'bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-md'

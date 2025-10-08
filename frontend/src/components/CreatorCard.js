@@ -2,8 +2,8 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StarIcon, VideoCameraIcon, PhoneIcon, ChatBubbleLeftRightIcon, GiftIcon, CheckBadgeIcon, UserGroupIcon } from '@heroicons/react/24/outline';
-import { StarIcon as StarIconSolid, CheckBadgeIcon as CheckBadgeIconSolid } from '@heroicons/react/24/solid';
+import { UserPlusIcon, VideoCameraIcon, PhoneIcon, ChatBubbleLeftRightIcon, GiftIcon, CheckBadgeIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon as UserPlusIconSolid, CheckBadgeIcon as CheckBadgeIconSolid } from '@heroicons/react/24/solid';
 import { getAuthToken } from '../utils/auth-helpers';
 import toast from 'react-hot-toast';
 import CallRequestModal from './CallRequestModal';
@@ -366,28 +366,22 @@ const CreatorCard = ({
         {/* Gradient Overlay for Text Readability */}
         <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
 
-        {/* Save/Star Button - Top Right */}
-        {onToggleSave && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleSave(creator.id || creator.uid);
-            }}
-            aria-pressed={isSaved}
-            aria-label={isSaved ? 'Remove from saved' : 'Save creator'}
-            className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full
-                     border border-white/40 bg-white/90 backdrop-blur-md shadow-md
-                     hover:bg-white hover:scale-110 focus-visible:ring-2 focus-visible:ring-purple-500
-                     transition-all"
-          >
-            {isSaved ? (
-              <StarIconSolid className="w-5 h-5 text-yellow-500" />
-            ) : (
-              <StarIcon className="w-5 h-5 text-gray-600" />
-            )}
-          </button>
-        )}
+        {/* Follow Button - Top Right */}
+        <button
+          type="button"
+          onClick={handleFollowClick}
+          disabled={isLoadingFollow}
+          aria-pressed={isFollowing}
+          aria-label={isFollowing ? 'Unfollow creator' : 'Follow creator'}
+          className="absolute right-3 top-3 p-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                   hover:scale-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+        >
+          {isFollowing ? (
+            <UserPlusIconSolid className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+          ) : (
+            <UserPlusIcon className="w-6 h-6 text-white drop-shadow-md" />
+          )}
+        </button>
 
         {/* Status Badges with Precedence */}
         {isLive ? (

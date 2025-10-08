@@ -12,7 +12,7 @@ import {
   CalendarDaysIcon,
   CurrencyDollarIcon,
   TvIcon,
-  AcademicCapIcon,
+  StarIcon,
   ShoppingBagIcon,
   HeartIcon,
   PhoneIcon,
@@ -37,11 +37,11 @@ import {
 export const NAV_ITEMS = [
   // Core navigation items
   {
-    id: 'home',
-    label: 'Home',
-    path: '/dashboard',  // Always go to dashboard for all roles
+    id: 'dashboard',
+    label: 'Dashboard',
+    path: '/dashboard',
     icon: HomeIcon,
-    roles: ['fan', 'creator', 'admin']
+    roles: ['creator', 'admin']
   },
   { 
     id: 'explore', 
@@ -63,7 +63,14 @@ export const NAV_ITEMS = [
     label: 'Wallet',
     path: '/wallet',
     icon: WalletIcon,
-    roles: ['fan', 'creator', 'admin']
+    roles: ['creator', 'admin']  // Removed 'fan' - fans use popup only
+  },
+  {
+    id: 'wallet-popup',
+    label: 'Wallet',
+    icon: WalletIcon,
+    roles: ['fan'],  // Fan-specific wallet (popup only, no path)
+    mobileOnly: true
   },
 
   // Analytics - now a top-level item for creators
@@ -77,13 +84,6 @@ export const NAV_ITEMS = [
 
   // Creator-specific items
   {
-    id: 'dashboard',
-    label: 'Dashboard',
-    path: '/dashboard',
-    icon: ChartBarIcon,
-    roles: ['creator', 'admin']
-  },
-  { 
     id: 'golive', 
     label: 'Go Live', 
     icon: VideoCameraIcon, 
@@ -121,12 +121,12 @@ export const NAV_ITEMS = [
     icon: TvIcon, 
     roles: ['fan', 'creator', 'admin'] 
   },
-  { 
-    id: 'classes', 
-    label: 'Classes', 
-    path: '/classes', 
-    icon: AcademicCapIcon, 
-    roles: ['fan', 'creator', 'admin'] 
+  {
+    id: 'classes',
+    label: 'Classes',
+    path: '/classes',
+    icon: StarIcon,
+    roles: ['fan', 'creator', 'admin']
   },
   { 
     id: 'shop', 
@@ -180,23 +180,27 @@ export const getNavItemsForRole = (role, isMobile = false) => {
 
 export const getMobileBottomItems = (role) => {
   const items = getNavItemsForRole(role, true);
-  // Return home, explore, messages, and profile for bottom nav (4 items total)
-  const bottomItems = items.filter(item =>
-    ['home', 'explore', 'messages', 'profile'].includes(item.id)
-  );
 
-  // Ensure home always goes to dashboard for all users on mobile
+  // For fans: explore, messages, tv, wallet-popup, profile
+  // For creators/admin: dashboard, explore, messages, profile
+  const navIds = role === 'fan'
+    ? ['explore', 'messages', 'tv', 'wallet-popup', 'profile']
+    : ['dashboard', 'explore', 'messages', 'profile'];
+
+  // Filter items and sort them according to navIds order
+  const filteredItems = items.filter(item => navIds.includes(item.id));
+  const bottomItems = navIds
+    .map(id => filteredItems.find(item => item.id === id))
+    .filter(Boolean); // Remove any undefined items
+
   const mappedItems = bottomItems.map(item => {
-    if (item.id === 'home') {
-      return { ...item, path: '/dashboard' };
-    }
     if (item.id === 'profile') {
-      return { ...item, label: 'Menu' }; // Changed label to Menu for clarity, but no path since it's a dropdown
+      return { ...item, label: 'Menu' }; // Changed label to Menu for clarity
     }
     return item;
   });
 
-  return mappedItems.slice(0, 4); // Only 4 items in bottom nav
+  return mappedItems.slice(0, 5); // 5 items for fans, 4 for creators
 };
 
 export const getMobileCenterAction = (role) => {

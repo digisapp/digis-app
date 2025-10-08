@@ -28,6 +28,9 @@ const createRedisLimiter = (options) => {
 
   return rateLimit({
     store, // Will use default memory store if undefined
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: { keyGeneratorIpFallback: false }, // Disable IPv6 validation warning
     ...options
   });
 };
@@ -48,11 +51,7 @@ const moneyOperationsLimiter = createRedisLimiter({
   legacyHeaders: false,
   keyGenerator: (req) => {
     // Use user ID for rate limiting
-    if (req.user?.supabase_id || req.user?.uid) {
-      return req.user?.supabase_id || req.user?.uid;
-    }
-    // Use the built-in IP key generator for IPv6 support
-    return req.ip;
+    return req.user?.supabase_id || req.user?.uid || req.ip;
   },
   skipSuccessfulRequests: false,
   skipFailedRequests: false,
@@ -227,10 +226,7 @@ const dailySpendingLimit = (limitInCents = 50000) => {
 const webhookRateLimiter = createRedisLimiter({
   windowMs: 1000, // 1 second
   max: 10, // 10 webhooks per second
-  keyGenerator: (req) => {
-    // Rate limit by source IP for webhooks
-    return req.ip || req.connection.remoteAddress;
-  },
+  // Use default keyGenerator for proper IPv6 support
   skip: (req) => {
     // Skip rate limiting for verified webhook sources
     const trustedIPs = process.env.TRUSTED_WEBHOOK_IPS?.split(',') || [];

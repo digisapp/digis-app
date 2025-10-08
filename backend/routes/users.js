@@ -1032,13 +1032,13 @@ router.get('/creators/search', async (req, res) => {
     const searchTerm = `%${q.trim().toLowerCase()}%`;
     
     const result = await pool.query(
-      `SELECT 
-         id, supabase_id, bio, profile_pic_url, 
-         COALESCE(creator_rate, voice_rate, stream_rate, 0) as price_per_min,
+      `SELECT
+         id, supabase_id, bio, profile_pic_url,
+         COALESCE(creator_rate, voice_rate, stream_price, 0) as price_per_min,
          created_at, updated_at,
          total_sessions, total_earnings
-       FROM users 
-       WHERE is_creator = TRUE 
+       FROM users
+       WHERE is_creator = TRUE
        AND (LOWER(bio) LIKE $1 OR LOWER(supabase_id) LIKE $1)
        ORDER BY total_sessions DESC, created_at DESC
        LIMIT $2 OFFSET $3`,
@@ -1194,7 +1194,7 @@ router.post('/session', authenticateToken, async (req, res) => {
     );
     
     const creatorResult = await client.query(
-      'SELECT id, supabase_id, COALESCE(creator_rate, voice_rate, stream_rate, 0) as price_per_min FROM users WHERE supabase_id = $1 AND is_creator = TRUE',
+      'SELECT id, supabase_id, COALESCE(creator_rate, voice_rate, stream_price, 0) as price_per_min FROM users WHERE supabase_id = $1 AND is_creator = TRUE',
       [creatorId]
     );
 

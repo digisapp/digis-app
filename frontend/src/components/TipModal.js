@@ -23,6 +23,7 @@ const TipModal = ({
   const [customAmount, setCustomAmount] = useState('');
   const [isCustom, setIsCustom] = useState(false);
   const [isSending, setSending] = useState(false);
+  const [showInsufficientTokens, setShowInsufficientTokens] = useState(false);
 
   const modalRef = useRef(null);
   const firstFocusableRef = useRef(null);
@@ -70,7 +71,11 @@ const TipModal = ({
   };
 
   const handleSendTip = async () => {
-    if (!hasEnoughTokens || actualAmount <= 0) return;
+    // Check if user has enough tokens
+    if (!hasEnoughTokens || actualAmount <= 0) {
+      setShowInsufficientTokens(true);
+      return;
+    }
 
     setSending(true);
     try {
@@ -90,6 +95,7 @@ const TipModal = ({
       setTipAmount(50);
       setCustomAmount('');
       setIsCustom(false);
+      setShowInsufficientTokens(false);
     } catch (error) {
       toast.error('Failed to send tip');
     } finally {
@@ -247,27 +253,17 @@ const TipModal = ({
                   </div>
                 </div>
 
-                {/* Token info */}
-                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl p-3 mb-4 border border-amber-200/50 dark:border-amber-700/30">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Tip amount:</span>
-                    <span className="font-semibold text-amber-600 dark:text-amber-400">
-                      {actualAmount} tokens
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm mt-2 pt-2 border-t border-amber-200/50 dark:border-amber-700/30">
-                    <span className="text-gray-600 dark:text-gray-400">Your balance:</span>
-                    <span className={`font-semibold ${hasEnoughTokens ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {tokenBalance} tokens
-                    </span>
-                  </div>
-                </div>
-
-                {/* Warning if insufficient tokens */}
-                {!hasEnoughTokens && actualAmount > 0 && (
+                {/* Warning if insufficient tokens - only shown after clicking Send Tip */}
+                {showInsufficientTokens && (
                   <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg mb-4">
                     <p className="font-medium">Insufficient tokens</p>
-                    <p className="text-xs mt-1">You need {actualAmount - tokenBalance} more tokens to send this tip.</p>
+                    <p className="text-xs mt-1">You need {Math.max(0, actualAmount - tokenBalance)} more tokens to send this tip.</p>
+                    <button
+                      onClick={() => navigate('/tokens')}
+                      className="mt-2 w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition-all"
+                    >
+                      Purchase Tokens
+                    </button>
                   </div>
                 )}
 
@@ -281,15 +277,15 @@ const TipModal = ({
                   </button>
                   <button
                     onClick={handleSendTip}
-                    disabled={!hasEnoughTokens || actualAmount <= 0 || isSending}
+                    disabled={actualAmount <= 0 || isSending}
                     className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden group ${
-                      hasEnoughTokens && actualAmount > 0 && !isSending
+                      actualAmount > 0 && !isSending
                         ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white shadow-lg hover:shadow-xl hover:from-amber-700 hover:to-yellow-700 transform hover:-translate-y-0.5'
                         : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-60'
                     }`}
                   >
                     {/* Button shimmer animation on hover */}
-                    {hasEnoughTokens && actualAmount > 0 && !isSending && (
+                    {actualAmount > 0 && !isSending && (
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[length:200%_100%] group-hover:animate-shimmer"></div>
                     )}
 

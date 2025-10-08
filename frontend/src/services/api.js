@@ -1,9 +1,9 @@
 // API client using enhanced Supabase authentication
 import axios from 'axios';
-import { ENV } from '../config/env';
+import { BACKEND_URL } from '../config/runtime';
 import { getAuthToken, refreshSession, retry } from '../utils/supabase-auth-enhanced';
 
-const API_BASE_URL = ENV.BACKEND_URL;
+const API_BASE_URL = BACKEND_URL;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

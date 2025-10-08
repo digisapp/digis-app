@@ -41,16 +41,25 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { getDesktopMenuItems } from '../../config/navSchema';
 import NotificationDropdown from '../NotificationDropdown';
 import ProfileDropdown from '../ProfileDropdown';
+import WalletQuickView from '../WalletQuickView';
+import TokenPurchase from '../TokenPurchase';
 import useHybridStore from '../../stores/useHybridStore';
+import useAuthStore from '../../stores/useAuthStore';
 import toast from 'react-hot-toast';
 
 const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
-  const { activePath, onNavigate, role, badges = { notifications: 0 }, tokenBalance } = useNavigation();
+  // Use AuthStore as single source of truth for role
+  const role = useAuthStore((state) => state.role || 'fan');
+  const authUser = useAuthStore((state) => state.user);
+
+  const { activePath, onNavigate, badges = { notifications: 0 }, tokenBalance } = useNavigation();
   const storeTokenBalance = useHybridStore((state) => state.tokenBalance);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showCreatorMenu, setShowCreatorMenu] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showTokenPurchase, setShowTokenPurchase] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState([]);
@@ -66,10 +75,10 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
 
   const navItems = getDesktopMenuItems(role);
   const mainNavItems = navItems.filter(item => {
-    // Main navigation items - add analytics for creators
+    // Main navigation items
     const allowedItems = role === 'creator'
-      ? ['home', 'explore', 'analytics', 'messages']
-      : ['home', 'explore', 'messages'];
+      ? ['dashboard', 'explore', 'messages']
+      : ['home', 'explore', 'messages', 'tv', 'classes'];
     return allowedItems.includes(item.id);
   });
 
@@ -201,7 +210,16 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
               {/* Enhanced Logo with Animation */}
               <motion.div
                 className="flex items-center cursor-pointer group"
-                onClick={() => onNavigate('/')}
+                onClick={() => {
+                  // Navigate based on user role
+                  if (role === 'creator') {
+                    onNavigate('/dashboard');
+                  } else if (role === 'fan') {
+                    onNavigate('/explore');
+                  } else {
+                    onNavigate('/');
+                  }
+                }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -211,28 +229,18 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
                     alt="Digis"
                     className="h-8 w-auto object-contain"
                   />
-                  {role === 'creator' && (
-                    <span className="absolute -top-2 -right-8 px-2 py-0.5 text-[10px] font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-full">
-                      PRO
-                    </span>
-                  )}
                 </div>
               </motion.div>
 
               {/* Main Navigation with Hover Effects */}
               <div className="hidden lg:flex items-center space-x-1">
-                {/* Always show token balance for debugging */}
-                {role === 'creator' && (
-                  <div className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 rounded-lg mr-2">
-                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                      Tokens: {typeof effectiveTokenBalance === 'number' ? effectiveTokenBalance.toLocaleString() : 'Loading...'}
-                    </span>
-                  </div>
-                )}
                 
                 {mainNavItems.map((item, index) => {
                   const Icon = item.icon;
-                  const isActive = activePath === item.path;
+                  // Special case for home button for fans - it should be active on /explore
+                  const isActive = item.id === 'home' && role === 'fan'
+                    ? activePath === '/explore' || activePath === item.path
+                    : activePath === item.path;
 
                   return (
                     <motion.button
@@ -313,122 +321,17 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
                   );
                 })}
 
-                {/* Go Live Button - icon only */}
-                {onShowGoLive && (
+                {/* Go Live Button - icon only (creators only) */}
+                {onShowGoLive && role === 'creator' && (
                   <motion.button
                     onClick={onShowGoLive}
-                    className="relative group"
+                    className="relative group p-3 rounded-xl text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <div className="relative px-4 py-2.5 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl text-white shadow-lg hover:shadow-xl transition-all duration-300">
-                      <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-pink-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <VideoCameraIcon className="w-6 h-6 relative" />
-                    </div>
+                    <div className="absolute inset-0 bg-gray-100 dark:bg-gray-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <VideoCameraIcon className="w-6 h-6 relative" />
                   </motion.button>
-                )}
-
-                {/* Creator Hub Dropdown with Glass Effect */}
-                {role === 'creator' && creatorItems.length > 0 && (
-                  <div className="relative">
-                    <motion.button
-                      onClick={() => setShowCreatorMenu(!showCreatorMenu)}
-                      className="relative group px-4 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300"
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <div className="relative flex items-center space-x-2">
-                        <RocketLaunchIcon className="w-5 h-5" />
-                        <span>Creator Hub</span>
-                        <ChevronDownIcon className={`w-4 h-4 transition-transform ${showCreatorMenu ? 'rotate-180' : ''}`} />
-                      </div>
-                    </motion.button>
-                    
-                    <AnimatePresence>
-                      {showCreatorMenu && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                          transition={{ duration: 0.2 }}
-                          className="absolute top-full left-0 mt-2 w-64 p-2 rounded-2xl overflow-hidden"
-                          style={{
-                            backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                            backdropFilter: 'blur(20px) saturate(180%)',
-                            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)'
-                          }}
-                        >
-                          {/* Quick Actions Grid */}
-                          <div className="grid grid-cols-2 gap-2 mb-2">
-                            {quickActions.map((action) => {
-                              const ActionIcon = action.icon;
-                              return (
-                                <motion.button
-                                  key={action.id}
-                                  onClick={() => {
-                                    if (action.action) action.action();
-                                    if (action.path) onNavigate(action.path);
-                                    setShowCreatorMenu(false);
-                                  }}
-                                  className="relative group p-3 rounded-xl overflow-hidden"
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                >
-                                  <div className={`absolute inset-0 bg-gradient-to-r ${action.color} opacity-10 group-hover:opacity-20 transition-opacity`} />
-                                  <div className="relative flex flex-col items-center space-y-1">
-                                    <ActionIcon className="w-6 h-6 text-gray-700 dark:text-gray-300" />
-                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{action.label}</span>
-                                  </div>
-                                </motion.button>
-                              );
-                            })}
-                          </div>
-                          
-                          <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
-                          
-                          {/* Creator Menu Items */}
-                          {creatorItems.map((item, index) => {
-                            const Icon = item.icon;
-                            return (
-                              <motion.button
-                                key={item.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                onClick={() => {
-                                  item.path && onNavigate(item.path);
-                                  setShowCreatorMenu(false);
-                                }}
-                                className="w-full px-3 py-2.5 rounded-xl text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-between group"
-                              >
-                                <div className="flex items-center space-x-3">
-                                  <Icon className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
-                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.label}</span>
-                                </div>
-                                <ChevronRightIcon className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </motion.button>
-                            );
-                          })}
-                          
-                          {/* Live Stats */}
-                          {liveViewers > 0 && (
-                            <div className="mt-2 p-3 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-xl">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Live Viewers</span>
-                                <div className="flex items-center space-x-1">
-                                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                                  <span className="text-sm font-bold text-red-600 dark:text-red-400">{liveViewers}</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
                 )}
               </div>
             </div>
@@ -440,7 +343,13 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
             <div className="flex items-center space-x-4">
               {/* Wallet Button - Icon and token count only */}
               <motion.button
-                onClick={() => onNavigate('/wallet')}
+                onClick={() => {
+                  if (role === 'fan') {
+                    setShowWalletModal(true);
+                  } else {
+                    onNavigate('/wallet');
+                  }
+                }}
                 className="relative group"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -521,6 +430,31 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Wallet Quick View Modal */}
+      <WalletQuickView
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        user={user}
+        tokenBalance={effectiveTokenBalance}
+        onTokenPurchase={() => {
+          setShowWalletModal(false);
+          setShowTokenPurchase(true);
+        }}
+      />
+
+      {/* Token Purchase Modal */}
+      {showTokenPurchase && (
+        <TokenPurchase
+          user={user}
+          isModal={true}
+          onClose={() => setShowTokenPurchase(false)}
+          onSuccess={() => {
+            setShowTokenPurchase(false);
+            toast.success('Tokens purchased successfully!');
+          }}
+        />
+      )}
     </>
   );
 };

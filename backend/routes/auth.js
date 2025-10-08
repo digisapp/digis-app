@@ -4,7 +4,7 @@ const { pool } = require('../utils/db');
 const { authenticateToken, verifySupabaseToken } = require('../middleware/auth');
 const { supabaseAdmin } = require('../utils/supabase-admin');
 const { v4: uuidv4 } = require('uuid');
-const { getVerifiedRole, clearRoleCache } = require('../middleware/roleVerification');
+const { getVerifiedRole, getUserRole, clearRoleCache } = require('../middleware/roleVerification');
 const { sendCreatorWelcomeEmail, sendFanWelcomeEmail } = require('../services/emailService');
 const { sessions, users: usersCache, TTL } = require('../utils/redis');
 
@@ -189,7 +189,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       supabaseId,
       email,
       username,
-      false, // New users start as fans, creators need approval
+      accountType === 'creator', // Set is_creator based on account_type
       JSON.stringify(metadata || {}),
       metadata?.date_of_birth || null
     ]);
@@ -785,6 +785,111 @@ router.post('/clear-role-cache', verifySupabaseToken, (req, res) => {
     clearRoleCache(userId);
   }
   res.json({ success: true, message: 'Role cache cleared' });
+});
+
+/**
+ * @swagger
+ * /auth/session:
+ *   get:
+ *     summary: Get current user session with unified role (SINGLE SOURCE OF TRUTH)
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Session data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 session:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       format: uuid
+ *                     email:
+ *                       type: string
+ *                     username:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                       enum: [fan, creator, admin]
+ *                     is_creator:
+ *                       type: boolean
+ *                     is_admin:
+ *                       type: boolean
+ *                     permissions:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     role_version:
+ *                       type: integer
+ *                     user:
+ *                       type: object
+ *       401:
+ *         description: Not authenticated
+ */
+router.get('/session', verifySupabaseToken, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authenticated'
+      });
+    }
+
+    // Get role from database (single source of truth)
+    const userRole = await getUserRole(userId);
+
+    if (!userRole) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Compute permissions based on role
+    const permissions = [];
+    if (userRole.isAdmin) {
+      permissions.push('admin:all', 'creator:all', 'fan:all');
+    } else if (userRole.isCreator) {
+      permissions.push('creator:manage', 'creator:earnings', 'creator:analytics', 'fan:all');
+    } else {
+      permissions.push('fan:all');
+    }
+
+    // Return unified session object
+    return res.json({
+      success: true,
+      session: {
+        userId: userRole.id,
+        email: userRole.email,
+        username: userRole.username,
+        role: userRole.primaryRole, // "creator" | "fan" | "admin"
+        is_creator: userRole.isCreator,
+        is_admin: userRole.isAdmin,
+        permissions,
+        role_version: 1, // Increment this when role changes
+        user: {
+          id: userRole.id,
+          email: userRole.email,
+          username: userRole.username
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error getting session:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get session'
+    });
+  }
 });
 
 // Export router and middleware for backward compatibility

@@ -172,6 +172,9 @@ const EnhancedMessagesPage = ({
   }, [isCreator]);
 
   // Inbox tabs configuration - different for creators and fans
+  // Debug logging for isCreator prop
+  console.log('💬 EnhancedMessagesPage - isCreator:', isCreator, 'user:', user?.email);
+
   const inboxTabs = isCreator ? [
     { id: 'all', label: 'All', icon: InboxIcon, count: 0 },
     { id: 'unread', label: 'Unread', icon: EnvelopeIcon, count: 0 },
@@ -1039,20 +1042,21 @@ const EnhancedMessagesPage = ({
           >
             {/* Header */}
             <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Messages</h2>
-                <div className="flex items-center gap-2">
-                  {/* New Conversation Button */}
-                  {!bulkActionMode && (
-                    <button
-                      onClick={() => setShowNewConversationModal(true)}
-                      className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                      title="Start new conversation"
-                    >
-                      <PlusIcon className="w-5 h-5" />
-                    </button>
-                  )}
-                  
+              <div className="flex items-center gap-2 mb-4">
+                {/* Search - full width on desktop */}
+                <div className="flex-1 relative min-w-0">
+                  <input
+                    type="search"
+                    placeholder="Search Messages"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-12 pl-10 pr-3 sm:pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                    aria-label="Search conversations"
+                  />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                </div>
+
+                <div className="flex items-center gap-2 ml-auto">
                   {/* Mass Message Button - Only for Creators */}
                   {isCreator && !bulkActionMode && (
                     <button
@@ -1066,7 +1070,7 @@ const EnhancedMessagesPage = ({
                       <UserGroupIcon className="w-5 h-5" />
                     </button>
                   )}
-                  
+
                   {bulkActionMode ? (
                     <>
                       <button
@@ -1101,36 +1105,15 @@ const EnhancedMessagesPage = ({
                       </button>
                     </>
                   ) : (
-                    <>
-                      <button
-                        onClick={() => setBulkActionMode(true)}
-                        className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                        title="Select multiple"
-                      >
-                        <EllipsisHorizontalIcon className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                      >
-                        <FunnelIcon className="w-5 h-5" />
-                      </button>
-                    </>
+                    <button
+                      onClick={() => setBulkActionMode(true)}
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      title="Select multiple"
+                    >
+                      <EllipsisHorizontalIcon className="w-5 h-5" />
+                    </button>
                   )}
                 </div>
-              </div>
-              
-              {/* Search */}
-              <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Search conversations..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  aria-label="Search conversations"
-                />
               </div>
             </div>
             
@@ -1518,12 +1501,12 @@ const EnhancedMessagesPage = ({
                 {conversations.length === 0 ? 'No conversations yet' : 'Select a conversation'}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                {conversations.length === 0 
-                  ? 'Start a new conversation to connect with fans'
+                {conversations.length === 0
+                  ? isCreator ? 'Start a new conversation to connect with fans' : 'No conversations yet. Interact with creators to start messaging.'
                   : 'Choose a conversation from the sidebar to start messaging'
                 }
               </p>
-              {conversations.length === 0 && (
+              {conversations.length === 0 && isCreator && (
                 <button
                   onClick={() => setShowNewConversationModal(true)}
                   className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all"

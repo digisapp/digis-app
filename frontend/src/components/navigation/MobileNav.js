@@ -11,7 +11,7 @@ import {
   ChevronRightIcon,
   ShoppingBagIcon,
   TvIcon,
-  AcademicCapIcon,
+  StarIcon,
   HeartIcon,
   TagIcon,
   CurrencyDollarIcon,
@@ -20,14 +20,24 @@ import {
 import { useNavigation } from '../../contexts/NavigationContext';
 import { getMobileBottomItems, getMobileCenterAction } from '../../config/navSchema';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
+import WalletQuickView from '../WalletQuickView';
+import TokenPurchase from '../TokenPurchase';
+import useAuthStore from '../../stores/useAuthStore';
+import toast from 'react-hot-toast';
 
 const MobileNav = ({ user, onShowGoLive, onLogout }) => {
-  const { activePath, onNavigate, role, badges, tokenBalance } = useNavigation();
+  // Use AuthStore as single source of truth for role
+  const role = useAuthStore((state) => state.role || 'fan');
+  const authUser = useAuthStore((state) => state.user);
+
+  const { activePath, onNavigate, badges, tokenBalance } = useNavigation();
   const [hoveredItem, setHoveredItem] = useState(null);
   const [lastTap, setLastTap] = useState({});
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showPricingRatesModal, setShowPricingRatesModal] = useState(false);
   const [showOffersModal, setShowOffersModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showTokenPurchase, setShowTokenPurchase] = useState(false);
   const controls = useAnimation();
   const navRef = useRef(null);
   const menuRef = useRef(null);
@@ -54,6 +64,12 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [showProfileMenu]);
+
+  // Close TokenPurchase modal when navigating to other pages
+  useEffect(() => {
+    setShowTokenPurchase(false);
+    setShowWalletModal(false);
+  }, [activePath]);
 
   // Helper function to handle navigation and close menu
   const handleMenuNavigate = (path) => {
@@ -143,16 +159,10 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 opacity-60 animate-gradient-x" />
         
         
-        <div className="flex items-center justify-between h-[72px] px-4 relative w-full">
+        <div className="flex items-center justify-around h-[72px] px-4 relative w-full">
           {bottomItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = activePath === item.path;
-            const isMiddle = centerAction && index === Math.floor(bottomItems.length / 2);
-            
-            // Skip middle position if we have a center action
-            if (isMiddle) {
-              return <div key={item.id} className="flex-1" />;
-            }
 
             // Special handling for profile button
             if (item.id === 'profile') {
@@ -221,7 +231,12 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                 key={item.id}
                 onClick={() => {
                   triggerHaptic(item.id);
-                  item.path && onNavigate(item.path);
+                  // Special handling for wallet popup button (fans only)
+                  if (item.id === 'wallet-popup') {
+                    setShowWalletModal(true);
+                  } else {
+                    item.path && onNavigate(item.path);
+                  }
                 }}
                 onHoverStart={() => setHoveredItem(item.id)}
                 onHoverEnd={() => setHoveredItem(null)}
@@ -277,93 +292,6 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
         </div>
       </motion.nav>
 
-      {/* Modern Floating Action Button with 2025 styling */}
-      {centerAction && onShowGoLive && (
-        <motion.button
-              initial={{ scale: 0, opacity: 0, y: 100 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0, opacity: 0, y: 100 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => {
-                triggerHaptic('go-live');
-                onShowGoLive();
-              }}
-              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[101] w-14 h-14 rounded-full flex items-center justify-center"
-              style={{ 
-                marginBottom: 'calc(env(safe-area-inset-bottom) + 8px)',
-                background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-                boxShadow: '0 10px 30px -5px rgba(168,85,247,0.4), 0 20px 50px -10px rgba(236,72,153,0.3), inset 0 1px 0 0 rgba(255,255,255,0.2)'
-              }}
-              aria-label="Go Live"
-            >
-              {/* Orbiting particles effect */}
-              <motion.div
-                className="absolute inset-0"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              >
-                {[...Array(3)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute w-2 h-2 bg-white rounded-full"
-                    style={{
-                      top: '50%',
-                      left: '50%',
-                      marginTop: -1,
-                      marginLeft: -1
-                    }}
-                    animate={{
-                      x: [0, 25 * Math.cos(i * 120 * Math.PI / 180), 0],
-                      y: [0, 25 * Math.sin(i * 120 * Math.PI / 180), 0],
-                      opacity: [0, 0.6, 0]
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      delay: i * 0.3,
-                      ease: 'easeInOut'
-                    }}
-                  />
-                ))}
-              </motion.div>
-              
-              {/* Gradient ring */}
-              <motion.div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: 'conic-gradient(from 180deg at 50% 50%, #a855f7 0deg, #ec4899 120deg, #a855f7 240deg, #ec4899 360deg)',
-                  opacity: 0.2
-                }}
-                animate={{ rotate: -360 }}
-                transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-              />
-              
-              <VideoCameraIcon className="w-7 h-7 text-white relative z-10 drop-shadow-lg" strokeWidth={2.5} />
-              
-              {/* Multi-layer pulse animation */}
-              {[...Array(2)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)'
-                  }}
-                  initial={{ scale: 1, opacity: 0.5 }}
-                  animate={{ scale: 2, opacity: 0 }}
-                  transition={{ 
-                    duration: 2, 
-                    repeat: Infinity,
-                    delay: i * 0.5,
-                    ease: 'easeOut'
-                  }}
-                />
-              ))}
-              
-              {/* Sparkle icon */}
-              <SparklesIcon className="absolute -top-1 -right-1 w-4 h-4 text-yellow-300 animate-pulse" />
-            </motion.button>
-      )}
 
       {/* Top Status Bar removed - not needed for this implementation */}
 
@@ -418,11 +346,11 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                 </div>
 
                 {/* Profile URL - Copy button for creators only */}
-                {(role === 'creator' || user?.is_creator) && (
+                {(role === 'creator' || role === 'admin') && (
                   <button
                     onClick={async (e) => {
                       e.stopPropagation();
-                      const username = user?.username || user?.email?.split('@')[0] || 'creator';
+                      const username = authUser?.username || user?.username || user?.email?.split('@')[0] || 'creator';
                       const profileUrl = `https://digis.cc/${username}`;
 
                       try {
@@ -478,7 +406,7 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
             {/* Menu Items - Different for Creator vs Fan */}
             <div className="py-2">
               <button
-                onClick={() => handleMenuNavigate('/profile?section=profile')}
+                onClick={() => handleMenuNavigate('/settings')}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <PencilSquareIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -486,7 +414,7 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
               </button>
 
               {/* Creator-specific menu items */}
-              {(role === 'creator' || user?.is_creator) ? (
+              {(role === 'creator' || role === 'admin') ? (
                 <>
                   <button
                     onClick={() => {
@@ -508,6 +436,14 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                   </button>
 
                   <button
+                    onClick={() => handleMenuNavigate('/call-requests')}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <VideoCameraIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <span className="text-gray-900 dark:text-white">Calls</span>
+                  </button>
+
+                  <button
                     onClick={() => {
                       setShowProfileMenu(false);
                       setShowPricingRatesModal(true);
@@ -519,10 +455,18 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                   </button>
 
                   <button
+                    onClick={() => handleMenuNavigate('/tv')}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <TvIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <span className="text-gray-900 dark:text-white">TV</span>
+                  </button>
+
+                  <button
                     onClick={() => handleMenuNavigate('/classes')}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
-                    <AcademicCapIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <StarIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     <span className="text-gray-900 dark:text-white">Classes</span>
                   </button>
 
@@ -549,7 +493,7 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                     onClick={() => handleMenuNavigate('/classes')}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
-                    <AcademicCapIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <StarIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     <span className="text-gray-900 dark:text-white">Classes</span>
                   </button>
 
@@ -560,24 +504,8 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                     <HeartIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     <span className="text-gray-900 dark:text-white">Collections</span>
                   </button>
-
-                  <button
-                    onClick={() => handleMenuNavigate('/shop')}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <ShoppingBagIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                    <span className="text-gray-900 dark:text-white">Shop</span>
-                  </button>
                 </>
               )}
-
-              <button
-                onClick={() => handleMenuNavigate('/settings')}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <Cog6ToothIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                <span className="text-gray-900 dark:text-white">Settings</span>
-              </button>
 
               <div className="my-2 border-t border-gray-200 dark:border-gray-800" />
 
@@ -780,6 +708,31 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Wallet Quick View Modal */}
+      <WalletQuickView
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        user={user}
+        tokenBalance={tokenBalance}
+        onTokenPurchase={() => {
+          setShowWalletModal(false);
+          setShowTokenPurchase(true);
+        }}
+      />
+
+      {/* Token Purchase Modal */}
+      {showTokenPurchase && (
+        <TokenPurchase
+          user={user}
+          isModal={true}
+          onClose={() => setShowTokenPurchase(false)}
+          onSuccess={() => {
+            setShowTokenPurchase(false);
+            toast.success('Tokens purchased successfully!');
+          }}
+        />
       )}
     </>
   );

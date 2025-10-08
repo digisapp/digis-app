@@ -181,7 +181,7 @@ const HomePage = ({ onSignIn, onSignUp }) => {
               onClick={onSignUp}
               className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg"
             >
-              Sign Up ✨
+              Sign Up
             </button>
           </div>
         </div>

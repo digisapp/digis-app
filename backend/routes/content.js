@@ -291,6 +291,118 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
   }
 });
 
+// Upload photo bundle (for bulk uploads)
+router.post('/upload-bundle', authenticateToken, upload.array('photos', 100), async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const userId = req.user.supabase_id;
+    const { title, description, category, is_premium, price, photo_count } = req.body;
+
+    // Verify user is a creator (userId is already the UUID from supabase_id)
+    const creatorCheck = await client.query(
+      'SELECT id, is_creator FROM users WHERE supabase_id = $1 OR id = $1',
+      [userId]
+    );
+
+    if (creatorCheck.rows.length === 0 || !creatorCheck.rows[0].is_creator) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Only creators can upload content' });
+    }
+
+    // Use the supabase_id (UUID) as creator_id
+    const creatorId = userId;
+
+    if (!req.files || req.files.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    // Create bundle record first
+    const bundleId = uuidv4();
+    await client.query(`
+      INSERT INTO content_bundles (
+        id, creator_id, title, description, category,
+        is_premium, price, photo_count, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+    `, [
+      bundleId,
+      creatorId,
+      title,
+      description || '',
+      category || 'general',
+      is_premium === 'true',
+      parseFloat(price) || 0,
+      req.files.length
+    ]);
+
+    // Upload each photo and link to bundle
+    const uploadedPhotos = [];
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
+      const photoTitle = req.body[`titles[${i}]`] || `Photo ${i + 1}`;
+      const photoDescription = req.body[`descriptions[${i}]`] || '';
+
+      const photoId = uuidv4();
+      const contentUrl = `/uploads/pictures/${file.filename}`;
+      const thumbnailUrl = contentUrl;
+
+      await client.query(`
+        INSERT INTO creator_content (
+          id, creator_id, content_type, title, description,
+          thumbnail_url, content_url, price, file_size,
+          mime_type, bundle_id, is_premium, category, created_at
+        ) VALUES ($1, $2, 'picture', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+      `, [
+        photoId,
+        creatorId,
+        photoTitle,
+        photoDescription,
+        thumbnailUrl,
+        contentUrl,
+        is_premium === 'true' ? 0 : 0, // Individual photos in bundle don't have separate prices
+        file.size,
+        file.mimetype,
+        bundleId,
+        is_premium === 'true',
+        category || 'general'
+      ]);
+
+      uploadedPhotos.push({
+        id: photoId,
+        title: photoTitle,
+        url: contentUrl,
+        thumbnail_url: thumbnailUrl
+      });
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: `Bundle uploaded successfully with ${req.files.length} photos`,
+      bundle: {
+        id: bundleId,
+        title,
+        description,
+        price: parseFloat(price) || 0,
+        is_premium: is_premium === 'true',
+        photo_count: req.files.length,
+        photos: uploadedPhotos
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error uploading bundle:', error);
+    res.status(500).json({ error: 'Failed to upload bundle' });
+  } finally {
+    client.release();
+  }
+});
+
 // Get purchased content
 router.get('/purchased', authenticateToken, async (req, res) => {
   try {

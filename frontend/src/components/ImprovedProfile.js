@@ -74,7 +74,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
   ];
   
   // Basic profile state
-  const [fullName, setFullName] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [pic, setPic] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
@@ -208,7 +208,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Profile loaded:', data);
-        setFullName(data.full_name || '');
+        setDisplayName(data.display_name || data.full_name || '');
         setBio(data.bio || '');
         setPic(data.profile_pic_url || '');
         setBannerUrl(data.banner_url || '');
@@ -381,7 +381,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         uid: user.id,
         email: user.email,
         username: username.trim() || user.email.split('@')[0],
-        full_name: fullName,
+        display_name: displayName,
         bio: bio.trim(),
         profile_pic_url: downloadURL, // Use the new profile pic URL
         banner_url: bannerUrl,
@@ -485,7 +485,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
 
     console.log('💾 Saving profile with data:', {
       username,
-      fullName,
+      displayName,
       bio,
       creatorType,
       interests,
@@ -506,7 +506,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         uid: user.id,
         email: user.email,
         username: username.trim(),
-        full_name: fullName,
+        display_name: displayName,
         bio: bio.trim(),
         profile_pic_url: pic,
         banner_url: bannerUrl,
@@ -638,7 +638,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                     user={{
                       id: user?.id,
                       username: username || user?.email,
-                      display_name: fullName,
+                      display_name: displayName,
                       creator_type: creatorType
                     }}
                     currentAvatar={pic}
@@ -662,7 +662,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3">
                     <div>
                       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
-                        {fullName || username || 'Your Name'}
+                        {displayName || username || 'Your Name'}
                       </h1>
                       <p className="text-gray-600">@{username || 'username'}</p>
                     </div>
@@ -810,9 +810,9 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                             placeholder="Choose a unique username"
                             maxLength={50}
                             required
-                            className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                            className="w-full h-10 pl-10 pr-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                           />
-                          <span className="absolute left-3 top-3.5 text-gray-400 dark:text-gray-500 font-medium">@</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 font-medium">@</span>
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                           This is your unique identifier on the platform
@@ -826,13 +826,13 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                         </label>
                         <input
                           type="text"
-                          value={fullName}
+                          value={displayName}
                           onChange={(e) => {
-                            setFullName(e.target.value);
+                            setDisplayName(e.target.value);
                             clearMessages();
                           }}
                           placeholder="Your display name"
-                          className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                          className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                         />
                       </div>
 
@@ -962,7 +962,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                                 clearMessages();
                               }}
                               placeholder="e.g., Florida"
-                              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                              className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                             />
                           </div>
                           <div>
@@ -977,7 +977,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                                 clearMessages();
                               }}
                               placeholder="e.g., USA"
-                              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                              className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                             />
                           </div>
                         </div>
@@ -1030,7 +1030,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                             value={socialLinks.instagram}
                             onChange={(e) => setSocialLinks({...socialLinks, instagram: e.target.value})}
                             placeholder="@yourinstagram"
-                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                            className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                           />
                         </div>
                         
@@ -1043,7 +1043,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                             value={socialLinks.twitter}
                             onChange={(e) => setSocialLinks({...socialLinks, twitter: e.target.value})}
                             placeholder="@yourtwitter"
-                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                            className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                           />
                         </div>
                         
@@ -1056,7 +1056,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                             value={socialLinks.youtube}
                             onChange={(e) => setSocialLinks({...socialLinks, youtube: e.target.value})}
                             placeholder="youtube.com/yourchannel"
-                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                            className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                           />
                         </div>
                         
@@ -1069,7 +1069,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                             value={socialLinks.tiktok}
                             onChange={(e) => setSocialLinks({...socialLinks, tiktok: e.target.value})}
                             placeholder="@yourtiktok"
-                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                            className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                           />
                         </div>
                       </div>

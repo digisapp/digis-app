@@ -14,7 +14,6 @@ export const VIEW = Object.freeze({
   ANALYTICS: 'analytics',
   CALLS: 'calls',
   CALL_REQUESTS: 'call-requests',
-  CALL_MANAGEMENT: 'call-management',
   TV: 'tv',
   CLASSES: 'classes',
   ADMIN: 'admin',
@@ -50,7 +49,6 @@ export const PATH_FOR_VIEW = Object.freeze({
   [VIEW.ANALYTICS]: '/analytics',
   [VIEW.CALLS]: '/calls',
   [VIEW.CALL_REQUESTS]: '/call-requests',
-  [VIEW.CALL_MANAGEMENT]: '/call-management',
   [VIEW.TV]: '/tv',
   [VIEW.CLASSES]: '/classes',
   [VIEW.ADMIN]: '/admin',
@@ -95,7 +93,6 @@ export const AUTH_REQUIRED_VIEWS = new Set([
   VIEW.ANALYTICS,
   VIEW.CALLS,
   VIEW.CALL_REQUESTS,
-  VIEW.CALL_MANAGEMENT,
   VIEW.ADMIN,
   VIEW.STREAMING,
   VIEW.VIDEO_CALL,
@@ -112,7 +109,6 @@ export const AUTH_REQUIRED_VIEWS = new Set([
 // Check if a view is creator-only
 export const CREATOR_ONLY_VIEWS = new Set([
   VIEW.ANALYTICS,
-  VIEW.CALL_MANAGEMENT,
   VIEW.STREAMING,
   VIEW.FOLLOWERS,
   VIEW.SUBSCRIBERS,

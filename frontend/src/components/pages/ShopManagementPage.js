@@ -406,8 +406,8 @@ const ShopManagementPage = ({ user }) => {
 
   const tabs = [
     { id: 'products', label: 'Products', mobileLabel: 'Products', icon: ShoppingBagIcon, count: shopItems.length },
-    { id: 'orders', label: 'Orders', mobileLabel: 'Orders', icon: TruckIcon, count: orders.length },
     { id: 'analytics', label: 'Shop Analytics', mobileLabel: 'Analytics', icon: ChartBarIcon },
+    { id: 'orders', label: 'Orders', mobileLabel: 'Orders', icon: TruckIcon, count: orders.length },
     { id: 'stream-analytics', label: 'Stream Sales', mobileLabel: 'Stream', icon: VideoCameraIcon },
     { id: 'settings', label: 'Settings', mobileLabel: 'Settings', icon: CogIcon }
   ];
@@ -424,44 +424,18 @@ const ShopManagementPage = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-0 md:pt-16">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Enhanced Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4 sm:py-6">
             <div className="flex items-center justify-between">
-              {/* Mobile: Username and Avatar on left */}
-              <div className="flex items-center gap-3 md:hidden">
-                {/* User Avatar */}
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                  {user?.profile_pic_url ? (
-                    <img
-                      src={user.profile_pic_url}
-                      alt={user.username}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-white font-bold text-lg">
-                      {user?.username?.[0]?.toUpperCase() || 'U'}
-                    </span>
-                  )}
-                </div>
-                {/* Username */}
-                <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {user?.username || 'Shop'}
-                </h1>
-              </div>
-
-              {/* Desktop: Original layout with back button and shop icon */}
-              <div className="hidden md:flex items-center gap-4">
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <ArrowLeftIcon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-                </button>
+              {/* Shop header */}
+              <div className="flex items-center gap-4">
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Shop Management</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Shop Management
+                  </h1>
                 </div>
               </div>
 
@@ -496,53 +470,9 @@ const ShopManagementPage = ({ user }) => {
                   )}
                 </Button>
               </div>
-
-              {/* Mobile: Shop Status Toggle Button */}
-              <div className="md:hidden">
-                <button
-                  onClick={toggleShopStatus}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    shopEnabled
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800'
-                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {shopEnabled ? 'Active' : 'Inactive'}
-                </button>
-              </div>
             </div>
 
-            {/* Stats Grid - 8 metrics in 2 rows */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-              {stats.map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Card className="p-4 hover:shadow-lg transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div className={`p-2 bg-${stat.color}-100 dark:bg-${stat.color}-900/20 rounded-lg`}>
-                        <stat.icon className={`w-6 h-6 text-${stat.color}-600 dark:text-${stat.color}-400`} />
-                      </div>
-                      {stat.trend === 'up' ? (
-                        <span className="text-green-600 dark:text-green-400 text-sm font-medium flex items-center gap-1">
-                          <ArrowTrendingUpIcon className="w-4 h-4" />
-                          {stat.change}
-                        </span>
-                      ) : (
-                        <span className="text-red-600 dark:text-red-400 text-sm font-medium">
-                          {stat.change}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white mt-3">{stat.value}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{stat.label}</p>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+            {/* Stats Grid - Hidden, moved to Analytics tab */}
           </div>
         </div>
       </div>
@@ -655,7 +585,7 @@ const ShopManagementPage = ({ user }) => {
                       <div className="p-4 bg-white dark:bg-gray-800 rounded-full shadow-lg mb-4 inline-block group-hover:scale-110 transition-transform">
                         <PlusIcon className="w-10 h-10 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <p className="text-sm font-semibold text-purple-700 dark:text-purple-300">Add New Product</p>
+                      <p className="text-sm font-semibold text-purple-700 dark:text-purple-300">Add Product</p>
                     </div>
                   </div>
                   <div className="p-4">
@@ -925,6 +855,38 @@ const ShopManagementPage = ({ user }) => {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6"
             >
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {stats.map((stat, index) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card className="p-4 hover:shadow-lg transition-shadow">
+                      <div className="flex items-center justify-between">
+                        <div className={`p-2 bg-${stat.color}-100 dark:bg-${stat.color}-900/20 rounded-lg`}>
+                          <stat.icon className={`w-6 h-6 text-${stat.color}-600 dark:text-${stat.color}-400`} />
+                        </div>
+                        {stat.trend === 'up' ? (
+                          <span className="text-green-600 dark:text-green-400 text-sm font-medium flex items-center gap-1">
+                            <ArrowTrendingUpIcon className="w-4 h-4" />
+                            {stat.change}
+                          </span>
+                        ) : (
+                          <span className="text-red-600 dark:text-red-400 text-sm font-medium">
+                            {stat.change}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xl font-bold text-gray-900 dark:text-white mt-3">{stat.value}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{stat.label}</p>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Revenue Chart */}
                 <Card className="p-6">
@@ -1191,7 +1153,9 @@ const ShopManagementPage = ({ user }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999]"
+            role="dialog"
+            aria-modal="true"
             onClick={() => setShowAddProduct(false)}
           >
             <motion.div
@@ -1210,7 +1174,7 @@ const ShopManagementPage = ({ user }) => {
                     </div>
                     <div>
                       <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                        {editingProduct ? 'Edit Product' : 'Add New Product'}
+                        {editingProduct ? 'Edit Product' : 'Add Product'}
                       </h2>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {editingProduct ? 'Update your product details' : 'Create a new product for your shop'}

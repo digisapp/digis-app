@@ -77,7 +77,23 @@ const MobileCreatorProfile = ({
   const [streamQuality, setStreamQuality] = useState('auto');
   const [loyaltyBadges, setLoyaltyBadges] = useState([]);
   const [fanNotes, setFanNotes] = useState('');
-  
+
+  // Real data states
+  const [photos, setPhotos] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [recordings, setRecordings] = useState([]);
+  const [digitals, setDigitals] = useState([]);
+  const [shopProducts, setShopProducts] = useState([]);
+  const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState({
+    photos: true,
+    videos: true,
+    recordings: true,
+    digitals: true,
+    shop: true,
+    offers: true
+  });
+
   // Refs for performance optimization
   const videoRef = useRef(null);
   const intersectionRef = useRef(null);
@@ -263,29 +279,102 @@ const MobileCreatorProfile = ({
     }
   }, [isLiveNow, liveStreamData?.streamUrl]);
 
-  // Fetch ticketed shows
+  // Fetch all real content data
   useEffect(() => {
-    const fetchTicketedShows = async () => {
+    const fetchCreatorContent = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/creator/${creatorId}`, {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        });
+        const headers = {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        };
 
-        if (response.ok) {
-          const data = await response.json();
+        // Fetch all data in parallel
+        const [
+          photosRes,
+          videosRes,
+          recordingsRes,
+          digitalsRes,
+          shopRes,
+          offersRes,
+          ticketedShowsRes
+        ] = await Promise.allSettled([
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/creator/${creatorId}?type=photo`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/creator/${creatorId}?type=video`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streams/recordings/${creatorId}`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/digitals/creator/${creatorId}`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/shop/items?creator_id=${creatorId}`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/offers/creator/${creatorId}`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/creator/${creatorId}`, { headers })
+        ]);
+
+        // Process photos
+        if (photosRes.status === 'fulfilled' && photosRes.value.ok) {
+          const data = await photosRes.value.json();
+          setPhotos(data.content || data.items || []);
+        }
+        setLoading(prev => ({ ...prev, photos: false }));
+
+        // Process videos
+        if (videosRes.status === 'fulfilled' && videosRes.value.ok) {
+          const data = await videosRes.value.json();
+          setVideos(data.content || data.items || []);
+        }
+        setLoading(prev => ({ ...prev, videos: false }));
+
+        // Process recordings
+        if (recordingsRes.status === 'fulfilled' && recordingsRes.value.ok) {
+          const data = await recordingsRes.value.json();
+          setRecordings(data.recordings || data.items || []);
+        }
+        setLoading(prev => ({ ...prev, recordings: false }));
+
+        // Process digitals
+        if (digitalsRes.status === 'fulfilled' && digitalsRes.value.ok) {
+          const data = await digitalsRes.value.json();
+          setDigitals(data.digitals || data.items || []);
+        }
+        setLoading(prev => ({ ...prev, digitals: false }));
+
+        // Process shop products
+        if (shopRes.status === 'fulfilled' && shopRes.value.ok) {
+          const data = await shopRes.value.json();
+          setShopProducts(data.items || data.products || []);
+        }
+        setLoading(prev => ({ ...prev, shop: false }));
+
+        // Process offers
+        if (offersRes.status === 'fulfilled' && offersRes.value.ok) {
+          const data = await offersRes.value.json();
+          setOffers(data.offers || data.items || []);
+        }
+        setLoading(prev => ({ ...prev, offers: false }));
+
+        // Process ticketed shows
+        if (ticketedShowsRes.status === 'fulfilled' && ticketedShowsRes.value.ok) {
+          const data = await ticketedShowsRes.value.json();
           setTicketedShows(data.shows || []);
         }
+
       } catch (error) {
-        console.error('Error fetching ticketed shows:', error);
+        console.error('Error fetching creator content:', error);
+        // Set all loading states to false on error
+        setLoading({
+          photos: false,
+          videos: false,
+          recordings: false,
+          digitals: false,
+          shop: false,
+          offers: false
+        });
       }
     };
 
-    fetchTicketedShows();
+    if (creatorId) {
+      fetchCreatorContent();
+    }
   }, [creatorId]);
 
   // Optimized live stream data fetching with error handling
@@ -333,86 +422,15 @@ const MobileCreatorProfile = ({
     };
   }, [creatorData.isLive]);
 
-  // Memoize content sections for performance
-  const content = useMemo(() => ({
-    videos: [
-      { id: 1, thumbnail: '/api/placeholder/150/150', duration: '5:23', views: 1200, locked: false },
-      { id: 2, thumbnail: '/api/placeholder/150/150', duration: '3:45', views: 890, locked: true },
-      { id: 3, thumbnail: '/api/placeholder/150/150', duration: '7:12', views: 2100, locked: false },
-      { id: 4, thumbnail: '/api/placeholder/150/150', duration: '4:56', views: 1560, locked: true }
-    ],
-    photos: [
-      { id: 1, url: '/api/placeholder/150/150', likes: 234, locked: false },
-      { id: 2, url: '/api/placeholder/150/150', likes: 189, locked: true },
-      { id: 3, url: '/api/placeholder/150/150', likes: 456, locked: false },
-      { id: 4, url: '/api/placeholder/150/150', likes: 321, locked: true }
-    ],
-    recordings: [
-      { id: 1, thumbnail: '/api/placeholder/150/150', title: 'Live Art Session', duration: '45:23', views: 3400, date: '2 days ago', price: 25 },
-      { id: 2, thumbnail: '/api/placeholder/150/150', title: 'Q&A Stream', duration: '62:15', views: 2100, date: '1 week ago', price: 0 },
-      { id: 3, thumbnail: '/api/placeholder/150/150', title: 'Tutorial Stream', duration: '38:45', views: 5600, date: '2 weeks ago', price: 15 }
-    ],
-    digitals: [
-      { id: 1, name: 'Digital Art Pack', price: 50, type: 'download', downloads: 45 },
-      { id: 2, name: 'Exclusive Wallpapers', price: 20, type: 'download', downloads: 120 },
-      { id: 3, name: 'Behind the Scenes', price: 35, type: 'video', downloads: 89 },
-      { id: 4, name: 'Tutorial Bundle', price: 75, type: 'course', downloads: 23 }
-    ],
-    shop: [
-      { id: 1, name: 'Custom Video', price: 100, type: 'digital' },
-      { id: 2, name: 'Signed Photo', price: 50, type: 'physical' },
-      { id: 3, name: '1-on-1 Session', price: 200, type: 'service' }
-    ],
-    offers: [
-      { 
-        id: 1, 
-        title: 'Quick Video Message', 
-        description: 'Get a personalized 30-second video message',
-        price: 500,
-        originalPrice: 800,
-        discount: '300 tokens OFF',
-        type: 'video',
-        deliveryTime: '24 hours',
-        limited: true
-      },
-      { 
-        id: 2, 
-        title: '10 Min Video Call', 
-        description: 'Private one-on-one video call session',
-        price: 1500,
-        originalPrice: 2000,
-        discount: '500 tokens OFF',
-        type: 'call',
-        deliveryTime: 'Schedule within 48h'
-      },
-      { 
-        id: 3, 
-        title: 'Monthly Subscription', 
-        description: 'All exclusive content + priority DMs',
-        price: 400,
-        originalPrice: 600,
-        discount: 'SAVE 200 tokens',
-        type: 'subscription',
-        recurring: true
-      },
-      { 
-        id: 4, 
-        title: 'Custom Photo Set', 
-        description: '5 exclusive photos just for you',
-        price: 700,
-        type: 'photo',
-        deliveryTime: '3-5 days'
-      }
-    ]
-  }), []);
 
   // Memoize tabs to prevent re-creation - including all desktop features
   const tabs = useMemo(() => [
-    { id: 'content', label: 'Content', icon: PhotoIcon },
+    { id: 'content', label: 'Photos', icon: PhotoIcon },
+    { id: 'videos', label: 'Videos', icon: VideoCameraIcon },
     { id: 'streams', label: 'Streams', icon: PlayCircleIcon },
-    { id: 'digitals', label: 'Digitals', icon: TagIcon },
     { id: 'offers', label: 'Offers', icon: SparklesIcon },
     { id: 'shop', label: 'Shop', icon: ShoppingBagIcon },
+    { id: 'digitals', label: 'Digitals', icon: DocumentIcon },
     { id: 'about', label: 'About', icon: UserGroupIcon }
   ], []);
 
@@ -897,59 +915,117 @@ const MobileCreatorProfile = ({
     };
   }, [handleRefresh, refreshing]);
 
-  // Extract tab content rendering
-  const renderContentTab = () => (
-    <div className="space-y-6">
-      {/* Live/Recent Streams Section */}
-      {isLiveNow && (
-        <div>
-          <h3 className="text-lg font-semibold mb-3 px-4 flex items-center gap-2">
-            <FireIcon className="w-5 h-5 text-red-500" />
-            Streams
-          </h3>
-          {isLiveNow && liveStreamData && (
-            <motion.div
-              className="mx-4 mb-3 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-3 border border-red-200"
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (hasJoinedStream) {
-                  setShowFullStream(true);
-                } else {
-                  handleJoinLiveStream();
-                }
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                      <PlayCircleIcon className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Live Now!</p>
-                    <p className="text-xs text-gray-500">{liveStreamData.viewers} watching</p>
-                  </div>
-                </div>
-                <ChevronRightIcon className="w-5 h-5 text-red-500" />
-              </div>
-            </motion.div>
-          )}
+  // Extract tab content rendering - Photos only (vertical aspect ratio)
+  const renderContentTab = () => {
+    if (loading.photos) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent" />
         </div>
-      )}
+      );
+    }
 
-      {/* Videos Section */}
-      <div>
-        <h3 className="text-lg font-semibold mb-3 px-4">Videos</h3>
-        <div className="grid grid-cols-2 gap-2 px-4">
-          {content.videos.map((video) => (
-            <motion.div
-              key={video.id}
-              className="relative rounded-xl overflow-hidden bg-gray-100"
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (!video.locked || contentPurchases[`video-${video.id}`]) {
+    if (photos.length === 0) {
+      return (
+        <div className="text-center py-12 px-4">
+          <PhotoIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-500">No photos yet</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Photos Section */}
+        <div>
+          <div className="grid grid-cols-3 gap-1 px-4">
+            {photos.map((photo) => (
+              <motion.div
+                key={photo.id}
+                className="relative rounded-lg overflow-hidden bg-gray-100 aspect-[3/4]"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                if (!photo.is_locked || contentPurchases[`photo-${photo.id}`]) {
+                  // View photo
+                  console.log('View photo:', photo);
+                } else {
+                  // Show purchase modal
+                  triggerHaptic('medium');
+                  openBottomSheet({
+                    title: 'Unlock Photo',
+                    content: (
+                      <div className="space-y-4 p-4">
+                        <div className="bg-purple-50 rounded-xl p-4">
+                          <p className="text-sm text-gray-600 mb-2">Photo Price</p>
+                          <p className="text-2xl font-bold text-purple-600">10 tokens</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            console.log('Purchase photo:', photo.id);
+                            setContentPurchases(prev => ({ ...prev, [`photo-${photo.id}`]: true }));
+                            triggerHaptic('success');
+                          }}
+                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
+                        >
+                          Unlock Photo
+                        </button>
+                      </div>
+                    )
+                  });
+                  }
+                }}
+              >
+                <img src={photo.thumbnail_url || photo.url || photo.content_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                {photo.is_locked && !contentPurchases[`photo-${photo.id}`] && (
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                    <LockClosedIcon className="w-6 h-6 text-white" />
+                  </div>
+                )}
+                {photo.likes_count > 0 && (
+                  <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    <HeartIcon className="w-3 h-3" />
+                    {photo.likes_count || photo.likes || 0}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Videos Tab - Vertical (Reels-style)
+  const renderVideosTab = () => {
+    if (loading.videos) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent" />
+        </div>
+      );
+    }
+
+    if (videos.length === 0) {
+      return (
+        <div className="text-center py-12 px-4">
+          <VideoCameraIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-500">No videos yet</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Videos Section */}
+        <div>
+          <div className="grid grid-cols-3 gap-1 px-4">
+            {videos.map((video) => (
+              <motion.div
+                key={video.id}
+                className="relative rounded-xl overflow-hidden bg-gray-100 aspect-[9/16]"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (!video.is_locked || contentPurchases[`video-${video.id}`]) {
                   // Play video
                   console.log('Play video:', video);
                 } else {
@@ -979,266 +1055,307 @@ const MobileCreatorProfile = ({
                 }
               }}
             >
-              <img src={video.thumbnail} alt="" className="w-full h-32 object-cover" loading="lazy" />
-              {video.locked && !contentPurchases[`video-${video.id}`] && (
+              <img src={video.thumbnail_url || video.thumbnail} alt="" className="w-full h-full object-cover" loading="lazy" />
+              {video.is_locked && !contentPurchases[`video-${video.id}`] && (
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
                   <LockClosedIcon className="w-8 h-8 text-white" />
-                </div>
-              )}
-              <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                {video.duration}
-              </div>
-              <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                {video.views} views
-              </div>
-            </motion.div>
-          ))}
+                  </div>
+                )}
+                {video.duration && (
+                  <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    {video.duration}
+                  </div>
+                )}
+                {video.views_count > 0 && (
+                  <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    {video.views_count || video.views} views
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
+    );
+  };
 
-      {/* Photos Section */}
-      <div>
-        <h3 className="text-lg font-semibold mb-3 px-4">Photos</h3>
-        <div className="grid grid-cols-3 gap-1 px-4">
-          {content.photos.map((photo) => (
-            <motion.div
-              key={photo.id}
-              className="relative rounded-lg overflow-hidden bg-gray-100"
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (!photo.locked || contentPurchases[`photo-${photo.id}`]) {
-                  // View photo
-                  console.log('View photo:', photo);
-                } else {
-                  // Show purchase modal
-                  triggerHaptic('medium');
-                  openBottomSheet({
-                    title: 'Unlock Photo',
-                    content: (
-                      <div className="space-y-4 p-4">
-                        <div className="bg-purple-50 rounded-xl p-4">
-                          <p className="text-sm text-gray-600 mb-2">Photo Price</p>
-                          <p className="text-2xl font-bold text-purple-600">10 tokens</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            console.log('Purchase photo:', photo.id);
-                            setContentPurchases(prev => ({ ...prev, [`photo-${photo.id}`]: true }));
-                            triggerHaptic('success');
-                          }}
-                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
-                        >
-                          Unlock Photo
-                        </button>
-                      </div>
-                    )
-                  });
-                }
-              }}
-            >
-              <img src={photo.url} alt="" className="w-full h-28 object-cover" loading="lazy" />
-              {photo.locked && !contentPurchases[`photo-${photo.id}`] && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
-                  <LockClosedIcon className="w-6 h-6 text-white" />
-                </div>
-              )}
-              <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                <HeartIcon className="w-3 h-3" />
-                {photo.likes}
-              </div>
-            </motion.div>
-          ))}
+  const renderOffersTab = () => {
+    if (loading.offers) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent" />
         </div>
-      </div>
-    </div>
-  );
+      );
+    }
 
-  const renderOffersTab = () => (
-    <div className="space-y-3 px-4">
-      {content.offers.map((offer) => (
+    if (offers.length === 0) {
+      return (
+        <div className="text-center py-12 px-4">
+          <SparklesIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-500">No offers yet</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3 px-4">
+        {offers.map((offer) => (
         <motion.div
           key={offer.id}
-          className="bg-white rounded-xl shadow-sm overflow-hidden"
           whileTap={{ scale: 0.98 }}
+          className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
         >
-          {/* Discount Badge */}
-          {offer.discount && (
-            <div className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 text-xs font-bold">
-              <div className="flex items-center justify-between">
-                <span>🔥 {offer.discount}</span>
-                {offer.limited && <span>LIMITED TIME</span>}
-              </div>
-            </div>
-          )}
-          
-          <div className="p-4">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{offer.title}</h3>
-                <p className="text-sm text-gray-600 mt-1">{offer.description}</p>
-              </div>
-              {offer.type === 'video' && <VideoCameraIcon className="w-5 h-5 text-purple-600" />}
-              {offer.type === 'call' && <PhoneIcon className="w-5 h-5 text-blue-600" />}
-              {offer.type === 'subscription' && <SparklesIcon className="w-5 h-5 text-pink-600" />}
-              {offer.type === 'photo' && <PhotoIcon className="w-5 h-5 text-green-600" />}
-            </div>
-            
-            {/* Delivery Time */}
-            {offer.deliveryTime && (
-              <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
-                <ClockIcon className="w-3 h-3" />
-                <span>{offer.deliveryTime}</span>
-              </div>
-            )}
-            
-            {/* Price and Action */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-gray-900">
-                  {offer.recurring ? `${offer.price} tokens/mo` : `${offer.price} tokens`}
-                </span>
-                {offer.originalPrice && (
-                  <span className="text-sm text-gray-400 line-through">
-                    {offer.originalPrice} tokens
-                  </span>
-                )}
-              </div>
-              <button 
-                onClick={() => {
-                  triggerHaptic('medium');
-                  // Handle purchase/booking
-                  console.log('Purchase offer:', offer);
-                }}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg font-semibold text-sm min-h-[40px]"
-              >
-                {offer.recurring ? 'Subscribe' : 'Book Now'}
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      ))}
-      
-      {/* Special Offers Banner */}
-      <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-4 mt-4">
-        <div className="flex items-center gap-2 mb-2">
-          <BoltIcon className="w-5 h-5 text-purple-600" />
-          <h3 className="font-semibold text-purple-900">Bundle Deal</h3>
-        </div>
-        <p className="text-sm text-purple-700 mb-3">
-          Book any 3 offers and save an extra 15%!
-        </p>
-        <button className="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold text-sm">
-          View Bundle Options
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderShopTab = () => (
-    <div className="space-y-4 px-4">
-      {content.shop.map((item) => (
-        <motion.div
-          key={item.id}
-          className="bg-white rounded-xl p-4 shadow-sm"
-          whileTap={{ scale: 0.98 }}
-        >
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="font-semibold">{item.name}</p>
-              <p className="text-sm text-gray-500">{item.type}</p>
-            </div>
-            <button className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold min-h-[44px]">
-              {item.price} tokens
-            </button>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  );
-
-  // Streams/Recordings Tab
-  const renderStreamsTab = () => (
-    <div className="space-y-6 px-4">
-      <h3 className="text-lg font-semibold">Past Streams</h3>
-      <div className="space-y-3">
-        {content.recordings.map((stream) => (
-          <motion.div
-            key={stream.id}
-            className="bg-white rounded-xl overflow-hidden shadow-sm"
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="relative">
-              <img
-                src={stream.thumbnail}
-                alt={stream.title}
-                className="w-full h-32 object-cover"
-                loading="lazy"
-              />
-              <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                {stream.duration}
-              </div>
-              {stream.price > 0 && (
-                <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs px-2 py-1 rounded font-bold">
-                  {stream.price} tokens
-                </div>
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex-1">
+              <h4 className="font-semibold text-gray-900 mb-1">{offer.title}</h4>
+              <p className="text-sm text-gray-600 mb-2">{offer.description}</p>
+              {offer.deliveryTime && (
+                <p className="text-xs text-gray-500">⏱️ {offer.deliveryTime}</p>
               )}
             </div>
-            <div className="p-3">
-              <h4 className="font-semibold text-gray-900 mb-1">{stream.title}</h4>
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>{stream.views.toLocaleString()} views</span>
-                <span>{stream.date}</span>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
+            {offer.limited && (
+              <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-semibold">
+                Limited
+              </span>
+            )}
+          </div>
 
-  // Digitals Tab
-  const renderDigitalsTab = () => (
-    <div className="space-y-4 px-4">
-      <h3 className="text-lg font-semibold mb-3">Digital Products</h3>
-      {content.digitals.map((item) => (
-        <motion.div
-          key={item.id}
-          className="bg-white rounded-xl p-4 shadow-sm"
-          whileTap={{ scale: 0.98 }}
-        >
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <p className="font-semibold text-gray-900">{item.name}</p>
-              <p className="text-sm text-gray-500 mb-2">{item.type}</p>
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  {item.downloads} downloads
-                </span>
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+            <div>
+              {offer.originalPrice && (
+                <p className="text-xs text-gray-400 line-through">
+                  {offer.originalPrice} tokens
+                </p>
+              )}
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-purple-600">{offer.price}</span>
+                <span className="text-sm text-gray-500">tokens</span>
+                {offer.discount && (
+                  <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold">
+                    {offer.discount}
+                  </span>
+                )}
               </div>
             </div>
             <button
               onClick={() => {
                 triggerHaptic('medium');
-                console.log('Purchase digital:', item);
+                console.log('Purchase offer:', offer);
               }}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg font-semibold text-sm min-h-[40px]"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg font-semibold text-sm"
             >
-              {item.price} tokens
+              Get Now
             </button>
           </div>
         </motion.div>
-      ))}
-    </div>
-  );
+        ))}
+      </div>
+    );
+  };
+
+  const renderShopTab = () => {
+    if (loading.shop) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent" />
+        </div>
+      );
+    }
+
+    if (shopProducts.length === 0) {
+      return (
+        <div className="text-center py-12 px-4">
+          <ShoppingBagIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-500">No products yet</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-2 gap-2 px-4">
+        {shopProducts.map((product) => (
+        <motion.div
+          key={product.id}
+          whileTap={{ scale: 0.98 }}
+          className="bg-white rounded-lg border border-gray-200 overflow-hidden"
+          onClick={() => {
+            triggerHaptic('light');
+            console.log('View product:', product);
+          }}
+        >
+          {/* Compact Product Image */}
+          <div className="relative aspect-square bg-gradient-to-br from-purple-100 to-pink-100">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <ShoppingBagIcon className="w-8 h-8 text-purple-300" />
+            </div>
+            <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full"></div>
+          </div>
+
+          {/* Compact Product Info */}
+          <div className="p-2">
+            <h4 className="font-medium text-xs mb-1 line-clamp-1">{product.name || product.title}</h4>
+            <p className="text-[10px] text-gray-500 mb-2 capitalize">{product.category || product.type}</p>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-bold text-purple-600">{product.price_tokens || product.price}</span>
+                <span className="text-[10px] text-gray-500 ml-0.5">tokens</span>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerHaptic('medium');
+                  console.log('Buy product:', product);
+                }}
+                className="text-[10px] px-2 py-1 bg-purple-600 text-white rounded"
+              >
+                Buy
+              </button>
+            </div>
+          </div>
+        </motion.div>
+        ))}
+      </div>
+    );
+  };
+
+  // Streams/Recordings Tab - Horizontal aspect ratio
+  const renderStreamsTab = () => {
+    if (loading.recordings) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent" />
+        </div>
+      );
+    }
+
+    if (recordings.length === 0) {
+      return (
+        <div className="text-center py-12 px-4">
+          <PlayCircleIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-500">No stream recordings yet</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6 px-4">
+        <div className="space-y-3">
+          {recordings.map((stream) => (
+          <motion.div
+            key={stream.id}
+            className="bg-white rounded-xl overflow-hidden shadow-sm"
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="relative aspect-video">
+              <img
+                src={stream.thumbnail_url || stream.thumbnail}
+                alt={stream.title || stream.name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+              {stream.duration && (
+                <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                  {stream.duration}
+                </div>
+              )}
+              {stream.price_tokens > 0 && (
+                <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs px-2 py-1 rounded font-bold">
+                  {stream.price_tokens || stream.price} tokens
+                </div>
+              )}
+            </div>
+            <div className="p-3">
+              <h4 className="font-semibold text-gray-900 mb-1">{stream.title || stream.name}</h4>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>{(stream.views_count || stream.views || 0).toLocaleString()} views</span>
+                <span>{stream.created_at ? new Date(stream.created_at).toLocaleDateString() : stream.date}</span>
+              </div>
+            </div>
+          </motion.div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Digitals Tab - Studio Model Section (2-column grid, clean layout)
+  const renderDigitalsTab = () => {
+    if (loading.digitals) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4 px-4">
+        {user?.id === creatorId && (
+          <div className="flex justify-end mb-4">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                triggerHaptic('medium');
+                // Open upload modal
+                console.log('Upload new digitals');
+              }}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2"
+            >
+              <PhotoIcon className="w-4 h-4" />
+              Upload
+            </motion.button>
+          </div>
+        )}
+
+        {digitals.length === 0 ? (
+          <div className="text-center py-12">
+            <DocumentIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm">No studio digitals yet</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {digitals.map((item) => (
+          <motion.div
+            key={item.id}
+            className="relative rounded-xl overflow-hidden bg-gray-100 aspect-[3/4]"
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              triggerHaptic('light');
+              console.log('View digital:', item);
+            }}
+              >
+                <img
+                  src={item.thumbnail_url || item.thumbnail || '/api/placeholder/300/400'}
+                  alt={`Studio digital by ${creatorData.displayName}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+
+                {/* Metadata overlay */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                  <p className="text-white text-xs font-medium">{item.title || item.name}</p>
+                  <p className="text-white/70 text-xs mt-1">
+                    Uploaded {new Date(item.created_at || item.uploadedAt || Date.now()).toLocaleDateString()}
+                  </p>
+                </div>
+
+                {/* Professional badge */}
+                <div className="absolute top-2 right-2 bg-blue-500/90 text-white px-2 py-1 rounded text-xs font-bold">
+                  PRO
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderAboutTab = () => (
     <div className="space-y-6 px-4">
       {/* Bio */}
       <div className="bg-white rounded-xl p-4">
-        <h3 className="font-semibold mb-2">About</h3>
         <p className="text-gray-600">{creatorData.bio}</p>
       </div>
       
@@ -1289,29 +1406,6 @@ const MobileCreatorProfile = ({
         )}
       </div>
 
-      {/* Stats */}
-      <div className="bg-white rounded-xl p-4">
-        <h3 className="font-semibold mb-3">Stats</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-2xl font-bold text-purple-600">{creatorData.followers.toLocaleString()}</p>
-            <p className="text-sm text-gray-500">Followers</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-blue-600">{creatorData.subscribers.toLocaleString()}</p>
-            <p className="text-sm text-gray-500">Subscribers</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-green-600">{creatorData.contentCount}</p>
-            <p className="text-sm text-gray-500">Content</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-yellow-600">{creatorData.rating}</p>
-            <p className="text-sm text-gray-500">Rating</p>
-          </div>
-        </div>
-      </div>
-
       {/* Interests */}
       <div className="bg-white rounded-xl p-4">
         <h3 className="font-semibold mb-3">Interests</h3>
@@ -1327,33 +1421,6 @@ const MobileCreatorProfile = ({
         </div>
       </div>
 
-      {/* Response Time */}
-      <div className="bg-white rounded-xl p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-semibold">Response Time</p>
-            <p className="text-sm text-gray-500">{creatorData.responseTime}</p>
-          </div>
-          <ClockIcon className="w-6 h-6 text-green-500" />
-        </div>
-      </div>
-
-      {/* Calendar Integration */}
-      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4">
-        <h3 className="font-semibold mb-3 flex items-center gap-2">
-          <CalendarIcon className="w-5 h-5 text-blue-600" />
-          Book a Session
-        </h3>
-        <button
-          onClick={() => {
-            triggerHaptic('medium');
-            // Navigate to calendar booking
-            console.log('Open calendar booking');
-          }}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold text-sm">
-          View Available Slots
-        </button>
-      </div>
     </div>
   );
 
@@ -1534,22 +1601,43 @@ const MobileCreatorProfile = ({
                     </div>
                   </button>
 
-                  {/* Stream Quality Selector */}
+                  {/* Stream Quality Selector - Connected to HLS levels */}
                   <div className="absolute top-3 right-3">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         triggerHaptic('light');
+
+                        // Get available quality levels from HLS
+                        const availableLevels = hlsRef.current?.levels || [];
+                        const qualityOptions = ['auto', ...availableLevels.map(l => `${l.height}p`)];
+
                         openBottomSheet({
                           title: 'Stream Quality',
                           content: (
                             <div className="space-y-2 p-4">
-                              {['auto', '2K', '1080p', '720p', '480p'].map((quality) => (
+                              {qualityOptions.map((quality) => (
                                 <button
                                   key={quality}
                                   onClick={() => {
+                                    // Apply quality change to HLS
+                                    if (hlsRef.current) {
+                                      if (quality === 'auto') {
+                                        hlsRef.current.autoLevelEnabled = true;
+                                        hlsRef.current.currentLevel = -1;
+                                      } else {
+                                        hlsRef.current.autoLevelEnabled = false;
+                                        const levelIndex = hlsRef.current.levels.findIndex(
+                                          l => `${l.height}p` === quality
+                                        );
+                                        if (levelIndex >= 0) {
+                                          hlsRef.current.currentLevel = levelIndex;
+                                        }
+                                      }
+                                    }
                                     setStreamQuality(quality);
                                     triggerHaptic('light');
+                                    openBottomSheet(null);
                                   }}
                                   className={`w-full p-3 rounded-lg text-left flex items-center justify-between ${
                                     streamQuality === quality
@@ -1627,14 +1715,7 @@ const MobileCreatorProfile = ({
         </motion.div>
 
         {/* Navigation Bar */}
-        <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-4 z-10" style={{ paddingTop: 'env(safe-area-inset-top, 20px)' }}>
-          <button
-            onClick={onBack}
-            className="min-w-[44px] min-h-[44px] bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"
-            aria-label="Go back"
-          >
-            <ChevronLeftIcon className="w-6 h-6 text-white" />
-          </button>
+        <div className="absolute top-0 left-0 right-0 flex justify-end items-center p-4 z-10" style={{ paddingTop: 'env(safe-area-inset-top, 20px)' }}>
           <div className="flex gap-2">
             <button
               onClick={handleShare}
@@ -1696,7 +1777,11 @@ const MobileCreatorProfile = ({
                 )}
               </div>
               <p className="text-white/80">@{creatorData.username}</p>
-              <p className="text-white/60 text-sm">{creatorData.lastSeen}</p>
+              {/* Follower Count - Under username */}
+              <div className="flex items-center gap-1.5 text-white/80 mt-1">
+                <UserGroupIcon className="w-4 h-4" />
+                <span className="font-semibold text-sm">{creatorData.followers.toLocaleString()}</span>
+              </div>
               {/* Loyalty Badges */}
               {loyaltyBadges.length > 0 && (
                 <div className="flex gap-1 mt-1">
@@ -1717,7 +1802,7 @@ const MobileCreatorProfile = ({
         <div className="flex gap-2 mb-2">
           <motion.button
             onClick={handleFollow}
-            className={`flex-1 py-2 rounded-lg font-medium text-sm transition-all min-h-[36px] ${
+            className={`flex-1 py-1.5 rounded-lg font-medium text-xs transition-all min-h-[32px] ${
               isFollowing
                 ? 'bg-gray-100 text-gray-700'
                 : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
@@ -1728,7 +1813,7 @@ const MobileCreatorProfile = ({
           </motion.button>
           <motion.button
             onClick={() => handleSubscribe()}
-            className={`flex-1 py-2 rounded-lg font-medium text-sm min-h-[36px] ${
+            className={`flex-1 py-1.5 rounded-lg font-medium text-xs min-h-[32px] ${
               isSubscribed
                 ? 'bg-gray-100 text-gray-700'
                 : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white'
@@ -1864,8 +1949,8 @@ const MobileCreatorProfile = ({
       </div>
 
 
-      {/* Tabs - Scrollable Horizontal */}
-      <div className="sticky top-0 bg-white border-b border-gray-100 z-10" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      {/* Tabs - Sticky with improved styling */}
+      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm z-10" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="overflow-x-auto scrollbar-hide">
           <div className="flex" role="tablist" style={{ minWidth: 'max-content' }}>
             {tabs.map((tab) => (
@@ -1875,7 +1960,7 @@ const MobileCreatorProfile = ({
                   setActiveTab(tab.id);
                   triggerHaptic('light');
                 }}
-                className={`px-4 py-2.5 flex flex-col items-center gap-1 relative transition-all min-h-[44px] min-w-[60px] ${
+                className={`px-4 py-3 flex flex-col items-center gap-1 relative transition-all min-h-[60px] min-w-[70px] ${
                   activeTab === tab.id
                     ? 'text-purple-600'
                     : 'text-gray-500'
@@ -1885,12 +1970,13 @@ const MobileCreatorProfile = ({
                 role="tab"
                 aria-selected={activeTab === tab.id}
               >
-                <tab.icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium">{tab.label}</span>
+                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'drop-shadow-sm' : ''}`} />
+                <span className={`text-[10px] font-medium ${activeTab === tab.id ? 'font-semibold' : ''}`}>{tab.label}</span>
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-2 right-2 h-0.5 bg-purple-600 rounded-full"
+                    className="absolute bottom-0 left-2 right-2 h-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-lg"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
               </motion.button>
@@ -1926,10 +2012,11 @@ const MobileCreatorProfile = ({
         <div className="py-4">
           <AnimatePresence mode="wait">
             {activeTab === 'content' && <div key="content">{renderContentTab()}</div>}
+            {activeTab === 'videos' && <div key="videos">{renderVideosTab()}</div>}
             {activeTab === 'streams' && <div key="streams">{renderStreamsTab()}</div>}
-            {activeTab === 'digitals' && <div key="digitals">{renderDigitalsTab()}</div>}
             {activeTab === 'offers' && <div key="offers">{renderOffersTab()}</div>}
             {activeTab === 'shop' && <div key="shop">{renderShopTab()}</div>}
+            {activeTab === 'digitals' && <div key="digitals">{renderDigitalsTab()}</div>}
             {activeTab === 'about' && <div key="about">{renderAboutTab()}</div>}
           </AnimatePresence>
         </div>

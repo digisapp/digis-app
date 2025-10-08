@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  HomeIcon, 
-  VideoCameraIcon, 
-  ChatBubbleLeftRightIcon, 
+import {
+  HomeIcon,
+  VideoCameraIcon,
+  ChatBubbleLeftRightIcon,
   WalletIcon,
   UserCircleIcon,
   SparklesIcon,
@@ -13,29 +13,32 @@ import {
   XMarkIcon,
   CameraIcon,
   MicrophoneIcon,
-  PhotoIcon
+  PhotoIcon,
+  TvIcon
 } from '@heroicons/react/24/outline';
-import { 
+import {
   HomeIcon as HomeIconSolid,
   VideoCameraIcon as VideoCameraIconSolid,
   ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
   WalletIcon as WalletIconSolid,
-  UserCircleIcon as UserCircleIconSolid
+  UserCircleIcon as UserCircleIconSolid,
+  TvIcon as TvIconSolid
 } from '@heroicons/react/24/solid';
 
 // Import existing components
 import EnhancedCreatorCard from '../EnhancedCreatorCard';
 import MobileOptimizedAuth from './MobileOptimizedAuth';
-import MobileProfile from './MobileProfile';
 import MobileMessages from './MobileMessages';
 import MobileOnboarding from './MobileOnboarding';
 import MobileCreatorDashboard from './MobileCreatorDashboard';
+import MobileExplore from './MobileExplore';
 import Wallet from '../Wallet';
 // Lazy load heavy components for better performance
 const MobileVideoStream = lazy(() => import('./MobileVideoStream'));
 const GoLiveSetup = lazy(() => import('../GoLiveSetup'));
 const TokenPurchase = lazy(() => import('../TokenPurchase'));
 const LiveChat = lazy(() => import('../LiveChat'));
+const TVPage = lazy(() => import('../pages/TVPage'));
 
 // Import styles
 import '../../styles/next-level-mobile.css';
@@ -62,11 +65,11 @@ const NextLevelMobileApp = ({ user, logout }) => {
     user_role: user?.role,
     user_creator_type: user?.creator_type,
     user_is_super_admin: user?.is_super_admin,
-    defaultTab: isCreator ? 'dashboard' : 'home'
+    defaultTab: isCreator ? 'dashboard' : 'explore'
   });
-  
-  // Default to dashboard for creators, home for fans - using initializer function
-  const [activeTab, setActiveTab] = useState(() => isCreator ? 'dashboard' : 'home');
+
+  // Default to dashboard for creators, explore for fans - using initializer function
+  const [activeTab, setActiveTab] = useState(() => isCreator ? 'dashboard' : 'explore');
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [creators, setCreators] = useState([]);
@@ -258,9 +261,9 @@ const NextLevelMobileApp = ({ user, logout }) => {
     { id: 'discover', label: 'Discover', icon: MagnifyingGlassIcon, iconSolid: MagnifyingGlassIcon },
     { id: 'profile', label: 'Profile', icon: UserCircleIcon, iconSolid: UserCircleIconSolid }
   ] : [
-    { id: 'home', label: 'Home', icon: HomeIcon, iconSolid: HomeIconSolid },
-    { id: 'discover', label: 'Discover', icon: MagnifyingGlassIcon, iconSolid: MagnifyingGlassIcon },
+    { id: 'explore', label: 'Explore', icon: MagnifyingGlassIcon, iconSolid: MagnifyingGlassIcon },
     { id: 'messages', label: 'Messages', icon: ChatBubbleLeftRightIcon, iconSolid: ChatBubbleLeftRightIconSolid },
+    { id: 'tv', label: 'TV', icon: TvIcon, iconSolid: TvIconSolid },
     { id: 'wallet', label: 'Wallet', icon: WalletIcon, iconSolid: WalletIconSolid },
     { id: 'profile', label: 'Profile', icon: UserCircleIcon, iconSolid: UserCircleIconSolid }
   ], [isCreator]);
@@ -269,80 +272,13 @@ const NextLevelMobileApp = ({ user, logout }) => {
   const renderContent = () => {
     console.log('🎨 Rendering content for tab:', activeTab, 'isCreator:', isCreator);
     switch (activeTab) {
-      case 'home':
+      case 'explore':
         return (
-          <div className="mobile-safe-area">
-            {/* Hero Section */}
-            <div className="mobile-glass-card p-6 mb-6">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-                Welcome back!
-              </h1>
-              <p className="text-gray-600">Connect with your favorite creators</p>
-            </div>
-
-            {/* Live Now Section */}
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-4 px-4">🔴 Live Now</h2>
-              <div className="overflow-x-auto px-4 -mx-4">
-                <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
-                  {creators.filter(c => c.is_live).map((creator) => (
-                    <motion.div
-                      key={creator.id}
-                      whileTap={{ scale: 0.95 }}
-                      className="mobile-creator-card-next"
-                      style={{ width: '280px' }}
-                      onClick={() => handleCreatorSelect(creator)}
-                    >
-                      <div className="mobile-card-image-container">
-                        <img 
-                          src={creator.profile_pic_url || '/api/placeholder/400/300'} 
-                          alt={creator.username}
-                          className="mobile-card-image"
-                        />
-                        <div className="mobile-card-live-badge">
-                          <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                          LIVE
-                        </div>
-                      </div>
-                      <div className="mobile-card-content">
-                        <div className="mobile-card-header">
-                          <img 
-                            src={creator.profile_pic_url || '/api/placeholder/100/100'} 
-                            alt={creator.username}
-                            className="mobile-card-avatar"
-                          />
-                          <div className="mobile-card-info">
-                            <h3 className="mobile-card-name">{creator.username}</h3>
-                            <div className="mobile-card-status">
-                              <span className="mobile-status-dot"></span>
-                              {creator.viewer_count || 0} watching
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600 line-clamp-2">{creator.bio}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Featured Creators */}
-            <div className="px-4">
-              <h2 className="text-xl font-semibold mb-4">Featured Creators</h2>
-              <div className="space-y-4">
-                {creators.filter(c => !c.is_live).slice(0, 5).map((creator) => (
-                  <motion.div
-                    key={creator.id}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleCreatorSelect(creator)}
-                  >
-                    <EnhancedCreatorCard creator={creator} />
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <MobileExplore
+            user={user}
+            onNavigate={(path) => setActiveTab(path)}
+            onCreatorSelect={handleCreatorSelect}
+          />
         );
 
       case 'discover':
@@ -402,6 +338,17 @@ const NextLevelMobileApp = ({ user, logout }) => {
       case 'messages':
         return <MobileMessages user={user} />;
 
+      case 'tv':
+        return (
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent" />
+            </div>
+          }>
+            <TVPage user={user} />
+          </Suspense>
+        );
+
       case 'wallet':
         return (
           <div className="mobile-safe-area">
@@ -437,26 +384,24 @@ const NextLevelMobileApp = ({ user, logout }) => {
                   <p className="text-xs">email: {user?.email}</p>
                 </div>
               </div>
-              <MobileCreatorDashboard 
+              <MobileCreatorDashboard
                 user={user}
                 tokenBalance={user?.token_balance || 0}
                 onNavigate={(tab) => setActiveTab(tab)}
                 onShowGoLive={() => setShowGoLiveSetup(true)}
-                onShowAvailability={() => setActiveTab('profile')}
+                onShowAvailability={() => setActiveTab('settings')}
                 onShowEarnings={() => setActiveTab('wallet')}
-                onShowSettings={() => setActiveTab('profile')}
-                onShowContent={() => setActiveTab('profile')}
+                onShowSettings={() => setActiveTab('settings')}
+                onShowContent={() => setActiveTab('content')}
                 onShowMessages={() => setActiveTab('messages')}
               />
             </div>
           );
         }
-        // Fall through to profile for non-creators
-        console.log('❌ Not a creator, showing profile instead');
-        return <MobileProfile user={user} isCreator={false} logout={logout} />;
-        
-      case 'profile':
-        return <MobileProfile user={user} isCreator={isCreator} logout={logout} />;
+        // Fall through to explore for non-creators
+        console.log('❌ Not a creator, redirecting to explore');
+        setActiveTab('explore');
+        return null;
 
       default:
         return null;
@@ -478,9 +423,29 @@ const NextLevelMobileApp = ({ user, logout }) => {
     );
   }
 
+  // Set body background to prevent black overscroll
+  useEffect(() => {
+    document.body.style.backgroundColor = '#f9fafb'; // bg-gray-50
+    document.documentElement.style.backgroundColor = '#f9fafb';
+
+    return () => {
+      document.body.style.backgroundColor = '';
+      document.documentElement.style.backgroundColor = '';
+    };
+  }, []);
+
   return (
-    <div 
+    <div
       className="min-h-screen bg-gray-50"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch'
+      }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}

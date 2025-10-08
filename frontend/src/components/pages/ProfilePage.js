@@ -224,7 +224,7 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
                     <h3 className="font-medium text-gray-900 dark:text-white">Theme</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Choose your preferred theme</p>
                   </div>
-                  <select className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2">
+                  <select className="h-10 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3">
                     <option>Light</option>
                     <option>Dark</option>
                     <option>System</option>
@@ -236,7 +236,7 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
                     <h3 className="font-medium text-gray-900 dark:text-white">Language</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Select your preferred language</p>
                   </div>
-                  <select className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2">
+                  <select className="h-10 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3">
                     <option>English</option>
                     <option>Spanish</option>
                     <option>French</option>

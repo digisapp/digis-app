@@ -841,124 +841,8 @@ const HybridCreatorDashboard = memo(({
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Content Gallery */}
-      <EnhancedContentGallery
-            photos={contentData.photos}
-            videos={contentData.videos}
-            audios={contentData.audios}
-            streams={contentData.streams}
-            shopProducts={shopProducts}
-            digitals={contentData.digitals || digitals}
-            offers={offers}
-            userPurchases={[]} // You can populate this with actual purchased content IDs
-            user={{ ...user, is_creator: true }}
-            onAddProduct={() => {
-              setShowAddProductModal(true);
-            }}
-            onUpdateProfile={async (profileData) => {
-              try {
-                const response = await api.put('/users/profile', profileData);
-                if (response.data.success) {
-                  toast.success('Profile updated successfully!');
-                  // Update local user data if needed
-                }
-              } catch (error) {
-                console.error('Error updating profile:', error);
-                toast.error('Failed to update profile');
-              }
-            }}
-            onAddDigital={() => setShowDigitalsUploadModal(true)}
-            onPurchaseContent={(item) => {
-          // Handle PPV purchase
-          const price = item.ppv_price || (item.is_premium ? 100 : 0);
-          if (price > 0) {
-            toast(
-              <div>
-                <p className="font-semibold">Unlock Premium Content</p>
-                <p className="text-sm">This {item.type} costs {price} tokens</p>
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={() => {
-                      // Implement actual purchase logic here
-                      toast.success(`Purchased ${item.title || 'content'} for ${price} tokens!`);
-                      toast.dismiss();
-                    }}
-                    className="px-3 py-1 bg-purple-500 text-white rounded-lg text-sm"
-                  >
-                    Purchase
-                  </button>
-                  <button
-                    onClick={() => toast.dismiss()}
-                    className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-sm"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>,
-              { duration: 10000 }
-            );
-          }
-        }}
-        onAddContent={async (type, newContent) => {
-          // The EnhancedContentGallery now handles uploads internally
-          // Just refresh the content data if needed
-          fetchDashboardData();
-        }}
-        onEditContent={(item) => {
-          console.log('Edit item:', item);
-          toast.info(`Edit ${item.type}: ${item.title || item.name || 'Untitled'}`);
-        }}
-        onDeleteContent={async (item) => {
-          if (item.type === 'photo') {
-            updateContentData({
-              ...contentData,
-              photos: contentData.photos.filter(p => p.id !== item.id)
-            });
-            toast.success('Photo deleted');
-          } else if (item.type === 'video') {
-            updateContentData({
-              ...contentData,
-              videos: contentData.videos.filter(v => v.id !== item.id)
-            });
-            toast.success('Video deleted');
-          } else if (item.type === 'audio') {
-            updateContentData({
-              ...contentData,
-              audios: contentData.audios.filter(a => a.id !== item.id)
-            });
-            toast.success('Audio deleted');
-          } else if (item.type === 'stream') {
-            updateContentData({
-              ...contentData,
-              streams: contentData.streams.filter(s => s.id !== item.id)
-            });
-            toast.success('Stream deleted');
-          } else if (item.type === 'product') {
-            setShopProducts(prev => prev.filter(p => p.id !== item.id));
-            toast.success('Product removed from shop');
-          }
-        }}
-        onViewDetails={(item) => {
-          if (item.type === 'product') {
-            navigate(`/shop/product/${item.id}`);
-          } else if (item.type === 'video') {
-            // Open in a modal or viewer instead of navigating
-            console.log('View video:', item);
-          } else if (item.type === 'audio') {
-            console.log('Play audio:', item);
-          } else if (item.type === 'stream') {
-            console.log('View stream:', item);
-          } else {
-            console.log('View photo:', item);
-          }
-        }}
-        onAddOffer={handleAddOffer}
-        onUpdateOffer={handleUpdateOffer}
-        onDeleteOffer={handleDeleteOffer}
-      />
-
-      {/* Top Section: 2x2 Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Top Section: 3-Column Grid - Calls, Schedule, Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-8">
 
         {/* Enhanced Calls Box */}
         <Card className="p-6 bg-white dark:bg-gray-800 shadow-xl">
@@ -974,26 +858,20 @@ const HybridCreatorDashboard = memo(({
                 </div>
               </div>
               <Button
-                onClick={() => {
-                  if (onNavigate) {
-                    onNavigate('call-requests');
-                  } else {
-                    navigate('/call-requests');
-                  }
-                }}
+                onClick={() => navigate('/call-requests')}
                 className="text-xs px-2 py-1"
                 variant="secondary"
               >
                 Manage
               </Button>
             </div>
-            
+
             {(() => {
               // Filter for only video or voice calls
-              const nextCall = upcomingSessions.find(session => 
+              const nextCall = upcomingSessions.find(session =>
                 session.type === 'video' || session.type === 'voice'
               );
-              
+
               if (nextCall) {
                 return (
                   <div className="space-y-4">
@@ -1003,8 +881,8 @@ const HybridCreatorDashboard = memo(({
                       </p>
                       <div className="flex items-center gap-2 mt-3">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                          nextCall.type === 'video' 
-                            ? 'bg-purple-100 text-purple-700' 
+                          nextCall.type === 'video'
+                            ? 'bg-purple-100 text-purple-700'
                             : 'bg-green-100 text-green-700'
                         }`}>
                           {nextCall.type === 'video' ? (
@@ -1019,7 +897,7 @@ const HybridCreatorDashboard = memo(({
                         </span>
                       </div>
                     </div>
-                    
+
                     {/* Enhanced Fan/User Info */}
                     <div className="relative overflow-hidden p-4 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl">
                       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-yellow-300/20 to-orange-300/20 rounded-full blur-xl"></div>
@@ -1048,7 +926,7 @@ const HybridCreatorDashboard = memo(({
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Action Buttons - Always show all 3 */}
                     <div className="flex gap-2">
                       {/* Start Now Button - Shows when within 5 minutes of call time */}
@@ -1068,7 +946,7 @@ const HybridCreatorDashboard = memo(({
                           const sessionTime = new Date(nextCall.scheduled_time || nextCall.time);
                           const now = new Date();
                           const minutesUntil = Math.floor((sessionTime - now) / 60000);
-                          
+
                           if (minutesUntil <= 5 && minutesUntil >= 0) {
                             // Start the call with the fan
                             if (nextCall.type === 'video') {
@@ -1091,7 +969,7 @@ const HybridCreatorDashboard = memo(({
                         <PlayIcon className="w-4 h-4 mr-1" />
                         Start Now
                       </Button>
-                      
+
                       {/* Message Button */}
                       <Button
                         size="sm"
@@ -1107,7 +985,7 @@ const HybridCreatorDashboard = memo(({
                         <ChatBubbleLeftRightIcon className="w-4 h-4 mr-1" />
                         Message
                       </Button>
-                      
+
                       {/* Reschedule Button */}
                       <Button
                         size="sm"
@@ -1139,7 +1017,7 @@ const HybridCreatorDashboard = memo(({
             })()}
           </div>
         </Card>
-        
+
         {/* Schedule Box - Next 2 Events */}
         <Card className="p-6 bg-white dark:bg-gray-800 shadow-xl">
           <div className="flex flex-col h-full">
@@ -1167,13 +1045,13 @@ const HybridCreatorDashboard = memo(({
                 Manage
               </Button>
             </div>
-            
+
             {upcomingSessions.length > 0 ? (
               <div className="space-y-3">
                 {/* Show next 2 events */}
                 {upcomingSessions.slice(0, 2).map((session, index) => (
-                  <div 
-                    key={session.id || index} 
+                  <div
+                    key={session.id || index}
                     className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800"
                   >
                     <div className="flex items-start justify-between">
@@ -1189,25 +1067,25 @@ const HybridCreatorDashboard = memo(({
                             <CalendarIcon className="w-4 h-4 text-gray-600" />
                           )}
                           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                            {session.type === 'video' ? 'Video Call' : 
-                             session.type === 'voice' ? 'Voice Call' : 
-                             session.type === 'stream' ? 'Live Stream' : 
+                            {session.type === 'video' ? 'Video Call' :
+                             session.type === 'voice' ? 'Voice Call' :
+                             session.type === 'stream' ? 'Live Stream' :
                              session.type || 'Event'}
                           </span>
                         </div>
-                        
+
                         {/* Time and Date */}
                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {formatTime(session.scheduled_time || session.time)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(session.scheduled_time || session.time).toLocaleDateString('en-US', { 
-                            weekday: 'short', 
-                            month: 'short', 
-                            day: 'numeric' 
+                          {new Date(session.scheduled_time || session.time).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
                           })}
                         </p>
-                        
+
                         {/* Participant info if available */}
                         {(session.fan_username || session.username) && (
                           <div className="flex items-center gap-2 mt-2">
@@ -1220,7 +1098,7 @@ const HybridCreatorDashboard = memo(({
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Duration badge */}
                       <span className="text-xs px-2 py-1 bg-white dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-400">
                         {session.duration || 30}m
@@ -1228,7 +1106,7 @@ const HybridCreatorDashboard = memo(({
                     </div>
                   </div>
                 ))}
-                
+
                 {/* If only 1 event, show placeholder for second */}
                 {upcomingSessions.length === 1 && (
                   <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
@@ -1244,17 +1122,16 @@ const HybridCreatorDashboard = memo(({
             )}
           </div>
         </Card>
-      </div>
 
-      {/* Recent Activity Section */}
-      <Card className="p-6 bg-white dark:bg-gray-800 shadow-xl">
+        {/* Recent Activity Section */}
+        <Card className="p-6 bg-white dark:bg-gray-800 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl shadow-lg">
               <ClockIcon className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recent Activity</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activity</p>
               <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Last 24 hours</p>
             </div>
           </div>
@@ -1394,7 +1271,124 @@ const HybridCreatorDashboard = memo(({
             </div>
           )}
         </div>
-      </Card>
+        </Card>
+      </div>
+
+      {/* Enhanced Content Gallery */}
+      <EnhancedContentGallery
+            photos={contentData.photos}
+            videos={contentData.videos}
+            audios={contentData.audios}
+            streams={contentData.streams}
+            shopProducts={shopProducts}
+            digitals={contentData.digitals || digitals}
+            offers={offers}
+            userPurchases={[]} // You can populate this with actual purchased content IDs
+            user={{ ...user, is_creator: true }}
+            onAddProduct={() => {
+              setShowAddProductModal(true);
+            }}
+            onUpdateProfile={async (profileData) => {
+              try {
+                const response = await api.put('/users/profile', profileData);
+                if (response.data.success) {
+                  toast.success('Profile updated successfully!');
+                  // Update local user data if needed
+                }
+              } catch (error) {
+                console.error('Error updating profile:', error);
+                toast.error('Failed to update profile');
+              }
+            }}
+            onAddDigital={() => setShowDigitalsUploadModal(true)}
+            onPurchaseContent={(item) => {
+          // Handle PPV purchase
+          const price = item.ppv_price || (item.is_premium ? 100 : 0);
+          if (price > 0) {
+            toast(
+              <div>
+                <p className="font-semibold">Unlock Premium Content</p>
+                <p className="text-sm">This {item.type} costs {price} tokens</p>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => {
+                      // Implement actual purchase logic here
+                      toast.success(`Purchased ${item.title || 'content'} for ${price} tokens!`);
+                      toast.dismiss();
+                    }}
+                    className="px-3 py-1 bg-purple-500 text-white rounded-lg text-sm"
+                  >
+                    Purchase
+                  </button>
+                  <button
+                    onClick={() => toast.dismiss()}
+                    className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>,
+              { duration: 10000 }
+            );
+          }
+        }}
+        onAddContent={async (type, newContent) => {
+          // The EnhancedContentGallery now handles uploads internally
+          // Just refresh the content data if needed
+          fetchDashboardData();
+        }}
+        onEditContent={(item) => {
+          console.log('Edit item:', item);
+          toast.info(`Edit ${item.type}: ${item.title || item.name || 'Untitled'}`);
+        }}
+        onDeleteContent={async (item) => {
+          if (item.type === 'photo') {
+            updateContentData({
+              ...contentData,
+              photos: contentData.photos.filter(p => p.id !== item.id)
+            });
+            toast.success('Photo deleted');
+          } else if (item.type === 'video') {
+            updateContentData({
+              ...contentData,
+              videos: contentData.videos.filter(v => v.id !== item.id)
+            });
+            toast.success('Video deleted');
+          } else if (item.type === 'audio') {
+            updateContentData({
+              ...contentData,
+              audios: contentData.audios.filter(a => a.id !== item.id)
+            });
+            toast.success('Audio deleted');
+          } else if (item.type === 'stream') {
+            updateContentData({
+              ...contentData,
+              streams: contentData.streams.filter(s => s.id !== item.id)
+            });
+            toast.success('Stream deleted');
+          } else if (item.type === 'product') {
+            setShopProducts(prev => prev.filter(p => p.id !== item.id));
+            toast.success('Product removed from shop');
+          }
+        }}
+        onViewDetails={(item) => {
+          if (item.type === 'product') {
+            navigate(`/shop/product/${item.id}`);
+          } else if (item.type === 'video') {
+            // Open in a modal or viewer instead of navigating
+            console.log('View video:', item);
+          } else if (item.type === 'audio') {
+            console.log('Play audio:', item);
+          } else if (item.type === 'stream') {
+            console.log('View stream:', item);
+          } else {
+            console.log('View photo:', item);
+          }
+        }}
+        onAddOffer={handleAddOffer}
+        onUpdateOffer={handleUpdateOffer}
+        onDeleteOffer={handleDeleteOffer}
+      />
 
       {/* Quick Insights Bar */}
       {(quickStats.pendingRequests > 0 || quickStats.recentTips > 0 || quickStats.messagesUnread > 0) && (
@@ -1691,14 +1685,14 @@ const HybridCreatorDashboard = memo(({
                 <input
                   type="text"
                   placeholder="Exclusive VIP Show"
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                  className="w-full h-10 px-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Description</label>
                 <textarea
                   placeholder="Describe your show..."
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                  className="w-full h-10 px-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   rows="3"
                 />
               </div>
@@ -1707,7 +1701,7 @@ const HybridCreatorDashboard = memo(({
                   <label className="block text-sm font-medium mb-2">Date & Time</label>
                   <input
                     type="datetime-local"
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                    className="w-full h-10 px-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
@@ -1715,7 +1709,7 @@ const HybridCreatorDashboard = memo(({
                   <input
                     type="number"
                     placeholder="100"
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                    className="w-full h-10 px-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -1744,7 +1738,7 @@ const HybridCreatorDashboard = memo(({
             isOpen={showNotificationsModal}
             onClose={() => setShowNotificationsModal(false)}
             title="All Notifications"
-            size="2xl"
+            size="lg"
           >
             <div className="max-h-[75vh] overflow-y-auto">
               <NotificationCenter />

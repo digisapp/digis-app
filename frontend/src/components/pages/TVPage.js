@@ -82,7 +82,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
   const [showFilters, setShowFilters] = useState(false);
   
   // New enhanced states
-  const [viewMode, setViewMode] = useState('grid'); // grid, list, compact
+  const [viewMode, setViewMode] = useState('list'); // Force list mode on mobile
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentlyWatched, setRecentlyWatched] = useState([]);
@@ -735,28 +735,19 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
           <div className="w-full max-w-7xl mx-auto">
-            <div className="flex flex-col gap-4">
-            {/* Title */}
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <TvIcon className="w-6 h-6 text-purple-600" />
-                Digis TV
-              </h1>
-            </div>
-            
-            {/* Search and Controls */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Enhanced Search Bar with Autocomplete */}
+            {/* Search Bar and Filters - All on one row for desktop */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Enhanced Search Bar with "Explore TV" placeholder */}
               <div className="relative flex-1 min-w-[200px] max-w-2xl" ref={searchRef}>
-                <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type="text"
+                  type="search"
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   onFocus={() => setShowSuggestions(true)}
-                  placeholder="Search streams, creators, tags..."
-                  className="w-full pl-11 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  placeholder="Explore TV"
+                  className="w-full h-12 pl-10 pr-3 sm:pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                 />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 {searchQuery && (
                   <button
                     onClick={() => {
@@ -768,7 +759,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                     <XMarkIcon className="w-4 h-4" />
                   </button>
                 )}
-                
+
                 {/* Search Suggestions Dropdown */}
                 <AnimatePresence>
                   {showSuggestions && (searchSuggestions.length > 0 || (!searchQuery && popularSearches.length > 0)) && (
@@ -801,6 +792,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                 </AnimatePresence>
               </div>
 
+              {/* Filter buttons - on same row for desktop */}
               {/* Category Filters Button */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -822,8 +814,8 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                     setShowReplays(false);
                   }}
                   className={`px-3 py-1.5 rounded-lg transition-all ${
-                    !showUpcoming && !showReplays 
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' 
+                    !showUpcoming && !showReplays
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
@@ -835,8 +827,8 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                     setShowReplays(false);
                   }}
                   className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${
-                    showUpcoming 
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' 
+                    showUpcoming
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
@@ -849,8 +841,8 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                     setShowUpcoming(false);
                   }}
                   className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${
-                    showReplays 
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' 
+                    showReplays
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
@@ -859,8 +851,8 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                 </button>
               </div>
               
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-1">
+              {/* View Mode Toggle - Hidden on mobile */}
+              <div className="hidden sm:flex items-center gap-1 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-1">
                 <button
                   onClick={() => setViewMode('grid')}
                   className={`p-2 rounded-lg transition-all ${
@@ -906,7 +898,6 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                 </button>
               )}
             </div>
-          </div>
           </div>
         </div>
       </div>

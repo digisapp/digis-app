@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMobileUI } from './MobileUIProvider';
-import { 
-  signUp, 
-  signIn, 
+import {
+  signUp,
+  signIn,
   resetPassword
 } from '../../utils/supabase-auth';
 import {
@@ -16,6 +17,7 @@ import { getAuthToken } from '../../utils/auth-helpers';
 import api from '../../services/api';
 
 const MobileOptimizedAuth = ({ onLogin, mode = 'signin', onClose }) => {
+  const navigate = useNavigate();
   console.log('🟡 MobileOptimizedAuth rendered with mode:', mode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -152,17 +154,16 @@ const MobileOptimizedAuth = ({ onLogin, mode = 'signin', onClose }) => {
         onLogin(fullUserData);
       }
       
-      // Force a page reload to the correct dashboard based on user type
+      // Navigate to correct dashboard based on user type (using existing isCreatorUser)
+      const destination = isCreatorUser ? '/dashboard' : '/explore';
+
+      console.log(`📱 Redirecting ${isCreatorUser ? 'creator' : 'fan'} to ${destination}`);
+
+      // Use React Router navigation to preserve state
       setTimeout(() => {
-        const isCreatorUser = userData.is_creator === true || userData.creator_type !== null;
-        if (isCreatorUser) {
-          console.log('📱 Redirecting creator to dashboard');
-          window.location.href = '/dashboard';
-        } else {
-          console.log('📱 Redirecting fan to explore');
-          window.location.href = '/explore';
-        }
-      }, 1500);
+        navigate(destination, { replace: true, state: { from: 'auth' } });
+        onLogin?.(userData);
+      }, 500);
       
     } catch (error) {
       console.error('❌ Error syncing mobile user data:', error);

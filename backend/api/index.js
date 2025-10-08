@@ -259,9 +259,10 @@ try {
   // Use enhanced auth with JWT refresh tokens
   const authEnhancedRoutes = require('../routes/auth-enhanced');
 
-  // Apply rate limiters to sensitive routes
-  app.use('/api/auth', rateLimiters.auth || ((req, res, next) => next()), authRoutes);
-  app.use('/api/auth/v2', rateLimiters.auth || ((req, res, next) => next()), authEnhancedRoutes); // New auth endpoints with refresh tokens
+  // Apply rate limiters to sensitive routes (disabled in development)
+  const authLimiter = process.env.NODE_ENV === 'production' ? (rateLimiters.auth || ((req, res, next) => next())) : ((req, res, next) => next());
+  app.use('/api/auth', authLimiter, authRoutes);
+  app.use('/api/auth/v2', authLimiter, authEnhancedRoutes); // New auth endpoints with refresh tokens
   // Use enhanced payment routes with idempotency and rate limiting
   const paymentsEnhanced = require('../routes/payments-enhanced');
   app.use('/api/v1/payments', paymentsEnhanced); // New enhanced version

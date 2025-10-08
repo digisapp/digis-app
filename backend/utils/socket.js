@@ -194,8 +194,17 @@ const initializeSocket = (server) => {
       console.log(`Socket authenticated for user: ${user.supabase_id || user.id}`);
       next();
     } catch (error) {
+      // In development, allow connections to fail gracefully without verbose errors
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Socket auth failed (dev mode) - allowing anonymous connection');
+        socket.userId = 'anonymous';
+        socket.userEmail = null;
+        socket.userData = { anonymous: true };
+        return next();
+      }
+
       console.error('Socket authentication error:', error);
-      
+
       // Provide specific error messages
       if (error.message?.includes('expired')) {
         next(new Error(ErrorMessages.TOKEN_EXPIRED));

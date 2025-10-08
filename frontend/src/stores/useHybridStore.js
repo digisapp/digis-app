@@ -17,12 +17,14 @@ const createAuthSlice = (set, get) => ({
   isAdmin: localStorage.getItem('userIsAdmin') === 'true' || false,
   tokenBalance: 0,
   profile: null,
-  
+  roleVerified: localStorage.getItem('roleVerified') === 'true' || false, // Track if role has been verified to prevent flip-flopping
+  roleLoading: localStorage.getItem('roleVerified') !== 'true', // Only show loading if role hasn't been verified yet
+
   // Actions
   setUser: (user) => set((state) => {
     state.user = user;
   }),
-  
+
   setProfile: (profile) => set((state) => {
     console.log('🔍 Setting profile in store:', {
       email: profile?.email,
@@ -32,24 +34,44 @@ const createAuthSlice = (set, get) => ({
       full_profile: profile
     });
     state.profile = profile;
-    
-    // More robust creator detection - check multiple fields
-    const isCreatorAccount = profile?.is_creator === true || 
-                            profile?.creator_type !== null || 
-                            profile?.role === 'creator';
-    
-    state.isCreator = isCreatorAccount;
-    state.isAdmin = profile?.role === 'admin' || profile?.is_super_admin === true;
-    
-    // Store creator status in localStorage for mobile fallback
-    if (profile) {
-      localStorage.setItem('userIsCreator', isCreatorAccount ? 'true' : 'false');
-      localStorage.setItem('userIsAdmin', (profile?.role === 'admin' || profile?.is_super_admin === true) ? 'true' : 'false');
-      localStorage.setItem('userEmail', profile?.email || '');
-      localStorage.setItem('userCreatorType', profile?.creator_type || '');
+
+    // STRICT creator detection - only use is_creator field as source of truth
+    // This prevents false positives from null checks
+    const isCreatorAccount = profile?.is_creator === true;
+
+    // CRITICAL: Once role is verified, prevent it from changing to prevent production issues
+    // Only update role if:
+    // 1. Role has never been set (first time)
+    // 2. Role is explicitly being changed (is_creator changed from previous value)
+    const currentIsCreator = state.isCreator;
+    const roleChanged = currentIsCreator !== isCreatorAccount;
+
+    if (!state.roleVerified || roleChanged) {
+      console.log('🔐 Role verification:', {
+        previous: currentIsCreator,
+        new: isCreatorAccount,
+        changed: roleChanged,
+        verified: state.roleVerified
+      });
+
+      state.isCreator = isCreatorAccount;
+      state.isAdmin = profile?.role === 'admin' || profile?.is_super_admin === true;
+      state.roleVerified = true;
+      state.roleLoading = false; // Role is now verified, allow rendering
+
+      // Store creator status in localStorage for persistence
+      if (profile) {
+        localStorage.setItem('userIsCreator', isCreatorAccount ? 'true' : 'false');
+        localStorage.setItem('userIsAdmin', (profile?.role === 'admin' || profile?.is_super_admin === true) ? 'true' : 'false');
+        localStorage.setItem('userEmail', profile?.email || '');
+        localStorage.setItem('userCreatorType', profile?.creator_type || '');
+        localStorage.setItem('roleVerified', 'true');
+      }
+
+      console.log('📱 Store state after setProfile - isCreator:', state.isCreator, 'isAdmin:', state.isAdmin, 'roleVerified:', state.roleVerified, 'roleLoading:', state.roleLoading);
+    } else {
+      console.log('⚠️ Skipping role update - role already verified:', currentIsCreator);
     }
-    
-    console.log('📱 Store state after setProfile - isCreator:', state.isCreator, 'isAdmin:', state.isAdmin, 'creator_type:', profile?.creator_type);
   }),
   
   setTokenBalance: (balance) => set((state) => {
@@ -66,6 +88,23 @@ const createAuthSlice = (set, get) => ({
     state.isCreator = false;
     state.isAdmin = false;
     state.tokenBalance = 0;
+    state.roleVerified = false;
+    state.roleLoading = true; // Reset to loading state on logout
+    // Clear localStorage
+    localStorage.removeItem('userIsCreator');
+    localStorage.removeItem('userIsAdmin');
+    localStorage.removeItem('roleVerified');
+  }),
+
+  // Force update role (use only when role explicitly changes, e.g., upgrading to creator)
+  forceUpdateRole: (isCreator, isAdmin = false) => set((state) => {
+    console.log('🔐 Force updating role:', { isCreator, isAdmin });
+    state.isCreator = isCreator;
+    state.isAdmin = isAdmin;
+    state.roleVerified = true;
+    localStorage.setItem('userIsCreator', isCreator ? 'true' : 'false');
+    localStorage.setItem('userIsAdmin', isAdmin ? 'true' : 'false');
+    localStorage.setItem('roleVerified', 'true');
   }),
 });
 

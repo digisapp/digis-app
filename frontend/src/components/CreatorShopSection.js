@@ -39,7 +39,8 @@ const CreatorShopSection = ({
   onAddProduct,
   onEditProduct,
   onDeleteProduct,
-  onViewAnalytics
+  onViewAnalytics,
+  mobile = false
 }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('memorabilia');
@@ -484,6 +485,64 @@ const CreatorShopSection = ({
     { id: 'branded', label: '👕 Merchandise', icon: BagIcon, count: brandedProducts.length }
   ];
 
+  // Mobile compact layout
+  if (mobile) {
+    return (
+      <div className="space-y-3">
+        {/* Compact product grid - 2 columns for mobile */}
+        {currentProducts.length === 0 ? (
+          <div className="text-center py-8">
+            <ShoppingBagIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm">No products yet</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            {currentProducts.map((product) => (
+              <motion.div
+                key={product.id}
+                whileTap={{ scale: 0.98 }}
+                className="bg-white rounded-lg border border-gray-200 overflow-hidden"
+                onClick={() => navigate(`/shop/product/${product.id}`)}
+              >
+                {/* Compact Product Image */}
+                <div className="relative aspect-square bg-gradient-to-br from-purple-100 to-pink-100">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <ShoppingBagIcon className="w-8 h-8 text-purple-300" />
+                  </div>
+                  {product.highValue && (
+                    <div className="absolute top-1 left-1 bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
+                      Premium
+                    </div>
+                  )}
+                  {product.available && (
+                    <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full"></div>
+                  )}
+                </div>
+
+                {/* Compact Product Info */}
+                <div className="p-2">
+                  <h4 className="font-medium text-xs mb-1 line-clamp-1">{product.title}</h4>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-bold text-purple-600">{product.price.toLocaleString()}</span>
+                      <span className="text-[10px] text-gray-500 ml-0.5">tokens</span>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <StarIcon className="w-3 h-3 text-yellow-500" />
+                      <span className="text-[10px] text-gray-600">{product.rating}</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop full layout
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

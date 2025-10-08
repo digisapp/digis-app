@@ -81,9 +81,11 @@ const cleanUsername = (v) => v.replace(/^@/,'').replace(/[^a-z0-9_]/g, '').trim(
 
 const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
 
+  console.log('MobileEditProfile user data:', user);
+
   // Form state matching desktop
   const [username, setUsername] = useState(user?.username || '');
-  const [fullName, setFullName] = useState(user?.full_name || user?.name || '');
+  const [displayName, setDisplayName] = useState(user?.display_name || user?.name || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [profileImage, setProfileImage] = useState(user?.profile_pic_url || user?.avatar_url || '');
   const [bannerImage, setBannerImage] = useState(user?.banner_url || '');
@@ -178,7 +180,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
     if (user && !initialRef.current) {
       initialRef.current = {
         username: user?.username || '',
-        fullName: user?.full_name || user?.name || '',
+        displayName: user?.display_name || user?.full_name || user?.name || '',
         bio: user?.bio || '',
         profileImage: user?.profile_pic_url || user?.avatar_url || '',
         bannerImage: user?.banner_url || '',
@@ -206,7 +208,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
 
     const changed =
       username !== initialRef.current.username ||
-      fullName !== initialRef.current.fullName ||
+      displayName !== initialRef.current.displayName ||
       bio !== initialRef.current.bio ||
       profileImage !== initialRef.current.profileImage ||
       bannerImage !== initialRef.current.bannerImage ||
@@ -224,7 +226,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
       voiceMemoPrice !== initialRef.current.prices.voiceMemo;
 
     setHasChanges(changed);
-  }, [username, fullName, bio, profileImage, bannerImage, state, country, interests, socialLinks,
+  }, [username, displayName, bio, profileImage, bannerImage, state, country, interests, socialLinks,
       streamPrice, videoPrice, voicePrice, messagePrice, textMessagePrice, imageMessagePrice,
       videoMessagePrice, voiceMemoPrice]);
 
@@ -241,7 +243,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
     if (hasChanges) {
       if (!confirm('Discard unsaved changes?')) return;
     }
-    onNavigate('profile');
+    onNavigate('dashboard');
   }, [hasChanges, onNavigate]);
 
   // Handle category selection
@@ -340,9 +342,9 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
       newErrors.username = 'Username must be between 3 and 30 characters';
     }
 
-    // Validate full name
-    if (fullName.trim() && fullName.trim().length > 50) {
-      newErrors.fullName = 'Full name must be less than 50 characters';
+    // Validate display name
+    if (displayName.trim() && displayName.trim().length > 50) {
+      newErrors.displayName = 'Display name must be less than 50 characters';
     }
 
     // Validate bio
@@ -397,7 +399,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
     try {
       const payload = {
         username: username.trim().toLowerCase(),
-        full_name: fullName.trim(),
+        display_name: displayName.trim(),
         bio: bio.trim(),
         profile_pic_url: profileImage,
         banner_url: bannerImage,
@@ -457,7 +459,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
       // Reset initial state after successful save
       initialRef.current = {
         username: payload.username,
-        fullName: payload.full_name,
+        displayName: payload.display_name,
         bio: payload.bio,
         profileImage: payload.profile_pic_url,
         bannerImage: payload.banner_url,
@@ -487,7 +489,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
         setShowChangePassword(false);
       }
 
-      onNavigate('profile');
+      onNavigate('dashboard');
     } catch (error) {
       console.error('Error saving profile:', error);
       toast.error(error.message ?? 'Failed to save profile');
@@ -504,15 +506,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex items-center justify-between px-4 py-3">
-          <button
-            onClick={safeNavigateBack}
-            className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-            aria-label="Go back"
-          >
-            <ArrowLeftIcon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-          </button>
-
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             Edit Profile
           </h1>
 
@@ -599,21 +593,25 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                   ) : (
                     <div className="w-full h-full bg-gradient-to-r from-purple-400 to-pink-400" />
                   )}
-                  <button
-                    onClick={() => bannerInputRef.current?.click()}
-                    className="absolute bottom-2 right-2 p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-colors"
-                    aria-label="Change banner image"
-                  >
-                    <CameraIcon className="w-5 h-5 text-white" />
-                  </button>
-                  <input
-                    ref={bannerInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, 'banner')}
-                    className="hidden"
-                    aria-label="Banner image upload"
-                  />
+                  {isCreator && (
+                    <>
+                      <button
+                        onClick={() => bannerInputRef.current?.click()}
+                        className="absolute bottom-2 right-2 p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-colors"
+                        aria-label="Change banner image"
+                      >
+                        <CameraIcon className="w-5 h-5 text-white" />
+                      </button>
+                      <input
+                        ref={bannerInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, 'banner')}
+                        className="hidden"
+                        aria-label="Banner image upload"
+                      />
+                    </>
+                  )}
                 </div>
 
                 {/* Profile Image */}
@@ -621,29 +619,33 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                   <div className="relative">
                     <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800 p-1">
                       <img
-                        src={profileImage || getDefaultAvatarUrl(fullName || username)}
+                        src={profileImage || getDefaultAvatarUrl(displayName || username)}
                         alt="Profile"
                         className="w-full h-full rounded-full object-cover"
                         onError={(e) => {
-                          e.target.src = getDefaultAvatarUrl(fullName || username);
+                          e.target.src = getDefaultAvatarUrl(displayName || username);
                         }}
                       />
                     </div>
-                    <button
-                      onClick={() => profileInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 p-2 bg-purple-600 rounded-full hover:bg-purple-700 transition-colors shadow-lg"
-                      aria-label="Change profile picture"
-                    >
-                      <CameraIcon className="w-4 h-4 text-white" />
-                    </button>
-                    <input
-                      ref={profileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, 'profile')}
-                      className="hidden"
-                      aria-label="Profile image upload"
-                    />
+                    {isCreator && (
+                      <>
+                        <button
+                          onClick={() => profileInputRef.current?.click()}
+                          className="absolute bottom-0 right-0 p-2 bg-purple-600 rounded-full hover:bg-purple-700 transition-colors shadow-lg"
+                          aria-label="Change profile picture"
+                        >
+                          <CameraIcon className="w-4 h-4 text-white" />
+                        </button>
+                        <input
+                          ref={profileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, 'profile')}
+                          className="hidden"
+                          aria-label="Profile image upload"
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -670,7 +672,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                           ? 'border-red-500 focus:ring-red-500'
                           : 'border-gray-300 dark:border-gray-600 focus:ring-purple-500'
                       }`}
-                      placeholder="johndoe"
+                      placeholder={username || user?.username || "Enter username"}
                       autoComplete="username"
                       autoCapitalize="none"
                       autoCorrect="off"
@@ -684,35 +686,36 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                   <p className="mt-1 text-xs text-gray-500">Lowercase letters, numbers, and underscores only</p>
                 </div>
 
-                {/* Full Name */}
+                {/* Display Name */}
                 <div>
-                  <label htmlFor="fullname" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Full Name
+                  <label htmlFor="displayname" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Display Name
                   </label>
                   <input
-                    id="fullname"
+                    id="displayname"
                     type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors dark:bg-gray-800 ${
-                      errors.fullName
+                      errors.displayName
                         ? 'border-red-500 focus:ring-red-500'
                         : 'border-gray-300 dark:border-gray-600 focus:ring-purple-500'
                     }`}
-                    placeholder="John Doe"
+                    placeholder="Your display name"
                     autoComplete="name"
-                    aria-invalid={!!errors.fullName}
-                    aria-describedby={errors.fullName ? 'fullname-error' : undefined}
+                    aria-invalid={!!errors.displayName}
+                    aria-describedby={errors.displayName ? 'displayname-error' : undefined}
                   />
-                  {errors.fullName && (
-                    <p id="fullname-error" className="mt-1 text-xs text-red-500">{errors.fullName}</p>
+                  {errors.displayName && (
+                    <p id="displayname-error" className="mt-1 text-xs text-red-500">{errors.displayName}</p>
                   )}
+                  <p className="mt-1 text-xs text-gray-500">This is the name that will be shown publicly</p>
                 </div>
 
                 {/* Bio */}
                 <div>
                   <label htmlFor="bio" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Bio
+                    About
                   </label>
                   <textarea
                     id="bio"
@@ -737,17 +740,122 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                   </div>
                 </div>
 
-                {/* Change Password Section */}
+                {/* Categories for creators */}
+                {isCreator && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Categories *<span className="text-xs text-gray-500 ml-2">(Select up to 4)</span>
+                    </label>
+
+                    {/* Selected categories */}
+                    {interests.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {interests.map((interest) => (
+                          <span
+                            key={interest}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-full text-sm"
+                          >
+                            <span>{availableCategories.find(c => c.value === interest)?.icon}</span>
+                            <span>{interest}</span>
+                            <button
+                              onClick={() => removeCategory(interest)}
+                              className="ml-1 hover:text-purple-900 dark:hover:text-purple-100"
+                              aria-label={`Remove ${interest}`}
+                            >
+                              <XMarkIcon className="w-4 h-4" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {interests.length === 0 && (
+                      <p className="text-sm text-gray-500 mb-2">No categories selected</p>
+                    )}
+
+                    {errors.categories && (
+                      <p className="text-xs text-red-500 mb-2">{errors.categories}</p>
+                    )}
+
+                    {/* Category selector */}
+                    <select
+                      value=""
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700"
+                      disabled={interests.length >= 4}
+                    >
+                      <option value="">Select a category...</option>
+                      {availableCategories
+                        .filter(cat => !interests.includes(cat.value))
+                        .map(cat => (
+                          <option key={cat.value} value={cat.value}>
+                            {cat.icon} {cat.label}
+                          </option>
+                        ))}
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">{interests.length}/4 categories selected</p>
+                  </div>
+                )}
+
+                {/* Location for creators */}
+                {isCreator && (
+                  <>
+                    <div>
+                      <label htmlFor="state" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        State/Province
+                      </label>
+                      <div className="relative">
+                        <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          id="state"
+                          type="text"
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700"
+                          placeholder="e.g., Florida"
+                          autoComplete="address-level1"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Country
+                      </label>
+                      <div className="relative">
+                        <GlobeAltIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          id="country"
+                          type="text"
+                          value={country}
+                          onChange={(e) => setCountry(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700"
+                          placeholder="e.g., USA"
+                          autoComplete="country"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Account Security Section */}
                 <div className="border-t pt-4">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
+                    Account Security
+                  </h3>
                   <button
                     onClick={() => setShowChangePassword(!showChangePassword)}
                     className="flex items-center justify-between w-full py-3 text-left"
                   >
                     <div className="flex items-center gap-3">
                       <LockClosedIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        Change Password
-                      </span>
+                      <div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white block">
+                          Password
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Keep your account secure with a strong password
+                        </span>
+                      </div>
                     </div>
                     <ChevronRightIcon className={`w-5 h-5 text-gray-400 transition-transform ${
                       showChangePassword ? 'rotate-90' : ''
@@ -889,7 +997,8 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
               className="space-y-4"
             >
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 dark:text-white mb-4">
+                <h3 className="font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <LinkIcon className="w-5 h-5 text-purple-600" />
                   Social Links
                 </h3>
                 <div className="space-y-3">
@@ -898,22 +1007,19 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                       <label htmlFor={`social-${platform}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {label}
                       </label>
-                      <div className="relative">
-                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                          id={`social-${platform}`}
-                          type="text"
-                          value={socialLinks[platform]}
-                          onChange={(e) => handleSocialChange(platform, e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700"
-                          placeholder={`@username or full URL`}
-                          autoComplete="off"
-                          autoCapitalize="none"
-                        />
-                      </div>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Enter username or full URL
-                      </p>
+                      <input
+                        id={`social-${platform}`}
+                        type="text"
+                        value={socialLinks[platform] || ''}
+                        onChange={(e) => handleSocialChange(platform, e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700"
+                        placeholder={platform === 'instagram' ? '@yourinstagram' :
+                                    platform === 'twitter' ? '@yourtwitter' :
+                                    platform === 'youtube' ? 'youtube.com/yourchannel' :
+                                    '@yourtiktok'}
+                        autoComplete="off"
+                        autoCapitalize="none"
+                      />
                     </div>
                   ))}
                 </div>
@@ -929,99 +1035,6 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              {/* Location */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 dark:text-white mb-4">
-                  Location
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="state" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      State/Province
-                    </label>
-                    <div className="relative">
-                      <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        id="state"
-                        type="text"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700"
-                        placeholder="CA"
-                        autoComplete="address-level1"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Country
-                    </label>
-                    <div className="relative">
-                      <GlobeAltIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        id="country"
-                        type="text"
-                        value={country}
-                        onChange={(e) => setCountry(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700"
-                        placeholder="USA"
-                        autoComplete="country"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Categories */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 dark:text-white mb-4">
-                  Categories ({interests.length}/4)
-                </h3>
-
-                {/* Selected categories */}
-                {interests.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {interests.map((interest) => (
-                      <span
-                        key={interest}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-full text-sm"
-                      >
-                        <span>{availableCategories.find(c => c.value === interest)?.icon}</span>
-                        <span>{interest}</span>
-                        <button
-                          onClick={() => removeCategory(interest)}
-                          className="ml-1 hover:text-purple-900 dark:hover:text-purple-100"
-                          aria-label={`Remove ${interest}`}
-                        >
-                          <XMarkIcon className="w-4 h-4" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {errors.categories && (
-                  <p className="text-xs text-red-500 mb-2">{errors.categories}</p>
-                )}
-
-                {/* Category selector */}
-                <select
-                  value=""
-                  onChange={(e) => handleCategoryChange(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700"
-                  disabled={interests.length >= 4}
-                >
-                  <option value="">Select a category</option>
-                  {availableCategories
-                    .filter(cat => !interests.includes(cat.value))
-                    .map(cat => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.icon} {cat.label}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
               {/* Pricing */}
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
                 <h3 className="font-medium text-gray-900 dark:text-white mb-4">

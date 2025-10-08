@@ -163,7 +163,45 @@ router.post('/', authenticateToken, async (req, res) => {
     ]);
     
     const newClass = result.rows[0];
-    
+
+    // Auto-sync to creator's calendar
+    try {
+      const startDateTime = new Date(newClass.start_time);
+      const scheduledDate = startDateTime.toISOString().split('T')[0];
+      const scheduledTime = startDateTime.toTimeString().split(' ')[0].substring(0, 5);
+
+      await pool.query(`
+        INSERT INTO calendar_events (
+          creator_id,
+          event_type,
+          title,
+          description,
+          scheduled_date,
+          scheduled_time,
+          duration_minutes,
+          status,
+          reference_id,
+          reference_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+        creatorId,
+        'class',
+        newClass.title,
+        newClass.description,
+        scheduledDate,
+        scheduledTime,
+        newClass.duration_minutes,
+        'scheduled',
+        newClass.id,
+        'class'
+      ]);
+
+      logger.info(`Class synced to creator calendar: ${newClass.id}`);
+    } catch (calendarError) {
+      logger.error('Error syncing class to calendar:', calendarError);
+      // Don't fail class creation if calendar sync fails
+    }
+
     res.status(201).json({
       success: true,
       class: {
@@ -191,7 +229,7 @@ router.post('/', authenticateToken, async (req, res) => {
         }
       }
     });
-    
+
     logger.info(`Class created: ${newClass.id}`, { creatorId, title });
     
   } catch (error) {
@@ -289,7 +327,54 @@ router.post('/:classId/join', authenticateToken, async (req, res) => {
       INSERT INTO class_participants (class_id, user_id, status, joined_at)
       VALUES ($1, $2, 'joined', NOW())
     `, [classId, userDbId]);
-    
+
+    // Auto-sync to user's calendar
+    try {
+      const startDateTime = new Date(classData.start_time);
+      const scheduledDate = startDateTime.toISOString().split('T')[0];
+      const scheduledTime = startDateTime.toTimeString().split(' ')[0].substring(0, 5);
+
+      // Get creator info
+      const creatorResult = await client.query(
+        'SELECT username, display_name FROM users WHERE id = $1',
+        [classData.creator_id]
+      );
+      const creatorName = creatorResult.rows[0]?.display_name || creatorResult.rows[0]?.username || 'Instructor';
+
+      await client.query(`
+        INSERT INTO calendar_events (
+          creator_id,
+          fan_id,
+          event_type,
+          title,
+          description,
+          scheduled_date,
+          scheduled_time,
+          duration_minutes,
+          status,
+          reference_id,
+          reference_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `, [
+        classData.creator_id,
+        userId,
+        'class',
+        classData.title,
+        `Class with ${creatorName}`,
+        scheduledDate,
+        scheduledTime,
+        classData.duration_minutes,
+        'scheduled',
+        classId,
+        'class_enrollment'
+      ]);
+
+      logger.info(`Class enrollment synced to calendar for user ${userId}`);
+    } catch (calendarError) {
+      logger.error('Error syncing enrollment to calendar:', calendarError);
+      // Don't fail enrollment if calendar sync fails
+    }
+
     await client.query('COMMIT');
 
     // Send confirmation email
@@ -504,10 +589,17 @@ router.delete('/:classId', authenticateToken, async (req, res) => {
     
     // Delete participants
     await client.query('DELETE FROM class_participants WHERE class_id = $1', [classId]);
-    
+
+    // Remove from calendars (mark as cancelled instead of deleting)
+    await client.query(`
+      UPDATE calendar_events
+      SET status = 'cancelled', updated_at = NOW()
+      WHERE reference_id = $1 AND reference_type IN ('class', 'class_enrollment')
+    `, [classId]);
+
     // Delete class
     await client.query('DELETE FROM classes WHERE id = $1', [classId]);
-    
+
     await client.query('COMMIT');
     
     res.json({ success: true, message: 'Class cancelled and participants refunded' });

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useHybridStore from '../stores/useHybridStore';
+import useAuthStore from '../stores/useAuthStore';
 
 const NavigationContext = createContext(undefined);
 
@@ -23,12 +24,9 @@ export const NavigationProvider = ({
   const location = useLocation();
   const setCurrentView = useHybridStore((state) => state.setCurrentView);
 
-  const role = useMemo(() => {
-    if (!user) return 'fan';
-    if (user.role === 'admin' || user.is_admin) return 'admin';
-    if (user.is_creator) return 'creator';
-    return 'fan';
-  }, [user]);
+  // CRITICAL: Use AuthStore as SINGLE SOURCE OF TRUTH
+  // Never read role from props or other sources
+  const role = useAuthStore((state) => state.role || 'fan');
 
   // Map paths to view states for mobile navigation
   const pathToView = useMemo(() => ({
@@ -44,7 +42,7 @@ export const NavigationProvider = ({
     '/schedule': 'schedule',
     '/analytics': 'analytics',
     '/calls': 'calls',
-    '/call-management': 'call-management',
+    '/call-requests': 'call-requests',
     '/followers': 'followers',
     '/subscribers': 'subscribers',
     '/tv': 'tv',

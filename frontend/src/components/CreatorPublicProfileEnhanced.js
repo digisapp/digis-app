@@ -29,7 +29,8 @@ import {
   XMarkIcon,
   ClockIcon,
   ArrowRightIcon,
-  DocumentIcon
+  DocumentIcon,
+  GiftIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid, LockClosedIcon } from '@heroicons/react/24/solid';
 import api from '../services/api';
@@ -63,9 +64,9 @@ const ContentItem = memo(({ item, index, handleContentClick, purchasedContent, p
       className="group cursor-pointer"
       onClick={() => handleContentClick(item)}
     >
-      <motion.div 
+      <motion.div
         whileHover={!prefersReducedMotion ? { boxShadow: '0 10px 30px rgba(139,92,246,0.2)' } : {}}
-        className={`relative ${item.type === 'photo' ? 'aspect-[3/4]' : 'aspect-[3/4]'} bg-gray-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-violet-200 dark:border-violet-700/50 group-hover:border-violet-400 dark:group-hover:border-violet-500 transition-all`}>
+        className={`relative ${item.type === 'stream' ? 'aspect-video' : 'aspect-[3/4]'} bg-gray-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-violet-200 dark:border-violet-700/50 group-hover:border-violet-400 dark:group-hover:border-violet-500 transition-all`}>
         <img
           src={item.thumbnail || `https://source.unsplash.com/400x${item.type === 'photo' ? '600' : '300'}/?${item.type},${item.id}`}
           alt={item.title || item.description}
@@ -1091,9 +1092,17 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                   Your browser does not support the video tag.
                 </video>
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/50 via-transparent to-transparent pointer-events-none" />
+
+                {/* Bottom Right - Creator Name Overlay */}
+                <div className="absolute bottom-4 right-16 px-4 py-2">
+                  <h1 className="text-sm md:text-base lg:text-lg font-bold text-white">
+                    digis.cc/{creator?.username}
+                  </h1>
+                </div>
+
                 <button
                   onClick={() => setStreamPreviewMuted(!streamPreviewMuted)}
-                  className="absolute bottom-4 right-4 p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-violet-600 dark:text-violet-400 hover:bg-white/90 dark:hover:bg-slate-700/90 transition-all border border-violet-300 dark:border-violet-500/30 shadow-lg"
+                  className="absolute bottom-4 right-4 p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-violet-600 dark:text-violet-400 hover:bg-white/90 dark:hover:bg-slate-700/90 transition-all border border-violet-300 dark:border-violet-500/30 shadow-lg z-10"
                 >
                   {streamPreviewMuted ? (
                     <SpeakerXMarkIcon className="h-5 w-5" />
@@ -1106,20 +1115,6 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
           </>
         </div>
       )}
-      
-      {/* Back button - Positioned absolutely over the banner */}
-      <button
-        onClick={() => {
-          if (onClose) {
-            onClose();
-          } else {
-            navigate('/');
-          }
-        }}
-        className="absolute top-4 left-4 p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-violet-600 dark:text-violet-400 hover:bg-white/90 dark:hover:bg-slate-700/90 transition-all z-20 border border-violet-300 dark:border-violet-500/30 shadow-lg"
-      >
-        <ArrowLeftIcon className="h-6 w-6" />
-      </button>
 
       {/* Profile Info */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 md:-mt-16 relative z-10">
@@ -1144,30 +1139,35 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
             </div>
             <div className="flex-1">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="flex-1">
                   <div className="flex items-center gap-3 mb-1">
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-pink-600 dark:from-violet-400 dark:to-pink-400 bg-clip-text text-transparent">{creator.username}</h1>
                     <motion.div
                       whileHover={!prefersReducedMotion ? { scale: 1.1 } : {}}
-                      className="bg-blue-500 rounded-full p-1.5 shadow-lg"
                       title="Verified Creator"
                     >
-                      <CheckCircleIcon className="h-5 w-5 text-white" />
+                      <CheckCircleIcon className="h-5 w-5 text-blue-500" />
                     </motion.div>
                   </div>
-                  <div className="flex flex-row flex-nowrap gap-2 mb-4 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
-                    {['Just Chatting', 'Gaming', 'IRL', 'Music & DJ Sets'].map((category) => (
-                      <motion.span
-                        key={category}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        whileHover={!prefersReducedMotion ? { scale: 1.05 } : {}}
-                        className="flex-shrink-0 px-4 py-1.5 bg-gradient-to-r from-violet-100 to-pink-100 dark:from-violet-900/30 dark:to-pink-900/30 rounded-full text-sm font-medium text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all cursor-pointer whitespace-nowrap"
-                      >
-                        {category}
-                      </motion.span>
-                    ))}
+                  {/* Follower Count - Under username */}
+                  <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 mb-3">
+                    <UserGroupIcon className="h-4 w-4" />
+                    <span className="font-semibold text-sm">{creator.stats.followers.toLocaleString()} followers</span>
                   </div>
+                  {creator.interests && creator.interests.length > 0 && (
+                    <div className="flex flex-row flex-nowrap gap-2 mb-4 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+                      {creator.interests.slice(0, 4).map((category) => (
+                        <motion.span
+                          key={category}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="flex-shrink-0 px-4 py-1.5 bg-gradient-to-r from-violet-100 to-pink-100 dark:from-violet-900/30 dark:to-pink-900/30 rounded-full text-sm font-medium text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700/50 backdrop-blur-sm shadow-sm transition-all whitespace-nowrap"
+                        >
+                          {category}
+                        </motion.span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <div className="flex items-center gap-2">
@@ -1175,14 +1175,13 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                       whileHover={!prefersReducedMotion ? { scale: 1.03 } : {}}
                       whileTap={!prefersReducedMotion ? { scale: 0.97 } : {}}
                       onClick={() => setShowSubscriptionModal(true)}
-                      className="relative px-5 py-2.5 bg-gradient-to-r from-violet-500 to-pink-500 text-white rounded-xl font-semibold transition-all overflow-hidden group"
+                      className="relative px-3 py-1.5 md:px-5 md:py-2.5 bg-gradient-to-r from-violet-500 to-pink-500 text-white rounded-lg md:rounded-xl text-xs md:text-base font-semibold transition-all overflow-hidden group"
                       style={{
                         boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
                       }}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                      <span className="relative z-10 flex items-center gap-2">
-                        <SparklesIcon className="w-4 h-4" />
+                      <span className="relative z-10">
                         Subscribe
                       </span>
                     </motion.button>
@@ -1190,15 +1189,14 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                       whileHover={!prefersReducedMotion ? { scale: 1.02 } : {}}
                       whileTap={!prefersReducedMotion ? { scale: 0.98 } : {}}
                       onClick={handleFollow}
-                      className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-sm font-medium ${
+                      className={`px-2 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-all text-xs md:text-sm font-medium ${
                         isFollowing
                           ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                           : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600'
                       }`}
                       aria-label={isFollowing ? 'Unfollow creator' : 'Follow creator'}
                     >
-                      {isFollowing ? <CheckCircleIcon className="h-4 w-4" /> : <UserPlusIcon className="h-4 w-4" />}
-                      <span>{isFollowing ? 'Following' : 'Follow'}</span>
+                      {isFollowing ? 'Following' : 'Follow'}
                     </motion.button>
                     <motion.button
                       whileHover={!prefersReducedMotion ? { scale: 1.02 } : {}}
@@ -1250,18 +1248,6 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                     >
                       <BellIcon className="h-4 w-4" />
                     </motion.button>
-                  </div>
-                  {/* Follower Count - Enhanced styling */}
-                  <div className="bg-gradient-to-r from-violet-100 to-pink-100 dark:from-violet-900/30 dark:to-pink-900/30 px-4 py-2 rounded-lg border border-violet-200 dark:border-violet-700/50 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <UserGroupIcon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                      <div className="flex flex-col">
-                        <div className="text-xl font-bold bg-gradient-to-r from-violet-600 to-pink-600 dark:from-violet-400 dark:to-pink-400 bg-clip-text text-transparent">
-                          {creator.stats.followers.toLocaleString()}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400 font-medium uppercase tracking-wider">Followers</div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1324,6 +1310,21 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                   </motion.button>
 
                   <motion.button
+                    onClick={handleSendTip}
+                    className="relative flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg transition-all text-sm font-medium overflow-hidden group"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    style={{
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                      minWidth: '100px'
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    <GiftIcon className="w-4 h-4 relative z-10" />
+                    <span className="relative z-10">Tip</span>
+                  </motion.button>
+
+                  <motion.button
                     onClick={handleSendMessage}
                     className="relative flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg transition-all text-sm font-medium overflow-hidden group"
                     whileHover={{ scale: 1.02 }}
@@ -1338,21 +1339,6 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                     <ChatBubbleLeftRightIcon className="w-4 h-4 relative z-10" />
                     <span className="relative z-10">Message</span>
                   </motion.button>
-
-                  <motion.button
-                    onClick={handleSendTip}
-                    className="relative flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg transition-all text-sm font-medium overflow-hidden group"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    style={{
-                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
-                      minWidth: '100px'
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    <SparklesIcon className="w-4 h-4 relative z-10" />
-                    <span className="relative z-10">Tip</span>
-                  </motion.button>
                 </div>
               </div>
             </div>
@@ -1364,24 +1350,16 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-violet-200 dark:border-violet-800/50 overflow-hidden">
             {/* Gallery Header */}
             <div className="p-6 border-b border-violet-200 dark:border-violet-800/30">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {pictures.length + videos.length + recordings.length + digitals.length} items
-                  </span>
-                </div>
-              </div>
-              
+
               {/* Content Type Tabs with Neon Underlines */}
-              <div className="flex gap-1 overflow-x-auto">
+              <div className="flex gap-1 overflow-x-auto scrollbar-hide">
                 {[
                   { id: 'photos', label: 'Photos', icon: PhotoIcon },
                   { id: 'videos', label: 'Videos', icon: VideoCameraIcon },
                   { id: 'streams', label: 'Streams', icon: PlayIcon },
                   { id: 'offers', label: 'Offers', icon: SparklesIcon },
-                  { id: 'about', label: 'About', icon: UserCircleIcon },
-                  { id: 'digitals', label: 'Digitals', icon: DocumentIcon },
-                  { id: 'shop', label: 'Shop', icon: ShoppingBagIcon }
+                  { id: 'shop', label: 'Shop', icon: ShoppingBagIcon },
+                  { id: 'about', label: 'About', icon: UserCircleIcon }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -1535,9 +1513,9 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                         }
                       }}
                     >
-                      <motion.div 
+                      <motion.div
                         whileHover={!prefersReducedMotion ? { boxShadow: '0 10px 30px rgba(139,92,246,0.2)' } : {}}
-                        className={`relative ${item.type === 'photo' ? 'aspect-[3/4]' : 'aspect-[3/4]'} bg-gray-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-violet-200 dark:border-violet-700/50 group-hover:border-violet-400 dark:group-hover:border-violet-500 transition-all`}>
+                        className={`relative ${item.type === 'stream' ? 'aspect-video' : 'aspect-[3/4]'} bg-gray-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-violet-200 dark:border-violet-700/50 group-hover:border-violet-400 dark:group-hover:border-violet-500 transition-all`}>
                         <img
                           src={item.thumbnail || `https://source.unsplash.com/400x${item.type === 'photo' ? '600' : '300'}/?${item.type},${item.id}`}
                           alt={item.title || item.description}

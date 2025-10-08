@@ -120,34 +120,35 @@ const ProfileBanner = ({
         {/* Content Overlay */}
         <div className="relative h-full flex flex-col justify-between p-4 md:p-6 lg:p-8 z-10">
 
-          {/* Middle Section - Creator Info */}
-          <div className="flex-1 flex items-center justify-center">
+          {/* Top Right - Next Stream Info */}
+          {creator?.next_stream_time && !isLiveStreaming && (
+            <div className="flex justify-end">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="inline-flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/20"
+              >
+                <ClockIcon className="w-5 h-5 text-white" />
+                <span className="text-white font-medium">
+                  Next stream in {countdown}
+                </span>
+                <BellIcon className="w-5 h-5 text-white cursor-pointer hover:text-yellow-400 transition-colors" />
+              </motion.div>
+            </div>
+          )}
+
+          {/* Bottom Right - Creator Name */}
+          <div className="flex items-end justify-end">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-center"
+              className="px-4 py-2"
             >
-              {/* Creator Name */}
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4">
+              <h1 className="text-sm md:text-base lg:text-lg font-bold text-white">
                 digis.cc/{creator?.username}
               </h1>
-
-              {/* Next Stream Info */}
-              {creator?.next_stream_time && !isLiveStreaming && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full"
-                >
-                  <ClockIcon className="w-5 h-5 text-white" />
-                  <span className="text-white font-medium">
-                    Next stream in {countdown}
-                  </span>
-                  <BellIcon className="w-5 h-5 text-white cursor-pointer hover:text-yellow-400 transition-colors" />
-                </motion.div>
-              )}
             </motion.div>
           </div>
 

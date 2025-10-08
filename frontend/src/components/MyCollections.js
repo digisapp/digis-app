@@ -23,7 +23,8 @@ import {
   CurrencyDollarIcon,
   CheckCircleIcon,
   LockClosedIcon,
-  CloudArrowDownIcon
+  CloudArrowDownIcon,
+  StarIcon
 } from '@heroicons/react/24/outline';
 import {
   PlayIcon,
@@ -39,7 +40,7 @@ import { getAuthToken } from '../utils/auth-helpers';
 const MyCollections = ({ user, isCreator = false }) => {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('photos');
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContent, setSelectedContent] = useState(null);
@@ -52,13 +53,10 @@ const MyCollections = ({ user, isCreator = false }) => {
 
   // Collection categories with mobile labels
   const categories = [
-    { id: 'all', label: 'All Collections', mobileLabel: 'All', icon: FolderIcon, count: 0 },
-    { id: 'videos', label: 'Videos', mobileLabel: 'Videos', icon: VideoCameraIcon, count: 0 },
     { id: 'photos', label: 'Photos', mobileLabel: 'Photos', icon: PhotoIcon, count: 0 },
-    { id: 'audio', label: 'Audio', mobileLabel: 'Audio', icon: MusicalNoteIcon, count: 0 },
-    { id: 'classes', label: 'Classes', mobileLabel: 'Classes', icon: AcademicCapIcon, count: 0 },
-    { id: 'streams', label: 'Live Streams', mobileLabel: 'Live', icon: PlayCircleIcon, count: 0 },
-    { id: 'favorites', label: 'Favorites', mobileLabel: 'Favs', icon: HeartIcon, count: 0 }
+    { id: 'videos', label: 'Videos', mobileLabel: 'Videos', icon: VideoCameraIcon, count: 0 },
+    { id: 'streams', label: 'Streams', mobileLabel: 'Streams', icon: PlayCircleIcon, count: 0 },
+    { id: 'classes', label: 'Classes', mobileLabel: 'Classes', icon: StarIcon, count: 0 }
   ];
 
   // Fetch purchased content
@@ -279,14 +277,9 @@ const MyCollections = ({ user, isCreator = false }) => {
         <div className="mb-4 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                My Collections
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Collections
               </h1>
-              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1 md:mt-2">
-                {isCreator 
-                  ? "Content you've purchased from other creators and your learning materials"
-                  : "Your purchased content, classes, and exclusive materials"}
-              </p>
             </div>
             
             {/* Stats Button for Creators */}
@@ -345,84 +338,6 @@ const MyCollections = ({ user, isCreator = false }) => {
           )}
         </div>
 
-        {/* Filters and Search */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 md:p-4 mb-4 md:mb-6">
-          <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search collections..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Mobile Filters Row */}
-            <div className="flex gap-2 md:gap-3">
-              {/* Creator Filter */}
-              <select
-                value={filterCreator}
-                onChange={(e) => setFilterCreator(e.target.value)}
-                className="flex-1 px-3 md:px-4 py-2 text-sm md:text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-              <option value="">All Creators</option>
-              {uniqueCreators.map(creator => (
-                <option key={creator.id} value={creator.id}>
-                  {creator.name} ({creator.username})
-                </option>
-              ))}
-            </select>
-
-              {/* Sort */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="flex-1 px-3 md:px-4 py-2 text-sm md:text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-              <option value="recent">Most Recent</option>
-              <option value="oldest">Oldest First</option>
-              <option value="name">Name (A-Z)</option>
-              <option value="creator">Creator Name</option>
-              <option value="mostViewed">Most Viewed</option>
-              </select>
-
-              {/* View Mode Toggle */}
-              <div className="flex gap-1 md:gap-2">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-colors ${
-                  viewMode === 'grid' 
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-colors ${
-                  viewMode === 'list' 
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                    d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Category Tabs - Mobile Optimized */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-2 mb-4 md:mb-6">

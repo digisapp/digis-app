@@ -26,13 +26,15 @@ import {
   ArrowTrendingUpIcon,
   GiftIcon,
   ClockIcon,
-  TagIcon
+  TagIcon,
+  RectangleStackIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
 import { getAuthToken } from '../utils/supabase-auth';
+import BulkPhotoUploadModal from './BulkPhotoUploadModal';
 
 const EnhancedContentGallery = ({
   photos = [],
@@ -64,6 +66,7 @@ const EnhancedContentGallery = ({
   const [isManageMode, setIsManageMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [uploadType, setUploadType] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -334,83 +337,73 @@ const EnhancedContentGallery = ({
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl p-4 sm:p-6">
-      {/* Header with Search and Actions */}
-      <div className="mb-4 space-y-3">
-        {/* Search and Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                placeholder={`Search ${activeTab}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-              <MagnifyingGlassIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-            </div>
-            
-            <div className="flex gap-2">
+      {/* Selected items count */}
+      {isManageMode && (
+        <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+          {selectedItems.size > 0
+            ? `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} selected`
+            : 'Select items to manage'}
+        </div>
+      )}
+
+      {/* Bulk Delete Button - Show when items are selected */}
+      {isManageMode && selectedItems.size > 0 && (
+        <div className="mb-3">
+          <button
+            onClick={handleBulkDelete}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center gap-2"
+          >
+            <TrashIcon className="w-5 h-5" />
+            Delete ({selectedItems.size})
+          </button>
+        </div>
+      )}
+
+      {/* Tabs and Action Buttons in Same Row */}
+      <div className="relative mb-6">
+        <div className="flex items-center gap-2">
+          {/* Tabs Container */}
+          <div className="flex-1 flex gap-2 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitScrollbar: { display: 'none' }, WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', transform: 'translate3d(0, 0, 0)' }}>
+            {tabs.map((tab) => (
               <button
-                onClick={() => setIsManageMode(!isManageMode)}
-                className={`p-2 rounded-lg transition-colors ${
-                  isManageMode 
-                    ? 'bg-purple-500 text-white' 
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap flex-shrink-0 will-change-transform ${
+                  activeTab === tab.id
+                    ? 'bg-purple-500 text-white shadow-md'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
-                title={isManageMode ? 'Exit manage mode' : 'Manage content'}
+                style={{ isolation: 'isolate' }}
               >
-                {isManageMode ? (
-                  <CheckIcon className="w-5 h-5" />
-                ) : (
-                  <AdjustmentsHorizontalIcon className="w-5 h-5" />
+                <tab.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">{tab.label}</span>
+                {tab.count > 0 && (
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-xs bg-white/20 font-bold">
+                    {tab.count}
+                  </span>
                 )}
               </button>
-              
-              {isManageMode && selectedItems.size > 0 && (
-                <button
-                  onClick={handleBulkDelete}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center gap-2"
-                >
-                  <TrashIcon className="w-5 h-5" />
-                  Delete ({selectedItems.size})
-                </button>
-              )}
-            </div>
+            ))}
           </div>
-        
-        {/* Selected items count */}
-        {isManageMode && (
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            {selectedItems.size > 0 
-              ? `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} selected`
-              : 'Select items to manage'}
-          </div>
-        )}
-      </div>
 
-      {/* Tabs */}
-      <div className="relative mb-6">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitScrollbar: { display: 'none' }, WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', transform: 'translate3d(0, 0, 0)' }}>
-          {tabs.map((tab) => (
+          {/* Action Buttons */}
+          <div className="flex gap-2 flex-shrink-0">
             <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap flex-shrink-0 will-change-transform ${
-                activeTab === tab.id
-                  ? 'bg-purple-500 text-white shadow-md'
+              onClick={() => setIsManageMode(!isManageMode)}
+              className={`p-2 rounded-lg transition-colors ${
+                isManageMode
+                  ? 'bg-purple-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
-              style={{ isolation: 'isolate' }}
+              title={isManageMode ? 'Exit manage mode' : 'Manage content'}
             >
-              <tab.icon className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="text-sm sm:text-base">{tab.label}</span>
-              {tab.count > 0 && (
-                <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-xs bg-white/20 font-bold">
-                  {tab.count}
-                </span>
+              {isManageMode ? (
+                <CheckIcon className="w-5 h-5" />
+              ) : (
+                <AdjustmentsHorizontalIcon className="w-5 h-5" />
               )}
             </button>
-          ))}
+          </div>
         </div>
         <div className="absolute left-0 top-0 bottom-2 w-4 bg-gradient-to-r from-white dark:from-gray-900 to-transparent pointer-events-none sm:hidden"></div>
         <div className="absolute right-0 top-0 bottom-2 w-4 bg-gradient-to-l from-white dark:from-gray-900 to-transparent pointer-events-none sm:hidden"></div>
@@ -629,40 +622,66 @@ const EnhancedContentGallery = ({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ duration: 0.2, delay: index * 0.05 }}
-                      className={`relative bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg hover:border-purple-400 dark:hover:border-purple-600 transition-all group flex-shrink-0
-                        ${activeTab === 'streams' 
+                      className={`relative bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg overflow-hidden hover:shadow-lg hover:border-purple-400 dark:hover:border-purple-600 transition-all group flex-shrink-0
+                        ${activeTab === 'streams'
                           ? 'w-[280px] sm:w-full aspect-video'
                           : activeTab === 'videos'
                           ? 'w-[150px] sm:w-full aspect-[9/16]'
                           : 'w-[180px] sm:w-full aspect-[4/5]'
                       }`}
-                      onClick={() => {
-                        if (activeTab === 'shop') {
-                          // For shop products, use the shop modal
-                          if (onAddProduct) {
-                            onAddProduct();
-                          }
-                        } else {
-                          // For other content types, use the upload modal
-                          setUploadType(activeTab);
-                          setShowUploadModal(true);
-                        }
-                      }}
                     >
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                        <div className="w-16 h-16 rounded-full bg-purple-200 dark:bg-purple-800/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                          <PlusIcon className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                        </div>
-                        <p className="text-purple-700 dark:text-purple-300 font-semibold text-center">
-                          Add {activeTab === 'photos' ? 'Photo' : 
-                                activeTab === 'videos' ? 'Video' : 
-                                activeTab === 'streams' ? 'Stream' : 
-                                activeTab === 'digitals' ? 'Digital' : 
-                                activeTab === 'shop' ? 'Product' : 'Content'}
-                        </p>
-                        <p className="text-xs text-purple-600 dark:text-purple-400 mt-1 text-center">
-                          Click to upload
-                        </p>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-3">
+                        {/* Single Upload Button */}
+                        <button
+                          onClick={() => {
+                            if (activeTab === 'shop') {
+                              // For shop products, use the shop modal
+                              if (onAddProduct) {
+                                onAddProduct();
+                              }
+                            } else {
+                              // For other content types, use the upload modal
+                              setUploadType(activeTab);
+                              setShowUploadModal(true);
+                            }
+                          }}
+                          className="flex flex-col items-center group/btn hover:scale-105 transition-transform"
+                        >
+                          <div className="w-16 h-16 rounded-full bg-purple-200 dark:bg-purple-800/50 flex items-center justify-center mb-2 group-hover/btn:scale-110 transition-transform">
+                            <PlusIcon className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <p className="text-purple-700 dark:text-purple-300 font-semibold text-center">
+                            Add {activeTab === 'photos' ? 'Photo' :
+                                  activeTab === 'videos' ? 'Video' :
+                                  activeTab === 'streams' ? 'Stream' :
+                                  activeTab === 'digitals' ? 'Digital' :
+                                  activeTab === 'shop' ? 'Product' : 'Content'}
+                          </p>
+                          <p className="text-xs text-purple-600 dark:text-purple-400 mt-1 text-center">
+                            Click to upload one
+                          </p>
+                        </button>
+
+                        {/* Bulk Upload Button - Only for photos tab */}
+                        {activeTab === 'photos' && (
+                          <>
+                            <div className="w-full border-t border-purple-300 dark:border-purple-600"></div>
+                            <button
+                              onClick={() => setShowBulkUploadModal(true)}
+                              className="flex flex-col items-center group/btn hover:scale-105 transition-transform mt-2"
+                            >
+                              <div className="w-12 h-12 rounded-full bg-blue-200 dark:bg-blue-800/50 flex items-center justify-center mb-2 group-hover/btn:scale-110 transition-transform">
+                                <RectangleStackIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <p className="text-blue-700 dark:text-blue-300 font-semibold text-center text-sm">
+                                Bulk Upload
+                              </p>
+                              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 text-center">
+                                Upload multiple photos
+                              </p>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -1143,6 +1162,22 @@ const EnhancedContentGallery = ({
           </div>
         </div>
       </Modal>
+
+      {/* Bulk Photo Upload Modal */}
+      <BulkPhotoUploadModal
+        isOpen={showBulkUploadModal}
+        onClose={() => setShowBulkUploadModal(false)}
+        onUploadSuccess={(uploadedPhotos) => {
+          // Refresh content or add to gallery
+          if (onAddContent) {
+            uploadedPhotos.forEach(photo => {
+              onAddContent('photos', photo);
+            });
+          }
+          setShowBulkUploadModal(false);
+          toast.success('Photos uploaded successfully!');
+        }}
+      />
     </div>
   );
 };

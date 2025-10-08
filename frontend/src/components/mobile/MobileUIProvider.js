@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import MobileBottomSheet from './MobileBottomSheet';
+
+// Lazy load MobileBottomSheet to avoid circular dependency issues
+const MobileBottomSheet = lazy(() => import('./MobileBottomSheet'));
 
 // Create context for mobile UI state
 const MobileUIContext = createContext({});
@@ -257,16 +259,18 @@ export const MobileUIProvider = ({ children }) => {
 
       {/* Bottom Sheet Modal */}
       {activeModal?.id === 'bottomSheet' && (
-        <MobileBottomSheet
-          isOpen={true}
-          onClose={() => {
-            setActiveModal(null);
-            document.body.style.overflow = '';
-          }}
-          title={activeModal.props?.title}
-        >
-          {activeModal.props?.content}
-        </MobileBottomSheet>
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 z-50" />}>
+          <MobileBottomSheet
+            isOpen={true}
+            onClose={() => {
+              setActiveModal(null);
+              document.body.style.overflow = '';
+            }}
+            title={activeModal.props?.title}
+          >
+            {activeModal.props?.content}
+          </MobileBottomSheet>
+        </Suspense>
       )}
     </MobileUIContext.Provider>
   );

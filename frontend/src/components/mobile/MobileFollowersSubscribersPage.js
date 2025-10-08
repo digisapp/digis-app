@@ -244,27 +244,27 @@ const MobileFollowersSubscribersPage = ({ user }) => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-purple-600 to-pink-600 text-white border-b border-purple-700">
         <div className="flex items-center gap-3 p-4">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
           >
-            <ChevronLeftIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ChevronLeftIcon className="w-5 h-5 text-white" />
           </button>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-lg font-semibold text-white">
             Followers & Subscribers
           </h1>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <div className="flex border-b border-white/20">
           <button
             onClick={() => setActiveTab('subscribers')}
             className={`flex-1 px-4 py-3 font-medium text-sm transition-colors relative ${
               activeTab === 'subscribers'
-                ? 'text-purple-600 dark:text-purple-400'
-                : 'text-gray-600 dark:text-gray-400'
+                ? 'text-white'
+                : 'text-white/60'
             }`}
           >
             <div className="flex items-center justify-center gap-1">
@@ -273,15 +273,15 @@ const MobileFollowersSubscribersPage = ({ user }) => {
               <span className="ml-1 text-xs">({stats.subscribersCount})</span>
             </div>
             {activeTab === 'subscribers' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 dark:bg-purple-400" />
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
             )}
           </button>
           <button
             onClick={() => setActiveTab('followers')}
             className={`flex-1 px-4 py-3 font-medium text-sm transition-colors relative ${
               activeTab === 'followers'
-                ? 'text-purple-600 dark:text-purple-400'
-                : 'text-gray-600 dark:text-gray-400'
+                ? 'text-white'
+                : 'text-white/60'
             }`}
           >
             <div className="flex items-center justify-center gap-1">
@@ -290,26 +290,26 @@ const MobileFollowersSubscribersPage = ({ user }) => {
               <span className="ml-1 text-xs">({stats.followersCount})</span>
             </div>
             {activeTab === 'followers' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 dark:bg-purple-400" />
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
             )}
           </button>
         </div>
 
         {/* Search Bar */}
-        <div className="p-3 bg-gray-50 dark:bg-gray-900">
+        <div className="p-3">
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/70" />
             <input
               type="text"
               placeholder={`Search ${activeTab}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+              className="w-full pl-9 pr-9 py-2 text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-white/50 focus:border-white/50 focus:bg-white/20 text-white placeholder-white/70 outline-none"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white"
               >
                 <XMarkIcon className="w-4 h-4" />
               </button>

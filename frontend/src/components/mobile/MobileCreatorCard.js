@@ -5,12 +5,12 @@ import {
   ChatBubbleLeftRightIcon,
   VideoCameraIcon,
   GiftIcon,
-  StarIcon as StarIconSolid,
+  UserPlusIcon as UserPlusIconSolid,
   CheckBadgeIcon,
   UserGroupIcon
 } from '@heroicons/react/24/solid';
 import {
-  StarIcon as StarIconOutline
+  UserPlusIcon as UserPlusIconOutline
 } from '@heroicons/react/24/outline';
 
 // Module-level image cache for performance (capped to prevent memory leaks)
@@ -278,20 +278,18 @@ const MobileCreatorCard = memo(({
               {/* Gradient Overlay for Text Readability */}
               <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
 
-              {/* Save Button - Top Right */}
+              {/* Follow Button - Top Right */}
               <button
                 type="button"
                 onClick={handleSave}
-                className="absolute right-3 top-3 h-10 w-10 grid place-items-center rounded-full
-                         border border-white/40 bg-white/90 backdrop-blur-md shadow-md
-                         hover:bg-white hover:scale-110 transition-all"
-                aria-label={isSaved ? "Unsave creator" : "Save creator"}
+                className="absolute right-3 top-3 p-1 transition-all hover:scale-110"
+                aria-label={isSaved ? "Unfollow creator" : "Follow creator"}
                 aria-pressed={isSaved}
               >
                 {isSaved ? (
-                  <StarIconSolid className="w-5 h-5 text-yellow-500" />
+                  <UserPlusIconSolid className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
                 ) : (
-                  <StarIconOutline className="w-5 h-5 text-gray-600" />
+                  <UserPlusIconOutline className="w-6 h-6 text-white drop-shadow-md" />
                 )}
               </button>
 

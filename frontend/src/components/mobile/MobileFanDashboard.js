@@ -51,21 +51,11 @@ const MobileFanDashboard = ({
       setFeaturedCreators(featured.data?.creators || []);
       setLiveCreators(live.data?.creators || []);
       setFollowedCreators(followed.data?.creators || []);
-      
-      // Set some mock data if API fails
-      if (!featured.data?.creators?.length) {
-        setFeaturedCreators([
-          { id: '1', username: 'Creator1', is_live: true, rating: 4.8, specialties: ['Gaming', 'Tech'] },
-          { id: '2', username: 'Creator2', is_live: false, rating: 4.9, specialties: ['Art', 'Music'] }
-        ]);
-      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Set mock data on error
-      setFeaturedCreators([
-        { id: '1', username: 'Creator1', is_live: true, rating: 4.8 },
-        { id: '2', username: 'Creator2', is_live: false, rating: 4.9 }
-      ]);
+      setFeaturedCreators([]);
+      setLiveCreators([]);
+      setFollowedCreators([]);
     } finally {
       setLoading(false);
     }

@@ -488,26 +488,24 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
   const ConversationList = () => (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+      <div className="sticky top-0 z-10 bg-gradient-to-r from-purple-600 to-pink-600 text-white border-b border-purple-700">
         <div className="px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             {/* Avatar and Username */}
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                {user?.profile_pic_url ? (
-                  <img
-                    src={user.profile_pic_url}
-                    alt={user.username}
-                    className="w-9 h-9 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white font-bold text-base">
-                    {user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-                  </span>
-                )}
+            <div className="flex items-center gap-2 flex-1">
+              {/* Search Bar with "Search Messages" placeholder */}
+              <div className="relative flex-1 min-w-0">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/70" />
+                <input
+                  type="search"
+                  placeholder="Search Messages"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-12 pl-10 pr-3 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-white/50 focus:border-white/50 focus:bg-white/20 text-sm text-white placeholder-white/70 transition-all"
+                />
               </div>
-              <h1 className="text-xl font-bold text-gray-900">Messages</h1>
             </div>
+
             {/* Show broadcast button for creators - check both prop and localStorage for resilience */}
             {(isCreator || localStorage.getItem('userIsCreator') === 'true') ? (
               <button
@@ -524,28 +522,16 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
               </button>
             ) : null}
           </div>
-          
-          {/* Search Bar */}
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="search"
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all"
-            />
-          </div>
         </div>
       </div>
-      
+
       {/* Loading State */}
       {conversationsLoading ? (
         <div className="flex justify-center py-8">
           <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-      
+
       /* Conversations */
       <div className="">
         {conversations.length === 0 ? (
@@ -580,8 +566,8 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
                       {participant?.avatar_url ? (
-                        <img 
-                          src={participant.avatar_url} 
+                        <img
+                          src={participant.avatar_url}
                           alt={participant.name}
                           className="w-14 h-14 rounded-full object-cover"
                         />
@@ -599,7 +585,7 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Content */}
                     <div className="flex-1 min-w-0 text-left">
                       <div className="flex items-center justify-between mb-1">
@@ -613,7 +599,7 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
                           {formatTimestamp(lastMsg.timestamp || conversation.timestamp || new Date())}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-gray-600 truncate">
                           {conversation.isTyping ? (

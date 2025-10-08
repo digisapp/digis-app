@@ -1,6 +1,28 @@
 // Import console override first to suppress all console outputs in production
 import './utils/console-override.js';
 
+// Validate environment configuration before app starts
+try {
+  // This will throw if required env vars are missing or invalid
+  await import('./config/runtime.js');
+} catch (error) {
+  console.error('❌ Environment configuration error:', error.message);
+  document.body.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: system-ui; padding: 20px;">
+      <div style="max-width: 600px; text-align: center;">
+        <h1 style="color: #ef4444; margin-bottom: 16px;">Configuration Error</h1>
+        <pre style="background: #f3f4f6; padding: 16px; border-radius: 8px; text-align: left; overflow: auto;">
+${error.message}
+        </pre>
+        <p style="margin-top: 16px; color: #6b7280;">
+          Please contact support or check your environment configuration.
+        </p>
+      </div>
+    </div>
+  `;
+  throw error;
+}
+
 // Initialize Sentry as early as possible (only once to prevent HMR issues)
 import * as Sentry from "@sentry/react";
 
@@ -43,10 +65,20 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import App from './App.js';
+import AppBootstrap from './components/AppBootstrap.jsx';
 // import App from './NewApp.js'; // Using simpler version temporarily
 
 // Import styles
 import './index.css';
+
+// Add keyframe animation for spinner
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(style);
 
 // Error boundary component
 class ErrorBoundary extends React.Component {
@@ -118,14 +150,18 @@ try {
   console.log('ReactDOM root created');
 
   root.render(
-    <ErrorBoundary>
-      <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          <App />
-          <Toaster position="top-right" />
-        </QueryClientProvider>
-      </BrowserRouter>
-    </ErrorBoundary>
+    <React.Suspense fallback={null}>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <QueryClientProvider client={queryClient}>
+            <AppBootstrap>
+              <App />
+            </AppBootstrap>
+            <Toaster position="top-right" />
+          </QueryClientProvider>
+        </BrowserRouter>
+      </ErrorBoundary>
+    </React.Suspense>
   );
 
   console.log('React render called successfully');

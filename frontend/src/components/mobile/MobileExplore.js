@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { getDefaultAvatarUrl } from '../../utils/avatarHelpers';
 import MobileCreatorCard from './MobileCreatorCard';
+import { apiClient } from '../../services/api';
 import {
   MagnifyingGlassIcon,
   AdjustmentsHorizontalIcon,
@@ -20,7 +21,8 @@ import {
   ChevronRightIcon,
   ChevronDownIcon,
   FunnelIcon,
-  ArrowTrendingUpIcon
+  ArrowTrendingUpIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { UserGroupIcon as UserGroupIconSolid, PhotoIcon as PhotoIconSolid } from '@heroicons/react/24/solid';
 
@@ -39,6 +41,7 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [showCategories, setShowCategories] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('all'); // 'all', 'trending', 'new', 'popular'
   
   const [filters, setFilters] = useState({
     priceRange: 'all',
@@ -53,30 +56,31 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
+  // Filter buttons like on mobile fan dashboard
+  const filterButtons = [
+    { id: 'trending', label: 'Trending', icon: FireIcon, color: 'text-red-500' },
+    { id: 'new', label: 'New', icon: StarIcon, color: 'text-yellow-500' },
+    { id: 'popular', label: 'Popular', icon: TrophyIcon, color: 'text-purple-500' }
+  ];
+
   const categories = [
     { id: 'all', name: 'All', icon: SparklesIcon },
-    { id: 'premium', name: 'Premium', icon: StarIcon },
-    { id: 'streamer', name: 'Streamer', icon: VideoCameraIcon },
-    { id: 'Content Creator', name: 'Content', icon: SparklesIcon },
-    { id: 'Artist', name: 'Artist', icon: SparklesIcon },
-    { id: 'Musician', name: 'Music', icon: SparklesIcon },
-    { id: 'Fitness Coach', name: 'Fitness', icon: HeartIcon },
-    { id: 'Gaming', name: 'Gaming', icon: TrophyIcon },
-    { id: 'Model', name: 'Model', icon: StarIcon },
-    { id: 'Cooking', name: 'Cooking', icon: SparklesIcon },
-    { id: 'Dance', name: 'Dance', icon: SparklesIcon },
-    { id: 'Comedy', name: 'Comedy', icon: SparklesIcon },
-    { id: 'Education', name: 'Education', icon: SparklesIcon },
     { id: 'Lifestyle', name: 'Lifestyle', icon: HeartIcon },
+    { id: 'Model', name: 'Model', icon: StarIcon },
+    { id: 'Art', name: 'Art', icon: SparklesIcon },
+    { id: 'Gaming', name: 'Gaming', icon: TrophyIcon },
+    { id: 'Music', name: 'Music', icon: SparklesIcon },
     { id: 'Fashion', name: 'Fashion', icon: SparklesIcon },
-    { id: 'Tech', name: 'Tech', icon: SparklesIcon },
-    { id: 'Sports', name: 'Sports', icon: TrophyIcon },
+    { id: 'Fitness', name: 'Fitness', icon: HeartIcon },
+    { id: 'Food', name: 'Food & Cooking', icon: SparklesIcon },
     { id: 'Travel', name: 'Travel', icon: SparklesIcon },
-    { id: 'Photography', name: 'Photography', icon: SparklesIcon },
+    { id: 'Education', name: 'Education', icon: SparklesIcon },
+    { id: 'Comedy', name: 'Comedy', icon: SparklesIcon },
+    { id: 'Sports', name: 'Sports', icon: TrophyIcon },
+    { id: 'Tech', name: 'Technology', icon: SparklesIcon },
     { id: 'Beauty', name: 'Beauty', icon: SparklesIcon },
-    { id: 'Business', name: 'Business', icon: SparklesIcon },
     { id: 'Wellness', name: 'Wellness', icon: SparklesIcon },
-    { id: 'other', name: 'Other', icon: SparklesIcon }
+    { id: 'ASMR', name: 'ASMR', icon: SparklesIcon }
   ];
 
 
@@ -101,15 +105,22 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
       
       setLoadingMore(append);
       setLoading(!append);
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/users/creators?page=${pageNum}&limit=20&category=${selectedCategory}`,
-        { signal: controller.signal }
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        
+
+      const { data } = await apiClient.get('/api/users/creators', {
+        params: {
+          page: pageNum,
+          limit: 20,
+          category: selectedCategory
+        },
+        signal: controller.signal
+      });
+        console.log('📊 MobileExplore - API Response:', {
+          creatorsCount: data.creators?.length,
+          total: data.total,
+          hasMore: data.hasMore,
+          firstCreator: data.creators?.[0]
+        });
+
         if (data.creators && data.creators.length > 0) {
           const formattedCreators = data.creators.map(creator => ({
             id: creator.id || creator.uid || creator.user_id,
@@ -137,6 +148,7 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
             } else {
               setCreators(formattedCreators);
             }
+            console.log('✅ MobileExplore - Creators set:', formattedCreators.length, 'creators');
           }
         }
         
@@ -144,9 +156,6 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
           setHasMore(data.hasMore !== false);
           setPage(pageNum);
         }
-      } else {
-        console.error('Failed to fetch creators:', response.status, response.statusText);
-      }
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error('Error fetching creators:', error);
@@ -174,26 +183,49 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
 
   // Filter creators based on search and filters
   const filteredCreators = creators.filter(creator => {
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
                          creator.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          creator.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          creator.bio.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     // More flexible category matching
-    const matchesCategory = selectedCategory === 'all' || 
+    const matchesCategory = selectedCategory === 'all' ||
                            creator.category === selectedCategory ||
                            creator.category?.toLowerCase() === selectedCategory.toLowerCase();
-    
-    const matchesFilters = 
+
+    const matchesFilters =
       (!filters.verified || creator.isVerified) &&
       (!filters.online || creator.isOnline) &&
       (!filters.hasContent || creator.contentCount > 0);
-    
+
     return matchesSearch && matchesCategory && matchesFilters;
   });
 
-  // No sorting - use creators as is
-  const sortedCreators = filteredCreators;
+  console.log('🔍 MobileExplore - Filter results:', {
+    totalCreators: creators.length,
+    filteredCreators: filteredCreators.length,
+    selectedCategory,
+    searchQuery,
+    filters,
+    selectedFilter
+  });
+
+  // Apply sorting based on selected filter
+  const sortedCreators = [...filteredCreators].sort((a, b) => {
+    switch (selectedFilter) {
+      case 'trending':
+        // Sort by followers + content count (trending = most popular currently)
+        return (b.followers + b.contentCount) - (a.followers + a.contentCount);
+      case 'new':
+        // New creators - could be based on join date, for now use reverse order
+        return 0; // Keep original order for now (would need created_at field)
+      case 'popular':
+        // Sort by followers
+        return b.followers - a.followers;
+      default:
+        return 0; // Keep original order
+    }
+  });
 
   const handleCreatorClick = (creator) => {
     // Haptic feedback on tap
@@ -297,45 +329,25 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white" style={{ paddingTop: 'env(safe-area-inset-top, 20px)' }}>
         <div className="px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">Explore</h1>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                {viewMode === 'grid' ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Search Bar and Category Filter Row */}
-          <div className="flex space-x-2 mb-4">
-            {/* Search Bar */}
-            <div className="relative flex-1">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-white/70" />
+          {/* Search Bar and Category Filter */}
+          <div className="flex space-x-2 mb-4 items-center">
+            {/* Search Bar with "Explore Creators" placeholder */}
+            <div className="flex-1 relative min-w-0">
               <input
-                type="text"
-                placeholder="Search creators..."
+                type="search"
+                placeholder="Explore Creators"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-white/20 backdrop-blur-sm rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-white/50"
+                className="w-full h-12 pl-10 pr-3 py-3 border border-white/20 rounded-lg focus:ring-2 focus:ring-white/40 focus:border-white/40 text-sm bg-white/20 backdrop-blur-sm text-white placeholder-white/70"
               />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/70" />
             </div>
 
             {/* Category Dropdown */}
             <div className="relative z-50">
               <button
                 onClick={() => setShowCategories(!showCategories)}
-                className="flex items-center space-x-1 px-3 py-2.5 bg-white dark:bg-white/20 backdrop-blur-sm rounded-xl text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-white/30 transition-colors"
+                className="flex items-center space-x-1 px-3 py-2.5 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30 transition-colors"
               >
                 <span className="text-sm font-medium whitespace-nowrap">
                   {categories.find(c => c.id === selectedCategory)?.name || 'All'}
@@ -359,7 +371,7 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
               className="fixed inset-0 z-40"
               onClick={() => setShowCategories(false)}
             />
-            
+
             {/* Dropdown Menu */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -387,6 +399,33 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
           </>
         )}
       </AnimatePresence>
+
+      {/* Filter Buttons - Trending, New, Popular */}
+      <div className="px-4 mt-4">
+        <div className="flex space-x-2 overflow-x-auto scrollbar-hide pb-2 scroll-smooth">
+          {filterButtons.map((filter) => (
+            <motion.button
+              key={filter.id}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setSelectedFilter(filter.id);
+                // Haptic feedback
+                if ('vibrate' in navigator) {
+                  navigator.vibrate(10);
+                }
+              }}
+              className={`flex-shrink-0 rounded-xl px-4 py-3 shadow-md border flex items-center space-x-2 hover:shadow-lg transition-all active:scale-95 ${
+                selectedFilter === filter.id
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-transparent'
+                  : 'bg-white border-gray-100 text-gray-700 active:bg-gray-50'
+              }`}
+            >
+              <filter.icon className={`w-5 h-5 ${selectedFilter === filter.id ? 'text-white' : filter.color}`} strokeWidth={2} />
+              <span className="text-sm font-semibold">{filter.label}</span>
+            </motion.button>
+          ))}
+        </div>
+      </div>
 
       {/* Creators Grid/List */}
       <div className="px-4 mt-6">

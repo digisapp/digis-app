@@ -1,98 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   XMarkIcon,
-  CurrencyDollarIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  SparklesIcon,
-  ArrowRightIcon
+  SparklesIcon
 } from '@heroicons/react/24/outline';
-import { getAuthToken } from '../utils/supabase-auth';
 import toast from 'react-hot-toast';
 
 const WalletQuickView = ({ isOpen, onClose, user, tokenBalance, onNavigateToWallet, onTokenPurchase }) => {
-  const [transactions, setTransactions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalSpent: 0,
-    totalEarned: 0,
-    pendingBalance: 0
-  });
-
-  useEffect(() => {
-    if (isOpen && user?.id) {
-      fetchWalletData();
-    }
-  }, [isOpen, user?.id]);
-
-  // Close on click outside
-  useEffect(() => {
-    if (!isOpen) return;
-    
-    const handleClickOutside = (event) => {
-      // Check if click is outside the modal
-      if (!event.target.closest('.wallet-modal')) {
-        onClose();
-      }
-    };
-
-    // Add delay to prevent immediate close on open
-    const timer = setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
-
-  const fetchWalletData = async () => {
-    try {
-      setIsLoading(true);
-      const authToken = await getAuthToken();
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/wallet/quick-view/${user.id}`,
-        {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTransactions(data.recentTransactions || []);
-        setStats({
-          totalSpent: data.totalSpent || 0,
-          totalEarned: data.totalEarned || 0,
-          pendingBalance: data.pendingBalance || 0
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching wallet data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Modal - positioned below navigation z-index */}
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[99]"
+            onClick={onClose}
+          />
+
+          {/* Modal - positioned above bottom navigation on mobile */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="wallet-modal fixed top-20 right-4 w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl z-30 overflow-hidden"
+            className="wallet-modal fixed bottom-20 left-4 right-4 md:top-20 md:bottom-auto md:right-4 md:left-auto w-auto md:w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl z-[100] overflow-hidden"
+            style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xl font-bold text-white">Wallet Overview</h3>
+                <h3 className="text-xl font-bold text-white">Wallet</h3>
                 <button
                   onClick={onClose}
                   className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
@@ -103,25 +44,17 @@ const WalletQuickView = ({ isOpen, onClose, user, tokenBalance, onNavigateToWall
 
               {/* Balance Display */}
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-purple-100 text-sm mb-1">Available Balance</p>
-                    <div className="flex items-center gap-2">
-                      <SparklesIcon className="w-6 h-6 text-yellow-300" />
-                      <span className="text-3xl font-bold text-white">
-                        {tokenBalance || 0}
-                      </span>
-                      <span className="text-purple-100">tokens</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-purple-100 mb-1">USD Value</p>
-                    <p className="text-xl font-semibold text-white">
-                      ${((tokenBalance || 0) * 0.05).toFixed(2)}
-                    </p>
+                <div className="text-center mb-4">
+                  <p className="text-purple-100 text-sm mb-2">Available Balance</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <SparklesIcon className="w-8 h-8 text-yellow-300" />
+                    <span className="text-4xl font-bold text-white">
+                      {tokenBalance || 0}
+                    </span>
+                    <span className="text-xl text-purple-100">tokens</span>
                   </div>
                 </div>
-                
+
                 {/* Buy Tokens Button */}
                 <button
                   onClick={() => {

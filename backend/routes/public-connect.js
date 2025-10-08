@@ -34,19 +34,19 @@ router.get('/experiences', async (req, res) => {
 router.get('/creators/featured', async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
+      SELECT
         supabase_id as id,
         username,
         display_name,
         bio,
         profile_pic_url,
-        COALESCE(creator_rate, voice_rate, stream_rate, 0) as price_per_min,
+        COALESCE(creator_rate, voice_rate, stream_price, 0) as price_per_min,
         is_online,
         is_verified,
         total_sessions,
         total_earnings
-      FROM users 
-      WHERE is_creator = TRUE 
+      FROM users
+      WHERE is_creator = TRUE
         AND is_verified = TRUE
       ORDER BY total_sessions DESC, total_earnings DESC
       LIMIT 6
