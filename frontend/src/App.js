@@ -1325,7 +1325,61 @@ const App = () => {
   // Public routing - show HomePage or Auth based on route
   if (!user) {
     console.log('🏠 Showing public homepage - no user authenticated, showAuth:', showAuth, 'isMobile:', isMobile);
-    
+
+    // Check if this is a username route (for public creator profiles)
+    const pathname = location.pathname;
+    const isUsernameRoute = pathname !== '/' &&
+                           pathname !== '/auth' &&
+                           pathname !== '/explore' &&
+                           pathname !== '/terms' &&
+                           pathname !== '/privacy' &&
+                           !pathname.startsWith('/creator/') &&
+                           !pathname.includes('/shop') &&
+                           !pathname.includes('/digitals');
+
+    console.log('🔍 Checking route:', { pathname, isUsernameRoute, match: pathname.match(/^\/[^\/]+$/) });
+
+    // If this is a username route, show the creator profile (mobile or desktop)
+    if (isUsernameRoute && pathname.match(/^\/[^\/]+$/)) {
+      const username = pathname.substring(1); // Remove leading slash
+      console.log('👤 Detected username route:', username);
+
+      if (isMobile) {
+        return (
+          <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>
+          <MobileUIProvider>
+            <MobileCreatorProfile
+              creatorId={username}
+              creator={{ username: username }}
+              user={user}
+              onBack={() => navigate('/')}
+              onStartCall={(type) => {
+                console.log('Starting call:', type);
+                setShowAuth(true);
+              }}
+              onSendMessage={() => {
+                setShowAuth(true);
+              }}
+              onSubscribe={(tier) => {
+                console.log('Subscribe to tier:', tier);
+                setShowAuth(true);
+              }}
+              onFollow={(following) => {
+                console.log('Follow status:', following);
+                setShowAuth(true);
+              }}
+              onJoinStream={(streamData) => {
+                console.log('Joining stream:', streamData);
+                setShowAuth(true);
+              }}
+            />
+          </MobileUIProvider>
+          </Suspense>
+        );
+      }
+      // Desktop will use the Routes below
+    }
+
     // For mobile users, show the mobile landing page (sign-in focused)
     if (isMobile) {
       console.log('📱 Rendering mobile landing for unauthenticated user');
@@ -1377,16 +1431,27 @@ const App = () => {
     }
     
     // Desktop routing
+    console.log('📍 Desktop routing - rendering Routes with pathname:', location.pathname);
     return (
       <Routes>
         <Route path="/" element={<HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/explore" element={<HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/creator/:username" element={<CreatorPublicProfileEnhanced />} />
         <Route path="/:username/shop" element={<PublicCreatorShop />} />
         <Route path="/:username/digitals" element={<DigitalsPage />} />
-        <Route path="/terms" element={<TermsOfService />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
+        {/* Direct username route - must be last before catch-all */}
+        <Route path="/:username" element={
+          <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>
+            {(() => {
+              const username = location.pathname.substring(1);
+              console.log('🎯 Username route matched! Username:', username);
+              return <CreatorPublicProfileEnhanced username={username} />;
+            })()}
+          </Suspense>
+        } />
         <Route path="*" element={<HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />} />
       </Routes>
     );
