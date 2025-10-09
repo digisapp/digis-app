@@ -13,8 +13,9 @@ const { users: usersCache, creators: creatorsCache, TTL } = require('../utils/re
 const router = express.Router();
 
 // Configure multer for file uploads
+// Use memory storage for serverless compatibility (uploads go to Supabase storage)
 const upload = multer({
-  dest: 'uploads/temp/',
+  storage: multer.memoryStorage(), // Store in memory instead of filesystem
   limits: {
     fileSize: 100 * 1024 * 1024 // 100MB limit
   },
