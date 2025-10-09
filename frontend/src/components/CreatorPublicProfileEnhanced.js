@@ -1729,12 +1729,14 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-full border border-violet-200 dark:border-violet-800/50 shadow-2xl"
             >
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Sign in to continue</h2>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-pink-600 dark:from-violet-400 dark:to-pink-400 bg-clip-text text-transparent mb-4">
+                You need to have a Digis Account to connect with Creators
+              </h2>
               <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Join Digis to interact with {creator.username} and unlock exclusive content
+                Create a free account to interact with {creator.username} and unlock exclusive content
               </p>
               <Auth
-                mode="signin"
+                mode="signup"
                 onLogin={(user) => {
                   setShowAuthModal(false);
                   if (authAction) {
@@ -1746,6 +1748,22 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                   }
                 }}
               />
+              <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
+                Already have an account?{' '}
+                <button
+                  onClick={() => {
+                    // Switch to sign in mode
+                    setShowAuthModal(false);
+                    setTimeout(() => {
+                      setAuthAction(authAction);
+                      setShowAuthModal(true);
+                    }, 100);
+                  }}
+                  className="text-violet-600 dark:text-violet-400 hover:underline font-semibold"
+                >
+                  Click to Sign In
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

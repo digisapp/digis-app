@@ -481,6 +481,46 @@ const MobileCreatorProfile = ({
 
   const handleStartVideoCall = useCallback(async () => {
     triggerHaptic('heavy');
+
+    // Check if user is authenticated
+    if (!user) {
+      openBottomSheet({
+        title: 'You need to have a Digis Account to connect with Creators',
+        content: (
+          <div className="space-y-4 p-4">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
+              <p className="text-gray-700 mb-3">
+                Create a free account to connect with {creatorData.displayName} and other creators
+              </p>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>✓ Video & voice calls</p>
+                <p>✓ Exclusive content</p>
+                <p>✓ Direct messaging</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                triggerHaptic('success');
+                openBottomSheet(null);
+                // Navigate to sign up page
+                window.location.href = '/signup';
+              }}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
+            >
+              Click to Sign Up
+            </button>
+            <button
+              onClick={() => openBottomSheet(null)}
+              className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        )
+      });
+      return;
+    }
+
     openBottomSheet({
       title: 'Video Call with ' + creatorData.displayName,
       content: (
@@ -594,6 +634,46 @@ const MobileCreatorProfile = ({
 
   const handleStartVoiceCall = useCallback(async () => {
     triggerHaptic('medium');
+
+    // Check if user is authenticated
+    if (!user) {
+      openBottomSheet({
+        title: 'You need to have a Digis Account to connect with Creators',
+        content: (
+          <div className="space-y-4 p-4">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
+              <p className="text-gray-700 mb-3">
+                Create a free account to connect with {creatorData.displayName} and other creators
+              </p>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>✓ Video & voice calls</p>
+                <p>✓ Exclusive content</p>
+                <p>✓ Direct messaging</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                triggerHaptic('success');
+                openBottomSheet(null);
+                // Navigate to sign up page
+                window.location.href = '/signup';
+              }}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
+            >
+              Click to Sign Up
+            </button>
+            <button
+              onClick={() => openBottomSheet(null)}
+              className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        )
+      });
+      return;
+    }
+
     openBottomSheet({
       title: 'Voice Call with ' + creatorData.displayName,
       content: (
