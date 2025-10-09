@@ -467,6 +467,21 @@ app.get('/debug/routes', (req, res) => {
   }
 });
 
+// Debug endpoint to check actual DATABASE_URL being used
+app.get('/debug/database-url', (req, res) => {
+  const dbUrl = process.env.DATABASE_URL || 'Not set';
+  // Mask the password for security
+  const maskedUrl = dbUrl.replace(/:([^@]+)@/, ':****@');
+  res.json({
+    databaseUrl: maskedUrl,
+    isPooler: dbUrl.includes('pooler.supabase.com'),
+    isDirect: dbUrl.includes('db.') && dbUrl.includes('.supabase.co'),
+    host: dbUrl.match(/@([^:]+)/)?.[1] || 'Unknown',
+    port: dbUrl.match(/:(\d+)\//)?.[1] || 'Unknown',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // 404 handler for unmatched routes
 app.use('*', notFound);
 
