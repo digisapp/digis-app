@@ -1194,44 +1194,55 @@ const App = () => {
                   creator_type: user.creator_type,
                   email: user.email
                 });
-                
-                setUser(user);
-                
-                // Always set profile if we have creator/role data
+
+                // CRITICAL: Set profile FIRST, before setting user, to prevent role flip-flopping
                 if (user.profile || user.is_creator !== undefined || user.role) {
                   const profileData = user.profile || user;
-                  console.log('🖥️ Desktop: Setting profile with data:', {
+                  console.log('🖥️ Desktop: Setting profile BEFORE user to prevent flip-flop:', {
                     is_creator: profileData.is_creator,
                     role: profileData.role,
                     creator_type: profileData.creator_type
                   });
+
+                  // Set profile first (this updates isCreator in the store immediately)
                   setProfile(profileData);
-                  
-                  // Force a state refresh after setting profile
-                  setTimeout(() => {
-                    console.log('🖥️ Desktop: After profile set - checking store state');
-                    const currentState = useHybridStore.getState();
-                    console.log('🖥️ Desktop: Current store state:', {
-                      isCreator: currentState.isCreator,
-                      isAdmin: currentState.isAdmin,
-                      profile_is_creator: currentState.profile?.is_creator
-                    });
-                    
-                    // Also update the current view based on creator status
-                    if (currentState.isCreator || profileData.is_creator) {
-                      console.log('🖥️ Desktop: Setting view to dashboard for creator');
-                      startTransition(() => {
-                        setCurrentView('dashboard');
-                      });
-                    } else {
-                      console.log('🖥️ Desktop: Setting view to explore for fan');
-                      startTransition(() => {
-                        setCurrentView('explore');
-                      });
-                    }
-                  }, 100);
+
+                  // Verify the store was updated
+                  const storeState = useHybridStore.getState();
+                  console.log('🖥️ Desktop: Store immediately after setProfile:', {
+                    isCreator: storeState.isCreator,
+                    isAdmin: storeState.isAdmin,
+                    roleVerified: storeState.roleVerified
+                  });
                 }
+
+                // Now set user (this triggers the app to render)
+                setUser(user);
+
+                // Close auth modal
                 setShowAuth(false);
+
+                // Navigate based on role (already set in store)
+                const finalState = useHybridStore.getState();
+                if (finalState.isAdmin) {
+                  console.log('🖥️ Desktop: Navigating to admin');
+                  startTransition(() => {
+                    navigate('/admin');
+                    setCurrentView('admin');
+                  });
+                } else if (finalState.isCreator) {
+                  console.log('🖥️ Desktop: Navigating to dashboard');
+                  startTransition(() => {
+                    navigate('/dashboard');
+                    setCurrentView('dashboard');
+                  });
+                } else {
+                  console.log('🖥️ Desktop: Navigating to explore');
+                  startTransition(() => {
+                    navigate('/explore');
+                    setCurrentView('explore');
+                  });
+                }
               }}
               onModeSwitch={(mode) => setAuthMode(mode)}
               onBack={() => {
@@ -1386,38 +1397,50 @@ const App = () => {
       return (
         <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>
         <MobileUIProvider>
-          <MobileLandingPage 
+          <MobileLandingPage
             onLogin={(user) => {
               console.log('📱 MobileLandingPage onLogin called with user:', user);
-              setUser(user);
-              
-              // Set profile if available
+
+              // CRITICAL: Set profile FIRST, before setting user, to prevent role flip-flopping
               if (user.profile || user.is_creator !== undefined || user.role) {
                 const profileData = user.profile || user;
+                console.log('📱 Mobile: Setting profile BEFORE user to prevent flip-flop:', {
+                  is_creator: profileData.is_creator,
+                  role: profileData.role,
+                  email: profileData.email
+                });
+
+                // Set profile first (this updates isCreator in the store immediately)
                 setProfile(profileData);
 
-                // Immediately navigate based on user role
-                const isCreatorUser = profileData.is_creator === true;
-                const isAdminUser = profileData.is_super_admin === true || profileData.role === 'admin';
+                // Verify the store was updated
+                const storeState = useHybridStore.getState();
+                console.log('📱 Mobile: Store immediately after setProfile:', {
+                  isCreator: storeState.isCreator,
+                  isAdmin: storeState.isAdmin,
+                  roleVerified: storeState.roleVerified
+                });
+              }
 
-                if (isAdminUser) {
-                  startTransition(() => {
-                    setCurrentView('dashboard');
-                    navigate('/admin');
-                  });
-                } else if (isCreatorUser) {
-                  startTransition(() => {
-                    setCurrentView('dashboard');
-                    navigate('/dashboard');
-                  });
-                } else {
-                  startTransition(() => {
-                    setCurrentView('explore');
-                    navigate('/explore');
-                  });
-                }
+              // Now set user (this triggers the app to render)
+              setUser(user);
+
+              // Navigate based on role (already set in store)
+              const finalState = useHybridStore.getState();
+              if (finalState.isAdmin) {
+                console.log('📱 Mobile: Navigating to admin');
+                startTransition(() => {
+                  setCurrentView('dashboard');
+                  navigate('/admin');
+                });
+              } else if (finalState.isCreator) {
+                console.log('📱 Mobile: Navigating to dashboard');
+                startTransition(() => {
+                  setCurrentView('dashboard');
+                  navigate('/dashboard');
+                });
               } else {
-                // Default to explore if no profile data
+                console.log('📱 Mobile: Navigating to explore');
                 startTransition(() => {
                   setCurrentView('explore');
                   navigate('/explore');
