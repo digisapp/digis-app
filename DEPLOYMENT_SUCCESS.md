@@ -184,3 +184,4 @@ After 5 rounds of fixes and debugging:
 # DATABASE_URL environment variable added on Vercel
 # Supabase credentials updated on Vercel Thu Oct  9 14:24:48 EDT 2025
 # Force redeploy after env var update Thu Oct  9 14:26:46 EDT 2025
+# Removed local .env to use Vercel env vars Thu Oct  9 14:29:49 EDT 2025
