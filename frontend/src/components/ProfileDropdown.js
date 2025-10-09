@@ -444,8 +444,11 @@ const ProfileDropdown = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[9998]"
-              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 bg-black/20 z-[9998]"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+              }}
             />
 
             {/* Dropdown Panel */}
@@ -454,8 +457,8 @@ const ProfileDropdown = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               transition={{ duration: 0.2 }}
-              className={`absolute right-0 mt-2 ${isActuallyAdmin ? 'w-64' : isActuallyCreator ? 'w-[440px]' : 'w-72'} bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden`}
-              style={{ zIndex: 99999 }}
+              className={`absolute right-0 mt-2 ${isActuallyAdmin ? 'w-64' : isActuallyCreator ? 'w-[440px]' : 'w-72'} bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-[9999]`}
+              onClick={(e) => e.stopPropagation()}
             >
               {/* User Info Header */}
               <div className="p-4 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 text-white">
@@ -479,8 +482,12 @@ const ProfileDropdown = ({
                     )}
                   </div>
                   <button
-                    onClick={() => setIsOpen(false)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsOpen(false);
+                    }}
                     className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    aria-label="Close menu"
                   >
                     <XMarkIcon className="w-5 h-5" />
                   </button>

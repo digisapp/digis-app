@@ -98,7 +98,7 @@ export default function AppBootstrap({ children }) {
  */
 function BootstrapLoader() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex items-center justify-center">
       <AnimatePresence mode="wait">
         <motion.div
           key="loader"
@@ -108,12 +108,12 @@ function BootstrapLoader() {
           transition={{ duration: 0.3 }}
           className="text-center"
         >
-          {/* Animated Logo */}
+          {/* Animated Digis Logo */}
           <motion.div
             className="mb-8"
             animate={{
-              rotate: [0, 360],
-              scale: [1, 1.1, 1]
+              scale: [1, 1.05, 1],
+              opacity: [0.9, 1, 0.9]
             }}
             transition={{
               duration: 2,
@@ -121,9 +121,11 @@ function BootstrapLoader() {
               ease: 'easeInOut'
             }}
           >
-            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-600 via-pink-500 to-purple-600 rounded-2xl shadow-2xl flex items-center justify-center">
-              <span className="text-4xl font-bold text-white">D</span>
-            </div>
+            <img
+              src="/digis-logo-white.png"
+              alt="Digis"
+              className="w-48 h-auto mx-auto filter drop-shadow-2xl"
+            />
           </motion.div>
 
           {/* Loading Text */}
@@ -132,21 +134,18 @@ function BootstrapLoader() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              Loading Digis
-            </h2>
-            <p className="text-gray-600">Verifying your session...</p>
+            <p className="text-white text-lg font-medium">Verifying your session...</p>
           </motion.div>
 
           {/* Animated Progress Bar */}
           <motion.div
-            className="mt-8 w-64 h-1 bg-gray-200 rounded-full overflow-hidden mx-auto"
+            className="mt-8 w-64 h-1 bg-purple-700 rounded-full overflow-hidden mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
           >
             <motion.div
-              className="h-full bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600"
+              className="h-full bg-gradient-to-r from-pink-500 via-purple-400 to-pink-500"
               animate={{
                 x: ['-100%', '100%']
               }}
@@ -163,7 +162,7 @@ function BootstrapLoader() {
             {[0, 1, 2].map((i) => (
               <motion.div
                 key={i}
-                className="w-2 h-2 bg-purple-400 rounded-full"
+                className="w-2 h-2 bg-pink-400 rounded-full"
                 animate={{
                   scale: [1, 1.5, 1],
                   opacity: [0.3, 1, 0.3]
