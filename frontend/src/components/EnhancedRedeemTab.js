@@ -263,11 +263,11 @@ const EnhancedRedeemTab = ({ walletData = {}, experiences = [], recordings = [],
         await onRedeem(experience);
         toast.dismiss(loadingToast);
         // toast.success(
-          <div>
-            <p className="font-semibold">Reward redeemed successfully!</p>
-            <p className="text-sm">Check your email for details</p>
-          </div>
-        );
+        //   <div>
+        //     <p className="font-semibold">Reward redeemed successfully!</p>
+        //     <p className="text-sm">Check your email for details</p>
+        //   </div>
+        // );
         setShowDetailModal(false);
         setSelectedExperience(null);
       } else {

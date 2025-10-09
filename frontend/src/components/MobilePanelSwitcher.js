@@ -5,7 +5,8 @@ import {
   ChartBarIcon,
   ShoppingBagIcon,
   UserGroupIcon,
-  XMarkIcon
+  XMarkIcon,
+  Squares2X2Icon
 } from '@heroicons/react/24/outline';
 import { triggerHaptic } from '../utils/streamUtils';
 
@@ -247,7 +248,7 @@ const MobilePanelSwitcher = memo(({
           </div>
         </motion.div>
       ) : (
-        {/* Minimized state - floating button */}
+        /* Minimized state - floating button */
         <motion.button
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}

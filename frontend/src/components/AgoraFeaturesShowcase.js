@@ -257,9 +257,9 @@ const AgoraFeaturesShowcase = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     // toast.success(`${feature.title} is active and ready to use!`, {
-                      duration: 3000,
-                      icon: '✨'
-                    });
+                    //   duration: 3000,
+                    //   icon: '✨'
+                    // });
                   }}
                 >
                   Try This Feature

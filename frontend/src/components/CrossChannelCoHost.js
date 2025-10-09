@@ -9,7 +9,8 @@ import {
   XCircleIcon,
   ClockIcon,
   SignalIcon,
-  SparklesIcon
+  SparklesIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import Card from './ui/Card';
 import Button from './ui/Button';
@@ -108,9 +109,9 @@ const CrossChannelCoHost = ({
       startChannelStatsTracking(channelName);
       
       // toast.success(`Connected to ${channelName}! 🎉`, {
-        duration: 4000,
-        icon: '🔗'
-      });
+      //   duration: 4000,
+      //   icon: '🔗'
+      // });
       
       if (onCoHostConnected) {
         onCoHostConnected(newChannel);
