@@ -132,47 +132,8 @@ app.use((req, res, next) => {
 
 // Note: Rate limiting is applied via buildLimiters() below when routes are registered
 
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      // Production domains
-      'https://digis.app',
-      'https://www.digis.app',
-      // Vercel preview URLs
-      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-      // Development (remove in production)
-      process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
-      process.env.NODE_ENV === 'development' ? 'http://localhost:3002' : null,
-      process.env.NODE_ENV === 'development' ? 'http://localhost:3003' : null,
-      process.env.NODE_ENV === 'development' ? 'http://localhost:3004' : null,
-      process.env.NODE_ENV === 'development' ? 'http://localhost:3005' : null,
-      process.env.NODE_ENV === 'development' ? 'http://localhost:3006' : null,
-      process.env.NODE_ENV === 'development' ? 'http://localhost:3007' : null,
-      process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:3000' : null,
-      process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:3002' : null,
-      process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:3003' : null,
-      process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:3004' : null,
-      process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:3005' : null,
-      process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:3006' : null,
-      process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:3007' : null
-    ].filter(Boolean);
-    
-    // Allow requests with no origin (mobile apps, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200
-};
-
+// Use the centralized CORS configuration
+const { corsOptions } = require('../middleware/cors-config');
 app.use(cors(corsOptions));
 
 // Body parsing middleware with size limits
