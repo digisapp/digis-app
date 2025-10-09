@@ -181,3 +181,4 @@ After 5 rounds of fixes and debugging:
 ---
 
 **Last Updated**: October 9, 2025 - Backend deployed and verified healthy
+# DATABASE_URL environment variable added on Vercel
