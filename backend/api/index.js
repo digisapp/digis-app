@@ -121,12 +121,12 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  
+  // Removed Cross-Origin-Resource-Policy to allow CORS
+  // res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+
   // Remove sensitive headers
   res.removeHeader('X-Powered-By');
-  
+
   next();
 });
 
