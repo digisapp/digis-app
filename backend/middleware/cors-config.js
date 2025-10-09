@@ -16,6 +16,8 @@ const { logger } = require('../utils/secureLogger');
  * Production domains (update with your actual domains)
  */
 const PRODUCTION_DOMAINS = [
+  'https://digis.cc',
+  'https://www.digis.cc',
   'https://digis.app',
   'https://www.digis.app',
 ];
@@ -46,11 +48,13 @@ const DEVELOPMENT_DOMAINS = [
  * Matches:
  * - https://digis-app-*.vercel.app
  * - https://digis-frontend-*.vercel.app
+ * - https://frontend-*.vercel.app
  * - https://your-app-git-branch-name.vercel.app
  */
 const VERCEL_PREVIEW_PATTERNS = [
   /^https:\/\/digis-app-[a-z0-9-]+\.vercel\.app$/,
   /^https:\/\/digis-frontend-[a-z0-9-]+\.vercel\.app$/,
+  /^https:\/\/frontend-[a-z0-9-]+\.vercel\.app$/,
   /^https:\/\/digis-app-git-[a-z0-9-]+\.vercel\.app$/,
 ];
 
