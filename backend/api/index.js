@@ -1,5 +1,11 @@
 // IMPORTANT: Sentry must be imported first for proper instrumentation
-require('../instrument');
+// Wrap in try-catch to make non-fatal on serverless
+try {
+  require('../instrument');
+  console.log('✅ Sentry instrumentation loaded');
+} catch (sentryError) {
+  console.warn('⚠️ Failed to load Sentry instrumentation (non-fatal):', sentryError.message);
+}
 
 const express = require('express');
 const cors = require('cors');
@@ -34,11 +40,17 @@ try {
     console.log('🚀 Serverless environment detected - using injected environment variables');
   }
 
-  // Validate all environment variables with Zod (crash early if invalid)
-  const { validateEnv } = require('../utils/env');
-  validateEnv();
+  // Validate all environment variables with Zod (non-fatal on serverless for debugging)
+  try {
+    const { validateEnv } = require('../utils/env');
+    validateEnv();
+  } catch (validationError) {
+    console.warn('⚠️ Environment validation failed (continuing anyway):', validationError.message);
+    // Don't exit - continue to see if app starts anyway
+  }
 
 } catch (envError) {
+  console.error('❌ Critical environment configuration error:', envError.message);
   logger.error('Environment configuration error:', { error: envError.message });
   process.exit(1);
 }
