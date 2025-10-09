@@ -13,7 +13,9 @@ import './index.css';
 initSentry();
 
 // Custom error fallback component
-const ErrorFallback = ({ error, resetError }: { error: Error; resetError: () => void }) => (
+const ErrorFallback = ({ error, resetError }: { error: unknown; resetError: () => void }) => {
+  const errorObj = error instanceof Error ? error : new Error(String(error));
+  return (
   <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
     <div className="max-w-md w-full bg-gray-800 rounded-lg p-6 text-center">
       <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -33,8 +35,8 @@ const ErrorFallback = ({ error, resetError }: { error: Error; resetError: () => 
             Error details
           </summary>
           <pre className="mt-2 p-2 bg-gray-900 rounded text-xs text-red-400 overflow-auto">
-            {error.message}
-            {error.stack}
+            {errorObj.message}
+            {errorObj.stack}
           </pre>
         </details>
       )}
@@ -55,7 +57,8 @@ const ErrorFallback = ({ error, resetError }: { error: Error; resetError: () => 
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Render app with error boundary
 ReactDOM.createRoot(document.getElementById('root')!).render(

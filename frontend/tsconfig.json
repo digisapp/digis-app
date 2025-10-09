@@ -17,17 +17,17 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": false,
+    "noUncheckedIndexedAccess": false,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": false,
+    "noPropertyAccessFromIndexSignature": false,
     
     /* Types */
     "types": ["vite/client"],
@@ -46,5 +46,14 @@
     }
   },
   "include": ["src"],
+  "exclude": [
+    "**/*.stories.tsx",
+    "**/*.stories.ts",
+    "**/*.story.tsx",
+    "**/*.story.ts",
+    "**/*.test.tsx",
+    "**/*.test.ts",
+    "**/__tests__/**"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

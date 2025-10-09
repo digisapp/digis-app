@@ -4,8 +4,7 @@
  */
 
 import * as Sentry from '@sentry/react';
-import { BrowserTracing } from '@sentry/tracing';
-import { CaptureConsole } from '@sentry/integrations';
+import { captureConsoleIntegration, replayIntegration } from '@sentry/react';
 
 // Environment configuration
 const environment = import.meta.env.MODE || 'development';
@@ -25,53 +24,29 @@ export const initSentry = () => {
     dsn,
     environment,
     release,
-    
+
     // Performance monitoring
     integrations: [
-      new BrowserTracing({
-        // Set tracingOrigins to control what URLs are traced
-        tracingOrigins: [
-          'localhost',
-          /^\//,
-          import.meta.env.VITE_BACKEND_URL
-        ],
-        
-        // Capture interactions
-        routingInstrumentation: Sentry.reactRouterV6Instrumentation(
-          React.useEffect,
-          useLocation,
-          useNavigationType,
-          createRoutesFromChildren,
-          matchRoutes
-        ),
-        
-        // Web vitals
-        _experiments: {
-          enableInteractions: true
-        }
-      }),
-      
+      Sentry.browserTracingIntegration(),
+
       // Capture console errors
-      new CaptureConsole({
+      captureConsoleIntegration({
         levels: ['error', 'warn']
       }),
-      
+
       // Session replay
-      new Sentry.Replay({
+      replayIntegration({
         maskAllText: false,
-        blockAllMedia: false,
-        // Sample 10% of sessions
-        sessionSampleRate: 0.1,
-        // Sample 100% of sessions with errors
-        errorSampleRate: 1.0
+        blockAllMedia: false
       })
     ],
-    
+
     // Performance sampling
     tracesSampleRate: environment === 'production' ? 0.1 : 1.0,
-    
-    // Release tracking
-    autoSessionTracking: true,
+
+    // Replay sampling
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
     
     // Breadcrumbs
     beforeBreadcrumb(breadcrumb) {
@@ -98,19 +73,23 @@ export const initSentry = () => {
     beforeSend(event, hint) {
       // Filter out known non-errors
       const error = hint.originalException;
-      
+
+      // Type guard for Error objects
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+
       // Ignore network errors in development
-      if (environment === 'development' && error?.message?.includes('NetworkError')) {
+      if (environment === 'development' && errorMessage.includes('NetworkError')) {
         return null;
       }
-      
+
       // Ignore ResizeObserver errors
-      if (error?.message?.includes('ResizeObserver loop limit exceeded')) {
+      if (errorMessage.includes('ResizeObserver loop limit exceeded')) {
         return null;
       }
-      
+
       // Ignore browser extension errors
-      if (error?.stack?.includes('extension://')) {
+      if (errorStack.includes('extension://')) {
         return null;
       }
       
@@ -254,7 +233,7 @@ export const setContext = (key: string, context: Record<string, any>) => {
  * Start transaction for performance monitoring
  */
 export const startTransaction = (name: string, op: string) => {
-  return Sentry.startTransaction({ name, op });
+  return Sentry.startSpan({ name, op }, (span) => span);
 };
 
 /**
@@ -265,24 +244,20 @@ export const profileFunction = async <T>(
   fn: () => Promise<T>,
   tags?: Record<string, string>
 ): Promise<T> => {
-  const transaction = Sentry.startTransaction({
-    name,
-    op: 'function',
-    tags
-  });
-
-  Sentry.getCurrentHub().configureScope(scope => scope.setSpan(transaction));
-
-  try {
-    const result = await fn();
-    transaction.setStatus('ok');
-    return result;
-  } catch (error) {
-    transaction.setStatus('internal_error');
-    throw error;
-  } finally {
-    transaction.finish();
-  }
+  return Sentry.startSpan(
+    {
+      name,
+      op: 'function',
+      attributes: tags
+    },
+    async () => {
+      try {
+        return await fn();
+      } catch (error) {
+        throw error;
+      }
+    }
+  );
 };
 
 /**
@@ -299,15 +274,6 @@ export const Profiler = Sentry.Profiler;
  * withSentryRouting HOC
  */
 export const withSentryRouting = Sentry.withSentryRouting;
-
-// Required imports for routing instrumentation
-import React from 'react';
-import {
-  useLocation,
-  useNavigationType,
-  createRoutesFromChildren,
-  matchRoutes
-} from 'react-router-dom';
 
 export default {
   initSentry,

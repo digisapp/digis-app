@@ -180,9 +180,9 @@ export const useAgoraClient = (config: AgoraConfig): UseAgoraClientReturn => {
       updated.delete(user.uid);
       return updated;
     });
-    
+
     console.log(`User ${user.uid} left channel`);
-    toast.info('User left the call');
+    toast('User left the call');
   }, []);
 
   /**
@@ -366,11 +366,11 @@ export const useAgoraClient = (config: AgoraConfig): UseAgoraClientReturn => {
       sendBytes: stats.SendBytes || 0,
       recvBytes: stats.RecvBytes || 0,
       sendPackets: localAudioStats.sendPackets || 0,
-      recvPackets: stats.RecvPackets || 0,
+      recvPackets: (stats as any).RecvPackets || 0,
       sendPacketsLost: localAudioStats.sendPacketsLost || 0,
-      recvPacketsLost: stats.RecvPacketsLost || 0,
+      recvPacketsLost: (stats as any).RecvPacketsLost || 0,
       rtt: stats.RTT || 0,
-      cpu: stats.CpuTotal || 0,
+      cpu: (stats as any).CpuTotal || 0,
       sendBitrate: localVideoStats.sendBitrate || 0,
       recvBitrate: stats.RecvBitrate || 0
     };

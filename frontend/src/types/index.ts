@@ -4,27 +4,36 @@ export interface User {
   supabase_id: string;
   email: string;
   username: string;
+  name?: string;
+  avatar?: string;
   profile_pic_url?: string;
   bio?: string;
   is_creator: boolean;
+  is_verified?: boolean;
+  token_balance?: number;
+  creator_type?: string;
+  followers_count?: number;
+  following_count?: number;
   created_at: string;
   updated_at: string;
 }
 
 export interface Creator extends User {
-  stream_price: number;
-  video_price: number;
-  voice_price: number;
-  message_price: number;
+  stream_price?: number;
+  video_price?: number;
+  voice_price?: number;
+  message_price?: number;
   text_message_price?: number;
   image_message_price?: number;
   video_message_price?: number;
   voice_memo_price?: number;
-  creator_type?: string;
+  hourly_rate?: number;
+  per_minute_rate?: number;
+  categories?: string[];
   gallery_photos?: string[];
   stream_audience_control?: boolean;
-  total_sessions: number;
-  total_earnings: number;
+  total_sessions?: number;
+  total_earnings?: number;
   rating?: number;
   state?: string;
   country?: string;
@@ -137,6 +146,20 @@ export interface PaginatedResponse<T> {
 }
 
 // Form types
+export interface SignupFormData {
+  email: string;
+  password: string;
+  username: string;
+  name?: string;
+  is_creator?: boolean;
+  creator_type?: string;
+}
+
+export interface LoginFormData {
+  email: string;
+  password: string;
+}
+
 export interface ProfileUpdateForm {
   bio?: string;
   profile_pic_url?: string;
