@@ -48,6 +48,8 @@ const getCorsOptions = () => {
 
   // Production origins
   const prodOrigins = [
+    'https://digis.cc',
+    'https://www.digis.cc',
     'https://digis.app',
     'https://www.digis.app',
     process.env.FRONTEND_URL,
