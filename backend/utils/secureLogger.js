@@ -3,10 +3,19 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-// Ensure logs directory exists
-const logsDir = path.join(__dirname, '../../logs');
-if (!fs.existsSync(logsDir)) {
+// Ensure logs directory exists (skip on serverless - filesystem is read-only except /tmp)
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const logsDir = isServerless ? '/tmp/logs' : path.join(__dirname, '../../logs');
+
+if (!isServerless && !fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
+} else if (isServerless && !fs.existsSync(logsDir)) {
+  // Create logs dir in /tmp for serverless
+  try {
+    fs.mkdirSync(logsDir, { recursive: true });
+  } catch (err) {
+    console.warn('Could not create /tmp/logs directory:', err.message);
+  }
 }
 
 // List of sensitive fields to redact
@@ -112,7 +121,7 @@ const logger = winston.createLogger({
     environment: process.env.NODE_ENV || 'development'
   },
   transports: [
-    // Console transport for development
+    // Console transport (always enabled except in tests)
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
@@ -120,36 +129,43 @@ const logger = winston.createLogger({
       ),
       silent: process.env.NODE_ENV === 'test'
     }),
-    
-    // File transport for errors
-    new winston.transports.File({
-      filename: path.join(logsDir, 'error.log'),
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-      tailable: true
-    }),
-    
-    // File transport for all logs
-    new winston.transports.File({
-      filename: path.join(logsDir, 'app.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 10,
-      tailable: true
-    })
+
+    // File transports (skip on serverless to avoid filesystem issues)
+    ...(isServerless ? [] : [
+      // File transport for errors
+      new winston.transports.File({
+        filename: path.join(logsDir, 'error.log'),
+        level: 'error',
+        maxsize: 5242880, // 5MB
+        maxFiles: 5,
+        tailable: true
+      }),
+
+      // File transport for all logs
+      new winston.transports.File({
+        filename: path.join(logsDir, 'app.log'),
+        maxsize: 5242880, // 5MB
+        maxFiles: 10,
+        tailable: true
+      })
+    ])
   ],
   
-  // Handle exceptions and rejections
-  exceptionHandlers: [
-    new winston.transports.File({ 
+  // Handle exceptions and rejections (console only on serverless)
+  exceptionHandlers: isServerless ? [
+    new winston.transports.Console()
+  ] : [
+    new winston.transports.File({
       filename: path.join(logsDir, 'exceptions.log'),
       maxsize: 5242880,
       maxFiles: 5
     })
   ],
-  
-  rejectionHandlers: [
-    new winston.transports.File({ 
+
+  rejectionHandlers: isServerless ? [
+    new winston.transports.Console()
+  ] : [
+    new winston.transports.File({
       filename: path.join(logsDir, 'rejections.log'),
       maxsize: 5242880,
       maxFiles: 5
