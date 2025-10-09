@@ -3,19 +3,10 @@ const router = express.Router();
 const { pool } = require('../utils/db');
 const { authenticateToken, optionalAuth } = require('../middleware/auth');
 const streamActivityMonitor = require('../utils/stream-activity-monitor');
-const winston = require('winston');
+const { logger: sharedLogger } = require('../utils/secureLogger');
 
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({ filename: '../logs/streaming.log' }),
-    new winston.transports.Console()
-  ]
-});
+// Use shared logger instead of creating a new one (serverless-friendly)
+const logger = sharedLogger;
 
 // Public endpoint - Get live streams (no auth required)
 router.get('/public/streams/live', async (req, res) => {

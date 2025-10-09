@@ -1,21 +1,12 @@
 const express = require('express');
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
-const winston = require('winston');
+const { logger: sharedLogger } = require('../utils/secureLogger');
 const { sendClassEnrollmentConfirmationEmail } = require('../services/emailService');
 const router = express.Router();
 
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({ filename: '../logs/classes.log' }),
-    new winston.transports.Console()
-  ]
-});
+// Use shared logger instead of creating a new one (serverless-friendly)
+const logger = sharedLogger;
 
 // Get enrolled classes for a user
 router.get('/enrolled', authenticateToken, async (req, res) => {
