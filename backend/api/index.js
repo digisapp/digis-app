@@ -179,6 +179,7 @@ let rateLimiters = {};
 })();
 
 // Load and register routes with error handling
+let routeLoadError = null;
 try {
   // Load v1 routes
   const v1Routes = require('../routes/v1');
@@ -324,7 +325,9 @@ try {
   
   console.log('✅ All routes loaded successfully');
 } catch (routeError) {
+  routeLoadError = routeError;
   console.error('❌ Error loading routes:', routeError.message);
+  console.error('Stack:', routeError.stack);
   console.error('Make sure all route files exist in backend/routes/');
   logger.error('Route loading failed', { error: routeError.message, stack: routeError.stack });
 }
@@ -441,6 +444,27 @@ app.get('/test', (req, res) => {
     nodeEnv: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });
+});
+
+// Debug endpoint to check route loading errors
+app.get('/debug/routes', (req, res) => {
+  if (routeLoadError) {
+    res.status(500).json({
+      routesLoaded: false,
+      error: {
+        message: routeLoadError.message,
+        stack: routeLoadError.stack,
+        code: routeLoadError.code
+      },
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    res.json({
+      routesLoaded: true,
+      message: 'All routes loaded successfully',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // 404 handler for unmatched routes
