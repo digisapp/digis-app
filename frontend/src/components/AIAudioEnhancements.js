@@ -8,7 +8,8 @@ import {
   DocumentTextIcon,
   CubeIcon,
   AdjustmentsHorizontalIcon,
-  XMarkIcon
+  XMarkIcon,
+  SunIcon
 } from '@heroicons/react/24/outline';
 import { SparklesIcon } from '@heroicons/react/24/solid';
 import Card from './ui/Card';
@@ -141,10 +142,10 @@ const AIAudioEnhancements = ({
         stopSpeechToText();
       }
 
-      // toast.success('Audio enhancements applied! 🎵', {
+      toast.success('Audio enhancements applied! 🎵', {
         duration: 2000
       });
-      
+
       if (onEnhancementsChanged) {
         onEnhancementsChanged(enhancements);
       }

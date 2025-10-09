@@ -574,7 +574,6 @@ const AppContent = () => {
           }}
         />
       )}
-      />
 
       {showGoLiveSetup && (
         <GoLiveSetup
