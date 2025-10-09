@@ -159,80 +159,74 @@ const verifySupabaseTokenAsymmetric = async (req, res, next) => {
       }
     }
 
-    // Try asymmetric verification first (new method)
-    // TEMPORARILY DISABLED: jose is ES Module only
-    // Skip directly to symmetric verification
+    // Symmetric verification (using Supabase client)
+    // NOTE: Asymmetric verification with jose is temporarily disabled (ES Module issue)
+    const admin = initializeSupabaseAdmin();
+
+    // Log token info for debugging (only first 20 chars for security)
+    logger.debug('Attempting symmetric verification with token:', token.substring(0, 20) + '...');
+
+    let user;
     try {
-      // Skip asymmetric verification (disabled)
-      throw new Error('Asymmetric verification disabled - using symmetric');
-
-      const admin = initializeSupabaseAdmin();
-
-      // Log token info for debugging (only first 20 chars for security)
-      logger.debug('Attempting symmetric verification with token:', token.substring(0, 20) + '...');
-
-      let user;
-      try {
-        // Create a user-scoped client with the JWT token
-        const { createClient } = require('@supabase/supabase-js');
-        const userClient = createClient(
-          process.env.SUPABASE_URL,
-          process.env.SUPABASE_ANON_KEY,
-          {
-            global: {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
+      // Create a user-scoped client with the JWT token
+      const { createClient } = require('@supabase/supabase-js');
+      const userClient = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`
             }
           }
-        );
-
-        // Now get the user with the authenticated client
-        const result = await userClient.auth.getUser();
-
-        if (result.error || !result.data?.user) {
-          logger.error('Token verification failed:', result.error);
-          return res.status(401).json({
-            error: 'Invalid token',
-            message: result.error?.message || 'Token verification failed',
-            timestamp: new Date().toISOString()
-          });
         }
-        user = result.data.user;
-      } catch (verifyError) {
-        logger.error('Failed to verify token:', verifyError);
+      );
+
+      // Now get the user with the authenticated client
+      const result = await userClient.auth.getUser();
+
+      if (result.error || !result.data?.user) {
+        logger.error('Token verification failed:', result.error);
         return res.status(401).json({
           error: 'Invalid token',
-          message: 'Token verification failed',
+          message: result.error?.message || 'Token verification failed',
           timestamp: new Date().toISOString()
         });
       }
-
-      req.user = {
-        id: user.id,
-        supabase_id: user.id, // Ensure supabase_id is set
-        uid: user.id, // For backward compatibility
-        email: user.email,
-        role: user.role,
-        app_metadata: user.app_metadata || {},
-        user_metadata: user.user_metadata || {}
-      };
-
-      // Cache the normalized result (not raw Supabase user)
-      if (redisClient) {
-        const cacheData = {
-          user: req.user,
-          exp: Math.floor(Date.now() / 1000) + 300 // 5 minutes from now
-        };
-        await redisClient.setex(
-          `jwt:${tokenHash}`,
-          300,
-          JSON.stringify(cacheData)
-        );
-      }
-      
-      next();
+      user = result.data.user;
+    } catch (verifyError) {
+      logger.error('Failed to verify token:', verifyError);
+      return res.status(401).json({
+        error: 'Invalid token',
+        message: 'Token verification failed',
+        timestamp: new Date().toISOString()
+      });
     }
+
+    req.user = {
+      id: user.id,
+      supabase_id: user.id, // Ensure supabase_id is set
+      uid: user.id, // For backward compatibility
+      email: user.email,
+      role: user.role,
+      app_metadata: user.app_metadata || {},
+      user_metadata: user.user_metadata || {}
+    };
+
+    // Cache the normalized result (not raw Supabase user)
+    if (redisClient) {
+      const cacheData = {
+        user: req.user,
+        exp: Math.floor(Date.now() / 1000) + 300 // 5 minutes from now
+      };
+      await redisClient.setex(
+        `jwt:${tokenHash}`,
+        300,
+        JSON.stringify(cacheData)
+      );
+    }
+
+    next();
   } catch (error) {
     logger.error('Auth middleware error:', error);
     res.status(500).json({ 
