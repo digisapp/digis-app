@@ -21,16 +21,23 @@ logger.info('Starting Digis backend server...');
 
 // Load environment variables with comprehensive validation
 try {
-  const dotenvResult = require('dotenv').config({ path: path.join(__dirname, '../.env') });
-  
-  if (dotenvResult.error) {
-    throw new Error(`Failed to load .env file: ${dotenvResult.error.message}`);
+  // On Vercel/serverless, env vars are injected automatically - skip dotenv loading
+  const isServerlessEnv = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+  if (!isServerlessEnv) {
+    const dotenvResult = require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
+    if (dotenvResult.error) {
+      throw new Error(`Failed to load .env file: ${dotenvResult.error.message}`);
+    }
+  } else {
+    console.log('🚀 Serverless environment detected - using injected environment variables');
   }
-  
+
   // Validate all environment variables with Zod (crash early if invalid)
   const { validateEnv } = require('../utils/env');
   validateEnv();
-  
+
 } catch (envError) {
   logger.error('Environment configuration error:', { error: envError.message });
   process.exit(1);
