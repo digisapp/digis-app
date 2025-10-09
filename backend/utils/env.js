@@ -34,6 +34,16 @@ const envSchema = z.object({
   // Ably (real-time messaging - required for Vercel deployment)
   ABLY_API_KEY: z.string().min(1, 'ABLY_API_KEY is required for real-time features').optional(),
 
+  // Inngest (serverless workflows)
+  INNGEST_EVENT_KEY: z.string().min(1, 'INNGEST_EVENT_KEY is required for Inngest').optional(),
+  INNGEST_SIGNING_KEY: z.string().startsWith('signkey-', 'INNGEST_SIGNING_KEY must start with signkey-').optional(),
+
+  // QStash (HTTP task queue)
+  QSTASH_TOKEN: z.string().optional(),
+
+  // Backend URL (for webhooks and callbacks)
+  BACKEND_URL: z.string().url().optional(),
+
   // Optional but recommended
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),

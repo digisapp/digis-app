@@ -268,6 +268,15 @@ try {
   const ablyAuth = require('./ably-auth');
   app.post('/api/ably-auth', ablyAuth);
   app.get('/api/ably-auth', ablyAuth);
+
+  // Inngest trigger endpoint (for QStash cron) - MUST be before general handler
+  const inngestTrigger = require('./inngest-trigger');
+  app.post('/api/inngest/trigger', inngestTrigger);
+
+  // Inngest webhook handler (for serverless workflows)
+  const inngestHandler = require('./inngest');
+  app.use('/api/inngest', inngestHandler);
+
   // Use enhanced payment routes with idempotency and rate limiting
   const paymentsEnhanced = require('../routes/payments-enhanced');
   app.use('/api/v1/payments', paymentsEnhanced); // New enhanced version
