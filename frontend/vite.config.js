@@ -136,44 +136,11 @@ export default defineConfig({
     // Optimize chunks with route-based splitting
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Vendor chunks
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'react-vendor';
-            }
-            if (id.includes('framer-motion') || id.includes('@headlessui') || id.includes('react-hot-toast')) {
-              return 'ui-vendor';
-            }
-            if (id.includes('agora-rtc-sdk-ng') || id.includes('agora-rtm-sdk')) {
-              return 'agora-vendor';
-            }
-            if (id.includes('zustand')) {
-              return 'state-vendor';
-            }
-            if (id.includes('@supabase')) {
-              return 'supabase-vendor';
-            }
-            // All other node_modules
-            return 'vendor';
-          }
-
-          // Route-based code splitting
-          if (id.includes('/components/mobile/')) {
-            return 'mobile';
-          }
-          if (id.includes('/components/pages/')) {
-            return 'pages';
-          }
-          if (id.includes('VideoCall') || id.includes('StreamingDashboard') || id.includes('StreamingLayout')) {
-            return 'streaming';
-          }
-          if (id.includes('/components/ui/')) {
-            return 'ui-components';
-          }
-          if (id.includes('/utils/') || id.includes('/services/')) {
-            return 'utils';
-          }
+        manualChunks: {
+          // Keep React together in one chunk to avoid module sharing issues
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'agora-vendor': ['agora-rtc-sdk-ng', 'agora-rtm-sdk', 'agora-rtc-react'],
+          'ui-vendor': ['framer-motion', '@headlessui/react', 'react-hot-toast'],
         },
         // Generate smaller chunks with better naming
         chunkFileNames: (chunkInfo) => {
