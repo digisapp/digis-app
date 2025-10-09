@@ -724,9 +724,12 @@ const ModernContentGallery = ({
                     </div>
                   )}
                 </motion.div>
-              </AnimatePresence>
+              ))}
+            </div>
 
-              {/* Navigation Arrows */}
+            {/* Navigation Arrows - These should be outside the grid, inside the content section */}
+            <div className="relative mt-6">
+              {/* Film Strip - moved here */}
               <button
                 onClick={handlePrevious}
                 className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/20 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all duration-300"
@@ -748,7 +751,6 @@ const ModernContentGallery = ({
                   animate={{ width: `${((selectedIndex + 1) / currentContent.length) * 100}%` }}
                   transition={{ duration: 0.3 }}
                 />
-              </div>
               </div>
             </div>
 
@@ -1087,11 +1089,11 @@ const ModernContentGallery = ({
           }
           
           // Track analytics for the new content
-          trackContentInteraction(newContent.id, 'upload');
-          
+          trackInteraction(newContent, 'upload');
+
           // Close the modal
           setShowUploadModal(false);
-          
+
           // Show success message
           toast.success(`${uploadContentType.charAt(0).toUpperCase() + uploadContentType.slice(1)} uploaded successfully!`);
         }}

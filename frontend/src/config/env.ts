@@ -95,12 +95,16 @@ export const validateEnvironment = (): boolean => {
     }
     return false;
   }
-  
-  // Log configuration summary
-    .filter(([_, enabled]) => enabled)
-    .map(([feature]) => feature)
-    .join(', ') || 'none'}`);
-  
+
+  // Log configuration summary in development
+  if (isDev) {
+    const enabledFeatures = Object.entries(ENV.FEATURES)
+      .filter(([_, enabled]) => enabled)
+      .map(([feature]) => feature)
+      .join(', ') || 'none';
+    console.log(`Enabled features: ${enabledFeatures}`);
+  }
+
   return true;
 };
 

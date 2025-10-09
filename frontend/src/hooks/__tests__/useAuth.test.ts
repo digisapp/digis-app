@@ -50,9 +50,11 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Test wrapper
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
-);
+function Wrapper({ children }: { children: React.ReactNode }) {
+  return React.createElement(BrowserRouter, null, children);
+}
+
+const wrapper = Wrapper;
 
 describe('useAuth', () => {
   const mockUser = {

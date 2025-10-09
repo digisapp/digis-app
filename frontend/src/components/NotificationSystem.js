@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PropTypes from 'prop-types';
 import {
   BellIcon,
   PhoneIcon,
@@ -183,23 +184,20 @@ const NotificationSystem = ({ user, isVisible = true }) => {
     switch (type) {
       case 'call_request':
       case 'call_incoming':
-        // toast.success(
-          <NotificationToast 
-            notification={notification} 
-            onAction={() => handleNotificationAction(notification)} 
-          />,
+        toast.success(
+          `📞 ${title}\n${body}`,
           { ...toastOptions, duration: 15000 }
         );
         break;
-      
+
       case 'token_earned':
-        // toast.success(`💰 ${title}\n${body}`, toastOptions);
+        toast.success(`💰 ${title}\n${body}`, toastOptions);
         break;
-      
+
       case 'queue_update':
         toast.info(`🕒 ${title}\n${body}`, toastOptions);
         break;
-      
+
       default:
         toast(body, toastOptions);
     }
@@ -568,7 +566,7 @@ export const NotificationSettings = ({ user, isOpen, onClose }) => {
         >
           <div className="p-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">Notification Settings</h3>
-            
+
             <div className="space-y-4">
               {Object.entries({
                 callRequests: 'Call requests',
@@ -617,7 +615,7 @@ export const NotificationSettings = ({ user, isOpen, onClose }) => {
       </motion.div>
     </AnimatePresence>
   );
-});
+};
 
 NotificationSettings.displayName = 'NotificationSettings';
 

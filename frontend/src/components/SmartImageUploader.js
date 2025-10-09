@@ -413,9 +413,8 @@ const SmartImageUploader = ({
             </p>
           </motion.div>
         </div>
-        />
       )}
-      
+
       {/* Uploading Overlay */}
       {uploading && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center">

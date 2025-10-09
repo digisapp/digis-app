@@ -364,15 +364,19 @@ export const updateAnalyticsWithoutRerender = (data) => {
   }, false, { type: 'analytics/transient' });
 };
 
-// TypeScript helpers
-export type StoreState = ReturnType<typeof useStore.getState>;
-export type StoreActions = {
-  fetchUser: () => Promise<any>;
-  updateUser: (updates: Partial<StoreState['user']>) => void;
-  updateAnalytics: (data: Partial<StoreState['analytics']>) => void;
-  initSocket: () => void;
-  sendSocketMessage: (type: string, payload: any) => void;
-  reset: () => void;
-};
+// JSDoc type hints for better IDE support
+/**
+ * @typedef {ReturnType<typeof useStore.getState>} StoreState
+ */
+
+/**
+ * @typedef {Object} StoreActions
+ * @property {() => Promise<any>} fetchUser
+ * @property {(updates: Partial<StoreState['user']>) => void} updateUser
+ * @property {(data: Partial<StoreState['analytics']>) => void} updateAnalytics
+ * @property {() => void} initSocket
+ * @property {(type: string, payload: any) => void} sendSocketMessage
+ * @property {() => void} reset
+ */
 
 export default useStore;
