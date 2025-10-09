@@ -4,7 +4,9 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const { createRemoteJWKSet, jwtVerify } = require('jose');
+// NOTE: jose is an ES Module and cannot be required in CommonJS
+// Temporarily disabled asymmetric JWT until we migrate to ES modules
+// const { createRemoteJWKSet, jwtVerify } = require('jose');
 const redis = require('redis');
 const crypto = require('crypto');
 const { logger } = require('./secureLogger');
@@ -103,10 +105,11 @@ const initializeSupabaseAdmin = () => {
     );
 
     // Initialize JWKS client for asymmetric JWT verification
-    const jwtIssuer = `${process.env.SUPABASE_URL}/auth/v1`;
-    jwksClient = createRemoteJWKSet(
-      new URL(`${jwtIssuer}/.well-known/jwks.json`)
-    );
+    // TEMPORARILY DISABLED: jose is ES Module only
+    // const jwtIssuer = `${process.env.SUPABASE_URL}/auth/v1`;
+    // jwksClient = createRemoteJWKSet(
+    //   new URL(`${jwtIssuer}/.well-known/jwks.json`)
+    // );
 
     logger.info('✅ Supabase Admin v2 initialized with enhanced features');
     return supabaseAdmin;
@@ -157,46 +160,11 @@ const verifySupabaseTokenAsymmetric = async (req, res, next) => {
     }
 
     // Try asymmetric verification first (new method)
+    // TEMPORARILY DISABLED: jose is ES Module only
+    // Skip directly to symmetric verification
     try {
-      const jwtIssuer = `${process.env.SUPABASE_URL}/auth/v1`;
-      const { payload } = await jwtVerify(token, jwksClient, {
-        issuer: jwtIssuer,
-        audience: 'authenticated',
-      });
-      
-      // Extract user from JWT payload
-      req.user = {
-        id: payload.sub,
-        supabase_id: payload.sub, // Ensure supabase_id is set
-        uid: payload.sub, // For backward compatibility
-        email: payload.email,
-        role: payload.role,
-        app_metadata: payload.app_metadata || {},
-        user_metadata: payload.user_metadata || {},
-      };
-
-      // Cache the normalized result with expiry
-      if (redisClient) {
-        const cacheData = {
-          user: req.user,
-          exp: payload.exp, // JWT expiry
-          iat: payload.iat  // JWT issued at
-        };
-        const ttl = Math.min(300, payload.exp - Math.floor(Date.now() / 1000)); // 5 min or JWT expiry
-        if (ttl > 0) {
-          await redisClient.setex(
-            `jwt:${tokenHash}`,
-            ttl,
-            JSON.stringify(cacheData)
-          );
-        }
-      }
-      
-      logger.debug('JWT verified with asymmetric key');
-      return next();
-    } catch (asymmetricError) {
-      // Fallback to symmetric verification for backward compatibility
-      logger.debug('Asymmetric verification failed, trying symmetric');
+      // Skip asymmetric verification (disabled)
+      throw new Error('Asymmetric verification disabled - using symmetric');
 
       const admin = initializeSupabaseAdmin();
 
