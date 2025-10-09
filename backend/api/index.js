@@ -633,18 +633,25 @@ server.listen(PORT, HOST, () => {
     nodeVersion: process.version
   });
 
-  // Initialize BullMQ background workers
-  try {
-    const { initWorkers } = require('../lib/queue');
-    initWorkers();
-    console.log('⚙️ Background job workers initialized (BullMQ)');
-  } catch (queueError) {
-    console.warn('⚠️ Failed to initialize background workers:', queueError.message);
-    // Continue without background jobs
+  // Initialize BullMQ background workers (skip on serverless)
+  // BullMQ workers require persistent connections and don't work on Vercel/AWS Lambda
+  const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+  if (!isServerless) {
+    try {
+      const { initWorkers } = require('../lib/queue');
+      initWorkers();
+      console.log('⚙️ Background job workers initialized (BullMQ)');
+    } catch (queueError) {
+      console.warn('⚠️ Failed to initialize background workers:', queueError.message);
+      // Continue without background jobs
+    }
+  } else {
+    console.log('🚀 Serverless environment detected - skipping BullMQ workers (using Inngest instead)');
   }
 
-  // Initialize scheduled jobs for payouts
-  if (process.env.NODE_ENV === 'production' || process.env.ENABLE_CRON === 'true') {
+  // Initialize scheduled jobs for payouts (skip on serverless - use QStash instead)
+  if (!isServerless && (process.env.NODE_ENV === 'production' || process.env.ENABLE_CRON === 'true')) {
     const { initializeScheduledJobs } = require('../jobs/cron-config');
     initializeScheduledJobs();
     console.log('📅 Scheduled jobs initialized for creator payouts');
@@ -658,6 +665,8 @@ server.listen(PORT, HOST, () => {
     const loyaltyPerkDeliveryJob = require('../jobs/loyalty-perk-delivery');
     loyaltyPerkDeliveryJob.start();
     console.log('🎁 Loyalty perk delivery jobs initialized');
+  } else if (isServerless) {
+    console.log('⏰ Serverless environment - cron jobs will be triggered via QStash (see /api/inngest/trigger)');
   }
 });
 
