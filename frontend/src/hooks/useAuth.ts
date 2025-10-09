@@ -239,7 +239,6 @@ export const useAuth = (): UseAuthReturn => {
 
         if (profileError) throw profileError;
 
-        toast.success('Account created! Please check your email to verify.');
         navigate('/auth/verify-email');
       }
     } catch (err) {
@@ -265,7 +264,6 @@ export const useAuth = (): UseAuthReturn => {
 
       setUser(null);
       setSession(null);
-      toast.success('Signed out successfully');
       navigate('/');
     } catch (err) {
       const error = err as Error;
@@ -296,7 +294,6 @@ export const useAuth = (): UseAuthReturn => {
 
       // Update local state
       setUser(prev => prev ? { ...prev, ...updates } : null);
-      toast.success('Profile updated successfully');
     } catch (err) {
       const error = err as Error;
       console.error('Profile update error:', error);
@@ -321,8 +318,6 @@ export const useAuth = (): UseAuthReturn => {
       });
 
       if (error) throw error;
-
-      toast.success('Password reset email sent');
     } catch (err) {
       const error = err as Error;
       console.error('Password reset error:', error);
@@ -351,7 +346,6 @@ export const useAuth = (): UseAuthReturn => {
 
       if (error) throw error;
 
-      toast.success('Password reset successfully');
       navigate('/auth/signin');
     } catch (err) {
       const error = err as Error;
