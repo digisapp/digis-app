@@ -1452,41 +1452,9 @@ const App = () => {
         </div>
       </NavigationProvider>
       </Suspense>
-      
-      {/* Go Live Setup Modal - Desktop only */}
-      {showGoLiveSetup && !isMobile && (
-        <GoLiveSetup
-          user={user}
-          onCancel={() => {
-            console.log('GoLiveSetup cancelled');
-            setShowGoLiveSetup(false);
-          }}
-          onGoLive={(config) => {
-            console.log('Starting stream with config:', config);
-            setStreamConfig(config);
-            setShowGoLiveSetup(false);
-            setCurrentView('streaming');
-            toast.success('Going live! 🎉');
-          }}
-        />
-      )}
 
-      {/* Mobile Live Stream - Simplified for mobile */}
-      {showMobileLiveStream && isMobile && (
-        <>
-          {console.log('🚀 Rendering MobileLiveStream component!')}
-          <MobileLiveStream
-            user={user}
-            onEnd={() => {
-              console.log('Mobile stream ended');
-              setShowMobileLiveStream(false);
-            }}
-            streamConfig={streamConfig}
-          />
-        </>
-      )}
-      {/* Debug log for mobile stream state */}
-      {isMobile && console.log('📱 Mobile Live Stream State:', { showMobileLiveStream, isMobile })}
+      {/* Note: Go Live Setup and Mobile Live Stream modals are now managed via ModalContext */}
+      {/* See openGoLive() function and Modals component for implementation */}
     </ErrorBoundary>
   );
 };
