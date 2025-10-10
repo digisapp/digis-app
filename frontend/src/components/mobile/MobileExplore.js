@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { getDefaultAvatarUrl } from '../../utils/avatarHelpers';
+import { isSelf } from '../../utils/creatorFilters';
 import MobileCreatorCard from './MobileCreatorCard';
 import { apiClient } from '../../services/api';
 import {
@@ -106,20 +107,21 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
       setLoadingMore(append);
       setLoading(!append);
 
+      // IMPORTANT: Pass excludeUserId to prevent self-discovery at API level
+      const params = {
+        page: pageNum,
+        limit: 20,
+        category: selectedCategory
+      };
+
+      if (user?.id) {
+        params.excludeUserId = user.id;
+      }
+
       const { data } = await apiClient.get('/api/users/creators', {
-        params: {
-          page: pageNum,
-          limit: 20,
-          category: selectedCategory
-        },
+        params,
         signal: controller.signal
       });
-        console.log('📊 MobileExplore - API Response:', {
-          creatorsCount: data.creators?.length,
-          total: data.total,
-          hasMore: data.hasMore,
-          firstCreator: data.creators?.[0]
-        });
 
         if (data.creators && data.creators.length > 0) {
           const formattedCreators = data.creators.map(creator => ({
@@ -148,7 +150,6 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
             } else {
               setCreators(formattedCreators);
             }
-            console.log('✅ MobileExplore - Creators set:', formattedCreators.length, 'creators');
           }
         }
         
@@ -183,10 +184,18 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
 
   // Filter creators based on search and filters
   const filteredCreators = creators.filter(creator => {
+    // IMPORTANT: Filter out the logged-in user's own creator card
+    // Creators should not see themselves in the Explore page
+    const currentUserId = user?.id;
+    const currentUsername = user?.username;
+    if (isSelf(creator, currentUserId, currentUsername)) {
+      return false;
+    }
+
     const matchesSearch = searchQuery === '' ||
-                         creator.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         creator.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         creator.bio.toLowerCase().includes(searchQuery.toLowerCase());
+                         creator.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         creator.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         creator.bio?.toLowerCase().includes(searchQuery.toLowerCase());
 
     // More flexible category matching
     const matchesCategory = selectedCategory === 'all' ||
@@ -199,15 +208,6 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
       (!filters.hasContent || creator.contentCount > 0);
 
     return matchesSearch && matchesCategory && matchesFilters;
-  });
-
-  console.log('🔍 MobileExplore - Filter results:', {
-    totalCreators: creators.length,
-    filteredCreators: filteredCreators.length,
-    selectedCategory,
-    searchQuery,
-    filters,
-    selectedFilter
   });
 
   // Apply sorting based on selected filter

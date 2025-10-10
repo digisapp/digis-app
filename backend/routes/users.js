@@ -821,39 +821,48 @@ router.get('/public/creators', async (req, res) => {
 
 // Get creators list with enhanced filtering
 router.get('/creators', async (req, res) => {
-  const { 
-    limit = 20, 
+  const {
+    limit = 20,
     page = 1,
-    offset = 0, 
+    offset = 0,
     category = 'all',
     languages = '',
     sort = 'popular',
     sortBy,
-    sortOrder = 'DESC' 
+    sortOrder = 'DESC',
+    excludeUserId  // NEW: Filter out the current user from results
   } = req.query;
-  
+
   // Calculate actual offset from page number
   const actualLimit = parseInt(limit);
   const actualOffset = page ? (parseInt(page) - 1) * actualLimit : parseInt(offset);
-  
-  logger.info('👥 Creators GET request:', { 
-    limit: actualLimit, 
+
+  logger.info('👥 Creators GET request:', {
+    limit: actualLimit,
     offset: actualOffset,
     page,
     category,
     languages,
     sort,
-    sortBy, 
+    sortBy,
     sortOrder,
+    excludeUserId: excludeUserId ? '***' : undefined,
     timestamp: new Date().toISOString()
   });
-  
+
   try {
     // Build WHERE clause based on filters
     let whereConditions = ['u.is_creator = TRUE'];
     let queryParams = [];
     let paramIndex = 1;
-    
+
+    // IMPORTANT: Exclude the current user from results (prevent self-discovery)
+    if (excludeUserId) {
+      whereConditions.push(`u.supabase_id != $${paramIndex}`);
+      queryParams.push(excludeUserId);
+      paramIndex++;
+    }
+
     // Category filter
     if (category && category !== 'all') {
       whereConditions.push(`LOWER(u.creator_type) = LOWER($${paramIndex})`);

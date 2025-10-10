@@ -12,6 +12,7 @@ import {
 import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import { getAuthToken } from '../../utils/auth-helpers';
+import { isSelf } from '../../utils/creatorFilters';
 
 const FollowersSubscribersPage = ({ user, isCreator, initialTab }) => {
   const { type } = useParams();
@@ -128,15 +129,27 @@ const FollowersSubscribersPage = ({ user, isCreator, initialTab }) => {
     navigate(`/${tab}`);
   };
 
-  const filteredFollowers = followers.filter(follower =>
-    follower.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    follower.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFollowers = followers.filter(follower => {
+    // IMPORTANT: Filter out the creator's own account from followers list
+    // Creators should not see themselves following themselves
+    if (isSelf(follower, user?.id, user?.username)) {
+      return false;
+    }
 
-  const filteredSubscribers = subscribers.filter(subscriber =>
-    subscriber.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    subscriber.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    return follower.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           follower.displayName?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const filteredSubscribers = subscribers.filter(subscriber => {
+    // IMPORTANT: Filter out the creator's own account from subscribers list
+    // Creators should not see themselves subscribing to themselves
+    if (isSelf(subscriber, user?.id, user?.username)) {
+      return false;
+    }
+
+    return subscriber.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           subscriber.displayName?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const UserCard = ({ userData, isSubscriber = false }) => (
     <motion.div

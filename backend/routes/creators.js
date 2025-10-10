@@ -795,8 +795,9 @@ router.get('/followers', authenticateToken, async (req, res) => {
     const creatorId = req.user.supabase_id;
     
     // Get followers with user details
+    // IMPORTANT: Exclude the creator from their own followers list
     const query = `
-      SELECT 
+      SELECT
         u.id,
         u.supabase_id,
         u.username,
@@ -807,9 +808,10 @@ router.get('/followers', authenticateToken, async (req, res) => {
       FROM followers f
       JOIN users u ON u.supabase_id = f.follower_id
       WHERE f.creator_id = $1
+        AND f.follower_id != $1
       ORDER BY f.created_at DESC
     `;
-    
+
     const result = await pool.query(query, [creatorId]);
     
     res.json({
@@ -829,8 +831,9 @@ router.get('/subscribers', authenticateToken, async (req, res) => {
     const creatorId = req.user.supabase_id;
     
     // Get active subscribers with tier info
+    // IMPORTANT: Exclude the creator from their own subscribers list
     const query = `
-      SELECT 
+      SELECT
         u.id,
         u.supabase_id,
         u.username,
@@ -842,6 +845,7 @@ router.get('/subscribers', authenticateToken, async (req, res) => {
       FROM subscriptions s
       JOIN users u ON u.supabase_id = s.user_id
       WHERE s.creator_id = $1
+        AND s.user_id != $1
         AND s.status = 'active'
         AND (s.expires_at IS NULL OR s.expires_at > NOW())
       ORDER BY s.created_at DESC
@@ -865,17 +869,18 @@ router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const creatorId = req.user.supabase_id;
     
-    // Get followers count
+    // Get followers count (excluding self)
     const followersResult = await pool.query(
-      'SELECT COUNT(*) as count FROM followers WHERE creator_id = $1',
+      'SELECT COUNT(*) as count FROM followers WHERE creator_id = $1 AND follower_id != $1',
       [creatorId]
     );
-    
-    // Get active subscribers count
+
+    // Get active subscribers count (excluding self)
     const subscribersResult = await pool.query(
-      `SELECT COUNT(*) as count 
-       FROM subscriptions 
-       WHERE creator_id = $1 
+      `SELECT COUNT(*) as count
+       FROM subscriptions
+       WHERE creator_id = $1
+         AND user_id != $1
          AND status = 'active'
          AND (expires_at IS NULL OR expires_at > NOW())`,
       [creatorId]

@@ -23,6 +23,7 @@ import {
 import { StarIcon } from '@heroicons/react/24/outline';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { normalizeCreator } from '../../utils/normalizeCreator';
+import { isSelf } from '../../utils/creatorFilters';
 import MobileLandingPage from '../mobile/MobileLandingPage';
 import MobileCreatorCard from '../mobile/MobileCreatorCard';
 import CreatorCard from '../CreatorCard';
@@ -156,6 +157,12 @@ const ExplorePage = ({
         sortBy: sortBy,
         onlineOnly: false
       });
+
+      // IMPORTANT: Pass excludeUserId to prevent self-discovery at API level
+      const currentUserId = props.currentUserId || props.user?.id;
+      if (currentUserId) {
+        params.append('excludeUserId', currentUserId);
+      }
 
       // Add selected languages
       if (selectedLanguages.length > 0) {
@@ -300,17 +307,25 @@ const ExplorePage = ({
   // Filter and sort creators
   const filterAndSortCreators = useCallback(() => {
     let filtered = [...creators];
-    
+
+    // IMPORTANT: Filter out the logged-in user's own creator card
+    // Creators should not see themselves in the Explore page
+    const currentUserId = props.currentUserId || props.user?.id;
+    const currentUsername = props.user?.username;
+    if (currentUserId || currentUsername) {
+      filtered = filtered.filter(creator => !isSelf(creator, currentUserId, currentUsername));
+    }
+
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(creator => 
+      filtered = filtered.filter(creator =>
         creator.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         creator.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
         creator.bio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         creator.specialties?.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-    
+
     // Category filter - check if creator's interests include the selected category
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(creator => {
@@ -365,7 +380,7 @@ const ExplorePage = ({
     }
 
     setFilteredCreators(filtered);
-  }, [creators, searchTerm, selectedCategory, selectedLanguages, sortBy]);
+  }, [creators, searchTerm, selectedCategory, selectedLanguages, sortBy, props.currentUserId, props.user?.id]);
 
   // Apply filters when dependencies change
   useEffect(() => {
