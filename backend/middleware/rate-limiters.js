@@ -109,13 +109,15 @@ async function buildLimiters() {
     // Authentication endpoints (general)
     auth: await createLimiter({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: process.env.NODE_ENV === 'production' ? 200 : 10000, // Much higher limit in dev
+      max: process.env.NODE_ENV === 'production' ? 500 : 10000, // Much higher limit (500 instead of 200)
       message: 'Too many authentication requests, please try again later',
       skipSuccessfulRequests: false,
-      // Skip rate limiting for critical auth endpoints in development
+      // Skip rate limiting in development or for critical auth endpoints
       skip: (req) => {
-        if (process.env.NODE_ENV !== 'production') return true; // Disable in dev
-        const skipPaths = ['/session', '/verify-role', '/sync-user'];
+        // Always skip in development
+        if (process.env.NODE_ENV !== 'production' || process.env.NODE_ENV === 'development') return true;
+        // Skip for critical endpoints
+        const skipPaths = ['/session', '/verify-role', '/sync-user', '/balance'];
         return skipPaths.some(path => req.path.includes(path) || req.url.includes(path));
       }
     }),
@@ -159,8 +161,13 @@ async function buildLimiters() {
     // General API endpoints
     api: await createLimiter({
       windowMs: 60 * 1000, // 1 minute
-      max: process.env.NODE_ENV === 'production' ? 100 : 1000,
-      message: 'Too many API requests, please slow down'
+      max: process.env.NODE_ENV === 'production' ? 300 : 10000, // Increased from 100 to 300
+      message: 'Too many API requests, please slow down',
+      skip: (req) => {
+        // Skip in development
+        if (process.env.NODE_ENV !== 'production' || process.env.NODE_ENV === 'development') return true;
+        return false;
+      }
     }),
 
     // Payment endpoints (strict)
