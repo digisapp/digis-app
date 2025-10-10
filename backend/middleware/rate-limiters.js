@@ -109,16 +109,25 @@ async function buildLimiters() {
     // Authentication endpoints (general)
     auth: await createLimiter({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: process.env.NODE_ENV === 'production' ? 500 : 10000, // Much higher limit (500 instead of 200)
+      max: process.env.NODE_ENV === 'production' ? 10000 : 100000, // VERY high limit (10k in prod)
       message: 'Too many authentication requests, please try again later',
       skipSuccessfulRequests: false,
-      // Skip rate limiting in development or for critical auth endpoints
+      // CRITICAL: Skip rate limiting for all auth endpoints to prevent 429 errors
       skip: (req) => {
-        // Always skip in development
-        if (process.env.NODE_ENV !== 'production' || process.env.NODE_ENV === 'development') return true;
-        // Skip for critical endpoints
-        const skipPaths = ['/session', '/verify-role', '/sync-user', '/balance'];
-        return skipPaths.some(path => req.path.includes(path) || req.url.includes(path));
+        // ALWAYS skip in development
+        if (process.env.NODE_ENV !== 'production') return true;
+        if (process.env.NODE_ENV === 'development') return true;
+
+        // In production, skip for critical endpoints that run on every page load
+        const skipPaths = [
+          '/session', '/verify-role', '/sync-user', '/balance',
+          '/profile', '/me', '/clear-role-cache'
+        ];
+        const shouldSkip = skipPaths.some(path =>
+          req.path.includes(path) || req.url.includes(path)
+        );
+
+        return shouldSkip;
       }
     }),
 
