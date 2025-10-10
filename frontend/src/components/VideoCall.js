@@ -13,6 +13,8 @@ import BeautyFilters from './BeautyFilters';
 import StreamQualityConfig from '../utils/StreamQualityConfig';
 import StreamOverlayManager, { StreamOverlay } from './StreamOverlayManager';
 import { UserGroupIcon, VideoCameraIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { fireBeacon } from '../utils/beacon';
+import { analytics } from '../lib/analytics';
 
 const VideoCall = forwardRef(({
   channel,
@@ -38,6 +40,7 @@ const VideoCall = forwardRef(({
   const localVideo = useRef(null);
   const localPreviewVideo = useRef(null);  // Separate ref for preview
   const remoteVideo = useRef(null);
+  const intentionalLeaveRef = useRef(false); // Track intentional call end to skip guard prompts
   const [token, setToken] = useState(initialToken);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(isHost ? !isVoiceOnly : (!isStreaming && !isVoiceOnly));
@@ -102,6 +105,9 @@ const VideoCall = forwardRef(({
   const durationInterval = useRef(null);
   const tokenRefreshTimer = useRef(null);
   const costCalculationInterval = useRef(null);
+
+  // Feature flag: Emergency disable for call leave guards (set VITE_CALL_GUARDS=false to disable)
+  const GUARDS_ENABLED = import.meta.env.VITE_CALL_GUARDS !== 'false';
 
   // Fetch current token balance
   const fetchTokenBalance = useCallback(async () => {
@@ -811,7 +817,10 @@ const VideoCall = forwardRef(({
   // Define cleanup function
   const cleanup = useCallback(async () => {
     console.log('🧹 VideoCall cleanup starting...');
-    
+
+    // Mark as intentional leave to skip guard prompts
+    intentionalLeaveRef.current = true;
+
     try {
       // Clear timers
       if (durationInterval.current) {
@@ -1161,11 +1170,179 @@ const VideoCall = forwardRef(({
     if (fallbackManager.current && localTracks) {
       fallbackManager.current.updateTracks(localTracks);
     }
-    
+
     if (connectionResilience.current && localTracks) {
       connectionResilience.current.setOriginalTracks(localTracks.audioTrack, localTracks.videoTrack);
     }
   }, [localTracks]);
+
+  // Prevent accidental tab close during active call
+  useEffect(() => {
+    if (!GUARDS_ENABLED || !isJoined) return; // Only guard when actively in a call
+
+    const handleBeforeUnload = (e) => {
+      // Track exit attempt for analytics (helps separate rage-quits from accidents)
+      analytics.track?.('call_exit_attempt', {
+        method: 'beforeunload',
+        joined: !!isJoined,
+        duration: callDuration
+      });
+
+      // Skip prompt if user clicked End Call button
+      if (intentionalLeaveRef.current) return;
+
+      e.preventDefault();
+      e.returnValue = 'You have an active call.'; // Text ignored by modern browsers, but required for prompt
+      return e.returnValue;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isJoined, callDuration]);
+
+  // Graceful teardown on tab close (pagehide) - for mobile Safari
+  useEffect(() => {
+    if (!GUARDS_ENABLED || !isJoined) return;
+
+    const handlePageHide = (e) => {
+      // If persisted, page is going into BFCache — still do minimal cleanup
+      const persisted = e.persisted === true;
+
+      try {
+        // Best-effort analytics on unload using centralized beacon helper
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+        fireBeacon(`${backendUrl}/api/telemetry`, {
+          event: 'call_end',
+          reason: persisted ? 'pagehide_bfcache' : 'pagehide',
+          duration: callDuration,
+          ts: Date.now(),
+          userAgent: navigator.userAgent,
+          visibilityState: document.visibilityState,
+          channel: channel || 'unknown',
+        });
+      } catch (err) {
+        // Silently fail - page is closing anyway
+        console.warn('Failed to send pagehide beacon:', err);
+      }
+
+      // Synchronous cleanup (pagehide doesn't wait for async)
+      try {
+        // Stop local tracks immediately
+        if (localTracks.audioTrack) {
+          localTracks.audioTrack.stop();
+          localTracks.audioTrack.close();
+        }
+        if (localTracks.videoTrack) {
+          localTracks.videoTrack.stop();
+          localTracks.videoTrack.close();
+        }
+        if (localTracks.screenTrack) {
+          localTracks.screenTrack.stop();
+          localTracks.screenTrack.close();
+        }
+
+        // Leave Agora channel (synchronous)
+        if (client.current) {
+          client.current.leave();
+        }
+      } catch (err) {
+        console.warn('Failed pagehide cleanup:', err);
+      }
+    };
+
+    const handlePageShow = (e) => {
+      // If we returned from BFCache while a call was "ended", ensure UI state is sane
+      if (e.persisted && !isJoined) {
+        console.log('Returned from BFCache, call was ended');
+        // Optional: show a toast or force a reconnect flow here
+      }
+    };
+
+    window.addEventListener('pagehide', handlePageHide, { once: true });
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, [isJoined, callDuration, localTracks]);
+
+  // Block SPA navigation during active call
+  useEffect(() => {
+    if (!GUARDS_ENABLED || !isJoined) return;
+
+    let lastPromptTs = 0;
+    const allowlist = [/^\/call\/(video|voice)/]; // Don't prompt for in-call routes
+
+    // Listen for React Router navigation events
+    // This works by intercepting the popstate event (back/forward button)
+    const handlePopState = () => {
+      // Skip prompt if user clicked End Call button
+      if (intentionalLeaveRef.current) return;
+
+      // Prevent double prompts within 500ms (browser re-entrancy guard)
+      const now = Date.now();
+      if (now - lastPromptTs < 500) {
+        window.history.pushState(null, '', window.location.pathname);
+        return;
+      }
+      lastPromptTs = now;
+
+      // Check if navigating to allowed in-call route
+      const nextPath = window.location.pathname;
+      const isAllowed = allowlist.some(rx => rx.test(nextPath));
+      if (isAllowed) return;
+
+      const shouldLeave = window.confirm(
+        'Leave the call? You may be disconnected and charged for the session.'
+      );
+
+      if (!shouldLeave) {
+        // User chose to stay - push state back to prevent navigation
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+
+    // Seed a history state so the first Back triggers popstate
+    window.history.pushState(null, '', window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isJoined]);
+
+  // Auto-pause local video when tab is backgrounded (saves data + battery)
+  useEffect(() => {
+    if (!isJoined || !localTracks?.videoTrack) return;
+
+    const handleVisibilityChange = async () => {
+      try {
+        if (document.hidden) {
+          // Tab backgrounded - pause video to save bandwidth
+          await localTracks.videoTrack.setEnabled(false);
+          console.log('📹 Video paused (tab backgrounded)');
+        } else {
+          // Tab foregrounded - resume video if it was enabled before
+          if (isVideoEnabled) {
+            await localTracks.videoTrack.setEnabled(true);
+            console.log('📹 Video resumed (tab foregrounded)');
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to toggle video on visibility change:', err);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isJoined, localTracks?.videoTrack, isVideoEnabled]);
 
   // Toggle audio
   const toggleAudio = useCallback(async () => {
