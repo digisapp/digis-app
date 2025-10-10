@@ -230,6 +230,7 @@ try {
   const creatorDashboardRoutes = require('../routes/creator-dashboard');
   const digitalsRoutes = require('../routes/digitals');
   const metaRoutes = require('../routes/meta');
+  const emergencyRoutes = require('../routes/emergency-reset');
 
   // Apply metrics middleware
   const metricsCollector = require('../utils/metrics-collector');
@@ -322,6 +323,7 @@ try {
   app.use('/api/metrics', rateLimiters.analytics || ((req, res, next) => next()), monitoringRoutes);
   app.use('/api/storage', rateLimiters.upload || ((req, res, next) => next()), storageRoutes);
   app.use('/api', metaRoutes); // Deployment metadata endpoint (no auth required)
+  app.use('/api', emergencyRoutes); // Emergency reset endpoints (NO AUTH, NO RATE LIMITING)
   app.use('/webhooks', webhookRoutes); // No rate limiting for webhooks
   app.use('/webhooks', stripeWebhookRoutes); // No rate limiting for webhooks
   
