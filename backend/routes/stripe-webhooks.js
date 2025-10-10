@@ -67,15 +67,17 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
 
   // Event allowlist check - ignore unknown event types
   if (!ALLOWED_EVENTS.has(event.type)) {
-    console.log(`Ignored unhandled event type: ${event.type}`);
+    console.log(`[WEBHOOK_IGNORED] type=${event.type} id=${event.id}`);
     return res.json({ received: true, message: 'Event type not handled' });
   }
+
+  console.log(`[WEBHOOK_RECEIVED] type=${event.type} id=${event.id} age=${Date.now() - (event.created * 1000)}ms`);
 
   // Check for idempotency with Redis first (faster)
   try {
     const isDuplicate = await isStripeEventDuplicate(event.id);
     if (isDuplicate) {
-      console.log(`Webhook duplicate detected (Redis): ${event.id} (${event.type})`);
+      console.log(`[WEBHOOK_DUPLICATE] source=redis type=${event.type} id=${event.id}`);
       return res.json({
         received: true,
         message: 'Already processed (Redis)',
@@ -95,7 +97,7 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
     );
 
     if (idempotencyCheck.rows.length > 0) {
-      console.log(`Webhook already processed (DB): ${event.id} (${event.type})`);
+      console.log(`[WEBHOOK_DUPLICATE] source=db type=${event.type} id=${event.id} status=${idempotencyCheck.rows[0].processing_status}`);
       return res.json({
         received: true,
         message: 'Already processed',
@@ -134,14 +136,15 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
       );
     });
 
-    console.log('Webhook processed successfully:', event.type, event.id);
+    const processingTime = Date.now() - (event.created * 1000);
+    console.log(`[WEBHOOK_SUCCESS] type=${event.type} id=${event.id} duration=${processingTime}ms`);
     res.json({ received: true, status: 'success' });
 
   } catch (error) {
     processingError = error.message;
     processingStatus = 'failed';
 
-    console.error('Webhook processing failed:', error);
+    console.error(`[WEBHOOK_FAILED] type=${event.type} id=${event.id} error="${error.message}"`);
 
     // Record the failure
     try {

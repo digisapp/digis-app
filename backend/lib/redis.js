@@ -30,6 +30,7 @@ const TTL = {
   MEDIUM: 1800,       // 30 minutes
   LONG: 3600,         // 1 hour
   DAY: 86400,         // 24 hours
+  WEEK: 604800,       // 7 days (for webhook idempotency - Stripe retries for 3 days)
 };
 
 /**
@@ -110,14 +111,17 @@ async function incrementTokenVersion(userId) {
 
 /**
  * Check Stripe webhook idempotency
+ *
+ * TTL is 7 days because Stripe can retry webhooks for up to 3 days
+ * We use 7 days to provide buffer and allow for extended analysis
  */
 async function isStripeEventDuplicate(eventId) {
   const key = `${KEY_PREFIXES.STRIPE_EVENT}${eventId}`;
 
-  // SET NX (only if not exists) with 24 hour TTL
-  const result = await redis.set(key, '1', {
+  // SET NX (only if not exists) with 7 day TTL
+  const result = await redis.set(key, Date.now().toString(), {
     nx: true,  // Only set if not exists
-    ex: TTL.DAY
+    ex: TTL.WEEK  // 7 days - matches Stripe retry window + buffer
   });
 
   // Returns null if key already existed (duplicate)
