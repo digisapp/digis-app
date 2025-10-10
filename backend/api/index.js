@@ -229,7 +229,8 @@ try {
   const storageRoutes = require('../routes/storage');
   const creatorDashboardRoutes = require('../routes/creator-dashboard');
   const digitalsRoutes = require('../routes/digitals');
-  
+  const metaRoutes = require('../routes/meta');
+
   // Apply metrics middleware
   const metricsCollector = require('../utils/metrics-collector');
   app.use(metricsCollector.httpMetricsMiddleware());
@@ -320,6 +321,7 @@ try {
   app.use('/api/digitals', rateLimiters.upload || ((req, res, next) => next()), digitalsRoutes);
   app.use('/api/metrics', rateLimiters.analytics || ((req, res, next) => next()), monitoringRoutes);
   app.use('/api/storage', rateLimiters.upload || ((req, res, next) => next()), storageRoutes);
+  app.use('/api', metaRoutes); // Deployment metadata endpoint (no auth required)
   app.use('/webhooks', webhookRoutes); // No rate limiting for webhooks
   app.use('/webhooks', stripeWebhookRoutes); // No rate limiting for webhooks
   

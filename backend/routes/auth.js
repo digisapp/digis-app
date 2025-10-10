@@ -64,6 +64,7 @@ const { sessions, users: usersCache, TTL } = require('../utils/redis');
 // Sync user from Supabase Auth to our database
 router.post('/sync-user', verifySupabaseToken, async (req, res) => {
   const rid = req.headers['x-request-id'] || uuidv4();
+  const TIMEOUT_MS = 1500; // 1.5 second timeout
 
   // Helper for consistent error responses
   const fail = (code, payload) => {
@@ -71,7 +72,13 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     return res.status(code).json({ success: false, rid, ...payload });
   };
 
-  try {
+  // Timeout promise
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('TIMEOUT')), TIMEOUT_MS);
+  });
+
+  // Main handler promise
+  const handlerPromise = (async () => {
     const { supabaseId, email, metadata } = req.body;
 
     // Verify authentication
@@ -402,13 +409,30 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
                 rawNewUser.role === 'admin'
     };
 
-    res.json({
+    return res.json({
       success: true,
       user: canonicalNewUser,
       isNewUser: true
     });
-    
+  })();
+
+  // Race handler against timeout
+  try {
+    await Promise.race([handlerPromise, timeoutPromise]);
   } catch (error) {
+    // Handle timeout specifically
+    if (error.message === 'TIMEOUT') {
+      console.error('❌ sync-user timeout', { rid, timeoutMs: TIMEOUT_MS });
+      return res.status(504).json({
+        success: false,
+        rid,
+        error: 'TIMEOUT',
+        message: `Request exceeded ${TIMEOUT_MS}ms timeout`,
+        detail: 'Database query took too long. Please try again.'
+      });
+    }
+
+    // Handle other errors
     console.error('❌ sync-user error', {
       rid,
       message: error.message,
@@ -418,6 +442,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       supabaseId: req.body?.supabaseId,
       email: req.body?.email
     });
+
     return res.status(500).json({
       success: false,
       rid,

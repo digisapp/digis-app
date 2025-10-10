@@ -129,6 +129,16 @@ class MetricsCollector {
 
   // Collect platform metrics periodically
   async startCollecting() {
+    // CRITICAL: Allow disabling metrics in production via env flag
+    const METRICS_ENABLED = process.env.METRICS_ENABLED !== 'false';
+
+    if (!METRICS_ENABLED) {
+      console.log('📊 Metrics collection DISABLED via METRICS_ENABLED=false');
+      return;
+    }
+
+    console.log('📊 Metrics collection ENABLED (set METRICS_ENABLED=false to disable)');
+
     setInterval(async () => {
       try {
         await this.collectPlatformMetrics();
