@@ -83,6 +83,56 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /**
+   * FALLBACK: Fetch profile directly from Supabase if backend is unreachable
+   * This provides mobile resilience and offline-first capability
+   */
+  const fetchProfileFromSupabaseDirect = useCallback(async (userId) => {
+    try {
+      console.log('🔄 Trying Supabase direct fallback for user:', userId);
+
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          token_balances!inner(balance, total_earned, total_spent, total_purchased)
+        `)
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      // Compute canonical role client-side (same logic as backend)
+      const canonicalProfile = {
+        ...data,
+        // Token balance from join
+        token_balance: data.token_balances?.balance || 0,
+        total_earned: data.token_balances?.total_earned || 0,
+        total_spent: data.token_balances?.total_spent || 0,
+        total_purchased: data.token_balances?.total_purchased || 0,
+
+        // Canonical role computation (matches backend logic in routes/auth.js)
+        is_creator: data.is_creator === true ||
+                    data.role === 'creator' ||
+                    (data.creator_type !== null && data.creator_type !== undefined),
+        is_admin: data.is_super_admin === true ||
+                  data.role === 'admin'
+      };
+
+      console.log('✅ Supabase direct fallback succeeded:', {
+        username: canonicalProfile.username,
+        is_creator: canonicalProfile.is_creator,
+        is_admin: canonicalProfile.is_admin,
+        token_balance: canonicalProfile.token_balance
+      });
+
+      return canonicalProfile;
+    } catch (error) {
+      console.error('❌ Supabase direct fallback failed:', error);
+      return null;
+    }
+  }, []);
+
+  /**
    * Fetch user profile from backend (legacy - kept for token balance)
    */
   const fetchUserProfile = useCallback(async (currentUser = user) => {
@@ -330,33 +380,63 @@ export const AuthProvider = ({ children }) => {
             } else {
               // Log detailed error response
               const errorData = await response.json().catch(() => ({}));
-              console.error('❌ sync-user failed:', {
+              console.error('❌ sync-user failed (HTTP error):', {
                 status: response.status,
                 error: errorData.error,
                 message: errorData.message,
                 detail: errorData.detail
               });
 
-              // Critical error - don't set partial profile to avoid routing issues
-              // Instead, sign out and show error
+              // TRY FALLBACK: Direct Supabase query for resilience
+              console.log('🔄 Trying Supabase fallback due to HTTP error...');
+              const fallbackProfile = await fetchProfileFromSupabaseDirect(session.user.id);
+
+              if (fallbackProfile && mounted) {
+                console.log('✅ Fallback succeeded despite HTTP error!');
+                setUser(session.user);
+                setProfile(fallbackProfile);
+                saveProfileCache(fallbackProfile, session);
+                setTokenBalance(fallbackProfile.token_balance);
+                setError('');
+                setAuthLoading(false);
+                clearTimeout(timeoutId);
+                return; // Success via fallback!
+              }
+
+              // BOTH FAILED: Sign out to prevent redirect loops
+              console.error('❌ Both backend and Supabase fallback failed');
               setError('Authentication failed. Please try logging in again.');
               setAuthLoading(false);
               clearTimeout(timeoutId);
 
-              // Sign out to prevent redirect loops
               await supabase.auth.signOut();
               setUser(null);
               setProfile(null);
             }
           } catch (syncError) {
-            console.error('❌ Error syncing user (network):', syncError);
+            console.error('❌ Backend sync failed, trying Supabase fallback...', syncError);
 
-            // Critical error - sign out to prevent redirect loops
+            // TRY FALLBACK: Direct Supabase query for mobile resilience
+            const fallbackProfile = await fetchProfileFromSupabaseDirect(session.user.id);
+
+            if (fallbackProfile && mounted) {
+              console.log('✅ Fallback succeeded! Using Supabase data');
+              setUser(session.user);
+              setProfile(fallbackProfile);
+              saveProfileCache(fallbackProfile, session);
+              setTokenBalance(fallbackProfile.token_balance);
+              setError('');
+              setAuthLoading(false);
+              clearTimeout(timeoutId);
+              return; // Success via fallback!
+            }
+
+            // BOTH FAILED: Sign out to prevent redirect loops
+            console.error('❌ Both backend and Supabase fallback failed');
             setError('Authentication failed. Please try logging in again.');
             setAuthLoading(false);
             clearTimeout(timeoutId);
 
-            // Sign out to prevent redirect loops
             await supabase.auth.signOut();
             setUser(null);
             setProfile(null);
