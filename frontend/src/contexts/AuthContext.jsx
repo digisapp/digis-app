@@ -257,6 +257,13 @@ export const AuthProvider = ({ children }) => {
               }
               setAuthLoading(false);
               return;
+            } else {
+              const errorData = await response.json().catch(() => ({}));
+              console.error('❌ AppBootstrap sync failed:', {
+                status: response.status,
+                error: errorData.error,
+                message: errorData.message
+              });
             }
           } catch (error) {
             console.error('Error syncing from AppBootstrap:', error);
@@ -300,6 +307,12 @@ export const AuthProvider = ({ children }) => {
               const data = await response.json();
               const userData = data.user;
 
+              console.log('✅ sync-user success:', {
+                username: userData.username,
+                is_creator: userData.is_creator,
+                is_admin: userData.is_admin
+              });
+
               setUser(session.user);
               setProfile(userData);
               saveProfileCache(userData, session);
@@ -315,9 +328,26 @@ export const AuthProvider = ({ children }) => {
               // Fetch token balance
               setTimeout(() => fetchTokenBalance(session.user), 200);
             } else {
+              // Log detailed error response
+              const errorData = await response.json().catch(() => ({}));
+              console.error('❌ sync-user failed:', {
+                status: response.status,
+                error: errorData.error,
+                message: errorData.message
+              });
+
+              // Fallback: still set user but with limited data
               setUser(session.user);
+              setProfile({
+                id: session.user.id,
+                email: session.user.email,
+                username: session.user.email.split('@')[0],
+                is_creator: false,
+                is_admin: false
+              });
               setError('');
               setAuthLoading(false);
+              clearTimeout(timeoutId); // Clear timeout on error
               setTimeout(() => fetchUserProfile(session.user), 100);
               setTimeout(() => fetchTokenBalance(session.user), 200);
             }
@@ -325,6 +355,7 @@ export const AuthProvider = ({ children }) => {
             console.error('Error syncing user:', syncError);
             setUser(session.user);
             setAuthLoading(false);
+            clearTimeout(timeoutId); // Clear timeout on error
             setTimeout(() => fetchUserProfile(session.user), 100);
             setTimeout(() => fetchTokenBalance(session.user), 200);
           }
@@ -333,13 +364,13 @@ export const AuthProvider = ({ children }) => {
         console.error('Error checking session:', error);
       }
 
-      // Timeout fallback
+      // Timeout fallback - reduced from 30s to 10s
       timeoutId = setTimeout(() => {
         if (mounted && authLoading) {
-          console.log('Auth timeout reached');
+          console.error('⚠️ Auth timeout reached after 10s');
           setAuthLoading(false);
         }
-      }, 30000);
+      }, 10000);
 
       // Subscribe to auth changes
       const unsubscribe = subscribeToAuthChanges(async (event, session) => {
