@@ -276,7 +276,7 @@ const updateAccountStatuses = inngest.createFunction(
     id: 'update-account-statuses',
     name: 'Update Stripe Account Statuses',
     retries: 3,
-    concurrency: { limit: 10 },
+    concurrency: { limit: 5 },
   },
   { event: 'payout.update-account-statuses' },
   async ({ event, step, logger: stepLogger }) => {

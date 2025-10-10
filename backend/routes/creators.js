@@ -794,9 +794,9 @@ router.get('/followers', authenticateToken, async (req, res) => {
   try {
     const creatorId = req.user.supabase_id;
     
-    // Get followers with user details
+    // Get followers with user details (exclude self-following)
     const query = `
-      SELECT 
+      SELECT
         u.id,
         u.supabase_id,
         u.username,
@@ -807,6 +807,7 @@ router.get('/followers', authenticateToken, async (req, res) => {
       FROM followers f
       JOIN users u ON u.supabase_id = f.follower_id
       WHERE f.creator_id = $1
+        AND f.follower_id != f.creator_id
       ORDER BY f.created_at DESC
     `;
     

@@ -3,35 +3,33 @@ import Cropper from 'react-easy-crop';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon, PhotoIcon, CameraIcon } from '@heroicons/react/24/outline';
 
-const ImageCropperModal = ({ 
-  isOpen, 
-  onClose, 
-  imageSrc, 
-  onCropComplete, 
-  aspectRatio = 1, 
-  cropShape = 'rect',
+const ImageCropperModal = ({
+  isOpen,
+  onClose,
+  imageSrc,
+  onCropComplete,
+  aspectRatio = 1,
+  cropShape = 'round', // ⬅ circle crop
   title = 'Crop Image',
-  showPreview = true 
+  showPreview = true
 }) => {
+  // Initialize crop at center of image
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [rotation, setRotation] = useState(0);
 
-  const onCropChange = (crop) => {
-    setCrop(crop);
-  };
+  // Reset crop position when modal opens or image changes
+  React.useEffect(() => {
+    if (isOpen && imageSrc) {
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setRotation(0);
+    }
+  }, [isOpen, imageSrc]);
 
-  const onZoomChange = (zoom) => {
-    setZoom(zoom);
-  };
-
-  const onRotationChange = (rotation) => {
-    setRotation(rotation);
-  };
-
-  const onCropAreaComplete = useCallback((croppedArea, croppedAreaPixels) => {
-    setCroppedAreaPixels(croppedAreaPixels);
+  const onCropAreaComplete = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels);
   }, []);
 
   const createImage = (url) =>
@@ -43,9 +41,7 @@ const ImageCropperModal = ({
       image.src = url;
     });
 
-  const getRadianAngle = (degreeValue) => {
-    return (degreeValue * Math.PI) / 180;
-  };
+  const getRadianAngle = (deg) => (deg * Math.PI) / 180;
 
   const rotateSize = (width, height, rotation) => {
     const rotRad = getRadianAngle(rotation);
@@ -57,8 +53,8 @@ const ImageCropperModal = ({
     };
   };
 
-  const getCroppedImg = async (imageSrc, pixelCrop, rotation = 0) => {
-    const image = await createImage(imageSrc);
+  const getCroppedImg = async (src, pixelCrop, rot = 0) => {
+    const image = await createImage(src);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -69,7 +65,7 @@ const ImageCropperModal = ({
     canvas.height = safeArea;
 
     ctx.translate(safeArea / 2, safeArea / 2);
-    ctx.rotate(getRadianAngle(rotation));
+    ctx.rotate(getRadianAngle(rot));
     ctx.translate(-safeArea / 2, -safeArea / 2);
 
     ctx.drawImage(
@@ -96,8 +92,7 @@ const ImageCropperModal = ({
           return;
         }
         blob.name = 'cropped.jpeg';
-        const fileUrl = URL.createObjectURL(blob);
-        resolve({ blob, url: fileUrl });
+        resolve({ blob, url: URL.createObjectURL(blob) });
       }, 'image/jpeg', 0.95);
     });
   };
@@ -133,11 +128,11 @@ const ImageCropperModal = ({
             onClick={onClose}
           />
 
-          {/* Modal */}
+          {/* Modal (no scale transform to avoid pointer math issues) */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
             className="fixed inset-x-4 top-[10%] max-h-[80vh] max-w-2xl mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl z-[10000] overflow-y-auto overflow-x-hidden"
           >
             {/* Header */}
@@ -157,30 +152,41 @@ const ImageCropperModal = ({
             {/* Content */}
             <div className="p-6 space-y-6">
               {/* Cropper Area */}
-              <div className="relative h-64 sm:h-80 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden">
-                <Cropper
-                  image={imageSrc}
-                  crop={crop}
-                  zoom={zoom}
-                  rotation={rotation}
-                  aspect={aspectRatio}
-                  cropShape={cropShape}
-                  onCropChange={onCropChange}
-                  onCropComplete={onCropAreaComplete}
-                  onZoomChange={onZoomChange}
-                  onRotationChange={onRotationChange}
-                  showGrid={false}
-                  style={{
-                    containerStyle: {
-                      backgroundColor: '#1f2937'
-                    }
-                  }}
-                />
+              <div className="relative h-64 sm:h-80 bg-gray-800 rounded-xl overflow-hidden">
+                {/* Transform reset wrapper ensures accurate pointer math */}
+                <div className="[transform:none] w-full h-full relative">
+                  {imageSrc && (
+                    <Cropper
+                      image={imageSrc}
+                      crop={crop}
+                      zoom={zoom}
+                      rotation={rotation}
+                      aspect={aspectRatio}
+                      cropShape={cropShape}
+                      onCropChange={setCrop}
+                      onCropComplete={onCropAreaComplete}
+                      onZoomChange={setZoom}
+                      onRotationChange={setRotation}
+                      showGrid={false}
+                      restrictPosition={false}
+                      zoomWithScroll={true}
+                      objectFit="contain"
+                      // Keep styles minimal; let the lib size itself to the container
+                      style={{
+                        cropAreaStyle: {
+                          border: '2px solid rgba(255, 255, 255, 0.9)',
+                          cursor: 'move',
+                          color: 'rgba(255, 255, 255, 0.6)'
+                        }
+                      }}
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Controls */}
               <div className="space-y-4">
-                {/* Zoom Control */}
+                {/* Zoom */}
                 <div className="space-y-2">
                   <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
                     <span>Zoom</span>
@@ -200,7 +206,7 @@ const ImageCropperModal = ({
                   />
                 </div>
 
-                {/* Rotation Control */}
+                {/* Rotation */}
                 <div className="space-y-2">
                   <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
                     <span>Rotation</span>
@@ -220,25 +226,16 @@ const ImageCropperModal = ({
                   />
                 </div>
 
-                {/* Aspect Ratio Info */}
+                {/* Aspect info */}
                 <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3">
                   <p className="text-sm text-purple-700 dark:text-purple-300">
-                    {aspectRatio === 1 ? (
-                      <>
-                        <PhotoIcon className="inline w-4 h-4 mr-1" />
-                        Square format (1:1) - Perfect for profile pictures
-                      </>
-                    ) : (
-                      <>
-                        <PhotoIcon className="inline w-4 h-4 mr-1" />
-                        Custom format ({aspectRatio.toFixed(2)})
-                      </>
-                    )}
+                    <PhotoIcon className="inline w-4 h-4 mr-1" />
+                    {aspectRatio === 1 ? 'Square format (1:1) - Perfect for profile pictures' : `Custom format (${aspectRatio.toFixed(2)})`}
                   </p>
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Actions */}
               <div className="flex justify-between">
                 <button
                   onClick={handleReset}

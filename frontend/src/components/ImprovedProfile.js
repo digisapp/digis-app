@@ -77,6 +77,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [pic, setPic] = useState('');
+  const [creatorCardImage, setCreatorCardImage] = useState(''); // Creator Card Picture (9:16 vertical)
   const [bannerUrl, setBannerUrl] = useState('');
   const [username, setUsername] = useState('');
   const [creatorType, setCreatorType] = useState('');
@@ -93,7 +94,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
   // Image cropper state
   const [showImageCropper, setShowImageCropper] = useState(false);
   const [tempImageSrc, setTempImageSrc] = useState(null);
-  const [cropperMode, setCropperMode] = useState('profile'); // 'profile', 'banner'
+  const [cropperMode, setCropperMode] = useState('profile'); // 'profile', 'card', 'banner'
   const [cropAspectRatio, setCropAspectRatio] = useState(1);
   
   // Settings state
@@ -152,6 +153,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [previewImage, setPreviewImage] = useState('');
+  const [previewCardImage, setPreviewCardImage] = useState('');
   const [previewBanner, setPreviewBanner] = useState('');
   const [stats, setStats] = useState({
     totalViews: 0,
@@ -211,6 +213,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         setDisplayName(data.display_name || data.full_name || '');
         setBio(data.bio || '');
         setPic(data.profile_pic_url || '');
+        setCreatorCardImage(data.creator_card_image || '');
         setBannerUrl(data.banner_url || '');
         setUsername(data.username || '');
         setCreatorType(data.creator_type || '');
@@ -218,6 +221,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         setState(data.state || '');
         setCountry(data.country || '');
         setPreviewImage(data.profile_pic_url || '');
+        setPreviewCardImage(data.creator_card_image || '');
         setPreviewBanner(data.banner_url || '');
         setSocialLinks(data.social_links || {
           instagram: '',
@@ -343,7 +347,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
       if (imageType === 'profile') {
         setCropAspectRatio(1); // Square for profile
       } else if (imageType === 'card') {
-        setCropAspectRatio(4/5); // Portrait for creator card
+        setCropAspectRatio(9/16); // Vertical for creator card (9:16 portrait)
       } else if (imageType === 'banner') {
         setCropAspectRatio(3/1); // Wide for banner
       }
@@ -369,6 +373,10 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         setPic(downloadURL);
         setPreviewImage(downloadURL);
         toast.success('Profile picture updated!');
+      } else if (cropperMode === 'card') {
+        setCreatorCardImage(downloadURL);
+        setPreviewCardImage(downloadURL);
+        toast.success('Creator card picture updated!');
       } else if (cropperMode === 'banner') {
         setBannerUrl(downloadURL);
         setPreviewBanner(downloadURL);
@@ -383,8 +391,9 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         username: username.trim() || user.email.split('@')[0],
         display_name: displayName,
         bio: bio.trim(),
-        profile_pic_url: downloadURL, // Use the new profile pic URL
-        banner_url: bannerUrl,
+        profile_pic_url: cropperMode === 'profile' ? downloadURL : pic,
+        creator_card_image: cropperMode === 'card' ? downloadURL : creatorCardImage,
+        banner_url: cropperMode === 'banner' ? downloadURL : bannerUrl,
         is_creator: isCreator,
         social_links: socialLinks
       };
@@ -509,6 +518,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         display_name: displayName,
         bio: bio.trim(),
         profile_pic_url: pic,
+        creator_card_image: creatorCardImage,
         banner_url: bannerUrl,
         is_creator: isCreator,
         social_links: socialLinks,
@@ -1003,6 +1013,57 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                           {bio.length}/500 characters
                         </p>
                       </div>
+
+                      {/* Creator Card Picture - Only for Creators */}
+                      {isCreator && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Creator Card Picture (9:16 Vertical)
+                          </label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                            This vertical image appears on your creator cards on the Explore page. Different from your circular profile picture.
+                          </p>
+                          <div className="flex items-start gap-4">
+                            {/* Preview */}
+                            {(previewCardImage || creatorCardImage) ? (
+                              <div className="w-24 h-40 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-600 shadow-md">
+                                <img
+                                  src={previewCardImage || creatorCardImage}
+                                  alt="Creator Card Preview"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-24 h-40 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+                                <PhotoIcon className="w-8 h-8 text-white" />
+                              </div>
+                            )}
+
+                            {/* Upload Button */}
+                            <div className="flex-1">
+                              <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                                <CameraIcon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  {(previewCardImage || creatorCardImage) ? 'Change Card Picture' : 'Upload Card Picture'}
+                                </span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleImageUpload(e, 'card')}
+                                  className="hidden"
+                                  id="card-image-upload"
+                                />
+                              </label>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                Recommended: 640 x 1136 pixels (9:16 ratio)
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Max file size: 5MB
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
 
@@ -1345,6 +1406,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         cropShape={cropperMode === 'profile' ? 'round' : 'rect'}
         title={
           cropperMode === 'profile' ? 'Crop Profile Picture' :
+          cropperMode === 'card' ? 'Crop Creator Card Picture (9:16)' :
           'Crop Banner Image'
         }
       />

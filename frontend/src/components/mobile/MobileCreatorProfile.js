@@ -79,6 +79,7 @@ const MobileCreatorProfile = ({
   const [fanNotes, setFanNotes] = useState('');
 
   // Real data states
+  const [creatorProfile, setCreatorProfile] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [videos, setVideos] = useState([]);
   const [recordings, setRecordings] = useState([]);
@@ -86,6 +87,7 @@ const MobileCreatorProfile = ({
   const [shopProducts, setShopProducts] = useState([]);
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState({
+    profile: true,
     photos: true,
     videos: true,
     recordings: true,
@@ -120,35 +122,40 @@ const MobileCreatorProfile = ({
   const headerScale = useTransform(scrollY, [0, 200], [1, prefersReducedMotion ? 1 : 1.1]);
 
   // Memoize creator data for performance
-  const creatorData = useMemo(() => ({
-    id: creatorId,
-    username: creator?.username || 'alexcreator',
-    displayName: creator?.displayName || 'Alex Creator',
-    bio: creator?.bio || 'Digital artist & content creator 🎨✨ Creating amazing experiences for my fans!',
-    avatarUrl: creator?.avatarUrl || null,
-    coverUrl: creator?.coverUrl || '/api/placeholder/400/200',
-    isVerified: true,
-    followers: 15420,
-    subscribers: 3200,
-    contentCount: 248,
-    rating: 4.9,
-    responseTime: '< 2 hours',
-    videoCallRate: 50,
-    voiceCallRate: 30,
-    messageRate: 5,
-    isOnline: true,
-    isLive: false, // Set this based on actual live status
-    lastSeen: 'Active now',
-    messagePrice: creator?.messagePrice || 5,
-    interests: ['Art', 'Music', 'Gaming', 'Fashion'],
-    subscriptionPrice: creator?.subscriptionPrice || 400, // Subscription price in tokens (was $19.99, now 400 tokens)
-    subscriptionBenefits: [
-      'Exclusive content',
-      'Priority messages',
-      'Monthly video call',
-      'Custom content requests'
-    ]
-  }), [creatorId, creator]);
+  const creatorData = useMemo(() => {
+    // Use creatorProfile data if available, otherwise fall back to creator prop
+    const profile = creatorProfile || creator || {};
+
+    return {
+      id: creatorId,
+      username: profile.username || creator?.username || 'creator',
+      displayName: profile.display_name || profile.displayName || profile.username || creator?.displayName || 'Creator',
+      bio: profile.bio || creator?.bio || 'Content creator',
+      avatarUrl: profile.profilePicUrl || profile.avatar_url || profile.avatarUrl || creator?.avatarUrl || null,
+      coverUrl: profile.banner_url || profile.cover_photo || profile.coverUrl || creator?.coverUrl || '/api/placeholder/400/200',
+      isVerified: profile.is_verified || profile.isVerified || false,
+      followers: profile.followerCount || profile.follower_count || profile.followers || 0,
+      subscribers: profile.subscriber_count || profile.subscribers || 0,
+      contentCount: profile.content_count || profile.contentCount || 0,
+      rating: profile.rating || 0,
+      responseTime: profile.response_time || profile.responseTime || 'N/A',
+      videoCallRate: profile.videoPrice || profile.video_call_rate || profile.videoCallRate || 50,
+      voiceCallRate: profile.voicePrice || profile.voice_call_rate || profile.voiceCallRate || 30,
+      messageRate: profile.messagePrice || profile.message_rate || profile.messageRate || 5,
+      isOnline: profile.is_online || profile.isOnline || false,
+      isLive: profile.is_live || profile.isLive || false,
+      lastSeen: profile.last_seen || profile.lastSeen || 'Unknown',
+      messagePrice: profile.messagePrice || profile.message_price || creator?.messagePrice || 5,
+      interests: profile.interests || ['Content'],
+      subscriptionPrice: profile.subscription_price || profile.subscriptionPrice || creator?.subscriptionPrice || 400,
+      subscriptionBenefits: profile.subscription_benefits || profile.subscriptionBenefits || [
+        'Exclusive content',
+        'Priority messages',
+        'Monthly video call',
+        'Custom content requests'
+      ]
+    };
+  }, [creatorId, creator, creatorProfile]);
 
   // WebSocket event handlers for real-time updates
   useEffect(() => {
@@ -278,6 +285,42 @@ const MobileCreatorProfile = ({
       setVideoLoadError(true);
     }
   }, [isLiveNow, liveStreamData?.streamUrl]);
+
+  // Fetch creator profile data
+  useEffect(() => {
+    const fetchCreatorProfile = async () => {
+      if (!creatorId && !creator?.username) return;
+
+      try {
+        setLoading(prev => ({ ...prev, profile: true }));
+
+        // Use username if available, otherwise use creatorId
+        const identifier = creator?.username || creatorId;
+        const BASE_URL = import.meta.env.VITE_BACKEND_URL;
+        const apiUrl = `${BASE_URL}/api/users/public/creator/${identifier}`;
+
+        console.log('MobileCreatorProfile: Fetching profile for:', identifier);
+
+        const response = await fetch(apiUrl);
+
+        if (response.ok) {
+          const data = await response.json();
+          const profileData = data.creator || data;
+          console.log('MobileCreatorProfile: Profile data received:', profileData);
+          setCreatorProfile(profileData);
+        } else {
+          console.error('Failed to fetch creator profile:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching creator profile:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, profile: false }));
+        setIsLoadingProfile(false);
+      }
+    };
+
+    fetchCreatorProfile();
+  }, [creatorId, creator?.username]);
 
   // Fetch all real content data
   useEffect(() => {
@@ -437,12 +480,90 @@ const MobileCreatorProfile = ({
   // Optimized event handlers with useCallback
   const handleFollow = useCallback(() => {
     triggerHaptic('medium');
+
+    // Check if user is authenticated
+    if (!user) {
+      openBottomSheet({
+        title: 'Sign Up Required',
+        content: (
+          <div className="space-y-4 p-4">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
+              <p className="text-gray-700 mb-3">
+                Create a free account to follow {creatorData.displayName} and other creators
+              </p>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>✓ Follow your favorite creators</p>
+                <p>✓ Get notified when they go live</p>
+                <p>✓ Access exclusive content</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                triggerHaptic('success');
+                openBottomSheet(null);
+                window.location.href = '/signup';
+              }}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
+            >
+              Sign Up
+            </button>
+            <button
+              onClick={() => openBottomSheet(null)}
+              className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        )
+      });
+      return;
+    }
+
     setIsFollowing(prev => !prev);
     onFollow?.(!isFollowing);
-  }, [isFollowing, onFollow, triggerHaptic]);
+  }, [user, isFollowing, onFollow, triggerHaptic, openBottomSheet, creatorData.displayName]);
 
   const handleSubscribe = useCallback(() => {
     triggerHaptic('medium');
+
+    // Check if user is authenticated
+    if (!user) {
+      openBottomSheet({
+        title: 'Sign Up Required',
+        content: (
+          <div className="space-y-4 p-4">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
+              <p className="text-gray-700 mb-3">
+                Create a free account to subscribe to {creatorData.displayName} and access exclusive benefits
+              </p>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>✓ Exclusive subscriber content</p>
+                <p>✓ Priority messages</p>
+                <p>✓ Special perks</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                triggerHaptic('success');
+                openBottomSheet(null);
+                window.location.href = '/signup';
+              }}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
+            >
+              Sign Up
+            </button>
+            <button
+              onClick={() => openBottomSheet(null)}
+              className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        )
+      });
+      return;
+    }
+
     // Show subscription cost popup
     openBottomSheet({
       title: `Subscribe to ${creatorData.displayName}`,
@@ -477,7 +598,7 @@ const MobileCreatorProfile = ({
         </div>
       )
     });
-  }, [onSubscribe, triggerHaptic, openBottomSheet, creatorData]);
+  }, [user, onSubscribe, triggerHaptic, openBottomSheet, creatorData]);
 
   const handleStartVideoCall = useCallback(async () => {
     triggerHaptic('heavy');
@@ -485,7 +606,7 @@ const MobileCreatorProfile = ({
     // Check if user is authenticated
     if (!user) {
       openBottomSheet({
-        title: 'You need to have a Digis Account to connect with Creators',
+        title: 'Sign Up Required',
         content: (
           <div className="space-y-4 p-4">
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
@@ -507,7 +628,7 @@ const MobileCreatorProfile = ({
               }}
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
             >
-              Click to Sign Up
+              Sign Up
             </button>
             <button
               onClick={() => openBottomSheet(null)}
@@ -638,7 +759,7 @@ const MobileCreatorProfile = ({
     // Check if user is authenticated
     if (!user) {
       openBottomSheet({
-        title: 'You need to have a Digis Account to connect with Creators',
+        title: 'Sign Up Required',
         content: (
           <div className="space-y-4 p-4">
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
@@ -660,7 +781,7 @@ const MobileCreatorProfile = ({
               }}
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
             >
-              Click to Sign Up
+              Sign Up
             </button>
             <button
               onClick={() => openBottomSheet(null)}
@@ -788,6 +909,45 @@ const MobileCreatorProfile = ({
   const handleSendMessage = useCallback(() => {
     triggerHaptic('light');
 
+    // Check if user is authenticated
+    if (!user) {
+      openBottomSheet({
+        title: 'Sign Up Required',
+        content: (
+          <div className="space-y-4 p-4">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
+              <p className="text-gray-700 mb-3">
+                Create a free account to connect with {creatorData.displayName} and other creators
+              </p>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>✓ Video & voice calls</p>
+                <p>✓ Exclusive content</p>
+                <p>✓ Direct messaging</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                triggerHaptic('success');
+                openBottomSheet(null);
+                // Navigate to sign up page
+                window.location.href = '/signup';
+              }}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
+            >
+              Sign Up
+            </button>
+            <button
+              onClick={() => openBottomSheet(null)}
+              className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        )
+      });
+      return;
+    }
+
     // If message has a price, show pricing first
     if (creatorData.messagePrice > 0) {
       openBottomSheet({
@@ -829,7 +989,7 @@ const MobileCreatorProfile = ({
       // Free messaging - go directly
       onSendMessage?.();
     }
-  }, [creatorData.messagePrice, creatorData.displayName, onSendMessage, triggerHaptic, openBottomSheet]);
+  }, [user, creatorData.messagePrice, creatorData.displayName, onSendMessage, triggerHaptic, openBottomSheet]);
 
   const handleShare = useCallback(async () => {
     triggerHaptic('light');
@@ -1943,6 +2103,44 @@ const MobileCreatorProfile = ({
           </motion.button>
           <motion.button
             onClick={() => {
+              // Check if user is authenticated
+              if (!user) {
+                openBottomSheet({
+                  title: 'Sign Up Required',
+                  content: (
+                    <div className="space-y-4 p-4">
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
+                        <p className="text-gray-700 mb-3">
+                          Create a free account to send tips to {creatorData.displayName} and support your favorite creators
+                        </p>
+                        <div className="space-y-2 text-sm text-gray-600">
+                          <p>✓ Send tips to creators</p>
+                          <p>✓ Support exclusive content</p>
+                          <p>✓ Connect with your favorites</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          triggerHaptic('success');
+                          openBottomSheet(null);
+                          window.location.href = '/signup';
+                        }}
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
+                      >
+                        Sign Up
+                      </button>
+                      <button
+                        onClick={() => openBottomSheet(null)}
+                        className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )
+                });
+                return;
+              }
+
               triggerHaptic('medium');
               openBottomSheet({
                 title: 'Send a Tip',
@@ -1986,6 +2184,44 @@ const MobileCreatorProfile = ({
           </motion.button>
           <motion.button
             onClick={() => {
+              // Check if user is authenticated
+              if (!user) {
+                openBottomSheet({
+                  title: 'Sign Up Required',
+                  content: (
+                    <div className="space-y-4 p-4">
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
+                        <p className="text-gray-700 mb-3">
+                          Create a free account to schedule sessions with {creatorData.displayName} and other creators
+                        </p>
+                        <div className="space-y-2 text-sm text-gray-600">
+                          <p>✓ Schedule video & voice calls</p>
+                          <p>✓ Book sessions in advance</p>
+                          <p>✓ Get reminders for upcoming calls</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          triggerHaptic('success');
+                          openBottomSheet(null);
+                          window.location.href = '/signup';
+                        }}
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold"
+                      >
+                        Sign Up
+                      </button>
+                      <button
+                        onClick={() => openBottomSheet(null)}
+                        className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )
+                });
+                return;
+              }
+
               triggerHaptic('medium');
               // Navigate to schedule page or open schedule modal
               openBottomSheet({

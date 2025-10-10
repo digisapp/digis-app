@@ -6,6 +6,7 @@ import {
   XMarkIcon,
   VideoCameraIcon
 } from '@heroicons/react/24/outline';
+import CallWaitingModal from './CallWaitingModal';
 
 const VideoCallModal = ({
   isOpen,
@@ -17,24 +18,52 @@ const VideoCallModal = ({
 }) => {
   const navigate = useNavigate();
   const [showInsufficientTokens, setShowInsufficientTokens] = useState(false);
+  const [showWaitingModal, setShowWaitingModal] = useState(false);
 
   const handleStartCall = () => {
-    // Check if user has any tokens (minimum check)
-    if (tokenBalance < tokenCost) {
+    // Check if user has sufficient tokens
+    // Convert to numbers to handle both string and number types
+    const balance = Number(tokenBalance) || 0;
+    const cost = Number(tokenCost) || 0;
+
+    console.log('Token balance check:', { balance, cost, tokenBalance, tokenCost });
+
+    if (balance < cost) {
       setShowInsufficientTokens(true);
       return;
     }
 
+    // Close this modal and show waiting modal
+    onClose();
+    setShowWaitingModal(true);
+
+    // Call the parent callback to initiate the call
     if (onCallStart) {
       onCallStart();
     }
   };
 
-  if (!isOpen) return null;
+  const handleCallTimeout = () => {
+    console.log('Call timed out - creator did not answer');
+    // The CallWaitingModal will handle showing the no-answer UI
+  };
 
-  return ReactDOM.createPortal(
-    <AnimatePresence>
-      {isOpen && (
+  const handleCallDeclined = () => {
+    console.log('Call declined by creator');
+    // The CallWaitingModal will handle showing the declined UI
+  };
+
+  const handleWaitingModalClose = () => {
+    setShowWaitingModal(false);
+  };
+
+  if (!isOpen && !showWaitingModal) return null;
+
+  return (
+    <>
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {isOpen && (
         <>
           {/* Backdrop */}
           <motion.div
@@ -109,7 +138,7 @@ const VideoCallModal = ({
 
                 {/* Call info card */}
                 <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-4 mb-4 border border-violet-200/50 dark:border-violet-700/30">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <VideoCameraIcon className="w-5 h-5 text-violet-600 dark:text-violet-400" />
                       <span className="font-medium text-gray-900 dark:text-white">Video Call</span>
@@ -117,6 +146,10 @@ const VideoCallModal = ({
                     <span className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
                       {tokenCost} tokens/min
                     </span>
+                  </div>
+                  {/* Token balance display */}
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Your balance: <span className="font-semibold text-gray-900 dark:text-white">{Number(tokenBalance).toLocaleString()}</span> tokens
                   </div>
                 </div>
 
@@ -158,10 +191,23 @@ const VideoCallModal = ({
               </div>
             </div>
           </motion.div>
-        </>
-      )}
-    </AnimatePresence>,
-    document.body
+          </>
+        )}
+      </AnimatePresence>,
+      document.body
+    )}
+
+    {/* Call Waiting Modal */}
+    <CallWaitingModal
+      isOpen={showWaitingModal}
+      onClose={handleWaitingModalClose}
+      creator={creator}
+      callType="video"
+      onTimeout={handleCallTimeout}
+      onCreatorDeclined={handleCallDeclined}
+      maxWaitTime={30000}
+    />
+  </>
   );
 };
 

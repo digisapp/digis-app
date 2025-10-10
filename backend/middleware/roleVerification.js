@@ -22,16 +22,21 @@ async function getUserRole(supabaseId) {
   }
 
   try {
-    // Query database for user role
+    // Query database for user role and profile data
     const query = `
-      SELECT 
+      SELECT
         supabase_id as id,
         email,
         is_creator,
         is_super_admin as is_admin,
         role,
-        username
-      FROM users 
+        username,
+        display_name,
+        profile_pic_url,
+        bio,
+        creator_type,
+        verified
+      FROM users
       WHERE supabase_id = $1
       LIMIT 1
     `;
@@ -51,11 +56,16 @@ async function getUserRole(supabaseId) {
       isAdmin: user.is_admin === true || user.role === 'admin',
       role: user.role,
       username: user.username,
+      display_name: user.display_name,
+      profile_pic_url: user.profile_pic_url,
+      bio: user.bio,
+      creator_type: user.creator_type,
+      verified: user.verified,
       // Determine primary role
-      primaryRole: user.is_admin || user.role === 'admin' 
-        ? 'admin' 
-        : user.is_creator 
-        ? 'creator' 
+      primaryRole: user.is_admin || user.role === 'admin'
+        ? 'admin'
+        : user.is_creator
+        ? 'creator'
         : 'fan'
     };
     

@@ -821,38 +821,55 @@ router.get('/public/creators', async (req, res) => {
 
 // Get creators list with enhanced filtering
 router.get('/creators', async (req, res) => {
-  const { 
-    limit = 20, 
+  const {
+    limit = 20,
     page = 1,
-    offset = 0, 
+    offset = 0,
     category = 'all',
     languages = '',
     sort = 'popular',
     sortBy,
-    sortOrder = 'DESC' 
+    sortOrder = 'DESC'
   } = req.query;
-  
+
   // Calculate actual offset from page number
   const actualLimit = parseInt(limit);
   const actualOffset = page ? (parseInt(page) - 1) * actualLimit : parseInt(offset);
-  
-  logger.info('👥 Creators GET request:', { 
-    limit: actualLimit, 
+
+  logger.info('👥 Creators GET request:', {
+    limit: actualLimit,
     offset: actualOffset,
     page,
     category,
     languages,
     sort,
-    sortBy, 
+    sortBy,
     sortOrder,
     timestamp: new Date().toISOString()
   });
-  
+
   try {
     // Build WHERE clause based on filters
     let whereConditions = ['u.is_creator = TRUE'];
     let queryParams = [];
     let paramIndex = 1;
+
+    // Exclude current user if authenticated (creators shouldn't see themselves)
+    if (req.headers.authorization) {
+      try {
+        const token = req.headers.authorization.replace('Bearer ', '');
+        const { supabase } = require('../utils/supabase');
+        const { data: { user } } = await supabase.auth.getUser(token);
+        if (user) {
+          whereConditions.push(`u.supabase_id != $${paramIndex}`);
+          queryParams.push(user.id);
+          paramIndex++;
+        }
+      } catch (err) {
+        // Not authenticated or invalid token - ignore and show all creators
+        logger.debug('No valid auth token for creators list filter');
+      }
+    }
     
     // Category filter
     if (category && category !== 'all') {
@@ -1844,7 +1861,7 @@ router.post('/send-tip', authenticateToken, async (req, res) => {
 // Follow/unfollow creator
 router.post('/follow', authenticateToken, async (req, res) => {
   const { creatorUsername } = req.body;
-  
+
   if (!creatorUsername) {
     return res.status(400).json({
       error: 'Creator username is required',
@@ -1853,7 +1870,7 @@ router.post('/follow', authenticateToken, async (req, res) => {
   }
 
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -1873,6 +1890,15 @@ router.post('/follow', authenticateToken, async (req, res) => {
 
     const creatorId = creatorResult.rows[0].id;
     const creatorSupabaseId = creatorResult.rows[0].supabase_id;
+
+    // Prevent users from following themselves
+    if (creatorSupabaseId === req.user.supabase_id) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        error: 'You cannot follow yourself',
+        timestamp: new Date().toISOString()
+      });
+    }
 
     // Check if already following
     const existingFollow = await client.query(
@@ -1995,7 +2021,7 @@ router.get('/creator/:username/followers', async (req, res) => {
 // Update online status
 router.post('/online-status', authenticateToken, async (req, res) => {
   const { isOnline } = req.body;
-  
+
   try {
     await pool.query(
       `INSERT INTO user_online_status (user_id, is_online, last_seen, updated_at)
@@ -2014,6 +2040,49 @@ router.post('/online-status', authenticateToken, async (req, res) => {
     logger.error('❌ Update online status error:', error);
     res.status(500).json({
       error: 'Failed to update online status',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Update call status (declined, timeout, accepted)
+router.post('/call-status', authenticateToken, async (req, res) => {
+  const { callId, status, fanUserId } = req.body;
+
+  if (!status || !fanUserId) {
+    return res.status(400).json({
+      error: 'Status and fanUserId are required',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  try {
+    logger.info(`📞 Call status update: ${status} for call ${callId} from creator ${req.user.supabase_id} to fan ${fanUserId}`);
+
+    // Send real-time notification to the fan via WebSocket
+    sendNotification(fanUserId, {
+      type: 'call_status',
+      status: status, // 'declined', 'timeout', 'accepted'
+      callId: callId,
+      creatorId: req.user.supabase_id,
+      timestamp: new Date().toISOString(),
+      message: status === 'declined'
+        ? 'Creator is currently unavailable'
+        : status === 'timeout'
+        ? 'Creator did not respond'
+        : 'Creator accepted your call'
+    });
+
+    res.json({
+      success: true,
+      status: status,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('❌ Update call status error:', error);
+    res.status(500).json({
+      error: 'Failed to update call status',
       details: error.message,
       timestamp: new Date().toISOString()
     });

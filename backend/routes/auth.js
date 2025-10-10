@@ -864,7 +864,7 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
       permissions.push('fan:all');
     }
 
-    // Return unified session object
+    // Return unified session object with full profile data
     return res.json({
       success: true,
       session: {
@@ -879,7 +879,12 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
         user: {
           id: userRole.id,
           email: userRole.email,
-          username: userRole.username
+          username: userRole.username,
+          display_name: userRole.display_name,
+          profile_pic_url: userRole.profile_pic_url,
+          bio: userRole.bio,
+          creator_type: userRole.creator_type,
+          verified: userRole.verified
         }
       }
     });

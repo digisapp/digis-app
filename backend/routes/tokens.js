@@ -8,6 +8,13 @@ const { logger } = require('../utils/secureLogger');
 const { observability, analyticsClient } = require('../utils/supabase-admin-v2');
 const { GIFT_CATALOG, getGiftById } = require('../utils/giftCatalog');
 const { updateUserTier } = require('../utils/gifterTiers');
+const {
+  getNextPayoutDate,
+  getAvailableBalance,
+  createWithdrawalRequest,
+  cancelWithdrawalRequest,
+  PAYOUT_CONFIG
+} = require('../utils/payout-scheduler');
 const router = express.Router();
 
 const TOKEN_VALUE = 0.05; // $0.05 per token
@@ -1157,9 +1164,211 @@ router.get('/analytics/predict-refill', authenticateToken, async (req, res) => {
   }
 });
 
-// Creator payout
+// Get creator earnings summary (bi-monthly payout system)
+router.get('/earnings', authenticateToken, async (req, res) => {
+  try {
+    const userResult = await pool.query(
+      'SELECT is_creator FROM users WHERE supabase_id = $1',
+      [req.user.supabase_id]
+    );
+
+    if (userResult.rows.length === 0 || !userResult.rows[0].is_creator) {
+      return res.status(403).json({
+        error: 'Only creators can view earnings',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Get earnings summary using database function
+    const summaryResult = await pool.query(
+      'SELECT * FROM get_creator_earnings_summary($1)',
+      [req.user.supabase_id]
+    );
+
+    const summary = summaryResult.rows[0];
+    const nextPayoutDate = getNextPayoutDate();
+
+    res.json({
+      success: true,
+      earnings: {
+        totalEarned: parseInt(summary.total_earned || 0),
+        totalPaidOut: parseInt(summary.total_paid_out || 0),
+        availableBalance: parseInt(summary.available_balance || 0),
+        bufferedEarnings: parseInt(summary.buffered_earnings || 0),
+        pendingWithdrawals: parseInt(summary.pending_withdrawals || 0)
+      },
+      payoutSchedule: {
+        nextPayoutDate: nextPayoutDate.toISOString().split('T')[0],
+        lastPayoutDate: summary.last_payout_date,
+        payoutDays: PAYOUT_CONFIG.PAYOUT_DAYS,
+        minimumWithdrawal: PAYOUT_CONFIG.MIN_PAYOUT_AMOUNT,
+        chargebackBuffer: `${PAYOUT_CONFIG.CHARGEBACK_BUFFER_DAYS} days`
+      },
+      usdValues: {
+        availableUsd: parseFloat((summary.available_balance * TOKEN_VALUE).toFixed(2)),
+        bufferedUsd: parseFloat((summary.buffered_earnings * TOKEN_VALUE).toFixed(2)),
+        pendingUsd: parseFloat((summary.pending_withdrawals * TOKEN_VALUE).toFixed(2))
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('❌ Earnings summary error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch earnings summary',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Request withdrawal (bi-monthly payout system)
+router.post('/request-withdrawal', authenticateToken, async (req, res) => {
+  const { tokenAmount, metadata = {} } = req.body;
+
+  if (!Number.isInteger(tokenAmount) || tokenAmount < PAYOUT_CONFIG.MIN_PAYOUT_AMOUNT) {
+    return res.status(400).json({
+      error: `Minimum withdrawal is ${PAYOUT_CONFIG.MIN_PAYOUT_AMOUNT} tokens ($${PAYOUT_CONFIG.MIN_PAYOUT_AMOUNT * TOKEN_VALUE})`,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  try {
+    const result = await createWithdrawalRequest(req.user.supabase_id, tokenAmount, metadata);
+
+    if (!result.success) {
+      return res.status(400).json({
+        error: result.error,
+        details: result.details,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    logger.info(`✅ Withdrawal request created: ${req.user.supabase_id}, ${tokenAmount} tokens`);
+
+    res.json({
+      success: true,
+      request: {
+        id: result.request.id,
+        amount: result.request.amount,
+        amountUsd: result.request.amount_usd,
+        payoutDate: result.payoutDate,
+        status: result.request.status
+      },
+      message: result.message,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('❌ Withdrawal request error:', error);
+    res.status(500).json({
+      error: 'Failed to create withdrawal request',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Get withdrawal requests
+router.get('/withdrawal-requests', authenticateToken, async (req, res) => {
+  const { status = 'all', limit = 50, offset = 0 } = req.query;
+
+  try {
+    const userResult = await pool.query(
+      'SELECT is_creator FROM users WHERE supabase_id = $1',
+      [req.user.supabase_id]
+    );
+
+    if (userResult.rows.length === 0 || !userResult.rows[0].is_creator) {
+      return res.status(403).json({
+        error: 'Only creators can view withdrawal requests',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    let query = `
+      SELECT * FROM withdrawal_requests
+      WHERE creator_id = $1
+    `;
+    const params = [req.user.supabase_id];
+
+    if (status !== 'all') {
+      query += ` AND status = $2`;
+      params.push(status);
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      requests: result.rows.map(row => ({
+        id: row.id,
+        amount: parseInt(row.amount),
+        amountUsd: parseFloat(row.amount_usd),
+        payoutDate: row.payout_date,
+        status: row.status,
+        createdAt: row.created_at,
+        processedAt: row.processed_at,
+        stripeTransferId: row.stripe_transfer_id,
+        errorMessage: row.error_message
+      })),
+      total: result.rows.length,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('❌ Withdrawal requests fetch error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch withdrawal requests',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Cancel withdrawal request (only before payout date)
+router.delete('/withdrawal-requests/:requestId', authenticateToken, async (req, res) => {
+  const { requestId } = req.params;
+
+  try {
+    const result = await cancelWithdrawalRequest(parseInt(requestId), req.user.supabase_id);
+
+    if (!result.success) {
+      return res.status(400).json({
+        error: result.error,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    logger.info(`Withdrawal request cancelled: ${requestId} by ${req.user.supabase_id}`);
+
+    res.json({
+      success: true,
+      request: {
+        id: result.request.id,
+        status: result.request.status,
+        amount: result.request.amount,
+        cancelledAt: result.request.updated_at
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('❌ Withdrawal cancellation error:', error);
+    res.status(500).json({
+      error: 'Failed to cancel withdrawal request',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Legacy payout endpoint (deprecated - kept for backward compatibility)
 router.post('/payout', authenticateToken, async (req, res) => {
   const { tokenAmount } = req.body;
+
+  logger.warn('⚠️ Legacy /payout endpoint called - use /request-withdrawal instead');
 
   if (!Number.isInteger(tokenAmount) || tokenAmount < MINIMUM_PAYOUT_TOKENS) {
     return res.status(400).json({
@@ -1216,7 +1425,7 @@ router.post('/payout', authenticateToken, async (req, res) => {
     });
 
     await client.query(
-      `UPDATE token_balances 
+      `UPDATE token_balances
        SET balance = balance - $1, updated_at = NOW()
        WHERE user_id = $2`,
       [tokenAmount, req.user.supabase_id]
