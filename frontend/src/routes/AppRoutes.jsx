@@ -85,17 +85,12 @@ const AppRoutes = () => {
         <Routes>
         {/* Public Routes */}
         <Route path="/" element={
-          !user ? (
-            <HomePage />
-          ) : isAdmin ? (
-            <Navigate to="/admin" replace />
-          ) : isCreator ? (
-            <Navigate to="/dashboard" replace />
+          user ? (
+            isAdmin ? <Navigate to="/admin" replace /> :
+            isCreator ? <Navigate to="/dashboard" replace /> :
+            <Navigate to="/explore" replace />
           ) : (
-            // Show ExplorePage directly at root for fans (no redirect to /explore)
-            <ProtectedRoute>
-              {isMobile ? <MobileExplore user={user} /> : <ExplorePage user={user} currentUserId={user?.id} tokenBalance={tokenBalance} />}
-            </ProtectedRoute>
+            <HomePage />
           )
         } />
 

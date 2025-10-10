@@ -43,8 +43,10 @@ export const AuthProvider = ({ children }) => {
   const fetchInProgress = useRef({ profile: false, balance: false });
   const lastFetch = useRef({ profile: 0, balance: 0 });
 
-  // Computed values
-  const isCreator = profile?.is_creator === true;
+  // Computed values - check multiple creator indicators for robustness
+  const isCreator = profile?.is_creator === true ||
+                    profile?.role === 'creator' ||
+                    profile?.creator_type != null;
   const isAdmin = profile?.is_super_admin === true || profile?.role === 'admin';
   const isAuthenticated = !!user;
 
