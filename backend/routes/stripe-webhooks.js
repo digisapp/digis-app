@@ -5,6 +5,44 @@ const stripeConnect = require('../services/stripe-connect');
 const { pool, withTransaction } = require('../utils/db');
 const { isStripeEventDuplicate } = require('../lib/redis');
 
+/**
+ * Stripe Webhook Event Allowlist
+ * Only these event types will be processed - all others are ignored
+ * This prevents unexpected events from causing issues
+ */
+const ALLOWED_EVENTS = new Set([
+  // Payment lifecycle
+  'payment_intent.succeeded',
+  'payment_intent.payment_failed',
+  'payment_intent.canceled',
+  'payment_intent.requires_action',
+
+  // Charge events
+  'charge.succeeded',
+  'charge.failed',
+  'charge.refunded',
+
+  // Customer events
+  'customer.created',
+  'customer.updated',
+  'customer.deleted',
+
+  // Payout events (for creator earnings)
+  'payout.created',
+  'payout.paid',
+  'payout.failed',
+
+  // Subscription events (if using)
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+
+  // Dispute handling
+  'charge.dispute.created',
+  'charge.dispute.updated',
+  'charge.dispute.closed'
+]);
+
 // Stripe webhook endpoint (raw body required)
 router.post('/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -13,10 +51,24 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
   let event;
 
   try {
+    // Verify webhook signature (prevents tampering)
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+
+    // Enforce narrow timestamp tolerance (5 minutes max)
+    const eventAge = Date.now() - (event.created * 1000);
+    if (eventAge > 300000) { // 5 minutes in ms
+      console.warn(`Webhook event too old: ${event.id} (${eventAge}ms)`);
+      return res.status(400).send('Webhook event timestamp too old');
+    }
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Event allowlist check - ignore unknown event types
+  if (!ALLOWED_EVENTS.has(event.type)) {
+    console.log(`Ignored unhandled event type: ${event.type}`);
+    return res.json({ received: true, message: 'Event type not handled' });
   }
 
   // Check for idempotency with Redis first (faster)
