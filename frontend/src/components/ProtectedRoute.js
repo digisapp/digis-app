@@ -128,12 +128,9 @@ const ProtectedRoute = ({
     );
   }
 
-  // Pass verified role data to children
-  return React.cloneElement(children, { 
-    verifiedRole,
-    isVerifiedAdmin: verifiedRole?.isAdmin === true,
-    isVerifiedCreator: verifiedRole?.isCreator === true
-  });
+  // Render children - don't try to clone them as they may be lazy-loaded
+  // The verified role data is available via AuthContext
+  return children;
 };
 
 export default ProtectedRoute;
