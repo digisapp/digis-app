@@ -23,9 +23,20 @@ export const getSupabaseClient = () => {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storageKey: 'digis-auth-token',
-        // Ensure session persists for a week
+        // Use localStorage for now (Supabase doesn't support httpOnly cookies directly)
+        // SECURITY NOTE: In production, consider using Supabase Edge Functions
+        // to set httpOnly cookies for enhanced XSS protection
         storage: window.localStorage,
-        flowType: 'pkce'
+        flowType: 'pkce', // PKCE provides additional security for OAuth flows
+        // Add security headers
+        headers: {
+          'X-Client-Info': 'digis-web-app'
+        }
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'digis-web-app'
+        }
       }
     });
   }
