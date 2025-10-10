@@ -17,6 +17,13 @@ class SocketService {
 
   async connect() {
     try {
+      // Disable socket.io in production (Vercel doesn't support WebSocket)
+      const isProduction = import.meta.env.PROD || import.meta.env.VITE_BACKEND_URL?.includes('vercel.app');
+      if (isProduction) {
+        console.log('Socket.io disabled in production (Vercel does not support WebSocket)');
+        return Promise.resolve();
+      }
+
       // If already connected, return immediately
       if (this.isConnected && this.socket?.connected) {
         console.log('Socket already connected');

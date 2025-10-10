@@ -63,16 +63,38 @@ const { sessions, users: usersCache, TTL } = require('../utils/redis');
  */
 // Sync user from Supabase Auth to our database
 router.post('/sync-user', verifySupabaseToken, async (req, res) => {
+  const rid = req.headers['x-request-id'] || uuidv4();
+
+  // Helper for consistent error responses
+  const fail = (code, payload) => {
+    console.error('❌ sync-user fail', { rid, code, ...payload });
+    return res.status(code).json({ success: false, rid, ...payload });
+  };
+
   try {
     const { supabaseId, email, metadata } = req.body;
-    
+
+    // Verify authentication
+    if (!req.user || !req.user.id) {
+      return fail(401, { error: 'UNAUTHENTICATED', message: 'No valid user in token' });
+    }
+
+    // Log token claims for debugging
+    console.log('✅ sync-user request', {
+      rid,
+      userId: req.user.id,
+      email: req.user.email,
+      supabaseId,
+      requestEmail: email
+    });
+
     // Check if user already exists
     const checkQuery = `
-      SELECT * FROM users 
+      SELECT * FROM users
       WHERE id = $1::uuid OR email = $2
       LIMIT 1
     `;
-    
+
     const existingUser = await pool.query(checkQuery, [supabaseId, email]);
     
     if (existingUser.rows.length > 0) {
@@ -125,10 +147,10 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       const profileResult = await pool.query(profileQuery, [user.id]);
 
       if (!profileResult.rows || profileResult.rows.length === 0) {
-        console.error('❌ No profile found for user:', user.id);
-        return res.status(404).json({
-          success: false,
-          error: 'User profile not found'
+        return fail(404, {
+          error: 'PROFILE_NOT_FOUND',
+          message: 'User profile not found in database',
+          userId: user.id
         });
       }
 
@@ -180,8 +202,11 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         // Don't fail the request if caching fails
       }
 
+      console.log('✅ sync-user success', { rid, username: completeProfile.username, is_creator: completeProfile.is_creator });
+
       return res.json({
         success: true,
+        rid,
         user: completeProfile,
         isNewUser: false,
         sessionId
@@ -384,18 +409,21 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Error syncing user:', {
+    console.error('❌ sync-user error', {
+      rid,
       message: error.message,
-      stack: error.stack,
       code: error.code,
       detail: error.detail,
+      stack: error.stack,
       supabaseId: req.body?.supabaseId,
       email: req.body?.email
     });
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      error: 'Failed to sync user',
+      rid,
+      error: 'INTERNAL',
       message: error.message,
+      code: error.code,
       detail: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
