@@ -7,9 +7,7 @@ import { UserPlusIcon as UserPlusIconSolid, CheckBadgeIcon as CheckBadgeIconSoli
 import { getAuthToken } from '../utils/auth-helpers';
 import toast from 'react-hot-toast';
 import CallRequestModal from './CallRequestModal';
-import VideoCallModal from './VideoCallModal';
-import VoiceCallModal from './VoiceCallModal';
-import TipModal from './TipModal';
+import CallConfirmationModal from './CallConfirmationModal';
 import MessageComposeModal from './MessageComposeModal';
 import {
   getStatusBadges,
@@ -64,10 +62,9 @@ const CreatorCard = ({
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [hasVideo, setHasVideo] = useState(false);
   const [isVisible, setIsVisible] = useState(!isLazyLoaded);
-  const [showVideoCallModal, setShowVideoCallModal] = useState(false);
-  const [showVoiceCallModal, setShowVoiceCallModal] = useState(false);
-  const [showTipModal, setShowTipModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [showMessageComposeModal, setShowMessageComposeModal] = useState(false);
+  const [selectedServiceType, setSelectedServiceType] = useState(null);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const navigate = useNavigate();
   const cardRef = useRef(null);
@@ -202,11 +199,9 @@ const CreatorCard = ({
     const loadAvatar = async () => {
       const { generateAvatar } = await import('../utils/avatarGenerator');
       const avatarService = (await import('../services/avatarService')).default;
-
-      // Prioritize creator_card_image for card display, fall back to profile_pic_url
-      if (creator.creator_card_image) {
-        setAvatarUrl(creator.creator_card_image);
-      } else if (creator.profile_pic_url || creator.profilePicUrl) {
+      
+      // Use existing image if available, otherwise generate
+      if (creator.profile_pic_url || creator.profilePicUrl) {
         setAvatarUrl(creator.profile_pic_url || creator.profilePicUrl);
       } else {
         // Generate avatar locally
@@ -220,7 +215,7 @@ const CreatorCard = ({
       }
       setAvatarLoading(false);
     };
-
+    
     loadAvatar();
   }, [creator]);
   
@@ -254,43 +249,16 @@ const CreatorCard = ({
     if (isDashboard && onOpenPricingModal) {
       onOpenPricingModal();
     } else {
-      // Open the appropriate modal based on service type
-      switch(serviceType) {
-        case 'video':
-          setShowVideoCallModal(true);
-          break;
-        case 'voice':
-          setShowVoiceCallModal(true);
-          break;
-        case 'message':
-          setShowMessageComposeModal(true);
-          break;
-        default:
-          break;
-      }
+      setSelectedServiceType(serviceType);
+      setShowConfirmationModal(true);
     }
   };
 
-  // Handle video call start
-  const handleVideoCallStart = () => {
-    setShowVideoCallModal(false);
+  // Handle confirmation
+  const handleConfirmService = async (sessionData) => {
+    setShowConfirmationModal(false);
     if (onJoinSession) {
-      onJoinSession('video');
-    }
-  };
-
-  // Handle voice call start
-  const handleVoiceCallStart = () => {
-    setShowVoiceCallModal(false);
-    if (onJoinSession) {
-      onJoinSession('voice');
-    }
-  };
-
-  // Handle tip sent
-  const handleTipSent = (amount) => {
-    if (onTip) {
-      onTip(creator, amount);
+      onJoinSession(selectedServiceType, sessionData);
     }
   };
 
@@ -405,13 +373,13 @@ const CreatorCard = ({
           disabled={isLoadingFollow}
           aria-pressed={isFollowing}
           aria-label={isFollowing ? 'Unfollow creator' : 'Follow creator'}
-          className="absolute right-3 top-3 p-1.5 bg-black/30 backdrop-blur-sm rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed
+          className="absolute right-3 top-3 p-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed
                    hover:scale-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
         >
           {isFollowing ? (
-            <UserPlusIconSolid className="w-6 h-6 text-green-400 drop-shadow-[0_0_12px_rgba(74,222,128,0.9)]" />
+            <UserPlusIconSolid className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
           ) : (
-            <UserPlusIcon className="w-6 h-6 text-white/80 drop-shadow-md" />
+            <UserPlusIcon className="w-6 h-6 text-white drop-shadow-md" />
           )}
         </button>
 
@@ -479,10 +447,10 @@ const CreatorCard = ({
 
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setShowTipModal(true); }}
+              onClick={(e) => { e.stopPropagation(); if (onTip) onTip(creator); }}
               disabled={disabled}
-              aria-label="Send tip"
-              title="Send Tip"
+              aria-label="Send gift"
+              title="Send Gift"
               className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
                        disabled:opacity-50 disabled:cursor-not-allowed
@@ -523,35 +491,22 @@ const CreatorCard = ({
 
 
       {/* Enhanced Modals */}
-      {showVideoCallModal && (
-        <VideoCallModal
-          isOpen={showVideoCallModal}
-          onClose={() => setShowVideoCallModal(false)}
+      {showRequestModal && (
+        <CallRequestModal
+          isOpen={showRequestModal}
+          onClose={() => setShowRequestModal(false)}
           creator={creator}
-          tokenCost={creator.video_price || creator.videoPrice || 150}
           tokenBalance={tokenBalance}
-          onCallStart={handleVideoCallStart}
         />
       )}
 
-      {showVoiceCallModal && (
-        <VoiceCallModal
-          isOpen={showVoiceCallModal}
-          onClose={() => setShowVoiceCallModal(false)}
+      {showConfirmationModal && (
+        <CallConfirmationModal
+          isOpen={showConfirmationModal}
+          onClose={() => setShowConfirmationModal(false)}
+          onConfirm={handleConfirmService}
           creator={creator}
-          tokenCost={creator.voice_price || creator.voicePrice || 50}
-          tokenBalance={tokenBalance}
-          onCallStart={handleVoiceCallStart}
-        />
-      )}
-
-      {showTipModal && (
-        <TipModal
-          isOpen={showTipModal}
-          onClose={() => setShowTipModal(false)}
-          creator={creator}
-          tokenBalance={tokenBalance}
-          onTipSent={handleTipSent}
+          serviceType={selectedServiceType}
         />
       )}
 

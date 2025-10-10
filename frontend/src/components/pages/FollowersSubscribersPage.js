@@ -45,43 +45,6 @@ const FollowersSubscribersPage = ({ user, isCreator, initialTab }) => {
     }
   }, [user, isCreator]);
 
-  // Refetch data when activeTab changes to ensure fresh data
-  useEffect(() => {
-    if (isCreator) {
-      if (activeTab === 'followers') {
-        fetchFollowers();
-        fetchStats();
-      } else if (activeTab === 'subscribers') {
-        fetchSubscribers();
-        fetchStats();
-      }
-    }
-  }, [activeTab, isCreator]);
-
-  // Refetch data when page becomes visible (e.g., navigating back from another page)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isCreator) {
-        if (activeTab === 'followers') {
-          fetchFollowers();
-        } else if (activeTab === 'subscribers') {
-          fetchSubscribers();
-        }
-        fetchStats();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Also listen for focus event for better UX
-    window.addEventListener('focus', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleVisibilityChange);
-    };
-  }, [isCreator, activeTab]);
-
   const fetchStats = async () => {
     try {
       const token = await getAuthToken();
@@ -180,7 +143,7 @@ const FollowersSubscribersPage = ({ user, isCreator, initialTab }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-200 cursor-pointer"
-      onClick={() => navigate(`/${userData.username}`)}
+      onClick={() => navigate(`/profile/${userData.username}`)}
     >
       <div className="flex items-center gap-3">
         <div className="relative">

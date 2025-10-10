@@ -154,25 +154,15 @@ const ProfileDropdown = ({
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    if (!isOpen) return;
-
     const handleClickOutside = (event) => {
-      // Check if click is outside the dropdown
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        console.log('🔴 ProfileDropdown: Click outside detected, closing dropdown');
         setIsOpen(false);
       }
     };
 
-    // Use both mousedown and click for better compatibility
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('click', handleClickOutside, true);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('click', handleClickOutside, true);
-    };
-  }, [isOpen]);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Close on escape key
   useEffect(() => {
@@ -333,14 +323,63 @@ const ProfileDropdown = ({
       return;
     }
 
-    console.log('ProfileDropdown: Navigating to path:', path);
 
-    // Use React Router's navigate for proper routing
-    navigate(path);
+    // Extract base path without query parameters
+    const basePath = path.split('?')[0];
+    const queryParams = path.includes('?') ? path.split('?')[1] : '';
 
-    // If setCurrentView is available, also update the context
+    // Map paths to view names
+    const viewMap = {
+      '/dashboard': 'dashboard',
+      '/offers': 'offers',
+      '/shop': 'shop',
+      '/schedule': 'schedule',
+      '/call-requests': 'call-requests',
+      '/calls': 'calls',
+      '/messages': 'messages',
+      '/classes': 'classes',
+      '/tv': 'tv',
+      '/explore': 'explore',
+      '/collections': 'collections',
+      '/wallet': 'wallet',
+      '/go-live': 'streaming',
+      '/profile': 'profile',
+      '/analytics': 'analytics',
+      '/followers': 'followers',
+      '/subscribers': 'subscribers'
+    };
+
+    const view = viewMap[basePath];
+
+    // Update the view using setCurrentView (which is actually onNavigate from NavigationContext)
+    // onNavigate expects a path, not a view name
     if (setCurrentView) {
-      setCurrentView(path);
+      console.log('ProfileDropdown: Navigating to path:', path);
+      setCurrentView(path); // Pass the full path with slash
+
+      // Handle tab parameters for profile page
+      if (basePath === '/profile' && queryParams) {
+        // Parse the tab parameter
+        const tabMatch = queryParams.match(/tab=(\w+)/);
+        if (tabMatch) {
+          const tabName = tabMatch[1];
+          // Give the profile view time to load, then switch to the specified tab
+          setTimeout(() => {
+            // Try to find and click the tab button
+            const tabButtons = document.querySelectorAll('button');
+            tabButtons.forEach(button => {
+              // Look for the tab by checking if it contains the tab icon and label
+              if (tabName === 'settings' && button.textContent?.includes('Settings')) {
+                button.click();
+              } else if (tabName === 'profile' && button.textContent?.includes('Profile')) {
+                button.click();
+              }
+            });
+          }, 100);
+        }
+      }
+    } else {
+      console.warn('ProfileDropdown: Cannot navigate to', path, '- setCurrentView not available');
     }
   };
 
@@ -356,11 +395,7 @@ const ProfileDropdown = ({
     <div className="relative" style={{ zIndex: 9999 }} ref={dropdownRef}>
       {/* Profile Button */}
       <motion.button
-        onClick={(e) => {
-          e.stopPropagation();
-          console.log(`🔵 ProfileDropdown: Toggle button clicked, isOpen: ${isOpen} -> ${!isOpen}`);
-          setIsOpen(!isOpen);
-        }}
+        onClick={() => setIsOpen(!isOpen)}
         className="relative group"
         aria-label="Profile menu"
         whileHover={{ scale: 1.05 }}
@@ -411,11 +446,7 @@ const ProfileDropdown = ({
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/20 z-[9998]"
               onClick={(e) => {
-                console.log('🔴 ProfileDropdown: Backdrop clicked, closing dropdown');
-                setIsOpen(false);
-              }}
-              onMouseDown={(e) => {
-                console.log('🔴 ProfileDropdown: Backdrop mousedown, closing dropdown');
+                e.stopPropagation();
                 setIsOpen(false);
               }}
             />
@@ -427,10 +458,7 @@ const ProfileDropdown = ({
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               transition={{ duration: 0.2 }}
               className={`absolute right-0 mt-2 ${isActuallyAdmin ? 'w-64' : isActuallyCreator ? 'w-[440px]' : 'w-72'} bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-[9999]`}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                console.log('🟢 ProfileDropdown: Panel clicked, preventing close');
-              }}
+              onClick={(e) => e.stopPropagation()}
             >
               {/* User Info Header */}
               <div className="p-4 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 text-white">
@@ -454,10 +482,8 @@ const ProfileDropdown = ({
                     )}
                   </div>
                   <button
-                    onMouseDown={(e) => {
-                      e.preventDefault();
+                    onClick={(e) => {
                       e.stopPropagation();
-                      console.log('🔴 ProfileDropdown: X button clicked, closing dropdown');
                       setIsOpen(false);
                     }}
                     className="p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -554,23 +580,25 @@ const ProfileDropdown = ({
                     <div className="space-y-1">
                       {[
                         { label: 'Dashboard', icon: HomeIcon, path: '/dashboard', color: 'text-purple-600 dark:text-purple-400' },
-                        { label: 'Offers', icon: GiftIcon, onClick: () => { setIsOpen(false); setShowOfferModal(true); }, color: 'text-pink-600 dark:text-pink-400' },
+                        { label: 'Offers', icon: GiftIcon, onClick: () => { setShowOfferModal(true); setIsOpen(false); }, color: 'text-pink-600 dark:text-pink-400' },
                         { label: 'Schedule', icon: CalendarIcon, path: '/schedule', color: 'text-indigo-600 dark:text-indigo-400' },
-                        { label: 'Calls', icon: PhoneIcon, path: '/call-requests', color: 'text-blue-600 dark:text-blue-400' },
+                        { label: 'Calls', icon: PhoneIcon, onClick: () => { navigate('/call-requests'); setIsOpen(false); }, color: 'text-blue-600 dark:text-blue-400' },
                         { label: 'Shop', icon: ShoppingBagIcon, path: '/shop', color: 'text-emerald-600 dark:text-emerald-400' },
-                        { label: 'Pricing Rates', icon: CurrencyDollarIcon, onClick: () => { setIsOpen(false); setShowPricingRatesModal(true); }, color: 'text-green-600 dark:text-green-400' }
+                        { label: 'Pricing Rates', icon: CurrencyDollarIcon, onClick: () => { setShowPricingRatesModal(true); setIsOpen(false); }, color: 'text-green-600 dark:text-green-400' }
                       ].map((item) => {
                         const Icon = item.icon;
                         const isActive = currentPath === item.path;
-
+                        
                         return (
                           <button
                             key={item.path || item.label}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (item.onClick) {
+                            onClick={() => {
+                              if (item.action) {
+                                item.action();
+                                setIsOpen(false);
+                              } else if (item.onClick) {
                                 item.onClick();
-                              } else if (item.path) {
+                              } else {
                                 handleNavigation(item.path);
                               }
                             }}
@@ -661,8 +689,7 @@ const ProfileDropdown = ({
                                 setIsOpen(false);
                               } else if (item.onClick) {
                                 item.onClick();
-                                // Always close menu after any action
-                                setIsOpen(false);
+                                if (!item.isToggle) setIsOpen(false);
                               } else {
                                 handleNavigation(item.path);
                               }

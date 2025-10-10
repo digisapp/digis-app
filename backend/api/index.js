@@ -229,7 +229,6 @@ try {
   const storageRoutes = require('../routes/storage');
   const creatorDashboardRoutes = require('../routes/creator-dashboard');
   const digitalsRoutes = require('../routes/digitals');
-  const stripeConnectRoutes = require('../routes/stripe-connect');
   
   // Apply metrics middleware
   const metricsCollector = require('../utils/metrics-collector');
@@ -321,7 +320,6 @@ try {
   app.use('/api/digitals', rateLimiters.upload || ((req, res, next) => next()), digitalsRoutes);
   app.use('/api/metrics', rateLimiters.analytics || ((req, res, next) => next()), monitoringRoutes);
   app.use('/api/storage', rateLimiters.upload || ((req, res, next) => next()), storageRoutes);
-  app.use('/api/stripe-connect', rateLimiters.api || ((req, res, next) => next()), stripeConnectRoutes);
   app.use('/webhooks', webhookRoutes); // No rate limiting for webhooks
   app.use('/webhooks', stripeWebhookRoutes); // No rate limiting for webhooks
   

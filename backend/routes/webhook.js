@@ -2,7 +2,6 @@ const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { pool } = require('../utils/db');
 const { logger } = require('../utils/secureLogger');
-const { creditTokens, isProviderEventProcessed } = require('../utils/ledger');
 const router = express.Router();
 
 // Middleware to capture raw body for Stripe webhook verification
@@ -51,23 +50,13 @@ router.post('/stripe', getRawBody, async (req, res) => {
     return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
   }
 
-  // Check for duplicate event (idempotency)
-  const eventRecord = await checkEventDuplication(event);
-  if (eventRecord.isDuplicate) {
-    logger.info(`⏭️  Skipping duplicate event: ${event.id}`);
-    return res.json({ received: true, type: event.type, duplicate: true });
-  }
-
   // Handle the event
   try {
     await handleStripeEvent(event);
-    await recordEventProcessed(event);
     logger.info('✅ Webhook event processed successfully:', event.type);
     res.json({ received: true, type: event.type });
   } catch (error) {
     logger.error('❌ Error processing webhook event:', error);
-    // Mark event as failed for retry
-    await recordEventFailed(event, error);
     res.status(500).json({ error: 'Failed to process webhook event' });
   }
 });
@@ -139,73 +128,64 @@ const handleStripeEvent = async (event) => {
 // Handle successful payment intent
 const handlePaymentIntentSucceeded = async (client, paymentIntent) => {
   logger.info('💰 Payment succeeded:', paymentIntent.id);
-
+  
   const { id, amount, metadata } = paymentIntent;
-  const { user_id, session_id, tokens, tokenAmount, bonusTokens, is_tip } = metadata || {};
-
-  // Check if already processed using provider_event_id
-  const alreadyProcessed = await isProviderEventProcessed(id);
-  if (alreadyProcessed.processed) {
-    logger.info(`⏭️  Payment ${id} already processed, skipping`);
-    return;
-  }
-
+  const { user_id, session_id, tokens, is_tip } = metadata || {};
+  
   // Update payment record
   await client.query(
-    `UPDATE payments
-     SET status = 'completed', updated_at = NOW()
+    `UPDATE payments 
+     SET status = 'completed', updated_at = NOW() 
      WHERE stripe_payment_intent_id = $1`,
     [id]
   );
-
-  // Handle token purchase with atomic ledger operation
-  if ((tokens || tokenAmount) && user_id) {
-    const finalTokenAmount = parseInt(tokens || tokenAmount);
-    const bonus = parseInt(bonusTokens || 0);
-    const totalTokens = finalTokenAmount + bonus;
-
-    // Use atomic credit operation with idempotency
-    await creditTokens({
-      userId: user_id,
-      tokens: totalTokens,
-      type: metadata.isQuickPurchase ? 'quick_purchase' :
-            metadata.isAutoRefill ? 'auto_refill' :
-            metadata.isSmartRefill ? 'smart_refill' : 'purchase',
-      amountUsd: amount / 100,
-      providerEventId: id, // This prevents duplicate processing
-      stripePaymentIntentId: id,
-      source: 'stripe',
-      metadata: {
-        bonusTokens: bonus,
-        originalAmount: finalTokenAmount,
-        ...metadata
-      }
-    });
-
-    logger.info(`✅ Added ${totalTokens} tokens (${finalTokenAmount} + ${bonus} bonus) for user ${user_id}`);
+  
+  // Handle token purchase
+  if (tokens && user_id) {
+    const tokenAmount = parseInt(tokens);
+    
+    // Update or create token balance
+    await client.query(
+      `INSERT INTO token_balances (user_id, balance) 
+       VALUES ($1, $2)
+       ON CONFLICT (user_id) 
+       DO UPDATE SET 
+         balance = token_balances.balance + $2,
+         updated_at = NOW()`,
+      [user_id, tokenAmount]
+    );
+    
+    // Record token transaction
+    await client.query(
+      `INSERT INTO token_transactions (user_id, type, tokens, amount_usd, stripe_payment_intent_id, status)
+       VALUES ($1, 'purchase', $2, $3, $4, 'completed')`,
+      [user_id, tokenAmount, amount / 100, id]
+    );
+    
+    logger.info(`✅ Added ${tokenAmount} tokens for user ${user_id}`);
   }
-
+  
   // Handle session payment
   if (session_id) {
     await client.query(
-      `UPDATE sessions
-       SET status = 'paid', updated_at = NOW()
+      `UPDATE sessions 
+       SET status = 'paid', updated_at = NOW() 
        WHERE id = $1`,
       [session_id]
     );
-
+    
     logger.info(`✅ Marked session ${session_id} as paid`);
   }
-
+  
   // Handle tip
   if (is_tip === 'true' && user_id) {
     await client.query(
-      `UPDATE users
-       SET total_earnings = total_earnings + $1, updated_at = NOW()
+      `UPDATE users 
+       SET total_earnings = total_earnings + $1, updated_at = NOW() 
        WHERE supabase_id = $2`,
       [amount / 100, user_id]
     );
-
+    
     logger.info(`✅ Added tip of $${amount / 100} to user ${user_id}`);
   }
 };
@@ -372,11 +352,11 @@ router.get('/health', (req, res) => {
 // Test webhook endpoint (for development)
 router.post('/test', async (req, res) => {
   logger.info('🧪 Test webhook received:', req.body);
-
+  
   try {
     // Simulate webhook processing
     await new Promise(resolve => setTimeout(resolve, 100));
-
+    
     res.json({
       received: true,
       body: req.body,
@@ -387,102 +367,5 @@ router.post('/test', async (req, res) => {
     res.status(500).json({ error: 'Test webhook failed' });
   }
 });
-
-/**
- * Event Deduplication Helpers
- * Prevents duplicate webhook processing using stripe_webhook_events table
- */
-
-// Check if webhook event has already been processed
-async function checkEventDuplication(event) {
-  try {
-    const result = await pool.query(
-      `SELECT id, status, processed_at
-       FROM stripe_webhook_events
-       WHERE event_id = $1
-       LIMIT 1`,
-      [event.id]
-    );
-
-    if (result.rows.length > 0) {
-      const record = result.rows[0];
-      return {
-        isDuplicate: true,
-        status: record.status,
-        processedAt: record.processed_at
-      };
-    }
-
-    return { isDuplicate: false };
-  } catch (error) {
-    // If table doesn't exist yet, assume not duplicate
-    if (error.code === '42P01') {
-      logger.warn('stripe_webhook_events table does not exist, creating it...');
-      await createWebhookEventsTable();
-      return { isDuplicate: false };
-    }
-    throw error;
-  }
-}
-
-// Record that event has been processed successfully
-async function recordEventProcessed(event) {
-  try {
-    await pool.query(
-      `INSERT INTO stripe_webhook_events (event_id, event_type, status, processed_at, payload, created_at)
-       VALUES ($1, $2, 'processed', NOW(), $3, NOW())
-       ON CONFLICT (event_id) DO UPDATE
-       SET status = 'processed', processed_at = NOW()`,
-      [event.id, event.type, JSON.stringify(event)]
-    );
-  } catch (error) {
-    logger.error('Failed to record processed event:', error);
-  }
-}
-
-// Record that event processing failed
-async function recordEventFailed(event, error) {
-  try {
-    await pool.query(
-      `INSERT INTO stripe_webhook_events (event_id, event_type, status, error_message, payload, created_at)
-       VALUES ($1, $2, 'failed', $3, $4, NOW())
-       ON CONFLICT (event_id) DO UPDATE
-       SET status = 'failed', error_message = $3, updated_at = NOW()`,
-      [event.id, event.type, error.message, JSON.stringify(event)]
-    );
-  } catch (err) {
-    logger.error('Failed to record failed event:', err);
-  }
-}
-
-// Create webhook events table if it doesn't exist
-async function createWebhookEventsTable() {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS stripe_webhook_events (
-        id SERIAL PRIMARY KEY,
-        event_id VARCHAR(255) UNIQUE NOT NULL,
-        event_type VARCHAR(100) NOT NULL,
-        status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'processed', 'failed')),
-        processed_at TIMESTAMPTZ,
-        error_message TEXT,
-        payload JSONB,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_webhook_events_event_id ON stripe_webhook_events(event_id);
-      CREATE INDEX IF NOT EXISTS idx_webhook_events_type ON stripe_webhook_events(event_type);
-      CREATE INDEX IF NOT EXISTS idx_webhook_events_status ON stripe_webhook_events(status);
-      CREATE INDEX IF NOT EXISTS idx_webhook_events_created ON stripe_webhook_events(created_at DESC);
-
-      COMMENT ON TABLE stripe_webhook_events IS
-        'Idempotency table for Stripe webhook events - prevents duplicate processing';
-    `);
-    logger.info('✅ Created stripe_webhook_events table');
-  } catch (error) {
-    logger.error('Failed to create stripe_webhook_events table:', error);
-  }
-}
 
 module.exports = router;

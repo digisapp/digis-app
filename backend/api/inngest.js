@@ -19,13 +19,6 @@ const {
   processSinglePayout,
 } = require('../inngest/functions/payouts');
 
-// Import V2 production-ready payout functions
-const {
-  createPayoutBatch,
-  processPayoutChunk,
-  retryFailedPayouts: retryFailedPayoutsV2,
-} = require('../inngest/functions/payouts-v2');
-
 const {
   dailyEarningsRollup,
   monthlyEarningsRollup,
@@ -38,12 +31,7 @@ const {
 const handler = serve({
   client: inngest,
   functions: [
-    // V2 Production-ready payout functions (use these for new deployments)
-    createPayoutBatch,
-    processPayoutChunk,
-    retryFailedPayoutsV2,
-
-    // Legacy payout functions (keep for backward compatibility)
+    // Payout functions
     processPayouts,
     retryFailedPayouts,
     updateAccountStatuses,

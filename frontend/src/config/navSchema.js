@@ -182,10 +182,10 @@ export const getMobileBottomItems = (role) => {
   const items = getNavItemsForRole(role, true);
 
   // For fans: explore, messages, tv, wallet-popup, profile
-  // For creators/admin: dashboard, explore, messages, wallet, profile
+  // For creators/admin: dashboard, explore, messages, profile
   const navIds = role === 'fan'
     ? ['explore', 'messages', 'tv', 'wallet-popup', 'profile']
-    : ['dashboard', 'explore', 'messages', 'wallet', 'profile'];
+    : ['dashboard', 'explore', 'messages', 'profile'];
 
   // Filter items and sort them according to navIds order
   const filteredItems = items.filter(item => navIds.includes(item.id));
@@ -200,7 +200,7 @@ export const getMobileBottomItems = (role) => {
     return item;
   });
 
-  return mappedItems.slice(0, 5); // 5 items for both fans and creators
+  return mappedItems.slice(0, 5); // 5 items for fans, 4 for creators
 };
 
 export const getMobileCenterAction = (role) => {

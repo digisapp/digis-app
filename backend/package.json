@@ -29,8 +29,6 @@
     "migrate:validate": "node migrations/validate.js",
     "db:test": "node -e \"require('./utils/db').testConnection()\"",
     "db:seed": "node utils/seed.js",
-    "payout:run": "node jobs/payout-cron.js",
-    "payout:test": "NODE_ENV=test node jobs/payout-cron.js",
     "clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
     "logs": "tail -f logs/app.log",
     "security:audit": "pnpm audit",

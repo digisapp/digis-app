@@ -6,7 +6,6 @@ import {
   XMarkIcon,
   PhoneIcon
 } from '@heroicons/react/24/outline';
-import CallWaitingModal from './CallWaitingModal';
 
 const VoiceCallModal = ({
   isOpen,
@@ -18,47 +17,24 @@ const VoiceCallModal = ({
 }) => {
   const navigate = useNavigate();
   const [showInsufficientTokens, setShowInsufficientTokens] = useState(false);
-  const [showWaitingModal, setShowWaitingModal] = useState(false);
 
   const handleStartCall = () => {
-    // Check if user has sufficient tokens
-    const balance = Number(tokenBalance) || 0;
-    const cost = Number(tokenCost) || 0;
-
-    if (balance < cost) {
+    // Check if user has any tokens (minimum check)
+    if (tokenBalance < tokenCost) {
       setShowInsufficientTokens(true);
       return;
     }
 
-    // Close this modal and show waiting modal
-    onClose();
-    setShowWaitingModal(true);
-
-    // Call the parent callback to initiate the call
     if (onCallStart) {
       onCallStart();
     }
   };
 
-  const handleCallTimeout = () => {
-    console.log('Call timed out - creator did not answer');
-  };
+  if (!isOpen) return null;
 
-  const handleCallDeclined = () => {
-    console.log('Call declined by creator');
-  };
-
-  const handleWaitingModalClose = () => {
-    setShowWaitingModal(false);
-  };
-
-  if (!isOpen && !showWaitingModal) return null;
-
-  return (
-    <>
-      {ReactDOM.createPortal(
-        <AnimatePresence>
-          {isOpen && (
+  return ReactDOM.createPortal(
+    <AnimatePresence>
+      {isOpen && (
         <>
           {/* Backdrop */}
           <motion.div
@@ -182,23 +158,10 @@ const VoiceCallModal = ({
               </div>
             </div>
           </motion.div>
-          </>
-        )}
-      </AnimatePresence>,
-      document.body
-    )}
-
-    {/* Call Waiting Modal */}
-    <CallWaitingModal
-      isOpen={showWaitingModal}
-      onClose={handleWaitingModalClose}
-      creator={creator}
-      callType="voice"
-      onTimeout={handleCallTimeout}
-      onCreatorDeclined={handleCallDeclined}
-      maxWaitTime={30000}
-    />
-  </>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 };
 

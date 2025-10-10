@@ -858,13 +858,7 @@ const HybridCreatorDashboard = memo(({
                 </div>
               </div>
               <Button
-                onClick={() => {
-                  if (onNavigate) {
-                    onNavigate('/call-requests');
-                  } else {
-                    navigate('/call-requests');
-                  }
-                }}
+                onClick={() => navigate('/call-requests')}
                 className="text-xs px-2 py-1"
                 variant="secondary"
               >
@@ -915,18 +909,9 @@ const HybridCreatorDashboard = memo(({
                           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                         </div>
                         <div className="flex-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const username = nextCall.fan_username || nextCall.username;
-                              if (username) {
-                                navigate(`/${username}`);
-                              }
-                            }}
-                            className="font-bold text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
-                          >
+                          <p className="font-bold text-gray-900 dark:text-gray-100">
                             @{nextCall.fan_username || nextCall.username || 'Unknown'}
-                          </button>
+                          </p>
                           <div className="flex items-center gap-3 mt-1">
                             <span className="text-xs text-gray-600 dark:text-gray-400">
                               {nextCall.fan_name || nextCall.name || 'Fan'}
@@ -1107,18 +1092,9 @@ const HybridCreatorDashboard = memo(({
                             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-bold">
                               {(session.fan_username || session.username || 'U').charAt(0).toUpperCase()}
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const username = session.fan_username || session.username;
-                                if (username) {
-                                  navigate(`/${username}`);
-                                }
-                              }}
-                              className="text-xs text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
-                            >
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
                               @{session.fan_username || session.username}
-                            </button>
+                            </span>
                           </div>
                         )}
                       </div>
@@ -1217,18 +1193,9 @@ const HybridCreatorDashboard = memo(({
                   <TrophyIcon className="absolute -bottom-1 -right-1 w-4 h-4 text-yellow-500 bg-white rounded-full p-0.5" />
                 </div>
                 <div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const username = topFans[0].username;
-                      if (username) {
-                        navigate(`/${username}`);
-                      }
-                    }}
-                    className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer text-left"
-                  >
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     Top fan: @{topFans[0].username || topFans[0].name}
-                  </button>
+                  </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Spent {topFans[0].totalSpent || 0} tokens this month
                   </p>
