@@ -1084,6 +1084,27 @@ router.get('/me', verifySupabaseToken, async (req, res) => {
   }
 });
 
+// Temporary debugging endpoint - check database connectivity
+router.get('/debug-db', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW() as current_time, version() as pg_version');
+
+    res.json({
+      success: true,
+      database: 'connected',
+      timestamp: result.rows[0].current_time,
+      postgresql: result.rows[0].pg_version
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Database connection failed',
+      message: error.message,
+      code: error.code
+    });
+  }
+});
+
 // Export router and middleware for backward compatibility
 module.exports = router;
 module.exports.verifySupabaseToken = authenticateToken; // Alias for migration
