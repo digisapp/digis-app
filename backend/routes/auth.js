@@ -76,38 +76,71 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     const existingUser = await pool.query(checkQuery, [supabaseId, email]);
     
     if (existingUser.rows.length > 0) {
-      // User exists, update their info
+      // User exists, update their info and fetch complete profile with token balance
       const user = existingUser.rows[0];
-      
+
       const updateQuery = `
-        UPDATE users 
-        SET 
+        UPDATE users
+        SET
           supabase_id = $1,
           email_verified = true,
           last_active = NOW(),
           updated_at = NOW()
         WHERE id = $2
-        RETURNING *
+        RETURNING id
       `;
-      
-      const result = await pool.query(updateQuery, [supabaseId, user.id]);
+
+      await pool.query(updateQuery, [supabaseId, user.id]);
+
+      // Fetch complete user profile with token balance
+      const profileQuery = `
+        SELECT
+          u.id,
+          u.supabase_id,
+          u.email,
+          u.username,
+          u.display_name,
+          u.bio,
+          u.profile_pic_url,
+          u.is_creator,
+          u.is_super_admin,
+          u.role,
+          u.creator_type,
+          u.price_per_min,
+          u.verified,
+          u.email_verified,
+          u.created_at,
+          u.updated_at,
+          u.last_active,
+          COALESCE(tb.balance, 0) as token_balance,
+          COALESCE(tb.total_purchased, 0) as total_purchased,
+          COALESCE(tb.total_spent, 0) as total_spent,
+          COALESCE(tb.total_earned, 0) as total_earned
+        FROM users u
+        LEFT JOIN token_balances tb ON tb.user_id = u.id
+        WHERE u.id = $1::uuid
+        LIMIT 1
+      `;
+
+      const profileResult = await pool.query(profileQuery, [user.id]);
+      const completeProfile = profileResult.rows[0];
 
       // Store session in Redis (24 hour TTL)
       const sessionId = req.headers['x-session-id'] || uuidv4();
       await sessions.store(sessionId, {
-        userId: result.rows[0].id,
-        email: result.rows[0].email,
-        username: result.rows[0].username,
-        isCreator: result.rows[0].is_creator,
+        userId: completeProfile.id,
+        email: completeProfile.email,
+        username: completeProfile.username,
+        isCreator: completeProfile.is_creator,
         loginTime: Date.now()
       }, TTL.DAY);
 
       // Cache user data for faster access
-      await usersCache.cache(result.rows[0].id, result.rows[0], TTL.LONG);
+      await usersCache.cache(completeProfile.id, completeProfile, TTL.LONG);
 
       return res.json({
         success: true,
-        user: result.rows[0],
+        user: completeProfile,
         isNewUser: false,
         sessionId
       });

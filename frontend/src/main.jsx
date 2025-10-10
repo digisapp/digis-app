@@ -23,40 +23,19 @@ ${error.message}
   throw error;
 }
 
-// Initialize Sentry as early as possible (only once to prevent HMR issues)
-import * as Sentry from "@sentry/react";
+// Initialize observability (analytics + error tracking)
+import { initAnalytics } from './lib/analytics';
+import { initSentry } from './lib/sentry.client';
+import { initWebVitals } from './lib/webvitals';
 
-if (!window.__SENTRY_INITIALIZED__) {
-  window.__SENTRY_INITIALIZED__ = true;
+// Initialize analytics (logs to console in dev, tracks in prod)
+initAnalytics();
 
-  Sentry.init({
-    dsn: "https://39643d408b9ed97b88abb63fb81cfeb6@o4510043742994432.ingest.us.sentry.io/4510043876229120",
-
-    // Environment
-    environment: import.meta.env.MODE || "development",
-
-    // Performance Monitoring
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration({
-        maskAllText: false,
-        blockAllMedia: false,
-      }),
-    ],
-
-    // Performance Monitoring
-    tracesSampleRate: import.meta.env.MODE === "production" ? 0.1 : 1.0,
-
-    // Session Replay
-    replaysSessionSampleRate: 0.1, // 10% of sessions will be recorded
-    replaysOnErrorSampleRate: 1.0, // 100% of sessions with errors will be recorded
-
-    // Send default PII data to Sentry
-    sendDefaultPii: true,
-
-    // Release tracking
-    release: "digis-frontend@1.0.0",
-  });
+// Initialize Sentry (only in production)
+if (import.meta.env.PROD) {
+  initSentry();
+  // Track Core Web Vitals for performance monitoring
+  initWebVitals();
 }
 
 import React from 'react';
@@ -66,10 +45,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import App from './App.js';
 import AppBootstrap from './components/AppBootstrap.jsx';
-// import App from './NewApp.js'; // Using simpler version temporarily
+import AuthGate from './components/AuthGate.jsx';
+import { disableAllServiceWorkers } from './utils/disableServiceWorker.js';
+
+// Import new context providers
+import { AuthProvider } from './contexts/AuthContext';
+import { DeviceProvider } from './contexts/DeviceContext';
+import { ModalProvider } from './contexts/ModalContext';
+import { SocketProvider } from './contexts/SocketContext';
 
 // Import styles
 import './index.css';
+
+// Disable all service workers immediately to prevent caching issues with auth
+disableAllServiceWorkers();
 
 // Add keyframe animation for spinner
 const style = document.createElement('style');
@@ -92,13 +81,15 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Send error to Sentry
-    Sentry.withScope((scope) => {
-      scope.setExtras(errorInfo);
-      Sentry.captureException(error);
-    });
+    // Send error to Sentry (if available)
+    if (window.Sentry) {
+      window.Sentry.withScope((scope) => {
+        scope.setExtras(errorInfo);
+        window.Sentry.captureException(error);
+      });
+    }
 
-    // Silently handle errors in production
+    // Log errors in development
     if (import.meta.env.MODE === 'development') {
       console.error('React Error Boundary caught:', error, errorInfo);
     }
@@ -154,9 +145,21 @@ try {
       <ErrorBoundary>
         <BrowserRouter>
           <QueryClientProvider client={queryClient}>
-            <AppBootstrap>
-              <App />
-            </AppBootstrap>
+            <AuthGate>
+              <AppBootstrap>
+                {/* New Context Providers - Order matters! */}
+                <AuthProvider>
+                  <DeviceProvider>
+                    {/* SocketProvider now handles all socket logic internally */}
+                    <SocketProvider>
+                      <ModalProvider>
+                        <App />
+                      </ModalProvider>
+                    </SocketProvider>
+                  </DeviceProvider>
+                </AuthProvider>
+              </AppBootstrap>
+            </AuthGate>
             <Toaster position="top-right" />
           </QueryClientProvider>
         </BrowserRouter>

@@ -107,12 +107,14 @@ const HybridCreatorDashboard = memo(({
   onContentUpdate: onExternalContentUpdate
 }) => {
   const navigate = useNavigate();
+  // Initialize profile data from user prop (from Zustand store) without fallback defaults
+  // This prevents showing "Creator Name" / "creator" before API data loads
   const [profileData, setProfileData] = useState({
     banner: user?.banner_url || '/placeholder-banner.jpg',
     avatar: user?.avatar_url || '/avatar-placeholder.png',
-    name: user?.name || 'Creator Name',
-    username: user?.username || 'creator',
-    bio: user?.bio || 'Welcome to my exclusive content!',
+    name: user?.name || user?.display_name || '',
+    username: user?.username || '',
+    bio: user?.bio || '',
     views: 0,
     followers: 0,
     subscribers: 0,
@@ -335,6 +337,21 @@ const HybridCreatorDashboard = memo(({
     const interval = setInterval(generateAITip, 30000);
     return () => clearInterval(interval);
   }, [topFans, generateAITip]);
+
+  // Update profile data when user prop changes (syncs with Zustand store updates)
+  useEffect(() => {
+    if (user) {
+      setProfileData(prev => ({
+        ...prev,
+        banner: user.banner_url || prev.banner,
+        avatar: user.avatar_url || prev.avatar,
+        name: user.name || user.display_name || prev.name,
+        username: user.username || prev.username,
+        bio: user.bio || prev.bio,
+        badges: user.badges || prev.badges
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -858,7 +875,13 @@ const HybridCreatorDashboard = memo(({
                 </div>
               </div>
               <Button
-                onClick={() => navigate('/call-requests')}
+                onClick={() => {
+                  if (onNavigate) {
+                    onNavigate('call-requests');
+                  } else {
+                    navigate('/call-requests');
+                  }
+                }}
                 className="text-xs px-2 py-1"
                 variant="secondary"
               >

@@ -1,96 +1,146 @@
-// Logger utility with environment-based output control
-const isDevelopment = process.env.NODE_ENV === 'development';
-const isTest = process.env.NODE_ENV === 'test';
+/**
+ * Logger utility - Centralized logging with environment awareness
+ *
+ * Replaces scattered console.log statements throughout the app.
+ * In production, debug logs are disabled for performance.
+ */
+
+const isDevelopment = import.meta.env.MODE === 'development';
+const isTest = import.meta.env.MODE === 'test';
 
 // Log levels
-const LogLevel = {
+const LEVELS = {
   DEBUG: 0,
   INFO: 1,
   WARN: 2,
   ERROR: 3
 };
 
-// Current log level based on environment
-const currentLogLevel = isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
+// Current log level (can be configured)
+const currentLevel = isDevelopment || isTest ? LEVELS.DEBUG : LEVELS.WARN;
 
-// Format timestamp for logs
-const timestamp = () => new Date().toISOString();
+/**
+ * Format log message with timestamp and category
+ */
+const formatMessage = (category, message, ...args) => {
+  const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+  return [`[${timestamp}] [${category}]`, message, ...args];
+};
 
-// Logger implementation
+/**
+ * Logger class
+ */
 class Logger {
-  constructor(prefix = '[DIGIS]') {
-    this.prefix = prefix;
+  constructor(category) {
+    this.category = category;
   }
 
-  debug(...args) {
-    if (currentLogLevel <= LogLevel.DEBUG && !isTest) {
-      console.log(`${timestamp()} ${this.prefix}[DEBUG]`, ...args);
+  debug(message, ...args) {
+    if (currentLevel <= LEVELS.DEBUG) {
+      console.log(...formatMessage(this.category, message, ...args));
     }
   }
 
-  info(...args) {
-    if (currentLogLevel <= LogLevel.INFO && !isTest) {
-      console.info(`${timestamp()} ${this.prefix}[INFO]`, ...args);
+  info(message, ...args) {
+    if (currentLevel <= LEVELS.INFO) {
+      console.info(...formatMessage(this.category, message, ...args));
     }
   }
 
-  log(...args) {
-    this.info(...args); // Alias for info
-  }
-
-  warn(...args) {
-    if (currentLogLevel <= LogLevel.WARN && !isTest) {
-      console.warn(`${timestamp()} ${this.prefix}[WARN]`, ...args);
+  warn(message, ...args) {
+    if (currentLevel <= LEVELS.WARN) {
+      console.warn(...formatMessage(this.category, message, ...args));
     }
   }
 
-  error(...args) {
-    if (currentLogLevel <= LogLevel.ERROR) {
-      console.error(`${timestamp()} ${this.prefix}[ERROR]`, ...args);
+  error(message, ...args) {
+    if (currentLevel <= LEVELS.ERROR) {
+      console.error(...formatMessage(this.category, message, ...args));
     }
   }
 
-  // Create a child logger with additional prefix
-  child(childPrefix) {
-    return new Logger(`${this.prefix}[${childPrefix}]`);
-  }
-
-  // Performance timing helper
-  time(label) {
-    if (isDevelopment && !isTest) {
-      console.time(`${this.prefix} ${label}`);
+  /**
+   * Device detection logs (replaces duplicate device logging)
+   */
+  device(deviceInfo) {
+    if (isDevelopment) {
+      this.debug('Device detection:', deviceInfo);
     }
   }
 
-  timeEnd(label) {
-    if (isDevelopment && !isTest) {
-      console.timeEnd(`${this.prefix} ${label}`);
+  /**
+   * Auth state logs (replaces scattered auth logging)
+   */
+  auth(event, data) {
+    if (isDevelopment) {
+      const emoji = {
+        'login': '🔐',
+        'logout': '🚪',
+        'profile': '👤',
+        'token': '💰',
+        'session': '🔑',
+        'error': '❌'
+      }[event] || '🔵';
+
+      this.debug(`${emoji} ${event}:`, data);
     }
   }
 
-  // Group related logs
-  group(label) {
-    if (isDevelopment && !isTest) {
-      console.group(`${this.prefix} ${label}`);
+  /**
+   * Socket logs (replaces socket logging)
+   */
+  socket(event, data) {
+    if (isDevelopment) {
+      const emoji = {
+        'connected': '📡',
+        'disconnected': '📴',
+        'call': '📞',
+        'message': '💬',
+        'balance': '💰',
+        'error': '❌'
+      }[event] || '🔵';
+
+      this.debug(`${emoji} Socket ${event}:`, data);
     }
   }
 
-  groupEnd() {
-    if (isDevelopment && !isTest) {
-      console.groupEnd();
+  /**
+   * Modal logs (replaces modal logging)
+   */
+  modal(action, modalName, props = {}) {
+    if (isDevelopment) {
+      const emoji = action === 'open' ? '🔵' : '🔴';
+      this.debug(`${emoji} Modal ${action}:`, modalName, props);
+    }
+  }
+
+  /**
+   * Route logs (replaces navigation logging)
+   */
+  route(from, to) {
+    if (isDevelopment) {
+      this.debug('➡️ Route change:', { from, to });
     }
   }
 }
 
-// Create default logger instance
-const logger = new Logger();
+/**
+ * Create logger instance for a category
+ */
+export const createLogger = (category) => new Logger(category);
 
-// Export both class and default instance
-export { Logger, logger as default };
+/**
+ * Default logger instance
+ */
+export const logger = new Logger('App');
 
-// Convenience exports for direct use
-export const log = (...args) => logger.log(...args);
-export const debug = (...args) => logger.debug(...args);
-export const info = (...args) => logger.info(...args);
-export const warn = (...args) => logger.warn(...args);
-export const error = (...args) => logger.error(...args);
+/**
+ * Category-specific loggers
+ */
+export const authLogger = new Logger('Auth');
+export const socketLogger = new Logger('Socket');
+export const modalLogger = new Logger('Modal');
+export const deviceLogger = new Logger('Device');
+export const routeLogger = new Logger('Route');
+
+export default logger;

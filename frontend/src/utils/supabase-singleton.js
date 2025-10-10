@@ -23,6 +23,9 @@ export const getSupabaseClient = () => {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storageKey: 'digis-auth-token',
+        // Ensure session persists for a week
+        storage: window.localStorage,
+        flowType: 'pkce'
       }
     });
   }

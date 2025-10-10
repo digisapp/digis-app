@@ -107,74 +107,77 @@ const SupabaseTestPage = lazy(() => import('./components/SupabaseTestPage'));
 import recentlyViewedService from './utils/recentlyViewedService';
 import serviceWorkerManager from './utils/ServiceWorkerManager';
 import agoraLoader from './utils/AgoraLoader';
-import socketService from './services/socket';
-import { useBalance, useNotifications } from './hooks/useSocket';
+// socketService is now managed by SocketContext
+import { useNotifications } from './hooks/useSocket';
 // Import hybrid store
 import useHybridStore, { useCurrentView, useNavigationActions } from './stores/useHybridStore';
+import useAuthStore from './stores/useAuthStore';
 import { shallow } from 'zustand/shallow';
+import { loadProfileCache, saveProfileCache, clearProfileCache } from './utils/profileCache';
+
+// Import new context hooks
+import { useAuth } from './contexts/AuthContext';
+import { useDevice } from './contexts/DeviceContext';
+import { useModal, MODALS } from './contexts/ModalContext';
+import { useSocket } from './contexts/SocketContext';
+import Modals from './components/modals/Modals';
+
+// Import gradual route migration utilities
+import AppRoutes from './routes/AppRoutes';
+import useViewRouter from './routes/useViewRouter';
+
+// Import analytics bridge
+import AuthAnalyticsBridge from './components/AuthAnalyticsBridge';
+
+// Import call navigator
+import CallNavigator from './components/CallNavigator';
+
+// Import preloading utilities
+import { preloadOnIdle } from './lib/preload';
 
 // Constants
 const FETCH_THROTTLE_MS = 5000; // 5 seconds between fetches
 
 const App = () => {
-  // Mobile detection - using consistent breakpoint
-  const isMobilePortrait = useMediaQuery(BREAKPOINTS.MOBILE_PORTRAIT_QUERY);
-  const isMobileLandscape = useMediaQuery(BREAKPOINTS.MOBILE_LANDSCAPE_QUERY);
-  const isMobile = useMediaQuery(BREAKPOINTS.MOBILE_QUERY) || isMobileLandscape;
-  const isTablet = useMediaQuery(BREAKPOINTS.TABLET_QUERY);
-  
-  // Debug logging for orientation
-  useEffect(() => {
-    console.log('📱 Device detection:', {
-      isMobile,
-      isMobilePortrait,
-      isMobileLandscape,
-      isTablet,
-      innerWidth: window.innerWidth,
-      innerHeight: window.innerHeight,
-      orientation: window.matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape'
-    });
-  }, [isMobile, isMobilePortrait, isMobileLandscape, isTablet]);
-  
-  // Add a test state for debugging
-  const [testModalOpen, setTestModalOpen] = useState(false);
-  
-  // Add global function for testing
-  useEffect(() => {
-    window.openTestModal = () => {
-      console.log('🔴 OPENING TEST MODAL VIA GLOBAL FUNCTION');
-      setTestModalOpen(true);
-    };
-    window.closeTestModal = () => {
-      console.log('🔴 CLOSING TEST MODAL VIA GLOBAL FUNCTION');
-      setTestModalOpen(false);
-    };
-  }, []);
-  
-  // Additional mobile detection for debugging
-  useEffect(() => {
-    console.log('📱 Mobile Detection Debug:', {
-      isMobile,
-      isTablet,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      userAgent: navigator.userAgent,
-      touchCapable: 'ontouchstart' in window,
-      pointerCoarse: window.matchMedia('(pointer: coarse)').matches
-    });
-  }, [isMobile, isTablet]);
-  
+  // Mount adapter hook to sync currentView ↔ URL (Phase 2: Gradual Route Migration)
+  useViewRouter();
+
+  // Device detection - now from DeviceContext (centralized)
+  const { isMobile, isTablet, isMobilePortrait, isMobileLandscape, orientation } = useDevice();
+
+  // Modal management - now from ModalContext (centralized)
+  const { open: openModal, close: closeModal, isOpen: isModalOpen } = useModal();
+
+  // Socket management - now from SocketContext (centralized)
+  const {
+    connected: websocketConnected,
+    incomingCall: socketIncomingCall,
+    clearIncomingCall,
+    respondToCall: socketRespondToCall
+  } = useSocket();
+
+  // Authentication - now from AuthContext (centralized)
+  const {
+    user,
+    profile,
+    tokenBalance,
+    authLoading,
+    isCreator: authIsCreator,
+    isAdmin: authIsAdmin,
+    isAuthenticated,
+    signOut: authSignOut,
+    refreshProfile,
+    fetchTokenBalance: authFetchTokenBalance,
+    updateTokenBalance: authUpdateTokenBalance
+  } = useAuth();
+
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Get state values directly from store - moved before useEffect to avoid reference error
-  const user = useHybridStore((state) => state.user);
-  const profile = useHybridStore((state) => state.profile);
+
+  // Still need notifications and some state from hybrid store
+  const notifications = useHybridStore((state)=> state.notifications, shallow);
   const storeIsCreator = useHybridStore((state) => state.isCreator);
-  const isAdmin = useHybridStore((state) => state.isAdmin);
-  const tokenBalance = useHybridStore((state) => state.tokenBalance);
-  const notifications = useHybridStore((state) => state.notifications, shallow);
-  
+
   // Get navigation state and actions from store BEFORE using them
   const currentView = useCurrentView();
   
@@ -185,25 +188,10 @@ const App = () => {
   
   // Track last view with a ref to avoid re-render loops
   const lastViewRef = useRef(currentView);
-  
-  // Determine creator status - prioritize profile data over localStorage
-  const isCreator = React.useMemo(() => {
-    // First check profile directly (most reliable source)
-    if (profile?.is_creator === true) {
-      console.log('🔄 Using profile.is_creator for creator status');
-      return true;
-    }
-    // Then check store
-    if (storeIsCreator) {
-      return true;
-    }
-    // Only use localStorage as last fallback if no profile data exists
-    if (!profile && localStorage.getItem('userIsCreator') === 'true') {
-      console.log('🔄 Using localStorage fallback for creator status (mobile:', isMobile, ')');
-      return true;
-    }
-    return false;
-  }, [isMobile, storeIsCreator, profile?.is_creator, profile]);
+
+  // Use auth context for creator/admin status (single source of truth)
+  const isCreator = authIsCreator;
+  const isAdmin = authIsAdmin;
 
   // Sync localStorage when profile changes to ensure consistency
   useEffect(() => {
@@ -219,36 +207,8 @@ const App = () => {
     }
   }, [profile?.is_creator, profile]);
 
-  // Sync URL changes with currentView in store - using direct store access to prevent loops
-  useEffect(() => {
-    const pathToView = {
-      '/': user ? (isCreator ? 'dashboard' : 'explore') : 'home',
-      '/dashboard': 'dashboard',
-      '/explore': 'explore',
-      '/messages': 'messages',
-      '/wallet': 'wallet',
-      '/profile': 'profile',
-      '/settings': 'settings',
-      '/content': 'content',
-      '/schedule': 'schedule',
-      '/analytics': 'analytics',
-      '/calls': 'calls',
-      '/tv': 'tv',
-      '/classes': 'classes',
-      '/shop': 'shop',
-      '/collections': 'collections',
-      '/admin': 'admin',
-    };
-    
-    const view = pathToView[location.pathname];
-    if (view && view !== lastViewRef.current) {
-      console.log('📱 URL changed to', location.pathname, '- updating view to', view);
-      // Use direct store access instead of hook to avoid dependency issues
-      useHybridStore.getState().setCurrentView(view);
-      lastViewRef.current = view;
-    }
-  }, [location.pathname, user, isCreator]); // Removed setCurrentView from deps
-  
+  // NOTE: URL ↔ view syncing now handled by useViewRouter adapter hook
+
   // Debug creator status for both mobile and desktop
   useEffect(() => {
     const deviceType = isMobile ? '📱 Mobile' : '🖥️ Desktop';
@@ -269,24 +229,15 @@ const App = () => {
   const store = useHybridStore;
   const setUser = useCallback((user) => store.getState().setUser(user), []);
   const setProfile = useCallback((profile) => store.getState().setProfile(profile), []);
-  const updateTokenBalance = useCallback((balance) => store.getState().setTokenBalance(balance), []);
+  const updateTokenBalance = authUpdateTokenBalance; // Use auth context method
   const logout = useCallback(() => store.getState().logout(), []);
   const addNotification = useCallback((notif) => store.getState().addNotification(notif), []);
   const removeNotification = useCallback((id) => store.getState().removeNotification(id), []);
   const setActiveChannel = useCallback((channel) => store.getState().setActiveChannel(channel), []);
   const startStream = useCallback((stream) => store.getState().startStream(stream), []);
   const endStream = useCallback(() => store.getState().endStream(), []);
-  
-  // Local UI state with useState
-  const [authLoading, setAuthLoading] = useState(() => {
-    // For mobile, don't show loading state initially to avoid black screen
-    if (window.innerWidth < 768) {
-      return false;
-    }
-    // Check if we have cached auth to determine initial loading state
-    const cachedAuth = localStorage.getItem('isAuthenticated');
-    return cachedAuth === 'true';
-  });
+
+  // authLoading is now from AuthContext (no local state needed)
   const [channel, setChannel] = useState('');
   // Initialize current view based on stored role
   const getInitialView = () => {
@@ -322,62 +273,16 @@ const App = () => {
     console.log('🔴 showAuth changed to:', showAuth);
   }, [showAuth]);
 
-  // Token balance is now managed in Zustand store (useTokenBalance)
-  
-  // Request throttling refs
-  const fetchInProgress = useRef({ profile: false, balance: false });
-  const lastFetch = useRef({ profile: 0, balance: 0 });
-  
-  // Notification state
+  // Token balance is now managed in AuthContext
+  // Note: Request throttling refs removed - handled in AuthContext
+
+  // Notification state (kept separate from modal management)
   const [showStreamNotification, setShowStreamNotification] = useState(false);
   const [streamNotificationConfig, setStreamNotificationConfig] = useState(null);
-  const [showTokenPurchase, setShowTokenPurchase] = useState(false);
-  const [showMobileTokenPurchase, setShowMobileTokenPurchase] = useState(false);
 
-  // Modal states
-  const [showCreatorDiscovery, setShowCreatorDiscovery] = useState(false);
-  const [showPrivacySettings, setShowPrivacySettings] = useState(false);
-  const [showCreatorApplication, setShowCreatorApplication] = useState(false);
-  const [showGoLiveSetup, setShowGoLiveSetup] = useState(false);
-  const [showMobileLiveStream, setShowMobileLiveStream] = useState(false);
-  const [goLiveClickCount, setGoLiveClickCount] = useState(0);
-
-  // Debug effect to monitor showGoLiveSetup changes and lock scroll
-  useEffect(() => {
-    console.log('🔴 showGoLiveSetup state changed to:', showGoLiveSetup);
-    console.log('📱 isMobile:', isMobile);
-    console.log('👤 User exists:', !!user);
-    console.log('🎬 GoLiveSetup component imported:', !!GoLiveSetup);
-    if (showGoLiveSetup) {
-      console.log('✅ Modal should be visible now!');
-      // Add a small delay to ensure DOM is ready
-      setTimeout(() => {
-        const modalElement = document.querySelector('[data-golive-modal="true"]');
-        if (modalElement) {
-          console.log('✅ Modal element found in DOM:', modalElement);
-          console.log('Modal dimensions:', {
-            width: modalElement.offsetWidth,
-            height: modalElement.offsetHeight,
-            visible: modalElement.offsetWidth > 0 && modalElement.offsetHeight > 0
-          });
-        } else {
-          console.error('❌ Modal element NOT found in DOM');
-        }
-      }, 100);
-      
-      // Lock body scroll when modal is open
-      const previousOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      
-      return () => {
-        // Restore previous overflow when modal closes
-        document.body.style.overflow = previousOverflow;
-      };
-    }
-  }, [showGoLiveSetup, isMobile]);
-  const [showTokenTipping, setShowTokenTipping] = useState(false);
-  const [showAvailabilityCalendar, setShowAvailabilityCalendar] = useState(false);
-  const [showFanEngagement, setShowFanEngagement] = useState(false);
+  // Note: All modal states (token purchase, creator discovery, privacy settings,
+  // creator application, go live setup, token tipping, availability calendar,
+  // fan engagement) are now managed by ModalContext via useModal hook
   
   const [tippingRecipient, setTippingRecipient] = useState(null);
   const [token, setToken] = useState('');
@@ -399,9 +304,17 @@ const App = () => {
     posts: []
   });
 
-  // Real-time state (from NewApp.js)
+  // Real-time state (from NewApp.js) - incomingCall now from SocketContext
+  // websocketConnected is now from SocketContext
+  // Keep local incomingCall for compatibility with existing code
   const [incomingCall, setIncomingCall] = useState(null);
-  const [websocketConnected, setWebsocketConnected] = useState(false);
+
+  // Sync socket incoming call to local state for compatibility
+  useEffect(() => {
+    if (socketIncomingCall) {
+      setIncomingCall(socketIncomingCall);
+    }
+  }, [socketIncomingCall]);
 
   const modalRef = useRef(null);
   
@@ -409,385 +322,16 @@ const App = () => {
   const effectiveIsCreator = isCreator;
   const effectiveIsAdmin = isAdmin;
 
-  // Fetch user profile
-  const fetchUserProfileDirectlyFromSupabase = async (userId) => {
-    try {
-      console.log('📱 Fetching profile directly from Supabase for:', userId);
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        console.error('Supabase direct query error:', error);
-        return null;
-      }
-      
-      console.log('✅ Direct Supabase profile data:', {
-        username: data?.username,
-        is_creator: data?.is_creator,
-        creator_type: data?.creator_type,
-        role: data?.role
-      });
-      
-      return data;
-    } catch (error) {
-      console.error('Error in direct Supabase query:', error);
-      return null;
-    }
-  };
+  // Note: fetchUserProfile and fetchTokenBalance are now handled by AuthContext
+  // Use refreshProfile() from useAuth() hook to manually refresh profile
+  // Use authFetchTokenBalance() from useAuth() hook to manually refresh balance
+  const fetchTokenBalance = authFetchTokenBalance; // Alias for compatibility
+  const fetchUserProfile = refreshProfile; // Alias for compatibility
 
-  const fetchUserProfile = useCallback(async (currentUser = user) => {
-    if (!currentUser) return;
-    
-    // Check throttling
-    const now = Date.now();
-    if (fetchInProgress.current.profile || now - lastFetch.current.profile < FETCH_THROTTLE_MS) {
-      return;
-    }
-    
-    fetchInProgress.current.profile = true;
-    lastFetch.current.profile = now;
-    
-    let currentSession = null; // Store session in outer scope
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      currentSession = session; // Store for use in catch block
-      console.log('🔑 Session check:', { 
-        hasSession: !!session, 
-        hasToken: !!session?.access_token,
-        userId: session?.user?.id,
-        currentUserId: currentUser?.id,
-        isMobile: window.innerWidth <= 768
-      });
-      
-      if (!session || !session.access_token) {
-        console.error('No valid session found, cannot fetch profile');
-        return;
-      }
-      
-      const token = session.access_token;
-      // Use the session user ID which is guaranteed to be the Supabase ID
-      const userId = session.user.id || currentUser.id;
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+  // Note: Focus management for modals is now handled in ModalContext
 
-      if (response.ok) {
-        const data = await response.json();
-        // Debug logging to check user data
-        console.log('🔍 User Profile Data from API:', {
-          username: data.username,
-          is_creator: data.is_creator,
-          is_super_admin: data.is_super_admin,
-          role: data.role,
-          full_data: data
-        });
-        // Store the full user profile in the store (this will automatically update isCreator and isAdmin)
-        setProfile(data);
-        if (data.token_balance !== undefined) {
-          updateTokenBalance(data.token_balance);
-        }
-        
-        // Additional debug logging
-        console.log('🔐 Admin status set to:', data.is_super_admin === true || data.role === 'admin');
-        console.log('👤 Current role:', data.is_super_admin ? 'ADMIN' : data.is_creator ? 'CREATOR' : 'FAN');
-      } else {
-        // API failed, log the issue
-        console.error('❌ Profile API failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-          isMobile: window.innerWidth <= 768
-        });
-        
-        // Try to get error details
-        try {
-          const errorData = await response.json();
-          console.error('API Error details:', errorData);
-        } catch (e) {
-          console.error('Could not parse error response');
-        }
-        
-        // Fallback: Try direct Supabase query if API fails
-        if (isMobile && userId) {
-          console.log('📱 Mobile: Attempting direct Supabase query as fallback');
-          const directData = await fetchUserProfileDirectlyFromSupabase(userId);
-          if (directData) {
-            setProfile(directData);
-            console.log('✅ Mobile: Successfully loaded profile from direct Supabase query');
-          }
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error fetching user profile:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        isMobile: window.innerWidth <= 768
-      });
-      
-      // Fallback: Try direct Supabase query if API fails
-      if (isMobile && currentSession?.user?.id) {
-        console.log('📱 Mobile: Attempting direct Supabase query as fallback (after error)');
-        const directData = await fetchUserProfileDirectlyFromSupabase(currentSession.user.id);
-        if (directData) {
-          setProfile(directData);
-          console.log('✅ Mobile: Successfully loaded profile from direct Supabase query (after error)');
-        }
-      }
-    } finally {
-      fetchInProgress.current.profile = false;
-    }
-  }, [user, setProfile, updateTokenBalance, isMobile]);
-
-  // Fetch token balance
-  const fetchTokenBalance = useCallback(async (currentUser = user) => {
-    console.log('💰 fetchTokenBalance called with user:', currentUser?.email);
-    if (!currentUser) {
-      console.log('❌ No user provided to fetchTokenBalance');
-      return;
-    }
-    
-    // Check throttling
-    const now = Date.now();
-    if (fetchInProgress.current.balance || now - lastFetch.current.balance < FETCH_THROTTLE_MS) {
-      console.log('⏳ Token balance fetch throttled');
-      return;
-    }
-    
-    fetchInProgress.current.balance = true;
-    lastFetch.current.balance = now;
-    
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔑 Session check for token balance:', { 
-        hasSession: !!session, 
-        hasToken: !!session?.access_token,
-        userId: session?.user?.id 
-      });
-      const token = session?.access_token;
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      console.log('📊 Token balance response:', { 
-        status: response.status, 
-        ok: response.ok 
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Token balance fetched successfully:', data.balance);
-        updateTokenBalance(data.balance || 0);
-      } else {
-        console.error('❌ Failed to fetch token balance:', response.status, response.statusText);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching token balance:', error);
-    } finally {
-      fetchInProgress.current.balance = false;
-    }
-  }, [user, updateTokenBalance]);
-
-  // Focus management for modals
-  useEffect(() => {
-    if (showTokenPurchase && modalRef.current) {
-      const currentModalRef = modalRef.current;
-      currentModalRef.focus();
-      const handleKeyDown = (event) => {
-        if (event.key === 'Escape') {
-          setShowTokenPurchase(false);
-        }
-      };
-      currentModalRef.addEventListener('keydown', handleKeyDown);
-      return () => {
-        currentModalRef.removeEventListener('keydown', handleKeyDown);
-      };
-    }
-  }, [showTokenPurchase]);
-
-  // Authentication state management - only run once on mount
-  useEffect(() => {
-    let timeoutId;
-    let mounted = true;
-
-    const initAuth = async () => {
-      // Check for existing session immediately
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && mounted) {
-          // First sync the user with backend to ensure we have the correct role
-          try {
-            const response = await fetch(
-              `${import.meta.env.VITE_BACKEND_URL}/api/auth/sync-user`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({
-                  supabaseId: session.user.id,
-                  email: session.user.email,
-                  metadata: session.user.user_metadata
-                })
-              }
-            );
-            
-            if (response.ok) {
-              const data = await response.json();
-              const userData = data.user;
-              
-              // Log the user data to debug
-              console.log('🔍 User data from sync:', {
-                email: userData.email,
-                is_creator: userData.is_creator,
-                is_super_admin: userData.is_super_admin,
-                role: userData.role,
-                username: userData.username
-              });
-              
-              // Set user and profile with synced data
-              setUser(session.user);
-              // Store in the global store (this will automatically update isCreator and isAdmin)
-              setProfile(userData);
-              if (userData.token_balance !== undefined) {
-                updateTokenBalance(userData.token_balance);
-              }
-              
-              console.log('✅ Roles set on refresh:', {
-                isCreator: userData.is_creator === true,
-                isAdmin: userData.is_super_admin === true || userData.role === 'admin'
-              });
-              
-              setError(''); // Clear any existing errors
-              setAuthLoading(false);
-              clearTimeout(timeoutId);
-              
-              // Fetch token balance after sync
-              setTimeout(() => fetchTokenBalance(session.user), 200);
-            } else {
-              // If sync fails, still set user but fetch profile normally
-              setUser(session.user);
-              setError(''); // Clear any existing errors
-              setAuthLoading(false);
-              clearTimeout(timeoutId);
-              setTimeout(() => fetchUserProfile(session.user), 100);
-              setTimeout(() => fetchTokenBalance(session.user), 200);
-            }
-          } catch (syncError) {
-            console.error('Error syncing user on refresh:', syncError);
-            // Fallback to normal flow
-            setUser(session.user);
-            setError(''); // Clear any existing errors
-            setAuthLoading(false);
-            clearTimeout(timeoutId);
-            setTimeout(() => fetchUserProfile(session.user), 100);
-            setTimeout(() => fetchTokenBalance(session.user), 200);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking initial session:', error);
-      }
-
-      timeoutId = setTimeout(() => {
-        if (mounted && authLoading) {
-          console.log('Auth timeout reached, checking auth state...');
-          // Don't show error immediately, just set loading to false
-          setAuthLoading(false);
-          // Only show error if we truly have no user after timeout
-          if (!user) {
-            console.warn('No user found after timeout');
-          }
-        }
-      }, 30000); // Increased to 30 seconds
-
-      const unsubscribe = subscribeToAuthChanges(async (event, session) => {
-        if (!mounted) return;
-        
-        try {
-          if (session?.user) {
-            const user = session.user;
-            setUser(user);
-            setError(''); // Clear any existing errors
-            
-            // Verify role with secure backend endpoint
-            const verifiedRole = await syncUserRole();
-            
-            if (verifiedRole) {
-              console.log('✅ Role verified on auth change:', {
-                event,
-                primaryRole: verifiedRole.primaryRole,
-                isCreator: verifiedRole.isCreator,
-                isAdmin: verifiedRole.isAdmin
-              });
-            } else {
-              console.warn('⚠️ Could not verify role, fetching profile data');
-            }
-            
-            // Fetch user profile and token balance
-            setTimeout(() => fetchUserProfile(user), 100);
-            setTimeout(() => fetchTokenBalance(user), 200);
-          } else {
-            // User signed out
-            setUser(null);
-            // Use logout to clear all auth state
-            logout();
-            clearRoleCache();
-          }
-        } catch (error) {
-          console.error('Auth state change error:', error);
-          // Default to fan account on error for security
-          
-          if (error.message && !error.message.includes('No user logged in')) {
-            setError('Authentication error. Please try again.');
-          }
-        } finally {
-          if (mounted) {
-            setAuthLoading(false);
-            clearTimeout(timeoutId); // Clear timeout when auth completes
-          }
-        }
-      });
-
-      return unsubscribe;
-    };
-
-    let unsubscribe;
-    initAuth().then(unsub => {
-      unsubscribe = unsub;
-    });
-
-    return () => {
-      mounted = false;
-      clearTimeout(timeoutId);
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []); // Empty dependency array - only run once
-
-  // Refresh user data when functions change
-  useEffect(() => {
-    if (user && !authLoading) {
-      console.log('🔄 Fetching user profile for:', user.email);
-      fetchUserProfile(user);
-      fetchTokenBalance(user);
-    }
-  }, [user, fetchUserProfile, fetchTokenBalance, authLoading]);
+  // Note: Authentication initialization is now handled by AuthContext
+  // The initAuth useEffect has been removed (~400 lines) - see AuthContext.jsx for auth logic
   
   // Force fetch profile on mobile if we have user but no profile or wrong creator status
   useEffect(() => {
@@ -813,57 +357,7 @@ const App = () => {
     }
   }, [isMobile, user?.id]); // Only depend on user.id to prevent loops
 
-  // Set initial view based on user role and redirect from homepage
-  useEffect(() => {
-    if (!authLoading && user) {
-      console.log('🎯 Setting initial view - Admin:', isAdmin, 'Creator:', isCreator);
-      
-      // Check if user is on homepage and redirect them
-      const currentPath = location.pathname;
-      if (currentPath === '/' || currentPath === '') {
-        // Redirect authenticated users away from homepage
-        if (isAdmin) {
-          console.log('➡️ Redirecting to ADMIN from homepage');
-          startTransition(() => {
-            navigate('/admin');
-            setCurrentView('admin');
-          });
-        } else if (isCreator) {
-          console.log('➡️ Redirecting to DASHBOARD from homepage');
-          startTransition(() => {
-            navigate('/dashboard');
-            setCurrentView('dashboard');
-          });
-        } else {
-          console.log('➡️ Redirecting to EXPLORE from homepage');
-          startTransition(() => {
-            navigate('/explore');
-            setCurrentView('explore');
-          });
-        }
-      } else {
-        // Set view based on current route
-        if (isAdmin && currentPath === '/admin') {
-          startTransition(() => {
-            setCurrentView('admin');
-          });
-        } else if (isCreator && currentPath === '/dashboard') {
-          startTransition(() => {
-            setCurrentView('dashboard');
-          });
-        } else if (currentPath === '/explore') {
-          startTransition(() => {
-            setCurrentView('explore');
-          });
-        } else if (currentPath.startsWith('/stream/')) {
-          // Handle stream viewing route
-          startTransition(() => {
-            setCurrentView('streaming');
-          });
-        }
-      }
-    }
-  }, [isCreator, isAdmin, user, authLoading]); // Removed location.pathname and navigate from deps
+  // NOTE: Initial view redirects now handled by AppRoutes (see / route logic)
 
   // Ensure mobile creators see dashboard
   useEffect(() => {
@@ -884,7 +378,7 @@ const App = () => {
   // Service initialization (from NewApp.js)
   useEffect(() => {
     const initializeServices = async () => {
-      
+
       // Initialize optional services with individual error handling
       try {
         // Initialize service worker for PWA capabilities
@@ -895,7 +389,7 @@ const App = () => {
       } catch (error) {
         console.log('Service worker registration skipped:', error.message);
       }
-      
+
       try {
         // Preload Agora SDK for better video call performance
         if (agoraLoader && typeof agoraLoader.preloadSDK === 'function') {
@@ -909,85 +403,23 @@ const App = () => {
     initializeServices();
   }, [user]);
 
-  // Socket.io connection with delay to prevent immediate errors
+  // Preload hot routes on idle for authenticated users
   useEffect(() => {
-    if (!user) return;
-
-    // Add a small delay to allow backend to be ready
-    const timeoutId = setTimeout(async () => {
-      try {
-        // Initialize Socket.io connection
-        console.log('📡 Initializing Socket.io connection...');
-        await socketService.connect();
-      } catch (error) {
-        console.warn('Socket connection failed (non-critical):', error.message);
-        // Socket connection is optional, app can work without it
-      }
-    }, 1500); // Wait 1.5 seconds before connecting
-
-    // Subscribe to connection status
-    const unsubConnection = socketService.on('connection-status', ({ connected }) => {
-      setWebsocketConnected(connected);
-    });
-
-    // Subscribe to call requests (for creators)
-    const unsubCallRequest = socketService.on('call-request', (data) => {
-      console.log('📞 Incoming call request:', data);
-      if (isCreator) {
-        // Show incoming call modal for creators
-        setIncomingCall({
-          id: data.requestId,
-          type: data.type,
-          caller: {
-            id: data.fanId,
-            name: data.fanName,
-            username: data.fanName
-          },
-          rate: data.rate
-        });
-      }
-    });
-
-    // Subscribe to call acceptance (for fans)
-    const unsubCallAccepted = socketService.on('call-accepted', (data) => {
-      console.log('✅ Call accepted by creator:', data);
-      // Navigate to video/voice call view
-      if (data.type === 'video') {
-        setCallType('video');
-        setCurrentView('videoCall');
-      } else {
-        setCallType('voice');
-        setCurrentView('voiceCall');
-      }
-    });
-
-    // Subscribe to call rejection (for fans)
-    const unsubCallRejected = socketService.on('call-rejected', (data) => {
-      console.log('❌ Call rejected by creator:', data);
-      toast.error('Call was declined by the creator', {
-        duration: 4000
-      });
-    });
-
-    // Cleanup on unmount or user change
-    return () => {
-      clearTimeout(timeoutId);
-      unsubConnection();
-      unsubCallRequest();
-      unsubCallAccepted();
-      unsubCallRejected();
-      socketService.disconnect();
-    };
-  }, [user, isCreator]);
-
-  // Real-time balance updates
-  const { balance } = useBalance(user);
-  
-  useEffect(() => {
-    if (balance !== null) {
-      updateTokenBalance(balance);
+    if (user) {
+      preloadOnIdle(() => Promise.all([
+        import('./components/pages/MessagesPage'),
+        import('./components/pages/DashboardRouter'),
+        import('./components/pages/WalletPage'),
+      ]));
     }
-  }, [balance]);
+  }, [user]);
+
+  // Note: Socket.io connection is now handled by SocketContext
+  // See src/contexts/SocketContext.jsx for socket logic
+  // Available via useSocket() hook: { connected, incomingCall, clearIncomingCall, respondToCall }
+
+  // Note: Real-time balance updates are now handled by SocketContext
+  // Balance updates are automatically reflected via AuthContext's updateTokenBalance
 
   // Real-time notifications
   useNotifications((notification) => {
@@ -1019,30 +451,37 @@ const App = () => {
   });
 
   // Handle tipping
-  const handleTipCreator = (creator) => {
-    setTippingRecipient(creator);
-    setShowTokenTipping(true);
-  };
+  const handleTipCreator = useCallback((creator) => {
+    openModal(MODALS.TOKEN_TIPPING, {
+      creator,
+      onTipSent: () => {
+        fetchTokenBalance();
+      }
+    });
+  }, [openModal, fetchTokenBalance]);
 
   // Unified Go Live handler
   const openGoLive = useCallback(() => {
     console.log('🎬 Opening Go Live setup');
     console.log('📱 isMobile value:', isMobile);
-    console.log('🔍 Current showMobileLiveStream state:', showMobileLiveStream);
 
     if (isMobile) {
-      console.log('📱 Mobile detected - setting showMobileLiveStream to true');
-      setShowMobileLiveStream(true);
-
-      // Debug check after state update
-      setTimeout(() => {
-        console.log('🔍 After setState - checking for MobileLiveStream component...');
-      }, 100);
+      console.log('📱 Mobile detected - opening mobile live stream modal');
+      openModal(MODALS.MOBILE_LIVE_STREAM, {
+        streamConfig
+      });
     } else {
-      console.log('🖥️ Desktop detected - setting showGoLiveSetup to true');
-      setShowGoLiveSetup(true);
+      console.log('🖥️ Desktop detected - opening desktop go live setup modal');
+      openModal(MODALS.GO_LIVE_SETUP, {
+        onGoLive: (config) => {
+          console.log('Starting stream with config:', config);
+          setStreamConfig(config);
+          setCurrentView('streaming');
+          toast.success('Going live! 🎉');
+        }
+      });
     }
-  }, [isMobile, showMobileLiveStream]);
+  }, [isMobile, openModal, streamConfig, setCurrentView]);
 
   // Handle video call
   const handleStartVideoCall = (creator) => {
@@ -1077,9 +516,17 @@ const App = () => {
   const startVoiceCall = handleStartVoiceCall;
   
   // Handle purchase
-  const handlePurchase = (amount) => {
-    setShowTokenPurchase(true);
-  };
+  const handlePurchase = useCallback((amount) => {
+    openModal(isMobile ? MODALS.MOBILE_TOKEN_PURCHASE : MODALS.TOKEN_PURCHASE, {
+      onSuccess: (tokensAdded) => {
+        updateTokenBalance(tokensAdded);
+      },
+      onPurchaseSuccess: (tokensAdded) => {
+        updateTokenBalance(tokensAdded);
+        toast.success(`✅ ${tokensAdded} tokens added to your account!`);
+      }
+    });
+  }, [isMobile, openModal, updateTokenBalance]);
   
   // Handle call creator
   const handleCallCreator = (creator) => {
@@ -1139,6 +586,7 @@ const App = () => {
       await supabase.auth.signOut();
       setUser(null);
       logout(); // This will clear isCreator and isAdmin through Zustand
+      clearProfileCache(); // Clear the cached profile
       // Stay on the same site after logout
       startTransition(() => {
         navigate('/');
@@ -1297,7 +745,7 @@ const App = () => {
               // Handle call start
             }}
             onSendMessage={() => {
-              setCurrentView('messages');
+              navigate('/messages');
               setViewingCreator(null);
             }}
             onSubscribe={(tier) => {
@@ -1510,9 +958,15 @@ const App = () => {
         tokenBalance={tokenBalance}
         onGoLive={openGoLive}
       >
+        {/* Sync auth state with analytics and error tracking */}
+        <AuthAnalyticsBridge />
+
+        {/* Auto-navigate to call page when creator accepts */}
+        <CallNavigator />
+
         {/* Navigation Component - Outside main content for proper fixed positioning */}
         {user && (
-          <Navigation 
+          <Navigation
             user={user}
             onLogout={handleSignOut}
             onShowGoLive={openGoLive}
@@ -1522,90 +976,13 @@ const App = () => {
         <div className={`min-h-screen ${isMobile ? '' : 'bg-gray-50 dark:bg-gray-900'} text-gray-900 dark:text-white transition-all duration-300`}>
           <EnhancedToaster />
 
-      {/* Token Purchase Modal */}
-      {showTokenPurchase && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowTokenPurchase(false);
-            }
-          }}
-        >
-          <ErrorBoundary variant="compact">
-            <ImprovedTokenPurchase
-              user={user}
-              onSuccess={(tokensAdded) => {
-                updateTokenBalance(tokensAdded); // updateTokenBalance handles the delta
-                setShowTokenPurchase(false);
-                // toast.success(`✅ ${tokensAdded} tokens added to your account!`);
-              }}
-              onClose={() => setShowTokenPurchase(false)}
-              isModal={true}
-            />
-          </ErrorBoundary>
-        </div>
-      )}
-
-      {/* Mobile Token Purchase Modal */}
-      {showMobileTokenPurchase && (
-        <MobileTokenPurchase
-          isOpen={showMobileTokenPurchase}
-          onClose={() => setShowMobileTokenPurchase(false)}
-          user={user}
-          onPurchaseSuccess={(tokensAdded) => {
-            updateTokenBalance(tokensAdded);
-            setShowMobileTokenPurchase(false);
-            toast.success(`✅ ${tokensAdded} tokens added to your account!`);
-          }}
-        />
-      )}
-
-
-      {/* Enhanced Creator Discovery Modal */}
-      {showCreatorDiscovery && (
-        <EnhancedCreatorDiscovery
-          user={user}
-          onClose={() => setShowCreatorDiscovery(false)}
-        />
-      )}
-
-      {/* Privacy Settings Modal */}
-      {showPrivacySettings && (
-        <PrivacySettings
-          user={user}
-          onClose={() => setShowPrivacySettings(false)}
-        />
-      )}
-
-      {/* Creator Application Modal */}
-      {showCreatorApplication && (
-        <CreatorApplication
-          onClose={() => setShowCreatorApplication(false)}
-          onSuccess={() => {
-            setShowCreatorApplication(false);
-            // toast.success('Creator application submitted successfully!');
-          }}
-        />
-      )}
-
-
-      {/* Tip Modal */}
-      <TipModal
-        isOpen={showTokenTipping}
-        onClose={() => {
-          setShowTokenTipping(false);
-          setTippingRecipient(null);
-        }}
-        creator={tippingRecipient}
-        tokenBalance={tokenBalance}
-        onTipSent={() => {
-          setShowTokenTipping(false);
-          setTippingRecipient(null);
-          fetchTokenBalance();
-          // toast.success('🎉 Tip sent successfully!');
-        }}
-      />
+          {/* All modals rendered via centralized Modals component */}
+          <Modals
+            user={user}
+            tokenBalance={tokenBalance}
+            onTokenUpdate={fetchTokenBalance}
+            onNavigate={setCurrentView}
+          />
 
       {/* Old header removed - Navigation component handles this now */}
 
@@ -1636,7 +1013,13 @@ const App = () => {
         refreshingMessage="Refreshing content..."
       >
         <main className={isMobile ? '' : 'pt-20 p-6'}>
-        {currentView === 'profile' ? (
+          {/* URL-based routes for migrated screens (Phase 2: Gradual Route Migration) */}
+          <AppRoutes />
+
+          {/* TEMPORARY: Legacy fallback for views NOT yet in AppRoutes */}
+          {/* As we verify each screen works with AppRoutes, delete its fallback branch */}
+
+          {currentView === 'profile' ? (
           isMobile ? (
             <>
               {/* Debug info for mobile creator detection */}
@@ -1668,24 +1051,6 @@ const App = () => {
           )
         ) : currentView === 'admin' && isAdmin ? (
           <EnhancedAdminDashboard user={user} />
-        ) : currentView === 'history' ? (
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-300">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">📊 Session History</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-green-50 p-6 rounded-xl border border-green-200 text-center">
-                <div className="text-2xl font-bold text-green-700">{sessionStats.totalSessions}</div>
-                <div className="text-sm text-green-600">Total Sessions</div>
-              </div>
-              <div className="bg-blue-50 p-6 rounded-xl border border-blue-200 text-center">
-                <div className="text-2xl font-bold text-blue-700">${sessionStats.totalEarnings}</div>
-                <div className="text-sm text-blue-600">Total Earnings</div>
-              </div>
-              <div className="bg-purple-50 p-6 rounded-xl border border-purple-200 text-center">
-                <div className="text-2xl font-bold text-purple-700">{sessionStats.activeUsers}</div>
-                <div className="text-sm text-purple-600">Active Fans</div>
-              </div>
-            </div>
-          </div>
         ) : currentView === 'streaming' ? (
           (() => {
             // Extract creator username from URL if joining a stream
@@ -1748,165 +1113,14 @@ const App = () => {
               );
             }
           })()
-        ) : currentView === 'following' ? (
-          <FollowingSystem 
-            user={user}
-            onCreatorSelect={(creator) => {
-              setViewingCreator(creator.username || creator.creator);
-            }}
-          />
-        ) : currentView === 'dashboard' && isMobile ? (
-          // Mobile Dashboard - Creator or Fan
-          (() => {
-            // Prioritize profile data over store/localStorage
-            const isCreatorUser = profile?.is_creator === true || (isCreator && profile?.is_creator !== false);
-            
-            console.log('📱 Mobile Dashboard Render:', {
-              isCreatorUser,
-              profile_is_creator: profile?.is_creator,
-              store_isCreator: isCreator,
-              localStorage_isCreator: localStorage.getItem('userIsCreator'),
-              user: user?.email,
-              profile: profile
-            });
-            
-            // Show loading state if user data isn't ready
-            if (!user) {
-              return (
-                <div className="flex items-center justify-center h-96">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading dashboard...</p>
-                  </div>
-                </div>
-              );
-            }
-            
-            if (isCreatorUser) {
-              // Try to render MobileCreatorDashboard with fallback
-              try {
-                return (
-                  <MobileCreatorDashboard
-                    user={user}
-                    tokenBalance={tokenBalance}
-                    onNavigate={setCurrentView}
-                    onShowGoLive={openGoLive}
-                    onShowAvailability={() => {
-                      console.log('Schedule clicked - navigating to schedule');
-                      setCurrentView('schedule');
-                    }}
-                    onShowEarnings={() => setCurrentView('wallet')}
-                    onShowSettings={() => setShowPrivacySettings(true)}
-                    onShowContent={() => setCurrentView('content')}
-                    onShowMessages={() => setCurrentView('messages')}
-                  />
-                );
-              } catch (error) {
-                console.error('Error rendering MobileCreatorDashboard:', error);
-                // Fallback to desktop dashboard for now
-                return (
-                  <div className="p-4">
-                    <h2 className="text-xl font-bold mb-4">Creator Dashboard</h2>
-                    <div className="grid gap-4">
-                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                        <p className="text-gray-600 dark:text-gray-400">Welcome back, {user?.email}</p>
-                        <p className="text-sm text-gray-500 mt-2">Mobile dashboard is being updated</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-            } else {
-              // Try to render MobileFanDashboard with fallback
-              try {
-                return (
-                  <MobileFanDashboard
-                    user={user}
-                    tokenBalance={tokenBalance}
-                    onNavigate={setCurrentView}
-                    onCreatorSelect={handleCreatorView}
-                    onTokenPurchase={() => setShowTokenPurchase(true)}
-                    onStartVideoCall={handleStartVideoCall}
-                    onStartVoiceCall={handleStartVoiceCall}
-                  />
-                );
-              } catch (error) {
-                console.error('Error rendering MobileFanDashboard:', error);
-                // Fallback to simple dashboard
-                return (
-                  <div className="p-4">
-                    <h2 className="text-xl font-bold mb-4">Dashboard</h2>
-                    <div className="grid gap-4">
-                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                        <p className="text-gray-600 dark:text-gray-400">Welcome, {user?.email}</p>
-                        <p className="text-sm text-gray-500 mt-2">Explore creators to get started</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-            }
-          })()
-        ) : currentView === 'dashboard' ? (
-          <DashboardRouter 
-            user={user}
-            isCreator={effectiveIsCreator}
-            isAdmin={effectiveIsAdmin}
-            tokenBalance={tokenBalance}
-            sessionStats={sessionStats}
-            onShowAvailability={() => setShowAvailabilityCalendar(true)}
-            onShowGoLive={openGoLive}
-            onCreatorSelect={handleCreatorView}
-            onTipCreator={handleTipCreator}
-            onStartVideoCall={handleStartVideoCall}
-            onStartVoiceCall={handleStartVoiceCall}
-            onShowEarnings={() => setCurrentView('wallet')}
-            onShowOffers={() => setCurrentView('offers')}
-            onShowSettings={() => setShowPrivacySettings(true)}
-            onNavigate={(view) => setCurrentView(view)}
-            contentData={sharedContentData}
-            onContentUpdate={setSharedContentData}
-          />
-        ) : currentView === 'explore' ? (
-          isMobile ? (
-            <MobileExplore
-              user={user}
-              onNavigate={setCurrentView}
-              onCreatorSelect={handleCreatorView}
-            />
-          ) : (
-            <ExplorePage
-              user={user}
-              tokenBalance={tokenBalance}
-              onCreatorSelect={handleCreatorView}
-              onTipCreator={handleTipCreator}
-              onStartVideoCall={handleStartVideoCall}
-              onStartVoiceCall={handleStartVoiceCall}
-              onScheduleSession={(creator) => {
-                sessionStorage.setItem('scheduleCreator', JSON.stringify(creator));
-                startTransition(() => {
-                  navigate('/schedule');
-                });
-              }}
-              onSendMessage={(creator) => {
-                sessionStorage.setItem('messageCreator', JSON.stringify(creator));
-                setCurrentCreator(creator);
-                setCurrentView('messages');
-              }}
-              onMakeOffer={(creator) => {
-                sessionStorage.setItem('offerCreator', JSON.stringify(creator));
-                startTransition(() => {
-                  navigate('/offers');
-                });
-              }}
-            />
-          )
         ) : currentView === 'tv' ? (
           <TVPage
             user={user}
             isCreator={isCreator}
             tokenBalance={tokenBalance}
-            onTokenPurchase={() => setShowTokenPurchase(true)}
+            onTokenPurchase={() => openModal(MODALS.TOKEN_PURCHASE, {
+              onSuccess: (tokensAdded) => updateTokenBalance(tokensAdded)
+            })}
             onJoinStream={(stream) => {
               // Handle joining a stream
               handleCreatorView(stream.creatorId);
@@ -1921,31 +1135,8 @@ const App = () => {
             tokenBalance={tokenBalance}
             onTokenUpdate={fetchTokenBalance}
           />
-        ) : currentView === 'messages' ? (
-          isMobile ? (
-            <MobileMessages
-              user={user}
-              isCreator={isCreator}
-              tokenBalance={tokenBalance}
-              onStartVideoCall={handleStartVideoCall}
-              onStartVoiceCall={handleStartVoiceCall}
-              onSendTip={handleTipCreator}
-            />
-          ) : (
-            <MessagesPage 
-              user={user}
-              isCreator={isCreator}
-              onStartVideoCall={handleStartVideoCall}
-              onStartVoiceCall={handleStartVoiceCall}
-              onSendTip={handleTipCreator}
-            />
-          )
         ) : currentView === 'shop' ? (
-          <ShopPage 
-            user={user}
-          />
-        ) : currentView === 'shop-management' ? (
-          <ShopManagementPage 
+          <ShopPage
             user={user}
           />
         ) : currentView === 'wallet' ? (
@@ -1954,15 +1145,22 @@ const App = () => {
               user={user}
               tokenBalance={tokenBalance}
               onNavigate={setCurrentView}
-              onTokenPurchase={() => setShowMobileTokenPurchase(true)}
+              onTokenPurchase={() => openModal(MODALS.MOBILE_TOKEN_PURCHASE, {
+                onPurchaseSuccess: (tokensAdded) => {
+                  updateTokenBalance(tokensAdded);
+                  toast.success(`✅ ${tokensAdded} tokens added to your account!`);
+                }
+              })}
             />
           ) : (
-            <WalletPage 
+            <WalletPage
               user={user}
               tokenBalance={tokenBalance}
               onTokenUpdate={fetchTokenBalance}
               onViewProfile={(username) => setViewingCreator(username)}
-              onTokenPurchase={() => setShowTokenPurchase(true)}
+              onTokenPurchase={() => openModal(MODALS.TOKEN_PURCHASE, {
+                onSuccess: (tokensAdded) => updateTokenBalance(tokensAdded)
+              })}
               isCreator={user?.is_creator || isCreator}
               isAdmin={isAdmin}
             />
@@ -2017,7 +1215,9 @@ const App = () => {
           ) : (
             <ImprovedProfile
               user={user}
-              onShowTokenPurchase={() => setShowTokenPurchase(true)}
+              onShowTokenPurchase={() => openModal(MODALS.TOKEN_PURCHASE, {
+                onSuccess: (tokensAdded) => updateTokenBalance(tokensAdded)
+              })}
             />
           )
         ) : currentView === 'settings' ? (
@@ -2057,13 +1257,13 @@ const App = () => {
           ) : (
             <>
               {isCreator ? (
-                <DashboardRouter 
+                <DashboardRouter
                 user={user}
                 isCreator={isCreator}
                 isAdmin={isAdmin}
                 tokenBalance={tokenBalance}
                 sessionStats={sessionStats}
-                onShowAvailability={() => setShowAvailabilityCalendar(true)}
+                onShowAvailability={() => openModal(MODALS.AVAILABILITY_CALENDAR)}
                 onShowGoLive={openGoLive}
                 onCreatorSelect={handleCreatorView}
                 onTipCreator={handleTipCreator}
@@ -2071,7 +1271,7 @@ const App = () => {
                 onStartVoiceCall={handleStartVoiceCall}
                 onShowEarnings={() => setCurrentView('wallet')}
                 onShowOffers={() => setCurrentView('offers')}
-                onShowSettings={() => setShowPrivacySettings(true)}
+                onShowSettings={() => openModal(MODALS.PRIVACY_SETTINGS)}
                 onNavigate={(view) => setCurrentView(view)}
                 contentData={sharedContentData}
                 onContentUpdate={setSharedContentData}
@@ -2099,17 +1299,6 @@ const App = () => {
             isCreator={isCreator}
             initialTab="subscribers"
           />
-        ) : currentView === 'supabase-test' ? (
-          <SupabaseTestPage />
-        ) : currentView === 'kyc' && isCreator ? (
-          <CreatorKYCVerification 
-            user={user}
-            onComplete={() => {
-              toast.success('KYC verification submitted successfully!');
-              setCurrentView('dashboard');
-            }}
-            onCancel={() => setCurrentView('dashboard')}
-          />
         ) : currentView === 'settings' ? (
           isMobile ? (
             <MobileSettingsPage
@@ -2126,13 +1315,13 @@ const App = () => {
           )
         ) : (
           <div className="space-y-8">
-            <DashboardRouter 
+            <DashboardRouter
               user={user}
               isCreator={isCreator}
               isAdmin={isAdmin}
               tokenBalance={tokenBalance}
               sessionStats={sessionStats}
-              onShowAvailability={() => setShowAvailabilityCalendar(true)}
+              onShowAvailability={() => openModal(MODALS.AVAILABILITY_CALENDAR)}
               onShowGoLive={openGoLive}
               onCreatorSelect={handleCreatorView}
               onTipCreator={handleTipCreator}
@@ -2140,7 +1329,7 @@ const App = () => {
               onStartVoiceCall={handleStartVoiceCall}
               onShowEarnings={() => setCurrentView('wallet')}
                 onShowOffers={() => setCurrentView('offers')}
-              onShowSettings={() => setShowPrivacySettings(true)}
+              onShowSettings={() => openModal(MODALS.PRIVACY_SETTINGS)}
               onNavigate={(view) => setCurrentView(view)}
               contentData={sharedContentData}
               onContentUpdate={setSharedContentData}
@@ -2179,35 +1368,9 @@ const App = () => {
         />
       )}
 
-      {/* Availability Calendar Modal */}
-      {showAvailabilityCalendar && (
-        <EnhancedSchedule
-          user={user}
-          onClose={() => setShowAvailabilityCalendar(false)}
-        />
-      )}
-
-      {/* Fan Engagement Modal */}
-      {showFanEngagement && (
-        <FanEngagement
-          user={user}
-          tokenBalance={tokenBalance}
-          onCreatorSelect={(creator) => {
-            setViewingCreator(creator.username || creator.creator);
-          }}
-          onClose={() => setShowFanEngagement(false)}
-        />
-      )}
+      {/* Note: All modals now rendered via centralized Modals component above */}
 
       {/* Smart Balance Notifications - Removed to prevent zero balance popups */}
-      {/* {user && !isCreator && (
-        <SmartBalanceNotifications
-          user={user}
-          currentBalance={tokenBalance}
-          onQuickPurchase={() => setShowTokenPurchase(true)}
-          onOpenTokenStore={() => setShowTokenPurchase(true)}
-        />
-      )} */}
 
       {/* PWA Install Prompt - Removed */}
 
@@ -2223,13 +1386,16 @@ const App = () => {
       {/* Incoming Call Modal */}
       <IncomingCallModal
         isOpen={!!incomingCall}
-        onClose={() => setIncomingCall(null)}
+        onClose={() => {
+          setIncomingCall(null);
+          clearIncomingCall();
+        }}
         callData={incomingCall}
         onAccept={async () => {
           console.log('✅ Call accepted');
           // Send acceptance to fan via socket
-          if (socketService && incomingCall) {
-            socketService.emit('call-response', {
+          if (incomingCall) {
+            socketRespondToCall({
               requestId: incomingCall.id,
               accepted: true,
               creatorId: user?.id
@@ -2246,18 +1412,20 @@ const App = () => {
           }
 
           setIncomingCall(null);
+          clearIncomingCall();
         }}
         onDecline={() => {
           console.log('❌ Call declined');
           // Send rejection to fan via socket
-          if (socketService && incomingCall) {
-            socketService.emit('call-response', {
+          if (incomingCall) {
+            socketRespondToCall({
               requestId: incomingCall.id,
               accepted: false,
               creatorId: user?.id
             });
           }
           setIncomingCall(null);
+          clearIncomingCall();
         }}
       />
 

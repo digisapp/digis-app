@@ -19,7 +19,13 @@ const VideoCallModal = ({
   const [showInsufficientTokens, setShowInsufficientTokens] = useState(false);
 
   const handleStartCall = () => {
-    // Check if user has any tokens (minimum check)
+    console.log('VideoCallModal - Token Check:', {
+      tokenBalance,
+      tokenCost,
+      hasEnough: tokenBalance >= tokenCost
+    });
+
+    // Check if user has enough tokens (creators can also pay for calls with other creators)
     if (tokenBalance < tokenCost) {
       setShowInsufficientTokens(true);
       return;

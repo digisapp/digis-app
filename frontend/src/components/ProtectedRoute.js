@@ -5,14 +5,33 @@ import { verifyUserRole, canAccessRoute, ROLES } from '../utils/roleVerification
 /**
  * Protected Route Component
  * Ensures only users with the correct role can access certain routes
+ *
+ * Props:
+ * - role: 'admin' | 'creator' | 'fan' (preferred API)
+ * - requireAdmin: boolean (legacy, maps to role='admin')
+ * - requireCreator: boolean (legacy, maps to role='creator')
+ * - requiredRole: ROLES enum value (legacy backend verification)
  */
-const ProtectedRoute = ({ 
-  children, 
-  requiredRole, 
+const ProtectedRoute = ({
+  children,
+  role,
+  requireAdmin,
+  requireCreator,
+  requiredRole,
   fallbackPath = '/',
   isAdmin,
-  isCreator 
+  isCreator
 }) => {
+  // Normalize to requiredRole for backend verification
+  let normalizedRole = requiredRole;
+
+  if (role === 'admin' || requireAdmin) {
+    normalizedRole = ROLES.ADMIN;
+  } else if (role === 'creator' || requireCreator) {
+    normalizedRole = ROLES.CREATOR;
+  } else if (role === 'fan') {
+    normalizedRole = ROLES.FAN;
+  }
   const [isVerifying, setIsVerifying] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [verifiedRole, setVerifiedRole] = useState(null);
@@ -31,8 +50,8 @@ const ProtectedRoute = ({
         }
 
         let allowed = false;
-        
-        switch (requiredRole) {
+
+        switch (normalizedRole) {
           case ROLES.ADMIN:
             // Only true admins can access admin routes
             allowed = role.isAdmin === true;
@@ -46,13 +65,13 @@ const ProtectedRoute = ({
             allowed = true;
             break;
           default:
-            allowed = await canAccessRoute(requiredRole);
+            allowed = await canAccessRoute(normalizedRole);
         }
-        
+
         setHasAccess(allowed);
-        
+
         // Log access attempt for security monitoring
-        if (!allowed && requiredRole === ROLES.ADMIN) {
+        if (!allowed && normalizedRole === ROLES.ADMIN) {
           console.warn('⚠️ Unauthorized admin access attempt:', {
             email: role.email,
             primaryRole: role.primaryRole,
@@ -68,7 +87,7 @@ const ProtectedRoute = ({
     }
 
     checkAccess();
-  }, [requiredRole]);
+  }, [normalizedRole]);
 
   if (isVerifying) {
     return (
@@ -83,7 +102,7 @@ const ProtectedRoute = ({
 
   if (!hasAccess) {
     // For admin routes, completely hide and redirect
-    if (requiredRole === ROLES.ADMIN) {
+    if (normalizedRole === ROLES.ADMIN) {
       return <Navigate to={fallbackPath} replace />;
     }
     

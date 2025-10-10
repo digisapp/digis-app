@@ -947,7 +947,7 @@ const Wallet = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onTokenPurch
             <div className="flex items-center justify-between py-2">
               <span className="text-sm text-gray-600">Auto-withdrawal</span>
               <button
-                onClick={toggleAutoWithdraw}
+                onClick={() => updateWithdrawalSettings(!autoWithdrawEnabled, null)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 ${
                   autoWithdrawEnabled ? 'bg-green-500 shadow-md' : 'bg-gray-300'
                 }`}

@@ -644,22 +644,49 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   // Fetch user token balance
   useEffect(() => {
     const fetchUserTokenBalance = async () => {
-      if (!user || !user.id) return;
+      console.log('CreatorPublicProfileEnhanced - Fetching token balance for user:', {
+        user,
+        userId: user?.id,
+        supabaseId: user?.supabase_id,
+        hasUser: !!user
+      });
+
+      if (!user) {
+        console.log('CreatorPublicProfileEnhanced - Skipping token fetch: No user');
+        return;
+      }
 
       try {
         const token = await getAuthToken();
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance/${user.id}`, {
+        // Backend authenticates via JWT token, no need to pass user ID in URL
+        const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`;
+        console.log('CreatorPublicProfileEnhanced - Fetching from:', apiUrl);
+
+        const response = await fetch(apiUrl, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
 
+        console.log('CreatorPublicProfileEnhanced - Token balance response:', {
+          ok: response.ok,
+          status: response.status,
+          statusText: response.statusText
+        });
+
         if (response.ok) {
           const data = await response.json();
+          console.log('CreatorPublicProfileEnhanced - Token balance data:', data);
+          console.log('CreatorPublicProfileEnhanced - Setting userTokenBalance to:', data.balance || 0);
           setUserTokenBalance(data.balance || 0);
+        } else {
+          console.error('CreatorPublicProfileEnhanced - Token balance fetch failed:', {
+            status: response.status,
+            statusText: response.statusText
+          });
         }
       } catch (error) {
-        console.error('Error fetching token balance:', error);
+        console.error('CreatorPublicProfileEnhanced - Error fetching token balance:', error);
       }
     };
 
@@ -1668,7 +1695,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
           displayName: creator?.display_name || creator?.username,
           isOnline: creator?.is_online
         }}
-        tokenCost={creator?.video_price || 100}
+        tokenCost={creator?.rates?.videoCall || creator?.video_price || 150}
         tokenBalance={userTokenBalance}
         onCallStart={handleVideoCallStart}
       />
@@ -1682,7 +1709,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
           displayName: creator?.display_name || creator?.username,
           isOnline: creator?.is_online
         }}
-        tokenCost={creator?.voice_price || 50}
+        tokenCost={creator?.rates?.voiceCall || creator?.voice_price || 50}
         tokenBalance={userTokenBalance}
         onCallStart={handleVoiceCallStart}
       />

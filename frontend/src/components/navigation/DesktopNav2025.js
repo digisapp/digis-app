@@ -46,6 +46,7 @@ import TokenPurchase from '../TokenPurchase';
 import useHybridStore from '../../stores/useHybridStore';
 import useAuthStore from '../../stores/useAuthStore';
 import toast from 'react-hot-toast';
+import { preload } from '../../lib/preload';
 
 const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
   // Use AuthStore as single source of truth for role
@@ -190,6 +191,28 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
     { id: 'schedule', label: 'Schedule', icon: CalendarDaysIcon, path: '/schedule', color: 'from-purple-500 to-indigo-500' }
   ];
 
+  // Map paths to their lazy-loaded components for preloading
+  const preloadRouteMap = {
+    '/dashboard': () => import('../pages/DashboardRouter'),
+    '/explore': () => import('../pages/ExplorePage'),
+    '/messages': () => import('../pages/MessagesPage'),
+    '/tv': () => import('../pages/TVPage'),
+    '/classes': () => import('../pages/ClassesPage'),
+    '/wallet': () => import('../pages/WalletPage'),
+    '/schedule': () => import('../pages/SchedulePage'),
+    '/profile': () => import('../ImprovedProfile'),
+    '/content': () => import('../pages/DashboardRouter'),
+    '/settings': () => import('../Settings'),
+  };
+
+  // Preload a route on hover
+  const handleRoutePreload = (path) => {
+    const importFn = preloadRouteMap[path];
+    if (importFn) {
+      preload(importFn);
+    }
+  };
+
   return (
     <>
       <motion.nav 
@@ -249,6 +272,7 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                       onClick={() => item.path && onNavigate(item.path)}
+                      onMouseEnter={() => handleRoutePreload(item.path)}
                       className="relative group"
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.95 }}
@@ -350,6 +374,7 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
                     onNavigate('/wallet');
                   }
                 }}
+                onMouseEnter={() => handleRoutePreload('/wallet')}
                 className="relative group"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

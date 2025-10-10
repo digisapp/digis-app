@@ -28,11 +28,25 @@ const createAuthSlice = (set, get) => ({
   setProfile: (profile) => set((state) => {
     console.log('🔍 Setting profile in store:', {
       email: profile?.email,
+      username: profile?.username,
       is_creator: profile?.is_creator,
       role: profile?.role,
       creator_type: profile?.creator_type,
       full_profile: profile
     });
+
+    // Prevent storing incomplete/default profile data
+    if (!profile) {
+      console.warn('⚠️ Attempted to set null profile - ignoring');
+      return;
+    }
+
+    // Validate that we have at minimum a username or email
+    if (!profile.username && !profile.email) {
+      console.warn('⚠️ Attempted to set profile without username or email - ignoring');
+      return;
+    }
+
     state.profile = profile;
 
     // STRICT creator detection - only use is_creator field as source of truth
@@ -467,17 +481,42 @@ const useHybridStore = create(
         name: 'digis-hybrid-store',
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
-          // Only persist auth and user preferences
-          user: state.user,
-          profile: state.profile,
+          // Persist auth state INCLUDING profile data to maintain session across refreshes
+          user: state.user ? { id: state.user.id, email: state.user.email } : null,
+          profile: state.profile ? {
+            id: state.profile.id,
+            email: state.profile.email,
+            username: state.profile.username,
+            display_name: state.profile.display_name,
+            bio: state.profile.bio,
+            profile_pic_url: state.profile.profile_pic_url,
+            is_creator: state.profile.is_creator,
+            is_super_admin: state.profile.is_super_admin,
+            role: state.profile.role,
+            creator_type: state.profile.creator_type,
+            verified: state.profile.verified,
+          } : null,
           tokenBalance: state.tokenBalance,
           isCreator: state.isCreator,
           isAdmin: state.isAdmin,
+          roleVerified: state.roleVerified, // Persist role verification status
         }),
         onRehydrateStorage: () => (state) => {
+          console.log('🔄 Rehydrating store from localStorage');
           // Ensure onlineUsers is always an array after rehydration
           if (state && !Array.isArray(state.onlineUsers)) {
             state.onlineUsers = [];
+          }
+          // Profile is now persisted and will be available immediately
+          if (state) {
+            console.log('✅ Store rehydrated with profile and roles:', {
+              username: state.profile?.username,
+              email: state.profile?.email,
+              isCreator: state.isCreator,
+              isAdmin: state.isAdmin,
+              roleVerified: state.roleVerified,
+              profileExists: !!state.profile
+            });
           }
         },
       }

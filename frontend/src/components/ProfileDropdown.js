@@ -582,7 +582,7 @@ const ProfileDropdown = ({
                         { label: 'Dashboard', icon: HomeIcon, path: '/dashboard', color: 'text-purple-600 dark:text-purple-400' },
                         { label: 'Offers', icon: GiftIcon, onClick: () => { setShowOfferModal(true); setIsOpen(false); }, color: 'text-pink-600 dark:text-pink-400' },
                         { label: 'Schedule', icon: CalendarIcon, path: '/schedule', color: 'text-indigo-600 dark:text-indigo-400' },
-                        { label: 'Calls', icon: PhoneIcon, onClick: () => { navigate('/call-requests'); setIsOpen(false); }, color: 'text-blue-600 dark:text-blue-400' },
+                        { label: 'Calls', icon: PhoneIcon, path: '/call-requests', color: 'text-blue-600 dark:text-blue-400' },
                         { label: 'Shop', icon: ShoppingBagIcon, path: '/shop', color: 'text-emerald-600 dark:text-emerald-400' },
                         { label: 'Pricing Rates', icon: CurrencyDollarIcon, onClick: () => { setShowPricingRatesModal(true); setIsOpen(false); }, color: 'text-green-600 dark:text-green-400' }
                       ].map((item) => {
