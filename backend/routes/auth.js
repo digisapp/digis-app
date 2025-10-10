@@ -123,30 +123,62 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       `;
 
       const profileResult = await pool.query(profileQuery, [user.id]);
+
+      if (!profileResult.rows || profileResult.rows.length === 0) {
+        console.error('❌ No profile found for user:', user.id);
+        return res.status(404).json({
+          success: false,
+          error: 'User profile not found'
+        });
+      }
+
       const rawProfile = profileResult.rows[0];
 
       // **CANONICAL ROLE COMPUTATION** - Override with server truth
+      // Add null-safe checks for all fields
       const completeProfile = {
         ...rawProfile,
         is_creator: rawProfile.is_creator === true ||
                     rawProfile.role === 'creator' ||
-                    rawProfile.creator_type != null,
+                    (rawProfile.creator_type !== null && rawProfile.creator_type !== undefined),
         is_admin: rawProfile.is_super_admin === true ||
-                  rawProfile.role === 'admin'
+                  rawProfile.role === 'admin',
+        // Ensure token balance fields are always numbers
+        token_balance: parseFloat(rawProfile.token_balance) || 0,
+        total_purchased: parseFloat(rawProfile.total_purchased) || 0,
+        total_spent: parseFloat(rawProfile.total_spent) || 0,
+        total_earned: parseFloat(rawProfile.total_earned) || 0
       };
 
-      // Store session in Redis (24 hour TTL)
-      const sessionId = req.headers['x-session-id'] || uuidv4();
-      await sessions.store(sessionId, {
-        userId: completeProfile.id,
-        email: completeProfile.email,
+      console.log('✅ Canonical profile computed:', {
         username: completeProfile.username,
-        isCreator: completeProfile.is_creator,
-        loginTime: Date.now()
-      }, TTL.DAY);
+        is_creator: completeProfile.is_creator,
+        is_admin: completeProfile.is_admin,
+        fields_checked: {
+          is_creator_field: rawProfile.is_creator,
+          role_field: rawProfile.role,
+          creator_type_field: rawProfile.creator_type,
+          is_super_admin_field: rawProfile.is_super_admin
+        }
+      });
 
-      // Cache user data for faster access
-      await usersCache.cache(completeProfile.id, completeProfile, TTL.LONG);
+      // Store session in Redis (24 hour TTL) - non-blocking
+      const sessionId = req.headers['x-session-id'] || uuidv4();
+      try {
+        await sessions.store(sessionId, {
+          userId: completeProfile.id,
+          email: completeProfile.email,
+          username: completeProfile.username,
+          isCreator: completeProfile.is_creator,
+          loginTime: Date.now()
+        }, TTL.DAY);
+
+        // Cache user data for faster access
+        await usersCache.cache(completeProfile.id, completeProfile, TTL.LONG);
+      } catch (cacheError) {
+        console.error('⚠️ Redis cache error (non-fatal):', cacheError.message);
+        // Don't fail the request if caching fails
+      }
 
       return res.json({
         success: true,
@@ -352,11 +384,19 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error syncing user:', error);
+    console.error('❌ Error syncing user:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      detail: error.detail,
+      supabaseId: req.body?.supabaseId,
+      email: req.body?.email
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to sync user',
-      message: error.message
+      message: error.message,
+      detail: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
