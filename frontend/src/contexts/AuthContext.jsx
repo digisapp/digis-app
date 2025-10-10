@@ -333,31 +333,33 @@ export const AuthProvider = ({ children }) => {
               console.error('❌ sync-user failed:', {
                 status: response.status,
                 error: errorData.error,
-                message: errorData.message
+                message: errorData.message,
+                detail: errorData.detail
               });
 
-              // Fallback: still set user but with limited data
-              setUser(session.user);
-              setProfile({
-                id: session.user.id,
-                email: session.user.email,
-                username: session.user.email.split('@')[0],
-                is_creator: false,
-                is_admin: false
-              });
-              setError('');
+              // Critical error - don't set partial profile to avoid routing issues
+              // Instead, sign out and show error
+              setError('Authentication failed. Please try logging in again.');
               setAuthLoading(false);
-              clearTimeout(timeoutId); // Clear timeout on error
-              setTimeout(() => fetchUserProfile(session.user), 100);
-              setTimeout(() => fetchTokenBalance(session.user), 200);
+              clearTimeout(timeoutId);
+
+              // Sign out to prevent redirect loops
+              await supabase.auth.signOut();
+              setUser(null);
+              setProfile(null);
             }
           } catch (syncError) {
-            console.error('Error syncing user:', syncError);
-            setUser(session.user);
+            console.error('❌ Error syncing user (network):', syncError);
+
+            // Critical error - sign out to prevent redirect loops
+            setError('Authentication failed. Please try logging in again.');
             setAuthLoading(false);
-            clearTimeout(timeoutId); // Clear timeout on error
-            setTimeout(() => fetchUserProfile(session.user), 100);
-            setTimeout(() => fetchTokenBalance(session.user), 200);
+            clearTimeout(timeoutId);
+
+            // Sign out to prevent redirect loops
+            await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
           }
         }
       } catch (error) {
