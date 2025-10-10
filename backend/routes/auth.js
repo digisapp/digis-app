@@ -123,7 +123,17 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       `;
 
       const profileResult = await pool.query(profileQuery, [user.id]);
-      const completeProfile = profileResult.rows[0];
+      const rawProfile = profileResult.rows[0];
+
+      // **CANONICAL ROLE COMPUTATION** - Override with server truth
+      const completeProfile = {
+        ...rawProfile,
+        is_creator: rawProfile.is_creator === true ||
+                    rawProfile.role === 'creator' ||
+                    rawProfile.creator_type != null,
+        is_admin: rawProfile.is_super_admin === true ||
+                  rawProfile.role === 'admin'
+      };
 
       // Store session in Redis (24 hour TTL)
       const sessionId = req.headers['x-session-id'] || uuidv4();
@@ -324,9 +334,20 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       console.error('Email service error:', emailError.message);
     }
 
+    // Apply canonical role computation for new users too
+    const rawNewUser = newUser.rows[0];
+    const canonicalNewUser = {
+      ...rawNewUser,
+      is_creator: rawNewUser.is_creator === true ||
+                  rawNewUser.role === 'creator' ||
+                  rawNewUser.creator_type != null,
+      is_admin: rawNewUser.is_super_admin === true ||
+                rawNewUser.role === 'admin'
+    };
+
     res.json({
       success: true,
-      user: newUser.rows[0],
+      user: canonicalNewUser,
       isNewUser: true
     });
     
@@ -922,6 +943,104 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
       success: false,
       error: 'Failed to get session'
     });
+  }
+});
+
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get canonical user role (SINGLE SOURCE OF TRUTH)
+ *     description: Returns simplified user role computed from multiple DB fields
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User role information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   format: uuid
+ *                 email:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 is_creator:
+ *                   type: boolean
+ *                   description: Canonical creator status (checks is_creator OR role='creator' OR creator_type != null)
+ *                 is_admin:
+ *                   type: boolean
+ *                   description: Canonical admin status (checks is_super_admin OR role='admin')
+ *                 profile:
+ *                   type: object
+ *       401:
+ *         description: Not authenticated
+ */
+router.get('/me', verifySupabaseToken, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Get user from database with ALL role-related fields
+    const query = `
+      SELECT
+        id,
+        email,
+        username,
+        is_creator,
+        is_super_admin,
+        role,
+        creator_type,
+        bio,
+        profile_pic_url,
+        verified
+      FROM users
+      WHERE id = $1::uuid
+      LIMIT 1
+    `;
+
+    const result = await pool.query(query, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    // **CANONICAL ROLE COMPUTATION** - Single source of truth
+    // A user is a creator if ANY of these conditions are true:
+    const isCreator = user.is_creator === true ||
+                      user.role === 'creator' ||
+                      user.creator_type != null;
+
+    const isAdmin = user.is_super_admin === true ||
+                    user.role === 'admin';
+
+    // Return simplified, canonical response
+    return res.json({
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      is_creator: isCreator,
+      is_admin: isAdmin,
+      profile: {
+        bio: user.bio,
+        profile_pic_url: user.profile_pic_url,
+        verified: user.verified
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in /api/me:', error);
+    return res.status(500).json({ error: 'Failed to get user info' });
   }
 });
 

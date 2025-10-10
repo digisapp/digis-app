@@ -43,15 +43,47 @@ export const AuthProvider = ({ children }) => {
   const fetchInProgress = useRef({ profile: false, balance: false });
   const lastFetch = useRef({ profile: 0, balance: 0 });
 
-  // Computed values - check multiple creator indicators for robustness
-  const isCreator = profile?.is_creator === true ||
-                    profile?.role === 'creator' ||
-                    profile?.creator_type != null;
-  const isAdmin = profile?.is_super_admin === true || profile?.role === 'admin';
+  // Computed values - use canonical role from /api/me (single source of truth)
+  const isCreator = profile?.is_creator === true;  // Backend computes this canonically
+  const isAdmin = profile?.is_admin === true;      // Backend computes this canonically
   const isAuthenticated = !!user;
 
   /**
-   * Fetch user profile from backend
+   * Fetch canonical user role from /api/me (SINGLE SOURCE OF TRUTH)
+   */
+  const fetchCanonicalRole = useCallback(async (session) => {
+    if (!session?.access_token) return null;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/auth/me`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Canonical role fetched from /api/me:', {
+          username: data.username,
+          is_creator: data.is_creator,
+          is_admin: data.is_admin
+        });
+        return data;
+      } else {
+        console.error('Failed to fetch canonical role:', response.status);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching canonical role:', error);
+      return null;
+    }
+  }, []);
+
+  /**
+   * Fetch user profile from backend (legacy - kept for token balance)
    */
   const fetchUserProfile = useCallback(async (currentUser = user) => {
     if (!currentUser) return;
