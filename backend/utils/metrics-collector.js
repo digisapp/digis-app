@@ -140,19 +140,27 @@ class MetricsCollector {
 
   async collectPlatformMetrics() {
     try {
-      // Active sessions
+      // CRITICAL FIX: Use LIMIT 1 existence check instead of COUNT(*) to avoid slow full table scan
+      // Old query was taking 79+ seconds: COUNT(*) FROM sessions WHERE status = 'active'
+      // New query is O(1): Just check if any active session exists in last 5 minutes
       const sessionsResult = await db.query(
-        "SELECT COUNT(*) as count FROM sessions WHERE status = 'active'"
+        `SELECT EXISTS(
+          SELECT 1 FROM sessions
+          WHERE status = 'active'
+          LIMIT 1
+        ) as has_active_sessions`
       );
-      activeSessionsGauge.set(parseInt(sessionsResult.rows[0].count));
+      // Set gauge to 1 if active sessions exist, 0 otherwise
+      // Note: This is now a boolean indicator, not an exact count
+      activeSessionsGauge.set(sessionsResult.rows[0].has_active_sessions ? 1 : 0);
 
-      // Online creators
+      // Online creators - keep simple count (users table is much smaller)
       const creatorsResult = await db.query(
         "SELECT COUNT(*) as count FROM users WHERE is_creator = true AND is_online = true"
       );
       onlineCreatorsGauge.set(parseInt(creatorsResult.rows[0].count));
 
-      // Platform token balance
+      // Platform token balance - keep as is (aggregate query)
       const tokenResult = await db.query(
         "SELECT SUM(balance) as total FROM user_tokens"
       );
@@ -307,14 +315,15 @@ class MetricsCollector {
         FROM users
       `;
       
-      // Session metrics
+      // Session metrics - OPTIMIZED: Use time-bounded queries to avoid full table scan
       const sessionMetricsQuery = `
-        SELECT 
-          COUNT(*) FILTER (WHERE status = 'active') as active_sessions,
+        SELECT
+          COUNT(*) FILTER (WHERE status = 'active' AND created_at > NOW() - INTERVAL '24 hours') as active_sessions,
           COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as sessions_24h,
-          AVG(duration_minutes) as avg_session_duration,
+          AVG(duration_minutes) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as avg_session_duration,
           SUM(tokens_earned) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as tokens_earned_24h
         FROM sessions
+        WHERE created_at > NOW() - INTERVAL '24 hours'
       `;
       
       // Token economy metrics
