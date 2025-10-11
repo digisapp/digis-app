@@ -1,140 +1,48 @@
-# Mobile Dashboard Fixes and Improvements
+# Mobile Creator Dashboard Fix - Role-Flicker Issue
 
-## Summary
-Fixed mobile dashboard visibility issues and implemented best practices for responsive design on the Digis platform.
+## Problem
 
-## Changes Made
+On mobile, the Creator Dashboard was showing fan-only content:
+1. "Explore Creators" search bar at the top
+2. "Featured Creators" section at the bottom
+3. "Recently Viewed Creators" section at the bottom
 
-### 1. Mobile Creator Dashboard (`MobileCreatorDashboard.js`)
-- ✅ Added safe area padding for notched devices (iPhone X+)
-- ✅ Improved touch targets to 44px minimum (iOS/Android guidelines)
-- ✅ Enhanced visual hierarchy with proper spacing
-- ✅ Added loading states and error handling
-- ✅ Implemented smooth animations with Framer Motion
-- ✅ Added proper ARIA labels for accessibility
-- ✅ Fixed token balance formatting with toLocaleString()
-- ✅ Enhanced cards with shadows and hover states
-- ✅ Added animated activity timeline
+This happened due to **role-flicker**: during profile load, `isCreator` was temporarily `undefined/false`, causing the fan dashboard to briefly render even for creators.
 
-### 2. Mobile Fan Dashboard (`MobileFanDashboard.js`)
-- ✅ Added safe area support
-- ✅ Enhanced quick action cards with better visual feedback
-- ✅ Improved scrollable categories with smooth scrolling
-- ✅ Enhanced live creator cards with better visuals
-- ✅ Added notification bell in header
-- ✅ Implemented proper error handling with fallback data
+---
 
-### 3. CSS Improvements (`index.css`)
-- ✅ Added safe area utility classes (pt-safe, pb-safe, px-safe, etc.)
-- ✅ Added line-clamp utility for text truncation
-- ✅ Added smooth scrolling for mobile
-- ✅ Added no-select utility to prevent text selection on buttons
+## Solution
 
-### 4. Mobile Navigation (`EnhancedMobileNavigation.js`)
-- ✅ Fixed navigation persistence with proper z-index
-- ✅ Added backdrop blur for iOS-style navigation
-- ✅ Implemented proper safe area padding for bottom nav
-- ✅ Enhanced touch feedback with haptic support
-- ✅ Fixed creator/fan navigation switching
+### 1. Updated DashboardRouter to Wait for Role Resolution
+**File**: `/frontend/src/components/pages/DashboardRouter.js`
 
-## Best Practices Implemented
-
-### Performance
-- Used `useCallback` for memoized functions
-- Implemented lazy loading for images
-- Added proper loading states
-- Optimized animations with GPU acceleration
-
-### Accessibility
-- Added ARIA labels to all interactive elements
-- Ensured minimum touch target sizes (44px)
-- Proper color contrast ratios
-- Screen reader support
-
-### Visual Design
-- Consistent spacing using Tailwind classes
-- Proper elevation with shadows
-- Smooth transitions and animations
-- Dark mode support ready
-
-### Responsiveness
-- Safe area support for all modern devices
-- Flexible grid layouts
-- Scrollable horizontal lists
-- Proper text truncation
-
-## Testing Checklist
-
-### Device Testing
-- [ ] iPhone 14 Pro (with notch)
-- [ ] iPhone SE (small screen)
-- [ ] Samsung Galaxy S23
-- [ ] iPad Mini
-- [ ] Pixel 7
-
-### Feature Testing
-- [x] Dashboard loads properly
-- [x] Navigation switches between creator/fan
-- [x] Quick actions are clickable
-- [x] Stats display correctly
-- [x] Scrolling works smoothly
-- [x] Safe areas respect device boundaries
-- [x] Animations are smooth (60fps)
-
-## Browser Compatibility
-- Safari iOS 15+
-- Chrome Android 100+
-- Firefox Mobile 100+
-- Samsung Internet 18+
-
-## Known Issues Fixed
-1. ✅ Dashboard not visible on mobile - FIXED
-2. ✅ Navigation overlapping content - FIXED
-3. ✅ Touch targets too small - FIXED
-4. ✅ Content cut off by notch - FIXED
-5. ✅ Animations janky - FIXED
-
-## Performance Metrics
-- First Contentful Paint: < 1.5s
-- Time to Interactive: < 3s
-- Cumulative Layout Shift: < 0.1
-- Touch responsiveness: < 100ms
-
-## Next Steps
-1. Add pull-to-refresh functionality
-2. Implement offline support
-3. Add gesture navigation
-4. Optimize image loading with lazy load
-5. Add skeleton loaders for all sections
-
-## Commands to Test
-
-```bash
-# Build CSS
-cd frontend
-npm run build:css
-
-# Start development server
-npm start
-
-# Test on mobile device
-# 1. Get your local IP: ifconfig | grep inet
-# 2. Access: http://[YOUR_IP]:3000 on mobile
+Added loading state until `roleResolved === true`:
+```javascript
+if (!roleResolved) {
+  return <LoadingSpinner message="Loading dashboard..." />;
+}
 ```
 
-## Mobile-Specific Features Added
-- Safe area padding for notched devices
-- Touch-optimized buttons (min 44px)
-- Smooth scrolling with momentum
-- Haptic feedback support
-- Swipe gestures ready
-- Bottom sheet modals
-- Floating action buttons
-- Pull-to-refresh ready
+### 2. Removed RecentlyViewedCreators on Mobile
+**File**: `/frontend/src/App.js` (line 1365)
 
-## Code Quality
-- TypeScript types ready to add
-- Proper error boundaries
-- Consistent naming conventions
-- Reusable components
-- Clean, maintainable code
+```javascript
+// OLD: {roleResolved && !isCreator && (
+// NEW: {roleResolved && !isCreator && !isMobile && (
+```
+
+### 3. Passed roleResolved to All DashboardRouter Instances
+Updated 3 places in App.js where DashboardRouter is rendered.
+
+---
+
+## Files Changed
+
+1. `/frontend/src/components/pages/DashboardRouter.js` - Added roleResolved prop and loading state
+2. `/frontend/src/App.js` - Added roleResolved prop to DashboardRouter calls, added !isMobile check
+
+---
+
+## Result
+
+Mobile creators now see ONLY MobileCreatorDashboard with no fan content during or after login.

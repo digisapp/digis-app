@@ -22,6 +22,7 @@ const DashboardRouter = ({
   isAdmin,
   tokenBalance,
   sessionStats,
+  roleResolved,  // NEW: Add roleResolved prop
   onShowAvailability,
   onShowGoLive,
   onCreatorSelect,
@@ -40,7 +41,7 @@ const DashboardRouter = ({
   const isMobile = useMediaQuery(BREAKPOINTS.MOBILE_QUERY);
 
   // Debug logging
-  console.log('🔀 DashboardRouter - isCreator:', isCreator, 'user:', user?.email, 'isMobile:', isMobile);
+  console.log('🔀 DashboardRouter - isCreator:', isCreator, 'roleResolved:', roleResolved, 'user:', user?.email, 'isMobile:', isMobile);
 
   // Check multiple sources for creator status to be absolutely sure
   const isDefinitelyCreator = isCreator ||
@@ -108,14 +109,27 @@ const DashboardRouter = ({
   // Fan Dashboard - Redirect fans to Explore page
   console.log('👤 Fan detected - redirecting to Explore page');
 
+  // Wait for role to be resolved before showing fan dashboard (prevents role-flicker)
+  if (!roleResolved) {
+    console.log('⏳ Waiting for roleResolved before showing fan content');
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Use React Router navigate for fans
   useEffect(() => {
-    if (!isDefinitelyCreator) {
+    if (!isDefinitelyCreator && roleResolved) {
       navigate('/explore', { replace: true });
     }
-  }, [isDefinitelyCreator, navigate]);
+  }, [isDefinitelyCreator, roleResolved, navigate]);
 
-  // Show mobile fan dashboard while redirecting (for smooth transition)
+  // Show mobile fan dashboard while redirecting (only after role is resolved)
   if (isMobile) {
     return (
       <MobileFanDashboard

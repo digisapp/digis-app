@@ -1265,10 +1265,11 @@ const App = () => {
               onNavigate={setCurrentView}
             />
           ) : (
-            <DashboardRouter 
+            <DashboardRouter
               user={user}
               isCreator={isCreator}
               isAdmin={isAdmin}
+              roleResolved={roleResolved}
               tokenBalance={tokenBalance}
               onNavigate={(view) => setCurrentView(view)}
             />
@@ -1287,6 +1288,7 @@ const App = () => {
                 user={user}
                 isCreator={isCreator}
                 isAdmin={isAdmin}
+                roleResolved={roleResolved}
                 tokenBalance={tokenBalance}
                 sessionStats={sessionStats}
                 onShowAvailability={() => openModal(MODALS.AVAILABILITY_CALENDAR)}
@@ -1345,6 +1347,7 @@ const App = () => {
               user={user}
               isCreator={isCreator}
               isAdmin={isAdmin}
+              roleResolved={roleResolved}
               tokenBalance={tokenBalance}
               sessionStats={sessionStats}
               onShowAvailability={() => openModal(MODALS.AVAILABILITY_CALENDAR)}
@@ -1361,8 +1364,8 @@ const App = () => {
               onContentUpdate={setSharedContentData}
             />
 
-            {/* Recently Viewed Creators - Only show for fans with resolved role */}
-            {roleResolved && !isCreator && (
+            {/* Recently Viewed Creators - Only show for fans with resolved role AND NOT on mobile */}
+            {roleResolved && !isCreator && !isMobile && (
               <ErrorBoundary variant="compact">
                 <RecentlyViewedCreators
                   user={user}
