@@ -508,6 +508,14 @@ export const AuthProvider = ({ children }) => {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-stop loading when user/profile are set manually (for manual login flows)
+  useEffect(() => {
+    if (user && profile) {
+      console.log('✅ AuthContext: User and profile set, stopping loading');
+      setAuthLoading(false);
+    }
+  }, [user, profile]);
+
   // Memoize value to prevent unnecessary re-renders
   const value = useMemo(() => ({
     // State

@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
-import socketService from '../services/socket';
+import socketService from '../services/socketServiceWrapper';
 import { useAuth } from './AuthContext';
 import { analytics } from '../lib/analytics';
 import toast from 'react-hot-toast';
 
 /**
- * SocketContext - Centralized Socket.io management
+ * SocketContext - Centralized Real-time Connection Management
+ *
+ * Automatically uses either Ably (Vercel-compatible) or Socket.io (legacy)
+ * based on VITE_USE_ABLY environment variable.
  *
  * Handles:
  * - Connection lifecycle (connect on login, disconnect on logout)

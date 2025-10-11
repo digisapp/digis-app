@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Auth Clear - Digis</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #e74c3c;
+      margin-top: 0;
+    }
+    button {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 10px 0;
+      width: 100%;
+    }
+    button:hover {
+      background: #c0392b;
+    }
+    .log {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log div {
+      margin: 5px 0;
+    }
+    .success { color: #2ecc71; }
+    .error { color: #e74c3c; }
+    .warning { color: #f39c12; }
+    .info { color: #3498db; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚨 Emergency Authentication Clear</h1>
+    <p><strong>Use this if you're stuck in an infinite redirect loop or getting 401/429 errors.</strong></p>
+
+    <p>This will:</p>
+    <ul>
+      <li>Clear ALL localStorage data</li>
+      <li>Clear ALL sessionStorage data</li>
+      <li>Clear ALL cookies (including Supabase auth)</li>
+      <li>Sign out from Supabase</li>
+      <li>Redirect you to login page</li>
+    </ul>
+
+    <button id="clearBtn" onclick="emergencyClear()">🚨 CLEAR ALL AUTH DATA NOW</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <script type="module">
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = `[${new Date().toISOString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(message);
+    }
+
+    window.emergencyClear = async function() {
+      const btn = document.getElementById('clearBtn');
+      btn.disabled = true;
+      btn.textContent = '🔄 Clearing...';
+
+      try {
+        log('🚨 Emergency auth clear initiated', 'warning');
+
+        // Step 1: Try to sign out from Supabase
+        try {
+          log('📡 Attempting Supabase sign out...', 'info');
+
+          const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+
+          const SUPABASE_URL = 'https://lpphsjowsivjtcmafxnj.supabase.co';
+          const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwcGhzam93c2l2anRjbWFmeG5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjYwNTk1ODQsImV4cCI6MjA0MTYzNTU4NH0.pC-3jqoePNO3tz7WMYbdDd6dEZPJZfSA7gRxsGx8Y0g';
+
+          const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+          await supabase.auth.signOut({ scope: 'global' });
+          log('✅ Signed out from Supabase', 'success');
+        } catch (supabaseError) {
+          log(`⚠️ Supabase sign out failed (continuing anyway): ${supabaseError.message}`, 'warning');
+        }
+
+        // Step 2: Clear localStorage
+        log('🗑️ Clearing localStorage...', 'info');
+        const localStorageKeys = Object.keys(localStorage);
+        log(`Found ${localStorageKeys.length} localStorage keys`, 'info');
+        localStorage.clear();
+        log('✅ localStorage cleared', 'success');
+
+        // Step 3: Clear sessionStorage
+        log('🗑️ Clearing sessionStorage...', 'info');
+        const sessionStorageKeys = Object.keys(sessionStorage);
+        log(`Found ${sessionStorageKeys.length} sessionStorage keys`, 'info');
+        sessionStorage.clear();
+        log('✅ sessionStorage cleared', 'success');
+
+        // Step 4: Clear ALL cookies
+        log('🗑️ Clearing cookies...', 'info');
+        const cookies = document.cookie.split(';');
+        log(`Found ${cookies.length} cookies`, 'info');
+
+        cookies.forEach(cookie => {
+          const name = cookie.split('=')[0].trim();
+          // Clear for all possible domains and paths
+          const domains = [
+            '',
+            '.examodels.com',
+            'examodels.com',
+            '.vercel.app',
+            'vercel.app',
+            window.location.hostname
+          ];
+
+          domains.forEach(domain => {
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;${domain ? `domain=${domain};` : ''}`;
+          });
+        });
+        log('✅ All cookies cleared', 'success');
+
+        // Step 5: Clear IndexedDB (Supabase uses this)
+        try {
+          log('🗑️ Clearing IndexedDB...', 'info');
+          const databases = await indexedDB.databases();
+          for (const db of databases) {
+            indexedDB.deleteDatabase(db.name);
+            log(`Deleted database: ${db.name}`, 'info');
+          }
+          log('✅ IndexedDB cleared', 'success');
+        } catch (idbError) {
+          log(`⚠️ IndexedDB clear failed: ${idbError.message}`, 'warning');
+        }
+
+        log('✅ All auth data cleared successfully!', 'success');
+        log('🔄 Redirecting to home page in 2 seconds...', 'info');
+
+        btn.textContent = '✅ CLEARED! Redirecting...';
+
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error');
+        btn.disabled = false;
+        btn.textContent = '🚨 Try Again';
+      }
+    };
+
+    // Auto-log initial state
+    log('Ready to clear auth data', 'info');
+    log(`Current URL: ${window.location.href}`, 'info');
+    log(`localStorage items: ${Object.keys(localStorage).length}`, 'info');
+    log(`sessionStorage items: ${Object.keys(sessionStorage).length}`, 'info');
+    log(`Cookies: ${document.cookie.split(';').length}`, 'info');
+  </script>
+</body>
+</html>

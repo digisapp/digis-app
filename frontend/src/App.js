@@ -168,7 +168,9 @@ const App = () => {
     signOut: authSignOut,
     refreshProfile,
     fetchTokenBalance: authFetchTokenBalance,
-    updateTokenBalance: authUpdateTokenBalance
+    updateTokenBalance: authUpdateTokenBalance,
+    setUser: authSetUser,
+    setProfile: authSetProfile
   } = useAuth();
 
   const navigate = useNavigate();
@@ -655,6 +657,9 @@ const App = () => {
                   // Set profile first (this updates isCreator in the store immediately)
                   setProfile(profileData);
 
+                  // CRITICAL: Also update AuthContext to stop loading state
+                  authSetProfile(profileData);
+
                   // Verify the store was updated
                   const storeState = useHybridStore.getState();
                   console.log('🖥️ Desktop: Store immediately after setProfile:', {
@@ -666,6 +671,12 @@ const App = () => {
 
                 // Now set user (this triggers the app to render)
                 setUser(user);
+
+                // CRITICAL: Also update AuthContext to stop loading state
+                authSetUser({
+                  id: user.id,
+                  email: user.email
+                });
 
                 // Close auth modal
                 setShowAuth(false);
@@ -861,6 +872,9 @@ const App = () => {
                 // Set profile first (this updates isCreator in the store immediately)
                 setProfile(profileData);
 
+                // CRITICAL: Also update AuthContext to stop loading state
+                authSetProfile(profileData);
+
                 // Verify the store was updated
                 const storeState = useHybridStore.getState();
                 console.log('📱 Mobile: Store immediately after setProfile:', {
@@ -872,6 +886,12 @@ const App = () => {
 
               // Now set user (this triggers the app to render)
               setUser(user);
+
+              // CRITICAL: Also update AuthContext to stop loading state
+              authSetUser({
+                id: user.id,
+                email: user.email
+              });
 
               // Navigate based on role (already set in store)
               const finalState = useHybridStore.getState();

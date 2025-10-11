@@ -618,19 +618,14 @@ process.on('uncaughtException', (error) => {
 const PORT = process.env.PORT || 3005;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Create HTTP server for Socket.io
+// Real-time Communication:
+// Using Ably for Vercel-compatible WebSocket functionality
+// Ably is initialized via /api/ably-auth endpoint (see lines 250-253)
+// Frontend uses feature flag (VITE_USE_ABLY) to switch between Socket.io (legacy) and Ably
+// Socket.io is NOT initialized on serverless environments (Vercel) as it requires persistent connections
+
 const http = require('http');
 const server = http.createServer(app);
-
-// Initialize Socket.io
-try {
-  const { initializeSocket } = require('../utils/socket');
-  initializeSocket(server);
-  console.log('Socket.io initialized successfully');
-} catch (socketError) {
-  console.error('Failed to initialize Socket.io:', socketError.message);
-  // Continue without socket support
-}
 
 // Initialize Stream Activity Monitor
 try {
