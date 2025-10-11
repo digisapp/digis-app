@@ -397,6 +397,15 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Healthz endpoint (standard Kubernetes endpoint)
+app.get('/api/healthz', (req, res) => {
+  res.status(200).json({
+    ok: true,
+    ts: Date.now(),
+    status: 'healthy'
+  });
+});
+
 // Readiness check endpoint (checks dependencies)
 app.get('/ready', async (req, res) => {
   const checks = {

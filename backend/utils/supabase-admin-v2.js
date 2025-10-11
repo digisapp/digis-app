@@ -7,9 +7,12 @@ const { createClient } = require('@supabase/supabase-js');
 // NOTE: jose is an ES Module and cannot be required in CommonJS
 // Temporarily disabled asymmetric JWT until we migrate to ES modules
 // const { createRemoteJWKSet, jwtVerify } = require('jose');
-const redis = require('redis');
 const crypto = require('crypto');
 const { logger } = require('./secureLogger');
+
+// IMPORTANT: Use Upstash Redis for serverless compatibility
+// This replaces the old Node Redis client to prevent connection pooling issues on Vercel
+const { Redis } = require('@upstash/redis');
 
 let supabaseAdmin = null;
 let redisClient = null;
@@ -29,41 +32,28 @@ const retry = async (fn, maxRetries = 3, delay = 1000) => {
   }
 };
 
-// Initialize Redis with improved error handling
-const initializeRedis = async () => {
+// Initialize Upstash Redis (serverless-compatible)
+const initializeRedis = () => {
   if (redisClient) return redisClient;
-  
+
   try {
-    redisClient = redis.createClient({
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
-      socket: {
-        reconnectStrategy: (times) => Math.min(times * 50, 2000),
-        connectTimeout: 5000,
-      },
-      // New: Add connection pooling
-      poolSize: 10,
-      retryStrategy: (times) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      }
+    // Check for Upstash environment variables
+    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+      logger.warn('⚠️ Upstash Redis not configured, caching will be disabled');
+      logger.info('Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable caching');
+      return null;
+    }
+
+    // Initialize Upstash Redis (HTTP-based, serverless-compatible)
+    redisClient = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
     });
-    
-    redisClient.on('error', (err) => {
-      logger.error('Redis Client Error:', err);
-    });
-    
-    redisClient.on('connect', () => {
-      logger.info('✅ Redis client connected for caching');
-    });
-    
-    redisClient.on('ready', () => {
-      logger.info('✅ Redis client ready');
-    });
-    
-    await redisClient.connect();
+
+    logger.info('✅ Upstash Redis client initialized (serverless-compatible)');
     return redisClient;
   } catch (error) {
-    logger.warn('⚠️ Redis connection failed, continuing without cache:', error.message);
+    logger.warn('⚠️ Redis initialization failed, continuing without cache:', error.message);
     return null;
   }
 };
@@ -143,19 +133,24 @@ const verifySupabaseTokenAsymmetric = async (req, res, next) => {
     // Generate secure cache key using hash
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex').substring(0, 16);
 
-    // Check cache first
+    // Check cache first (Upstash Redis)
     if (redisClient) {
-      const cached = await redisClient.get(`jwt:${tokenHash}`);
-      if (cached) {
-        const cachedData = JSON.parse(cached);
-        // Verify cache hasn't expired
-        if (cachedData.exp && cachedData.exp * 1000 > Date.now()) {
-          req.user = cachedData.user;
-          return next();
-        } else {
-          // Remove expired cache
-          await redisClient.del(`jwt:${tokenHash}`);
+      try {
+        const cached = await redisClient.get(`jwt:${tokenHash}`);
+        if (cached) {
+          const cachedData = typeof cached === 'string' ? JSON.parse(cached) : cached;
+          // Verify cache hasn't expired
+          if (cachedData.exp && cachedData.exp * 1000 > Date.now()) {
+            req.user = cachedData.user;
+            return next();
+          } else {
+            // Remove expired cache
+            await redisClient.del(`jwt:${tokenHash}`);
+          }
         }
+      } catch (cacheError) {
+        logger.warn('Redis cache read failed:', cacheError.message);
+        // Continue without cache
       }
     }
 
@@ -213,17 +208,19 @@ const verifySupabaseTokenAsymmetric = async (req, res, next) => {
       user_metadata: user.user_metadata || {}
     };
 
-    // Cache the normalized result (not raw Supabase user)
+    // Cache the normalized result (not raw Supabase user) using Upstash Redis
     if (redisClient) {
-      const cacheData = {
-        user: req.user,
-        exp: Math.floor(Date.now() / 1000) + 300 // 5 minutes from now
-      };
-      await redisClient.setex(
-        `jwt:${tokenHash}`,
-        300,
-        JSON.stringify(cacheData)
-      );
+      try {
+        const cacheData = {
+          user: req.user,
+          exp: Math.floor(Date.now() / 1000) + 300 // 5 minutes from now
+        };
+        // Upstash Redis REST API uses setex method
+        await redisClient.setex(`jwt:${tokenHash}`, 300, JSON.stringify(cacheData));
+      } catch (cacheError) {
+        logger.warn('Redis cache write failed:', cacheError.message);
+        // Continue without caching
+      }
     }
 
     next();
@@ -409,10 +406,14 @@ const observability = {
           timestamp: new Date().toISOString()
         });
       
-      // Also track in Redis for real-time dashboards
+      // Also track in Redis for real-time dashboards (Upstash)
       if (redisClient) {
-        const key = `metric:${name}:${Date.now()}`;
-        await redisClient.setex(key, 3600, JSON.stringify({ value, unit, tags }));
+        try {
+          const key = `metric:${name}:${Date.now()}`;
+          await redisClient.setex(key, 3600, JSON.stringify({ value, unit, tags }));
+        } catch (redisError) {
+          logger.warn('Metric Redis tracking failed:', redisError.message);
+        }
       }
     } catch (error) {
       logger.error('Metric tracking error:', error);
@@ -634,8 +635,9 @@ module.exports = {
   
   // Cleanup function
   async cleanup() {
+    // Note: Upstash Redis (HTTP-based) doesn't require explicit disconnect
+    // Just nullify the reference
     if (redisClient) {
-      await redisClient.quit();
       redisClient = null;
     }
     if (supabaseAdmin) {

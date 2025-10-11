@@ -117,10 +117,14 @@ console.log('🔗 Database connection config:', {
 });
 
 // Create a new pool instance with optimized settings
-const pool = new Pool({
+// Serverless-optimized configuration (Vercel/AWS Lambda)
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const poolConfig = {
   ...connectionConfig,
-  max: process.env.NODE_ENV === 'production' ? 50 : 20, // Scale up in production
-  idleTimeoutMillis: 30000,
+  // Serverless: use smaller pool to prevent connection exhaustion
+  // Traditional: scale up for concurrent requests
+  max: isServerless ? 10 : (process.env.NODE_ENV === 'production' ? 20 : 10),
+  idleTimeoutMillis: isServerless ? 10000 : 30000, // Faster cleanup on serverless
   connectionTimeoutMillis: 5000, // Tighter timeout for faster failure detection
   keepAlive: true,
   keepAliveInitialDelayMillis: 0,
@@ -128,14 +132,26 @@ const pool = new Pool({
   statement_timeout: 30000, // 30 seconds
   query_timeout: 30000, // 30 seconds
   application_name: 'digis-backend',
-  // Production optimizations
-  ...(process.env.NODE_ENV === 'production' && {
+  // Serverless optimizations
+  ...(isServerless && {
+    allowExitOnIdle: true, // Allow pool to close when idle (important for serverless)
+  }),
+  // Traditional server optimizations
+  ...(!isServerless && process.env.NODE_ENV === 'production' && {
     allowExitOnIdle: false,
     ssl: {
       rejectUnauthorized: false,
       keepAlive: true
     }
   })
+};
+
+const pool = new Pool(poolConfig);
+
+console.log(`📊 Database pool configured for ${isServerless ? 'SERVERLESS' : 'TRADITIONAL'} environment:`, {
+  max: poolConfig.max,
+  idleTimeout: poolConfig.idleTimeoutMillis,
+  allowExitOnIdle: poolConfig.allowExitOnIdle
 });
 
 // Monitor pool health in production
@@ -699,6 +715,49 @@ setTimeout(async () => {
   }
 }, 1000);
 
+// Atomic token operation helper to prevent race conditions
+const atomicTokenUpdate = async (userId, tokenAmount, operation = 'add') => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // Use SELECT FOR UPDATE to lock the row during transaction
+    const balanceCheck = await client.query(
+      `SELECT balance FROM token_balances WHERE user_id = $1 FOR UPDATE`,
+      [userId]
+    );
+
+    const currentBalance = balanceCheck.rows.length > 0 ? balanceCheck.rows[0].balance : 0;
+
+    if (operation === 'subtract' && currentBalance < tokenAmount) {
+      await client.query('ROLLBACK');
+      throw new Error('Insufficient token balance');
+    }
+
+    const newBalance = operation === 'add'
+      ? currentBalance + tokenAmount
+      : currentBalance - tokenAmount;
+
+    // Update with atomic operation using ON CONFLICT
+    const result = await client.query(
+      `INSERT INTO token_balances (user_id, balance, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET balance = $2, updated_at = NOW()
+       RETURNING balance`,
+      [userId, newBalance]
+    );
+
+    await client.query('COMMIT');
+    return result.rows[0].balance;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 // Export the pool and helper functions
 module.exports = {
   pool,
@@ -723,5 +782,6 @@ module.exports = {
   transaction,
   healthCheck,
   getPoolStats,
-  addMissingColumns
+  addMissingColumns,
+  atomicTokenUpdate // New atomic token operation helper
 };

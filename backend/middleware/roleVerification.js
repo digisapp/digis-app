@@ -10,12 +10,33 @@ const { supabaseAdmin } = require('../utils/supabase-admin-v2');
 // Cache user roles for performance (5 minute TTL)
 const roleCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_SECONDS = 300; // 5 minutes in seconds for Redis
+
+// Try to use Redis for serverless-friendly caching
+let redis = null;
+try {
+  redis = require('../utils/redis');
+} catch (err) {
+  console.log('Redis not available, using in-memory cache');
+}
 
 /**
- * Get user role from database with caching
+ * Get user role from database with caching (Redis-first for serverless)
  */
 async function getUserRole(supabaseId) {
-  // Check cache first
+  // Try Redis first if available (for serverless persistence)
+  if (redis && redis.get) {
+    try {
+      const cachedRole = await redis.get(`role:${supabaseId}`);
+      if (cachedRole) {
+        return JSON.parse(cachedRole);
+      }
+    } catch (redisError) {
+      console.warn('Redis cache read failed, falling back to DB:', redisError.message);
+    }
+  }
+
+  // Fallback to in-memory cache
   const cached = roleCache.get(supabaseId);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data;
@@ -59,12 +80,21 @@ async function getUserRole(supabaseId) {
         : 'fan'
     };
     
-    // Cache the result
+    // Cache the result in Redis if available (for serverless)
+    if (redis && redis.setex) {
+      try {
+        await redis.setex(`role:${supabaseId}`, CACHE_TTL_SECONDS, JSON.stringify(roleData));
+      } catch (redisError) {
+        console.warn('Redis cache write failed:', redisError.message);
+      }
+    }
+
+    // Also cache in memory as fallback
     roleCache.set(supabaseId, {
       data: roleData,
       timestamp: Date.now()
     });
-    
+
     return roleData;
   } catch (error) {
     console.error('Error fetching user role:', error);
@@ -73,9 +103,19 @@ async function getUserRole(supabaseId) {
 }
 
 /**
- * Clear role cache for a specific user
+ * Clear role cache for a specific user (both Redis and memory)
  */
-function clearRoleCache(supabaseId) {
+async function clearRoleCache(supabaseId) {
+  // Clear from Redis if available
+  if (redis && redis.del) {
+    try {
+      await redis.del(`role:${supabaseId}`);
+    } catch (redisError) {
+      console.warn('Redis cache clear failed:', redisError.message);
+    }
+  }
+
+  // Clear from memory cache
   roleCache.delete(supabaseId);
 }
 
