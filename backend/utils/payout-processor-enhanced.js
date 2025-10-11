@@ -1,5 +1,5 @@
 const { db } = require('./db');
-const { supabaseAdmin } = require('./supabase-admin');
+const { supabaseAdmin } = require('./supabase-admin-v2');
 const winston = require('winston');
 const redis = require('redis');
 

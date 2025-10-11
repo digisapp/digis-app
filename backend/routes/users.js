@@ -1,7 +1,7 @@
 const express = require('express');
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
-const { supabaseAdmin } = require('../utils/supabase-admin');
+const { supabaseAdmin } = require('../utils/supabase-admin-v2');
 const multer = require('multer');
 const { validateUsername, checkUsernameAvailability } = require('../utils/usernameValidation');
 const { profileUpdateSchema, validate } = require('../validators/schemas');

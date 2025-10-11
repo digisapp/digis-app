@@ -190,7 +190,7 @@ try {
   const agoraRoutes = require('../routes/agora');
   const userRoutes = require('../routes/users');
   const tokenRoutes = require('../routes/tokens');
-  const subscriptionRoutes = require('../routes/subscriptions');
+  const subscriptionRoutes = require('../routes/enhanced-subscriptions');
   const subscriptionTierRoutes = require('../routes/subscription-tiers');
   const giftRoutes = require('../routes/gifts');
   const tipRoutes = require('../routes/tips');
@@ -260,10 +260,8 @@ try {
   const inngestHandler = require('./inngest');
   app.use('/api/inngest', inngestHandler);
 
-  // Use enhanced payment routes with idempotency and rate limiting
-  const paymentsEnhanced = require('../routes/payments-enhanced');
-  app.use('/api/v1/payments', paymentsEnhanced); // New enhanced version
-  app.use('/api/payments', rateLimiters.payment || ((req, res, next) => next()), paymentRoutes); // Keep legacy for backward compatibility
+  // Payment routes (unified - removed incomplete payments-enhanced.js)
+  app.use('/api/payments', rateLimiters.payment || ((req, res, next) => next()), paymentRoutes);
   app.use('/api/agora', rateLimiters.streaming || ((req, res, next) => next()), agoraRoutes);
   app.use('/api/users', rateLimiters.api || ((req, res, next) => next()), userRoutes);
   app.use('/api/tokens', rateLimiters.tokenPurchase || ((req, res, next) => next()), tokenRoutes);
@@ -357,8 +355,8 @@ app.get('/', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     documentation: process.env.NODE_ENV === 'development' ? 'http://localhost:3005/api-docs' : '/api-docs',
     routes: {
-      v1: ['/api/v1/auth', '/api/v1/payments', '/api/v1/agora', '/api/v1/users', '/api/v1/tokens'],
-      legacy: ['/api/auth', '/api/payments', '/api/agora', '/api/users', '/api/tokens', '/api/subscriptions', '/api/gifts', '/api/tips', '/api/polls', '/api/questions', '/api/messages', '/api/chat', '/api/notifications', '/api/collaborations', '/api/membership-tiers']
+      v1: ['/api/v1/auth', '/api/v1/agora', '/api/v1/users', '/api/v1/tokens'],
+      main: ['/api/auth', '/api/payments', '/api/agora', '/api/users', '/api/tokens', '/api/subscriptions', '/api/gifts', '/api/tips', '/api/polls', '/api/questions', '/api/messages', '/api/chat', '/api/notifications', '/api/collaborations', '/api/membership-tiers']
     },
     features: [
       'Supabase Authentication',

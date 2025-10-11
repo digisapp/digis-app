@@ -1,5 +1,5 @@
 const { pool } = require('./utils/db');
-const { initializeSupabaseAdmin } = require('./utils/supabase-admin');
+const { initializeSupabaseAdmin } = require('./utils/supabase-admin-v2');
 
 async function ensureAdminUser() {
   try {

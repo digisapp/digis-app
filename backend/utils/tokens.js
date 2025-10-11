@@ -1,5 +1,5 @@
 const logger = require('./logger');
-const { supabaseAdmin } = require('./supabase-admin');
+const { supabaseAdmin } = require('./supabase-admin-v2');
 
 class TokenService {
   constructor() {

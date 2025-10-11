@@ -11,7 +11,7 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
-const { supabaseAdmin } = require('../utils/supabase-admin');
+const { supabaseAdmin } = require('../utils/supabase-admin-v2');
 const { sanitizeInput, sanitizers } = require('../middleware/sanitize');
 const {
   generateAccessToken,

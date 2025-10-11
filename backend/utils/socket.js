@@ -1,6 +1,6 @@
 const { Server } = require('socket.io');
 const { createAdapter } = require('@socket.io/redis-adapter');
-const { verifySupabaseToken } = require('./supabase-admin');
+const { verifySupabaseToken } = require('./supabase-admin-v2');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
 const redis = require('./redis');
 

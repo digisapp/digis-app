@@ -171,7 +171,7 @@ Backup files created with .backup extension
 async function createAuthMiddlewareUpdate() {
   const authMiddleware = `
 const jwt = require('jsonwebtoken');
-const { supabaseAdmin } = require('../utils/supabase-admin');
+const { supabaseAdmin } = require('../utils/supabase-admin-v2');
 
 /**
  * Updated authentication middleware for Supabase

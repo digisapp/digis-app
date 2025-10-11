@@ -7,7 +7,7 @@
  */
 
 const Ably = require('ably');
-const { verifySupabaseToken } = require('../utils/supabase-admin');
+const { verifySupabaseToken } = require('../utils/supabase-admin-v2');
 
 /**
  * Serverless handler for Ably token authentication

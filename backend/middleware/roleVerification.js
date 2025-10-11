@@ -1,5 +1,5 @@
 const pool = require('../utils/db');
-const { supabaseAdmin } = require('../utils/supabase-admin');
+const { supabaseAdmin } = require('../utils/supabase-admin-v2');
 
 /**
  * Role Verification Middleware

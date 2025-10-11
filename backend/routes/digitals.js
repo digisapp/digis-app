@@ -3,7 +3,7 @@ const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
-const { initializeSupabaseAdmin } = require('../utils/supabase-admin');
+const { initializeSupabaseAdmin } = require('../utils/supabase-admin-v2');
 const supabaseAdmin = initializeSupabaseAdmin();
 const { pool } = require('../utils/db');
 

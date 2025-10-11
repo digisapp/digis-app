@@ -1,7 +1,7 @@
 const { Server } = require('socket.io');
 const { createAdapter } = require('@socket.io/redis-adapter');
 const { createClient } = require('redis');
-const { verifySupabaseToken } = require('./supabase-admin');
+const { verifySupabaseToken } = require('./supabase-admin-v2');
 
 let io = null;
 const activeStreams = new Map(); // Track active streams

@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const { Pool } = require('pg');
-const { initializeSupabaseAdmin } = require('./utils/supabase-admin');
+const { initializeSupabaseAdmin } = require('./utils/supabase-admin-v2');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

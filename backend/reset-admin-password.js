@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { initializeSupabaseAdmin } = require('./utils/supabase-admin');
+const { initializeSupabaseAdmin } = require('./utils/supabase-admin-v2');
 
 async function resetAdminPassword() {
   try {
