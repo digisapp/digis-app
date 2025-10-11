@@ -146,17 +146,14 @@ const Auth = ({ mode: initialMode = 'signin', onModeSwitch, onLogin }) => {
           profile: finalUserData
         };
         console.log('🖥️ Desktop: Calling onLogin with:', fullUserData);
-        onLogin(fullUserData);
+
+        // CRITICAL: Let the parent (App.js) handle navigation after state is fully set
+        // This ensures the role state is updated before navigation occurs
+        await onLogin(fullUserData);
       }
 
-      // IMPORTANT: Wait for onLogin to complete state updates before navigating
-      // This prevents the infinite loading issue by giving AuthContext time to update
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Navigate immediately based on user type
-      const targetPath = isAdminUser ? '/admin' : isCreatorUser ? '/dashboard' : '/explore';
-      console.log('🖥️ Desktop: Redirecting to:', targetPath);
-      navigate(targetPath);
+      // Navigation is now handled by parent's onLogin callback
+      // This prevents race conditions where navigation happens before state updates complete
     } catch (error) {
       console.error('Error syncing user:', error);
       

@@ -633,9 +633,9 @@ const App = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
         <div className="w-full h-full flex items-center justify-center">
           <div className="relative w-full max-w-screen-sm px-4">
-            <Auth 
+            <Auth
               mode={authMode}
-              onLogin={(user) => {
+              onLogin={async (user) => {
                 console.log('🖥️ Desktop Auth onLogin called with user:', user);
                 console.log('🖥️ Desktop auth data received:', {
                   hasProfile: !!user.profile,
@@ -677,6 +677,9 @@ const App = () => {
                   id: user.id,
                   email: user.email
                 });
+
+                // Wait for state to propagate (next tick)
+                await new Promise(resolve => setTimeout(resolve, 0));
 
                 // Close auth modal
                 setShowAuth(false);
@@ -857,7 +860,7 @@ const App = () => {
         <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>
         <MobileUIProvider>
           <MobileLandingPage
-            onLogin={(user) => {
+            onLogin={async (user) => {
               console.log('📱 MobileLandingPage onLogin called with user:', user);
 
               // CRITICAL: Set profile FIRST, before setting user, to prevent role flip-flopping
@@ -892,6 +895,9 @@ const App = () => {
                 id: user.id,
                 email: user.email
               });
+
+              // Wait for state to propagate (next tick)
+              await new Promise(resolve => setTimeout(resolve, 0));
 
               // Navigate based on role (already set in store)
               const finalState = useHybridStore.getState();
@@ -1032,13 +1038,13 @@ const App = () => {
         releaseMessage="Release to refresh"
         refreshingMessage="Refreshing content..."
       >
+        {/* URL-based routes for migrated screens (Phase 2: Gradual Route Migration) */}
+        {/* Pages in AppRoutes have their own full-screen containers - no wrapper needed */}
+        <AppRoutes />
+
+        {/* TEMPORARY: Legacy fallback for views NOT yet in AppRoutes */}
+        {/* Wrap legacy views in main tag for consistent styling */}
         <main className={isMobile ? '' : 'pt-20 p-6'}>
-          {/* URL-based routes for migrated screens (Phase 2: Gradual Route Migration) */}
-          <AppRoutes />
-
-          {/* TEMPORARY: Legacy fallback for views NOT yet in AppRoutes */}
-          {/* As we verify each screen works with AppRoutes, delete its fallback branch */}
-
           {currentView === 'profile' ? (
           isMobile ? (
             <>
