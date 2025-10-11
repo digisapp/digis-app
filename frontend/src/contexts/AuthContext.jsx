@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }) => {
   const isCreator = profile?.is_creator === true;  // Backend computes this canonically
   const isAdmin = profile?.is_admin === true;      // Backend computes this canonically
   const isAuthenticated = !!user;
+  const roleResolved = !!profile?.id && typeof profile?.is_creator === 'boolean'; // Role is fully resolved
 
   /**
    * Fetch canonical user role from /api/me (SINGLE SOURCE OF TRUTH)
@@ -529,6 +530,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isCreator,
     isAdmin,
+    roleResolved,
 
     // Actions
     signOut,
@@ -546,6 +548,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isCreator,
     isAdmin,
+    roleResolved,
     signOut,
     refreshProfile,
     fetchTokenBalance,

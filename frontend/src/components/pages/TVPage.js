@@ -731,8 +731,8 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
         </div>
       )}
 
-      {/* Clean Header */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+      {/* Clean Header - Hidden on mobile */}
+      <div className="hidden md:block bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
           <div className="w-full max-w-7xl mx-auto">
             {/* Search Bar and Filters - All on one row for desktop */}
@@ -744,7 +744,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   onFocus={() => setShowSuggestions(true)}
-                  placeholder="Explore TV"
+                  placeholder="Search TV"
                   className="w-full h-12 pl-10 pr-3 sm:pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                 />
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />

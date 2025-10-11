@@ -165,6 +165,7 @@ const App = () => {
     isCreator: authIsCreator,
     isAdmin: authIsAdmin,
     isAuthenticated,
+    roleResolved,
     signOut: authSignOut,
     refreshProfile,
     fetchTokenBalance: authFetchTokenBalance,
@@ -178,20 +179,19 @@ const App = () => {
 
   // Still need notifications and some state from hybrid store
   const notifications = useHybridStore((state)=> state.notifications, shallow);
-  const storeIsCreator = useHybridStore((state) => state.isCreator);
 
   // Get navigation state and actions from store BEFORE using them
   const currentView = useCurrentView();
-  
+
   // Create a stable setCurrentView function using useCallback
   const setCurrentView = useCallback((view) => {
     useHybridStore.getState().setCurrentView(view);
   }, []);
-  
+
   // Track last view with a ref to avoid re-render loops
   const lastViewRef = useRef(currentView);
 
-  // Use auth context for creator/admin status (single source of truth)
+  // Use AuthContext as SINGLE SOURCE OF TRUTH for creator/admin status
   const isCreator = authIsCreator;
   const isAdmin = authIsAdmin;
 
@@ -219,13 +219,13 @@ const App = () => {
       profile: profile?.email,
       isCreator,
       isAdmin,
-      storeIsCreator,
+      roleResolved,
       profile_is_creator: profile?.is_creator,
       profile_role: profile?.role,
       localStorage_isCreator: localStorage.getItem('userIsCreator'),
       localStorage_role: localStorage.getItem('userRole')
     });
-  }, [isMobile, user, profile, isCreator, isAdmin, storeIsCreator]);
+  }, [isMobile, user, profile, isCreator, isAdmin, roleResolved]);
   
   // Get actions separately using store's getState to avoid subscriptions
   const store = useHybridStore;
@@ -1039,11 +1039,11 @@ const App = () => {
         refreshingMessage="Refreshing content..."
       >
         {/* URL-based routes for migrated screens (Phase 2: Gradual Route Migration) */}
-        {/* Pages in AppRoutes have their own full-screen containers - no wrapper needed */}
+        {/* Pages in AppRoutes have their own full-screen containers - rendered outside main wrapper */}
         <AppRoutes />
 
         {/* TEMPORARY: Legacy fallback for views NOT yet in AppRoutes */}
-        {/* Wrap legacy views in main tag for consistent styling */}
+        {/* Wrap ONLY legacy views in main tag for consistent styling */}
         <main className={isMobile ? '' : 'pt-20 p-6'}>
           {currentView === 'profile' ? (
           isMobile ? (
@@ -1361,8 +1361,8 @@ const App = () => {
               onContentUpdate={setSharedContentData}
             />
 
-            {/* Recently Viewed Creators - Only show for fans */}
-            {!isCreator && (
+            {/* Recently Viewed Creators - Only show for fans with resolved role */}
+            {roleResolved && !isCreator && (
               <ErrorBoundary variant="compact">
                 <RecentlyViewedCreators
                   user={user}
