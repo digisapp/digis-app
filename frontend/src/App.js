@@ -965,12 +965,21 @@ const App = () => {
     setViewingCreator(creatorUsername);
   };
 
+  // Route guard - prevent legacy views from rendering when on routed pages
+  const routedRoots = [
+    '/dashboard', '/messages', '/wallet', '/tv', '/classes', '/explore', '/call',
+    '/subscriptions', '/following', '/schedule', '/admin', '/content', '/analytics',
+    '/collections', '/profile', '/settings', '/followers', '/subscribers'
+  ];
+  const isRoutedPage = routedRoots.some(p => location.pathname.startsWith(p));
+
   // Authenticated user layout
   console.log('👤 Showing authenticated layout for user:', user?.email, 'isCreator:', isCreator);
-  
+  console.log('📍 Route guard - isRoutedPage:', isRoutedPage, 'pathname:', location.pathname);
+
   // Don't return early for mobile - let the main layout handle it with MobileNavigationEnhanced
   // This ensures the navigation and content both render properly
-  
+
   // Desktop layout continues below
   return (
     <ErrorBoundary>
@@ -1044,6 +1053,8 @@ const App = () => {
 
         {/* TEMPORARY: Legacy fallback for views NOT yet in AppRoutes */}
         {/* Wrap ONLY legacy views in main tag for consistent styling */}
+        {/* Only render when NOT on a routed page to prevent double-rendering */}
+        {!isRoutedPage && (
         <main className={isMobile ? '' : 'pt-20 p-6'}>
           {currentView === 'profile' ? (
           isMobile ? (
@@ -1342,43 +1353,13 @@ const App = () => {
             </div>
           )
         ) : (
-          <div className="space-y-8">
-            <DashboardRouter
-              user={user}
-              isCreator={isCreator}
-              isAdmin={isAdmin}
-              roleResolved={roleResolved}
-              tokenBalance={tokenBalance}
-              sessionStats={sessionStats}
-              onShowAvailability={() => openModal(MODALS.AVAILABILITY_CALENDAR)}
-              onShowGoLive={openGoLive}
-              onCreatorSelect={handleCreatorView}
-              onTipCreator={handleTipCreator}
-              onStartVideoCall={handleStartVideoCall}
-              onStartVoiceCall={handleStartVoiceCall}
-              onShowEarnings={() => setCurrentView('wallet')}
-                onShowOffers={() => setCurrentView('offers')}
-              onShowSettings={() => openModal(MODALS.PRIVACY_SETTINGS)}
-              onNavigate={(view) => setCurrentView(view)}
-              contentData={sharedContentData}
-              onContentUpdate={setSharedContentData}
-            />
-
-            {/* Recently Viewed Creators - Only show for fans with resolved role AND NOT on mobile */}
-            {roleResolved && !isCreator && !isMobile && (
-              <ErrorBoundary variant="compact">
-                <RecentlyViewedCreators
-                  user={user}
-                  onCreatorClick={handleCreatorView}
-                  onTipCreator={handleTipCreator}
-                  maxItems={8}
-                  className="px-6"
-                />
-              </ErrorBoundary>
-            )}
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-500">Page not found</p>
           </div>
         )}
         </main>
+        )}
+        {/* Close the !isRoutedPage conditional wrapper */}
         {/* Add padding at bottom for mobile navigation */}
         {isMobile && <div style={{ height: '80px' }} />}
       </PullToRefresh>
