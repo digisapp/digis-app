@@ -7,7 +7,7 @@ const userRoutes = require('../users');
 const tokenRoutes = require('../tokens');
 const paymentRoutes = require('../payments');
 const agoraRoutes = require('../agora');
-const subscriptionRoutes = require('../subscriptions');
+const subscriptionRoutes = require('../enhanced-subscriptions');
 const creatorRoutes = require('../creators');
 
 // Mount v1 routes
