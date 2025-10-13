@@ -95,15 +95,71 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       requestEmail: email
     });
 
-    // Check if user already exists
+    // IDEMPOTENT: Ensure user exists (create or update)
+    const upsertUserQuery = `
+      INSERT INTO users (
+        id,
+        supabase_id,
+        email,
+        username,
+        display_name,
+        email_verified,
+        last_active,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        $1::uuid,
+        $1::uuid,
+        $2,
+        COALESCE($3, split_part($2, '@', 1)),
+        COALESCE($4, split_part($2, '@', 1)),
+        true,
+        NOW(),
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        email_verified = true,
+        last_active = NOW(),
+        updated_at = NOW()
+      RETURNING id
+    `;
+
+    await pool.query(upsertUserQuery, [
+      supabaseId,
+      email,
+      metadata?.username,
+      metadata?.username
+    ]);
+
+    // IDEMPOTENT: Ensure token balance exists
+    const upsertTokenBalanceQuery = `
+      INSERT INTO token_balances (
+        user_id,
+        balance,
+        total_earned,
+        total_spent,
+        total_purchased,
+        created_at,
+        updated_at
+      )
+      VALUES ($1::uuid, 0, 0, 0, 0, NOW(), NOW())
+      ON CONFLICT (user_id) DO NOTHING
+    `;
+
+    await pool.query(upsertTokenBalanceQuery, [supabaseId]);
+
+    // Now fetch the complete profile
     const checkQuery = `
       SELECT * FROM users
-      WHERE id = $1::uuid OR email = $2
+      WHERE id = $1::uuid
       LIMIT 1
     `;
 
-    const existingUser = await pool.query(checkQuery, [supabaseId, email]);
-    
+    const existingUser = await pool.query(checkQuery, [supabaseId]);
+
     if (existingUser.rows.length > 0) {
       // User exists, update their info and fetch complete profile with token balance
       const user = existingUser.rows[0];

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digis Deployment Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a1a1a;
+            margin-top: 0;
+        }
+        h2 {
+            color: #333;
+            font-size: 18px;
+            margin-top: 0;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .result {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        .code {
+            font-family: 'Monaco', 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .step {
+            margin: 12px 0;
+            padding: 12px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🚀 Digis Deployment Verification</h1>
+        <p><strong>Commit:</strong> <span class="code">25f0ca3</span> - "fix: resolve mobile creator dashboard role-flicker and layout issues"</p>
+        <p><strong>Deployed:</strong> ~2 hours ago</p>
+    </div>
+
+    <div class="card">
+        <h2>1. Check Deployment Status</h2>
+        <p>Click the buttons below to verify your deployments are live:</p>
+        <button onclick="checkFrontend()">Check Frontend (digis.cc)</button>
+        <button onclick="checkBackend()">Check Backend API</button>
+        <div id="deployment-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="card">
+        <h2>2. Clear Browser Cache</h2>
+        <p><strong>⚠️ IMPORTANT:</strong> You need to clear your cache to see the updates!</p>
+
+        <div class="step">
+            <strong>Mobile (iOS Safari/Chrome):</strong>
+            <ol>
+                <li>Close the Digis app completely</li>
+                <li>Settings → Safari (or Chrome)</li>
+                <li>Tap "Clear History and Website Data"</li>
+                <li>Reopen browser and go to digis.cc</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <strong>Desktop:</strong>
+            <ol>
+                <li><strong>Hard Refresh:</strong> Press <span class="code">Cmd + Shift + R</span> (Mac) or <span class="code">Ctrl + Shift + R</span> (Windows)</li>
+                <li><strong>OR Clear Service Worker:</strong>
+                    <ul>
+                        <li>Open DevTools (F12)</li>
+                        <li>Go to Application tab → Service Workers</li>
+                        <li>Click "Unregister"</li>
+                        <li>Reload page</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <button class="danger" onclick="clearLocalCache()">Clear Local Storage (This Page)</button>
+        <p style="font-size: 12px; color: #666; margin-top: 8px;">Note: This only clears cache for this verification page, not digis.cc. You still need to clear cache on digis.cc.</p>
+    </div>
+
+    <div class="card">
+        <h2>3. Verify Fixes Work</h2>
+        <p>After clearing cache, test these scenarios:</p>
+
+        <div class="step">
+            <strong>✅ Expected Behavior (Mobile Creator Dashboard):</strong>
+            <ul>
+                <li>Login as Nathan (creator)</li>
+                <li>Should see <strong>MobileCreatorDashboard</strong></li>
+                <li>Should <strong>NOT</strong> see:
+                    <ul>
+                        <li>"Featured Creators" section</li>
+                        <li>"Recently Viewed Creators" section</li>
+                        <li>Message search at bottom</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>✅ Expected Behavior (TV Page):</strong>
+            <ul>
+                <li>Go to TV page on mobile</li>
+                <li>Should <strong>NOT</strong> see search bar at top</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>4. Debug Tools</h2>
+        <p>If you're still having issues, use these diagnostic tools:</p>
+        <button onclick="checkAuthState()">Check Auth State</button>
+        <button onclick="checkRoleResolved()">Test roleResolved Logic</button>
+        <button onclick="testBackendSync()">Test Backend Sync</button>
+        <div id="debug-result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function checkFrontend() {
+            const result = document.getElementById('deployment-result');
+            result.style.display = 'block';
+            result.innerHTML = '<p>Checking frontend...</p>';
+
+            try {
+                const response = await fetch('https://digis.cc', { method: 'HEAD' });
+                if (response.ok) {
+                    result.innerHTML = `
+                        <span class="status success">✅ SUCCESS</span>
+                        <p><strong>Frontend is deployed and accessible!</strong></p>
+                        <p>URL: <a href="https://digis.cc" target="_blank">https://digis.cc</a></p>
+                        <p>Status: ${response.status} ${response.statusText}</p>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <span class="status error">❌ ERROR</span>
+                        <p>Frontend returned status: ${response.status}</p>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <span class="status error">❌ ERROR</span>
+                    <p>Could not reach frontend: ${error.message}</p>
+                `;
+            }
+        }
+
+        async function checkBackend() {
+            const result = document.getElementById('deployment-result');
+            result.style.display = 'block';
+            result.innerHTML = '<p>Checking backend...</p>';
+
+            try {
+                const response = await fetch('https://backend-wine-theta-69.vercel.app/');
+                const data = await response.json();
+
+                if (response.ok) {
+                    result.innerHTML = `
+                        <span class="status success">✅ SUCCESS</span>
+                        <p><strong>Backend is deployed and working!</strong></p>
+                        <p>URL: <a href="https://backend-wine-theta-69.vercel.app/" target="_blank">https://backend-wine-theta-69.vercel.app</a></p>
+                        <p>Version: ${data.version}</p>
+                        <p>Environment: ${data.environment}</p>
+                        <p>Features: ${data.features.length} enabled</p>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <span class="status error">❌ ERROR</span>
+                        <p>Backend returned status: ${response.status}</p>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <span class="status error">❌ ERROR</span>
+                    <p>Could not reach backend: ${error.message}</p>
+                `;
+            }
+        }
+
+        function clearLocalCache() {
+            localStorage.clear();
+            sessionStorage.clear();
+            alert('✅ Local cache cleared for this page!\n\nNote: You still need to clear cache on digis.cc itself (see instructions above).');
+        }
+
+        function checkAuthState() {
+            const result = document.getElementById('debug-result');
+            result.style.display = 'block';
+
+            const authToken = localStorage.getItem('sb-lpphsjowsivjtcmafxnj-auth-token');
+            const profileCache = localStorage.getItem('digis-profile-cache');
+
+            result.innerHTML = `
+                <h3>Current Browser State:</h3>
+                <p><strong>Auth Token:</strong> ${authToken ? '✅ Present' : '❌ Not found'}</p>
+                <p><strong>Profile Cache:</strong> ${profileCache ? '✅ Present' : '❌ Not found'}</p>
+                <p style="font-size: 12px; color: #666;">Open digis.cc and check DevTools Console (F12) for auth state logs.</p>
+            `;
+        }
+
+        function checkRoleResolved() {
+            const result = document.getElementById('debug-result');
+            result.style.display = 'block';
+
+            result.innerHTML = `
+                <h3>roleResolved Logic Test:</h3>
+                <p>The <code>roleResolved</code> flag prevents rendering until profile loads.</p>
+                <pre>
+// From AuthContext.jsx (line 50)
+const roleResolved = !!profile?.id && typeof profile?.is_creator === 'boolean';
+
+// Test scenarios:
+1. profile = null               → roleResolved = false ✅
+2. profile = { id: '123' }      → roleResolved = false ✅
+3. profile = { id: '123', is_creator: true }  → roleResolved = true ✅
+4. profile = { id: '123', is_creator: false } → roleResolved = true ✅
+                </pre>
+                <p><strong>Expected:</strong> RecentlyViewedCreators only renders when <code>roleResolved === true && isCreator === false</code></p>
+            `;
+        }
+
+        async function testBackendSync() {
+            const result = document.getElementById('debug-result');
+            result.style.display = 'block';
+            result.innerHTML = '<p>Testing backend sync endpoint...</p>';
+
+            result.innerHTML = `
+                <h3>Backend Sync Test:</h3>
+                <p>To test the <code>/api/auth/sync-user</code> endpoint:</p>
+                <ol>
+                    <li>Login to digis.cc as Nathan</li>
+                    <li>Open DevTools (F12) → Console</li>
+                    <li>Look for log: <code>✅ sync-user success: { username: 'nathan', is_creator: true }</code></li>
+                    <li>If you see <code>❌ sync-user fail</code>, check backend logs in Vercel</li>
+                </ol>
+                <p>Backend URL: <a href="https://backend-wine-theta-69.vercel.app/" target="_blank">https://backend-wine-theta-69.vercel.app/</a></p>
+            `;
+        }
+    </script>
+</body>
+</html>

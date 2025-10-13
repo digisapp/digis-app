@@ -21,11 +21,11 @@ const ProtectedRoute = ({
   requireAdmin = false,
   fallbackPath = '/'
 }) => {
-  const { user, authLoading, isCreator, isAdmin, profile } = useAuth();
+  const { user, authLoading, isCreator, isAdmin, profile, roleResolved, currentUser } = useAuth();
   const location = useLocation();
 
-  // Tri-state: Still loading auth/profile? Show neutral skeleton (not "Access Denied")
-  if (authLoading || (user && !profile)) {
+  // Hard guard: never render children until role & user are ready
+  if (authLoading || !roleResolved || !currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">

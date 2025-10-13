@@ -53,6 +53,11 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
   // Use AuthContext as SINGLE SOURCE OF TRUTH
   const { currentUser, isCreator, isAdmin, role, roleResolved } = useAuth();
 
+  // Hard guard: never render until role & user are ready
+  if (!roleResolved || !currentUser) {
+    return null; // nav waits until auth settles; app shows top-level fallback
+  }
+
   const { activePath, onNavigate, badges = { notifications: 0 }, tokenBalance } = useNavigation();
   const storeTokenBalance = useHybridStore((state) => state.tokenBalance);
   const [showNotifications, setShowNotifications] = useState(false);

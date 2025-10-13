@@ -18,6 +18,18 @@ class ErrorBoundary extends React.Component {
       error: error,
       errorInfo: errorInfo
     });
+
+    // Log the actual crash stack for debugging
+    try {
+      window.__lastError = {
+        error: String(error?.stack || error),
+        info: errorInfo,
+        timestamp: new Date().toISOString()
+      };
+      console.error('[ErrorBoundary] crash details:', error, errorInfo);
+    } catch (loggingError) {
+      console.error('Failed to log error:', loggingError);
+    }
   }
 
   handleReset = () => {
