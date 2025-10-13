@@ -69,12 +69,15 @@ const MobileCreatorProfile = lazy(() => import('../components/mobile/MobileCreat
  * location.pathname is the single source of truth
  */
 const AppRoutes = () => {
-  const { user, isCreator, isAdmin, tokenBalance } = useAuth();
+  const { user, profile, isCreator, isAdmin, tokenBalance, roleResolved } = useAuth();
   const { isMobile } = useDevice();
   const location = useLocation();
 
   // Route observability - tracks navigation performance and errors
   useRouteObservability();
+
+  // Merge user and profile for complete user data
+  const mergedUser = user && profile ? { ...user, ...profile } : (user || profile);
 
   // Loading fallback - branded for consistency
   const LoadingFallback = isMobile ? <MobileRouteFallback /> : <RouteFallback />;
@@ -105,166 +108,166 @@ const AppRoutes = () => {
         {/* Protected Routes - Require Authentication */}
         <Route path="/explore" element={
           <ProtectedRoute>
-            {isMobile ? <MobileExplore user={user} /> : <ExplorePage user={user} currentUserId={user?.id} tokenBalance={tokenBalance} />}
+            {isMobile ? <MobileExplore user={mergedUser} /> : <ExplorePage user={mergedUser} currentUserId={mergedUser?.id} tokenBalance={tokenBalance} />}
           </ProtectedRoute>
         } />
 
         <Route path="/dashboard" element={
           <ProtectedRoute>
             {isMobile ? (
-              isCreator ? <MobileDashboard /> : <MobileFanDashboard />
+              isCreator ? <MobileDashboard user={mergedUser} tokenBalance={tokenBalance} /> : <MobileFanDashboard user={mergedUser} tokenBalance={tokenBalance} />
             ) : (
-              <DashboardRouter />
+              <DashboardRouter user={mergedUser} isCreator={isCreator} isAdmin={isAdmin} roleResolved={roleResolved} tokenBalance={tokenBalance} />
             )}
           </ProtectedRoute>
         } />
 
         <Route path="/messages" element={
           <ProtectedRoute>
-            {isMobile ? <MobileMessages /> : <MessagesPage />}
+            {isMobile ? <MobileMessages user={mergedUser} /> : <MessagesPage user={mergedUser} />}
           </ProtectedRoute>
         } />
 
         <Route path="/wallet" element={
           <ProtectedRoute>
-            {isMobile ? <MobileWallet /> : <WalletPage />}
+            {isMobile ? <MobileWallet user={mergedUser} tokenBalance={tokenBalance} /> : <WalletPage user={mergedUser} tokenBalance={tokenBalance} />}
           </ProtectedRoute>
         } />
 
         <Route path="/call-requests" element={
           <ProtectedRoute requireCreator>
-            {isMobile ? <MobileCalls /> : <CallRequestsPage />}
+            {isMobile ? <MobileCalls user={mergedUser} /> : <CallRequestsPage user={mergedUser} />}
           </ProtectedRoute>
         } />
 
         <Route path="/schedule" element={
           <ProtectedRoute>
-            {isMobile ? <MobileSchedule /> : <SchedulePage />}
+            {isMobile ? <MobileSchedule user={mergedUser} /> : <SchedulePage user={mergedUser} isCreator={isCreator} />}
           </ProtectedRoute>
         } />
 
         <Route path="/analytics" element={
           <ProtectedRoute requireCreator>
-            {isMobile ? <MobileAnalytics /> : <AnalyticsDashboard />}
+            {isMobile ? <MobileAnalytics user={mergedUser} /> : <AnalyticsDashboard user={mergedUser} />}
           </ProtectedRoute>
         } />
 
         <Route path="/content" element={
           <ProtectedRoute requireCreator>
-            {isMobile ? <MobileContent /> : <DashboardRouter />}
+            {isMobile ? <MobileContent user={mergedUser} /> : <DashboardRouter user={mergedUser} isCreator={isCreator} isAdmin={isAdmin} roleResolved={roleResolved} tokenBalance={tokenBalance} />}
           </ProtectedRoute>
         } />
 
         <Route path="/tv" element={
           <ProtectedRoute>
-            <TVPage />
+            <TVPage user={mergedUser} />
           </ProtectedRoute>
         } />
 
         <Route path="/classes" element={
           <ProtectedRoute>
-            <ClassesPage />
+            <ClassesPage user={mergedUser} />
           </ProtectedRoute>
         } />
 
         <Route path="/shop" element={
           <ProtectedRoute>
-            <ShopPage />
+            <ShopPage user={mergedUser} />
           </ProtectedRoute>
         } />
 
         <Route path="/collections" element={
           <ProtectedRoute>
-            <CollectionsPage />
+            <CollectionsPage user={mergedUser} />
           </ProtectedRoute>
         } />
 
         <Route path="/profile" element={
           <ProtectedRoute>
-            <ImprovedProfile />
+            <ImprovedProfile user={mergedUser} isCreator={isCreator} />
           </ProtectedRoute>
         } />
 
         <Route path="/settings" element={
           <ProtectedRoute>
-            {isMobile ? <MobileSettingsPage /> : <Settings />}
+            {isMobile ? <MobileSettingsPage user={mergedUser} /> : <Settings user={mergedUser} />}
           </ProtectedRoute>
         } />
 
         <Route path="/followers" element={
           <ProtectedRoute requireCreator>
-            <FollowersSubscribersPage initialTab="followers" />
+            <FollowersSubscribersPage user={mergedUser} isCreator={isCreator} initialTab="followers" />
           </ProtectedRoute>
         } />
 
         <Route path="/subscribers" element={
           <ProtectedRoute requireCreator>
-            <FollowersSubscribersPage initialTab="subscribers" />
+            <FollowersSubscribersPage user={mergedUser} isCreator={isCreator} initialTab="subscribers" />
           </ProtectedRoute>
         } />
 
         {/* Admin Routes */}
         <Route path="/admin" element={
           <ProtectedRoute requireAdmin>
-            <EnhancedAdminDashboard />
+            <EnhancedAdminDashboard user={mergedUser} />
           </ProtectedRoute>
         } />
 
         {/* Call Routes */}
         <Route path="/call/video" element={
           <ProtectedRoute>
-            <VideoCall audioOnly={false} />
+            <VideoCall user={mergedUser} audioOnly={false} />
           </ProtectedRoute>
         } />
 
         <Route path="/call/voice" element={
           <ProtectedRoute>
-            <VideoCall audioOnly={true} />
+            <VideoCall user={mergedUser} audioOnly={true} />
           </ProtectedRoute>
         } />
 
         {/* Streaming Routes */}
         <Route path="/streaming" element={
           <ProtectedRoute>
-            {isCreator ? <StreamingDashboard /> : <StreamingLayout />}
+            {isCreator ? <StreamingDashboard user={mergedUser} /> : <StreamingLayout user={mergedUser} />}
           </ProtectedRoute>
         } />
 
         <Route path="/stream/:username" element={
           <ProtectedRoute>
-            <StreamingLayout />
+            <StreamingLayout user={mergedUser} />
           </ProtectedRoute>
         } />
 
         {/* Phase 3: Final 5 routes */}
         <Route path="/history" element={
           <ProtectedRoute requireCreator>
-            <SessionHistory />
+            <SessionHistory user={mergedUser} />
           </ProtectedRoute>
         } />
 
-        <Route path="/following" element={<FollowingSystem />} />
+        <Route path="/following" element={<FollowingSystem user={mergedUser} />} />
 
         <Route path="/shop-management" element={
           <ProtectedRoute requireCreator>
-            <ShopManagementPage />
+            <ShopManagementPage user={mergedUser} />
           </ProtectedRoute>
         } />
 
         <Route path="/kyc" element={
           <ProtectedRoute>
-            <CreatorKYCVerification />
+            <CreatorKYCVerification user={mergedUser} />
           </ProtectedRoute>
         } />
 
-        <Route path="/supabase-test" element={<SupabaseTestPage />} />
+        <Route path="/supabase-test" element={<SupabaseTestPage user={mergedUser} />} />
 
         {/* Direct Username Routes (must be last before catch-all) */}
         <Route path="/:username" element={
           isMobile ? (
-            <MobileCreatorProfile />
+            <MobileCreatorProfile user={mergedUser} />
           ) : (
-            <CreatorPublicProfileEnhanced />
+            <CreatorPublicProfileEnhanced user={mergedUser} />
           )
         } />
 
