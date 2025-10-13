@@ -298,19 +298,26 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // Load cached profile
+      // Load cached profile FIRST - this prevents flash of empty state
       const cachedProfile = loadProfileCache();
-      if (cachedProfile && mounted) {
-        console.log('📦 Loading cached profile:', cachedProfile.username);
-        setProfile(cachedProfile);
-        if (cachedProfile.token_balance !== undefined) {
-          setTokenBalance(cachedProfile.token_balance);
-        }
-      }
 
       // Check for existing session
       try {
         const { data: { session } } = await supabase.auth.getSession();
+
+        // Set cached profile immediately if we have one
+        if (cachedProfile && mounted) {
+          console.log('📦 Loading cached profile:', cachedProfile.username);
+          setProfile(cachedProfile);
+          if (cachedProfile.token_balance !== undefined) {
+            setTokenBalance(cachedProfile.token_balance);
+          }
+          // IMPORTANT: Also set user from session so roleResolved works
+          if (session?.user) {
+            setUser(session.user);
+          }
+        }
+
         if (session?.user && mounted) {
           // Sync user with backend
           try {
