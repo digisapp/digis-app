@@ -21,6 +21,7 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
+      cleanupOutdatedCaches: true, // Ensure old caches are cleaned up
       includeAssets: ['favicon.ico', 'digis-logo-black.png', 'digis-logo-white.png'],
       manifest: {
         name: 'Digis Creator Platform',
