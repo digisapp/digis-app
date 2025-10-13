@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Auth - Digis</title>
+    <style>
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .status {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .error {
+            background: rgba(239, 68, 68, 0.3);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+        .success {
+            background: rgba(34, 197, 94, 0.3);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Auth Debug Tool</h1>
+
+        <div id="status"></div>
+
+        <button onclick="checkSupabaseSession()">1. Check Supabase Session</button>
+        <button onclick="testSyncUser()">2. Test /api/auth/sync-user</button>
+        <button onclick="testMe()">3. Test /api/auth/me</button>
+        <button onclick="testDbConnection()">4. Test DB Connection</button>
+        <button onclick="checkUser()">5. Check User in DB</button>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+        const SUPABASE_URL = 'https://lpphsjowsivjtcmafxnj.supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwcGhzam93c2l2anRjbWFmeG5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0MzQzMDIsImV4cCI6MjA1MTAxMDMwMn0.nxOQNhkPd0_uuHe3sKjPZHWpBa7ZY4Nzs-Kz8-ot0PM'
+        const BACKEND_URL = 'https://backend-nathans-projects-43dfdae0.vercel.app'
+
+        window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+        function log(message, isError = false) {
+            const div = document.createElement('div')
+            div.className = `status ${isError ? 'error' : 'success'}`
+            div.innerHTML = `<pre>${message}</pre>`
+            document.getElementById('status').appendChild(div)
+        }
+
+        window.checkSupabaseSession = async function() {
+            try {
+                const { data: { session }, error } = await window.supabase.auth.getSession()
+                if (error) throw error
+
+                if (session) {
+                    log(`✅ Session found:\nUser ID: ${session.user.id}\nEmail: ${session.user.email}`)
+                } else {
+                    log('❌ No active session - please login at https://digis.cc first', true)
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, true)
+            }
+        }
+
+        window.testSyncUser = async function() {
+            try {
+                const { data: { session }, error: sessionError } = await window.supabase.auth.getSession()
+                if (sessionError) throw sessionError
+                if (!session) {
+                    log('❌ No session - login first', true)
+                    return
+                }
+
+                log(`🔄 Testing sync-user with user ${session.user.id}...`)
+
+                const response = await fetch(`${BACKEND_URL}/api/auth/sync-user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({
+                        supabaseId: session.user.id,
+                        email: session.user.email,
+                        metadata: session.user.user_metadata
+                    })
+                })
+
+                const data = await response.json()
+
+                if (response.ok) {
+                    log(`✅ sync-user SUCCESS:\n${JSON.stringify(data, null, 2)}`)
+                } else {
+                    log(`❌ sync-user FAILED (${response.status}):\n${JSON.stringify(data, null, 2)}`, true)
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, true)
+            }
+        }
+
+        window.testMe = async function() {
+            try {
+                const { data: { session }, error: sessionError } = await window.supabase.auth.getSession()
+                if (sessionError) throw sessionError
+                if (!session) {
+                    log('❌ No session - login first', true)
+                    return
+                }
+
+                const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`
+                    }
+                })
+
+                const data = await response.json()
+
+                if (response.ok) {
+                    log(`✅ /api/auth/me SUCCESS:\n${JSON.stringify(data, null, 2)}`)
+                } else {
+                    log(`❌ /api/auth/me FAILED (${response.status}):\n${JSON.stringify(data, null, 2)}`, true)
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, true)
+            }
+        }
+
+        window.testDbConnection = async function() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/auth/debug-db`)
+                const data = await response.json()
+
+                if (response.ok) {
+                    log(`✅ Database connected:\n${JSON.stringify(data, null, 2)}`)
+                } else {
+                    log(`❌ Database error:\n${JSON.stringify(data, null, 2)}`, true)
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, true)
+            }
+        }
+
+        window.checkUser = async function() {
+            try {
+                const { data: { session }, error: sessionError } = await window.supabase.auth.getSession()
+                if (sessionError) throw sessionError
+                if (!session) {
+                    log('❌ No session - login first', true)
+                    return
+                }
+
+                const { data, error } = await window.supabase
+                    .from('users')
+                    .select('id, email, username, display_name, is_creator, role, creator_type, is_super_admin')
+                    .eq('id', session.user.id)
+                    .single()
+
+                if (error) throw error
+
+                log(`✅ User found in database:\n${JSON.stringify(data, null, 2)}`)
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, true)
+            }
+        }
+    </script>
+</body>
+</html>

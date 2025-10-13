@@ -100,56 +100,13 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /**
-   * FALLBACK: Fetch profile directly from Supabase if backend is unreachable
-   * This provides mobile resilience and offline-first capability
+   * DISABLED: Supabase direct fallback removed due to RLS restrictions
+   * RLS policies prevent direct queries without bypassing auth
+   * Backend is the single source of truth for user data
    */
   const fetchProfileFromSupabaseDirect = useCallback(async (userId) => {
-    try {
-      console.log('🔄 Trying Supabase direct fallback for user:', userId);
-
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
-          *,
-          token_balances(balance, total_earned, total_spent, total_purchased)
-        `)
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      // Compute canonical role client-side (same logic as backend)
-      // Note: token_balances is an array when using LEFT JOIN
-      const tokenBalanceData = Array.isArray(data.token_balances) ? data.token_balances[0] : data.token_balances;
-
-      const canonicalProfile = {
-        ...data,
-        // Token balance from join
-        token_balance: tokenBalanceData?.balance || 0,
-        total_earned: tokenBalanceData?.total_earned || 0,
-        total_spent: tokenBalanceData?.total_spent || 0,
-        total_purchased: tokenBalanceData?.total_purchased || 0,
-
-        // Canonical role computation (matches backend logic in routes/auth.js)
-        is_creator: data.is_creator === true ||
-                    data.role === 'creator' ||
-                    (data.creator_type !== null && data.creator_type !== undefined),
-        is_admin: data.is_super_admin === true ||
-                  data.role === 'admin'
-      };
-
-      console.log('✅ Supabase direct fallback succeeded:', {
-        username: canonicalProfile.username,
-        is_creator: canonicalProfile.is_creator,
-        is_admin: canonicalProfile.is_admin,
-        token_balance: canonicalProfile.token_balance
-      });
-
-      return canonicalProfile;
-    } catch (error) {
-      console.error('❌ Supabase direct fallback failed:', error);
-      return null;
-    }
+    console.log('⚠️ Supabase direct fallback disabled - backend is required for auth');
+    return null;
   }, []);
 
   /**
