@@ -223,7 +223,15 @@ const MobileCreatorProfile = ({
     if (video.canPlayType('application/vnd.apple.mpegURL')) {
       video.src = src;
       video.play().catch(() => {}); // autoplay may need user gesture
-      return;
+
+      // Cleanup for native HLS playback
+      return () => {
+        if (video) {
+          video.pause();
+          video.src = '';
+          video.load();
+        }
+      };
     }
 
     // Use HLS.js for other browsers

@@ -66,6 +66,7 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
   const [recordingAudio, setRecordingAudio] = useState(false);
   const [audioRecordTime, setAudioRecordTime] = useState(0);
   const audioRecorderRef = useRef(null);
+  const audioStreamRef = useRef(null);
   const audioTimerRef = useRef(null);
   const [showCallRequest, setShowCallRequest] = useState(false);
   const [callRequestType, setCallRequestType] = useState('video');
@@ -157,44 +158,54 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       const chunks = [];
-      
+
       mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
         // Handle audio blob - send as message
         handleSendAudioMessage(blob);
+        // Clean up stream after recording stops
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach(track => track.stop());
+          audioStreamRef.current = null;
+        }
       };
-      
+
       audioRecorderRef.current = mediaRecorder;
+      audioStreamRef.current = stream;
       mediaRecorder.start();
       setRecordingAudio(true);
       setAudioRecordTime(0);
-      
+
       // Start timer
       audioTimerRef.current = setInterval(() => {
         setAudioRecordTime(prev => prev + 1);
       }, 1000);
-      
+
       triggerHaptic('medium');
     } catch (error) {
       console.error('Error starting audio recording:', error);
       toast.error('Unable to access microphone');
     }
-  }, [triggerHaptic]);
+  }, [triggerHaptic, handleSendAudioMessage]);
   
   // Stop audio recording
   const stopAudioRecording = useCallback(() => {
     if (audioRecorderRef.current) {
       audioRecorderRef.current.stop();
-      audioRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       audioRecorderRef.current = null;
     }
-    
+
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop());
+      audioStreamRef.current = null;
+    }
+
     if (audioTimerRef.current) {
       clearInterval(audioTimerRef.current);
       audioTimerRef.current = null;
     }
-    
+
     setRecordingAudio(false);
     setAudioRecordTime(0);
     triggerHaptic('light');
@@ -271,6 +282,25 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
       setSendingMessage(false);
     }
   }, [selectedConversation]);
+
+  // Cleanup audio recording on unmount
+  useEffect(() => {
+    return () => {
+      // Clean up audio recording if component unmounts while recording
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.stop();
+        audioRecorderRef.current = null;
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+        audioStreamRef.current = null;
+      }
+      if (audioTimerRef.current) {
+        clearInterval(audioTimerRef.current);
+        audioTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Fetch conversations on mount
   useEffect(() => {

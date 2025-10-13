@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, lazy, Suspense } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Lazy load MobileBottomSheet to avoid circular dependency issues
@@ -17,6 +17,11 @@ export const MobileUIProvider = ({ children }) => {
   const [swipeDirection, setSwipeDirection] = useState(null);
   const [isPullToRefresh, setIsPullToRefresh] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Refs to maintain stable references for touch handlers
+  const touchStartRef = useRef(null);
+  const touchEndRef = useRef(null);
+  const handlersRef = useRef({});
 
   // Haptic feedback support
   const triggerHaptic = useCallback((type = 'light') => {
@@ -73,35 +78,43 @@ export const MobileUIProvider = ({ children }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Touch gesture handling
+  // Touch gesture handling - using refs to avoid creating new functions on every state change
   const handleTouchStart = useCallback((e) => {
-    setTouchStart({
+    const touch = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
       time: Date.now()
-    });
+    };
+    touchStartRef.current = touch;
+    touchEndRef.current = null;
+    setTouchStart(touch);
     setTouchEnd(null);
   }, []);
 
   const handleTouchMove = useCallback((e) => {
-    if (!touchStart) return;
-    
-    setTouchEnd({
+    if (!touchStartRef.current) return;
+
+    const touch = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY
-    });
-  }, [touchStart]);
+    };
+    touchEndRef.current = touch;
+    setTouchEnd(touch);
+  }, []);
 
   const handleTouchEnd = useCallback(() => {
-    if (!touchStart || !touchEnd) return;
-    
-    const deltaX = touchEnd.x - touchStart.x;
-    const deltaY = touchEnd.y - touchStart.y;
-    const deltaTime = Date.now() - touchStart.time;
-    
+    const start = touchStartRef.current;
+    const end = touchEndRef.current;
+
+    if (!start || !end) return;
+
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    const deltaTime = Date.now() - start.time;
+
     // Minimum swipe distance
     const minSwipeDistance = 50;
-    
+
     // Detect swipe direction
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
       // Horizontal swipe
@@ -127,12 +140,12 @@ export const MobileUIProvider = ({ children }) => {
         }
       }
     }
-    
+
     // Reset after animation
     setTimeout(() => {
       setSwipeDirection(null);
     }, 300);
-  }, [touchStart, touchEnd, triggerHaptic]);
+  }, [triggerHaptic]);
 
   // Keyboard height detection for iOS
   useEffect(() => {
@@ -157,18 +170,29 @@ export const MobileUIProvider = ({ children }) => {
     };
   }, []);
 
-  // Attach global touch listeners
+  // Store handlers in ref to maintain stable references
   useEffect(() => {
-    document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    document.addEventListener('touchmove', handleTouchMove, { passive: true });
-    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    handlersRef.current.handleTouchStart = handleTouchStart;
+    handlersRef.current.handleTouchMove = handleTouchMove;
+    handlersRef.current.handleTouchEnd = handleTouchEnd;
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+
+  // Attach global touch listeners - use stable wrapper functions
+  useEffect(() => {
+    const onTouchStart = (e) => handlersRef.current.handleTouchStart?.(e);
+    const onTouchMove = (e) => handlersRef.current.handleTouchMove?.(e);
+    const onTouchEnd = (e) => handlersRef.current.handleTouchEnd?.(e);
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
 
     return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
     };
-  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+  }, []); // Empty dependency array - listeners are now stable
 
   // Enhanced modal system
   const openModal = useCallback((modalId, props = {}) => {

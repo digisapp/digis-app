@@ -35,6 +35,7 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
   const isPulling = useRef(false);
   const mountedRef = useRef(true);
   const creatorsAbortRef = useRef(null);
+  const pageRef = useRef(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loadingMore, setLoadingMore] = useState(false);
@@ -100,10 +101,10 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
       if (creatorsAbortRef.current) {
         creatorsAbortRef.current.abort();
       }
-      
+
       const controller = new AbortController();
       creatorsAbortRef.current = controller;
-      
+
       setLoadingMore(append);
       setLoading(!append);
 
@@ -143,7 +144,7 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
             location: creator.location || creator.city || '',
             tags: creator.tags || []
           }));
-          
+
           if (mountedRef.current) {
             if (append) {
               setCreators(prev => [...prev, ...formattedCreators]);
@@ -152,14 +153,24 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
             }
           }
         }
-        
+
         if (mountedRef.current) {
           setHasMore(data.hasMore !== false);
           setPage(pageNum);
+          pageRef.current = pageNum;
+        }
+
+        // Clear the abort controller reference after successful completion
+        if (creatorsAbortRef.current === controller) {
+          creatorsAbortRef.current = null;
         }
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error('Error fetching creators:', error);
+      }
+      // Clear the abort controller reference on error
+      if (creatorsAbortRef.current === controller) {
+        creatorsAbortRef.current = null;
       }
     } finally {
       if (mountedRef.current) {
@@ -272,18 +283,21 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
     setPullDistance(0);
   }, [pullDistance, refreshing, handleRefresh]);
 
-  // Infinite scroll handler with throttling
+  // Infinite scroll handler with throttling - using refs to avoid dependency issues
+  const fetchCreatorsRef = useRef(fetchCreators);
+  fetchCreatorsRef.current = fetchCreators;
+
   const handleScroll = useCallback(() => {
     if (!mountedRef.current) return;
-    
+
     const scrollHeight = document.documentElement.scrollHeight;
     const scrollTop = document.documentElement.scrollTop;
     const clientHeight = document.documentElement.clientHeight;
-    
+
     if (scrollTop + clientHeight >= scrollHeight - 100 && !loadingMore && hasMore) {
-      fetchCreators(page + 1, true);
+      fetchCreatorsRef.current(pageRef.current + 1, true);
     }
-  }, [loadingMore, hasMore, page, fetchCreators]);
+  }, [loadingMore, hasMore]);
 
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);

@@ -14,7 +14,7 @@ import {
   SparklesIcon
 } from '@heroicons/react/24/outline';
 
-const MobileLandingPage = ({ onLogin }) => {
+const MobileLandingPage = React.memo(({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -363,6 +363,8 @@ const MobileLandingPage = ({ onLogin }) => {
       `}} />
     </div>
   );
-};
+});
+
+MobileLandingPage.displayName = 'MobileLandingPage';
 
 export default MobileLandingPage;

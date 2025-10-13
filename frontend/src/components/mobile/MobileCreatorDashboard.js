@@ -36,6 +36,71 @@ const DEFAULT_STATS = {
   followers: 0
 };
 
+// Separate component for scheduled call with countdown to avoid nested useEffect
+const ScheduledCallCard = ({ call }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const callTime = new Date(call.scheduledTime);
+      const diff = callTime - now;
+
+      if (diff > 0) {
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        if (hours > 24) {
+          const days = Math.floor(hours / 24);
+          setTimeLeft(`${days}d ${hours % 24}h`);
+        } else if (hours > 0) {
+          setTimeLeft(`${hours}h ${minutes}m`);
+        } else if (minutes > 0) {
+          setTimeLeft(`${minutes}m ${seconds}s`);
+        } else {
+          setTimeLeft(`${seconds}s`);
+        }
+      } else {
+        setTimeLeft('Starting...');
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [call.scheduledTime]);
+
+  return (
+    <motion.div
+      key={call.id}
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+            {call.type === 'video' ? (
+              <VideoCameraIcon className="w-5 h-5 text-blue-600" />
+            ) : (
+              <PhoneIcon className="w-5 h-5 text-blue-600" />
+            )}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">{call.fanName}</p>
+            <p className="text-sm text-gray-500">Scheduled {call.type} call</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
+            {timeLeft}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">{call.tokens} tokens</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const MobileCreatorDashboard = ({
   user,
   tokenBalance,
@@ -71,17 +136,29 @@ const MobileCreatorDashboard = ({
     console.log('🎯 MobileCreatorDashboard mounted');
     console.log('User data:', user);
     console.log('Token balance:', tokenBalance);
-    fetchAllData();
+
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (isMounted) {
+        await fetchAllData();
+      }
+    };
+
+    loadData();
 
     // Fallback timeout to ensure loading state doesn't get stuck
     const timeout = setTimeout(() => {
-      if (loading) {
+      if (loading && isMounted) {
         console.log('⏱️ Loading timeout - forcing loading to false');
         setLoading(false);
       }
     }, 3000);
 
-    return () => clearTimeout(timeout);
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+    };
   }, []);
 
   const fetchAllData = async () => {
@@ -612,69 +689,9 @@ const MobileCreatorDashboard = ({
               ))}
 
               {/* Scheduled Calls with Countdown */}
-              {scheduledCalls.map((call) => {
-                const [timeLeft, setTimeLeft] = useState('');
-
-                useEffect(() => {
-                  const timer = setInterval(() => {
-                    const now = new Date();
-                    const callTime = new Date(call.scheduledTime);
-                    const diff = callTime - now;
-
-                    if (diff > 0) {
-                      const hours = Math.floor(diff / (1000 * 60 * 60));
-                      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-                      if (hours > 24) {
-                        const days = Math.floor(hours / 24);
-                        setTimeLeft(`${days}d ${hours % 24}h`);
-                      } else if (hours > 0) {
-                        setTimeLeft(`${hours}h ${minutes}m`);
-                      } else if (minutes > 0) {
-                        setTimeLeft(`${minutes}m ${seconds}s`);
-                      } else {
-                        setTimeLeft(`${seconds}s`);
-                      }
-                    } else {
-                      setTimeLeft('Starting...');
-                    }
-                  }, 1000);
-
-                  return () => clearInterval(timer);
-                }, [call.scheduledTime]);
-
-                return (
-                  <motion.div
-                    key={call.id}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          {call.type === 'video' ? (
-                            <VideoCameraIcon className="w-5 h-5 text-blue-600" />
-                          ) : (
-                            <PhoneIcon className="w-5 h-5 text-blue-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{call.fanName}</p>
-                          <p className="text-sm text-gray-500">Scheduled {call.type} call</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-                          {timeLeft}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{call.tokens} tokens</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+              {scheduledCalls.map((call) => (
+                <ScheduledCallCard key={call.id} call={call} />
+              ))}
             </div>
           </div>
         </div>
