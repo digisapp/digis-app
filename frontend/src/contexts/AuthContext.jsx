@@ -364,59 +364,55 @@ export const AuthProvider = ({ children }) => {
                 detail: errorData.detail
               });
 
-              // TRY FALLBACK: Direct Supabase query for resilience
-              console.log('🔄 Trying Supabase fallback due to HTTP error...');
-              const fallbackProfile = await fetchProfileFromSupabaseDirect(session.user.id);
+              // Backend failed - use cached profile if available
+              console.log('⚠️ Backend sync failed, checking cache...');
+              const cachedProfile = loadProfileCache();
 
-              if (fallbackProfile && mounted) {
-                console.log('✅ Fallback succeeded despite HTTP error!');
+              if (cachedProfile && mounted) {
+                console.log('✅ Using cached profile as fallback');
                 setUser(session.user);
-                setProfile(fallbackProfile);
-                saveProfileCache(fallbackProfile, session);
-                setTokenBalance(fallbackProfile.token_balance);
+                setProfile(cachedProfile);
+                setTokenBalance(cachedProfile.token_balance || 0);
                 setError('');
                 setAuthLoading(false);
                 clearTimeout(timeoutId);
-                return; // Success via fallback!
+                return; // Success via cache!
               }
 
-              // BOTH FAILED: Sign out to prevent redirect loops
-              console.error('❌ Both backend and Supabase fallback failed');
-              setError('Authentication failed. Please try logging in again.');
+              // No cache available - stop loading but don't sign out
+              console.error('❌ Backend sync failed and no cache available');
+              setError('Unable to connect to server. Please check your connection.');
               setAuthLoading(false);
               clearTimeout(timeoutId);
 
-              await supabase.auth.signOut();
-              setUser(null);
-              setProfile(null);
+              // Keep the session active - don't sign out automatically
+              setUser(session.user);
             }
           } catch (syncError) {
-            console.error('❌ Backend sync failed, trying Supabase fallback...', syncError);
+            console.error('❌ Backend sync network error:', syncError);
 
-            // TRY FALLBACK: Direct Supabase query for mobile resilience
-            const fallbackProfile = await fetchProfileFromSupabaseDirect(session.user.id);
+            // Use cached profile as fallback
+            const cachedProfile = loadProfileCache();
 
-            if (fallbackProfile && mounted) {
-              console.log('✅ Fallback succeeded! Using Supabase data');
+            if (cachedProfile && mounted) {
+              console.log('✅ Using cached profile after network error');
               setUser(session.user);
-              setProfile(fallbackProfile);
-              saveProfileCache(fallbackProfile, session);
-              setTokenBalance(fallbackProfile.token_balance);
+              setProfile(cachedProfile);
+              setTokenBalance(cachedProfile.token_balance || 0);
               setError('');
               setAuthLoading(false);
               clearTimeout(timeoutId);
-              return; // Success via fallback!
+              return; // Success via cache!
             }
 
-            // BOTH FAILED: Sign out to prevent redirect loops
-            console.error('❌ Both backend and Supabase fallback failed');
-            setError('Authentication failed. Please try logging in again.');
+            // No cache available - stop loading but don't sign out
+            console.error('❌ Network error and no cache available');
+            setError('Unable to connect to server. Please check your connection.');
             setAuthLoading(false);
             clearTimeout(timeoutId);
 
-            await supabase.auth.signOut();
-            setUser(null);
-            setProfile(null);
+            // Keep the session active - don't sign out automatically
+            setUser(session.user);
           }
         }
       } catch (error) {
