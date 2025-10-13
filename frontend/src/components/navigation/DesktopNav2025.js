@@ -45,13 +45,17 @@ import WalletQuickView from '../WalletQuickView';
 import TokenPurchase from '../TokenPurchase';
 import useHybridStore from '../../stores/useHybridStore';
 import useAuthStore from '../../stores/useAuthStore';
+import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { preload } from '../../lib/preload';
 
-const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
-  // Use AuthStore as single source of truth for role
-  const role = useAuthStore((state) => state.role || 'fan');
-  const authUser = useAuthStore((state) => state.user);
+const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
+  // Use AuthContext as SINGLE SOURCE OF TRUTH
+  const { currentUser, isCreator, isAdmin, roleResolved } = useAuth();
+
+  // Fallback to AuthStore role for backward compatibility
+  const storeRole = useAuthStore((state) => state.role || 'fan');
+  const role = isCreator ? 'creator' : isAdmin ? 'admin' : 'fan';
 
   const { activePath, onNavigate, badges = { notifications: 0 }, tokenBalance } = useNavigation();
   const storeTokenBalance = useHybridStore((state) => state.tokenBalance);
@@ -99,10 +103,25 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
     ['dashboard', 'earnings', 'content', 'schedule'].includes(item.id)  // Removed analytics from here
   );
 
+  // Guard: Don't render until role is resolved to prevent flicker
+  if (!roleResolved) {
+    return (
+      <nav className="fixed top-0 left-0 right-0 z-[100] h-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-lg">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+          <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="flex items-center space-x-4">
+            <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-11 w-11 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   // Mock live viewer count animation and fetch token balance if needed
   useEffect(() => {
     // Fetch token balance if it's not loaded
-    if (effectiveTokenBalance === undefined && user) {
+    if (effectiveTokenBalance === undefined && currentUser) {
       console.log('🔄 Token balance undefined, triggering fetch...');
       // Trigger a token balance fetch through the API
       const fetchBalance = async () => {
@@ -130,14 +149,14 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
       };
       fetchBalance();
     }
-    
+
     if (role === 'creator') {
       const interval = setInterval(() => {
         setLiveViewers(prev => Math.max(0, prev + Math.floor(Math.random() * 10 - 3)));
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [role, effectiveTokenBalance, user]);
+  }, [role, effectiveTokenBalance, currentUser, roleResolved]);
 
   // Scroll effect
   useEffect(() => {
@@ -391,11 +410,11 @@ const DesktopNav2025 = ({ user, onLogout, onShowGoLive }) => {
               {/* Theme Toggle removed - moved to profile dropdown */}
 
               {/* Profile with Status Indicator */}
-              <ProfileDropdown 
-                user={user}
-                profile={user}
-                isCreator={role === 'creator'}
-                isAdmin={role === 'admin'}
+              <ProfileDropdown
+                user={currentUser}
+                profile={currentUser}
+                isCreator={isCreator}
+                isAdmin={isAdmin}
                 onSignOut={onLogout}
                 tokenBalance={effectiveTokenBalance}
                 currentPath={activePath}

@@ -23,11 +23,16 @@ import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import WalletQuickView from '../WalletQuickView';
 import TokenPurchase from '../TokenPurchase';
 import useAuthStore from '../../stores/useAuthStore';
+import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-const MobileNav = ({ user, onShowGoLive, onLogout }) => {
-  // Use AuthStore as single source of truth for role
-  const role = useAuthStore((state) => state.role || 'fan');
+const MobileNav = ({ onShowGoLive, onLogout }) => {
+  // Use AuthContext as SINGLE SOURCE OF TRUTH
+  const { currentUser, isCreator, isAdmin, roleResolved } = useAuth();
+
+  // Fallback to AuthStore role for backward compatibility
+  const storeRole = useAuthStore((state) => state.role || 'fan');
+  const role = isCreator ? 'creator' : isAdmin ? 'admin' : 'fan';
   const authUser = useAuthStore((state) => state.user);
 
   const { activePath, onNavigate, badges, tokenBalance } = useNavigation();
@@ -118,13 +123,37 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
   });
   
   
-  console.log('MobileNav rendering:', { 
-    user: !!user, 
-    role, 
+  console.log('MobileNav rendering:', {
+    user: !!currentUser,
+    role,
     bottomItems: bottomItems?.length,
     badges,
-    activePath 
+    activePath
   });
+
+  // Guard: Don't render until role is resolved to prevent flicker
+  if (!roleResolved) {
+    return (
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-[100]"
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.85) 30%, rgba(255,255,255,0.95) 100%)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderTop: '0.5px solid rgba(0,0,0,0.1)'
+        }}
+      >
+        <div className="flex items-center justify-around h-[72px] px-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex flex-col items-center justify-center flex-1">
+              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </nav>
+    );
+  }
 
   // Haptic-like animation trigger
   const triggerHaptic = (itemId) => {
@@ -185,11 +214,11 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                     }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                   >
-                    {user?.avatar_url || user?.profilePicture ? (
+                    {currentUser?.avatar_url || currentUser?.profilePicture ? (
                       <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700">
                         <img
-                          src={user?.avatar_url || user?.profilePicture}
-                          alt={user?.username || 'Profile'}
+                          src={currentUser?.avatar_url || currentUser?.profilePicture}
+                          alt={currentUser?.username || 'Profile'}
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -324,9 +353,9 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                 {/* Profile info */}
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center overflow-hidden">
-                    {user?.avatar_url ? (
+                    {currentUser?.avatar_url ? (
                       <img
-                        src={user.avatar_url}
+                        src={currentUser.avatar_url}
                         alt="Profile"
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -340,7 +369,7 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                   </div>
                   <div className="flex-1">
                     <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {user?.username || user?.email?.split('@')[0] || 'User'}
+                      {currentUser?.display_name || currentUser?.username || currentUser?.email?.split('@')[0] || 'User'}
                     </p>
                   </div>
                 </div>
@@ -350,7 +379,7 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                   <button
                     onClick={async (e) => {
                       e.stopPropagation();
-                      const username = authUser?.username || user?.username || user?.email?.split('@')[0] || 'creator';
+                      const username = authUser?.username || currentUser?.username || currentUser?.email?.split('@')[0] || 'creator';
                       const profileUrl = `https://digis.cc/${username}`;
 
                       try {
@@ -394,7 +423,7 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <ClipboardDocumentIcon className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                        digis.cc/{user?.username || user?.email?.split('@')[0] || 'creator'}
+                        digis.cc/{currentUser?.username || currentUser?.email?.split('@')[0] || 'creator'}
                       </span>
                     </div>
                     <span className="copy-text text-xs text-purple-600 dark:text-purple-400 font-medium ml-2 flex-shrink-0">Copy</span>
@@ -714,7 +743,7 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
       <WalletQuickView
         isOpen={showWalletModal}
         onClose={() => setShowWalletModal(false)}
-        user={user}
+        user={currentUser}
         tokenBalance={tokenBalance}
         onTokenPurchase={() => {
           setShowWalletModal(false);
@@ -725,7 +754,7 @@ const MobileNav = ({ user, onShowGoLive, onLogout }) => {
       {/* Token Purchase Modal */}
       {showTokenPurchase && (
         <TokenPurchase
-          user={user}
+          user={currentUser}
           isModal={true}
           onClose={() => setShowTokenPurchase(false)}
           onSuccess={() => {

@@ -1002,7 +1002,6 @@ const App = () => {
         {/* Navigation Component - Outside main content for proper fixed positioning */}
         {user && (
           <Navigation
-            user={user}
             onLogout={handleSignOut}
             onShowGoLive={openGoLive}
           />
