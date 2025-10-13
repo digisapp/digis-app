@@ -219,6 +219,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
     '/tv': () => import('../pages/TVPage'),
     '/classes': () => import('../pages/ClassesPage'),
     '/wallet': () => import('../pages/WalletPage'),
+    '/earnings': () => import('../pages/EarningsPage'),
     '/schedule': () => import('../pages/SchedulePage'),
     '/profile': () => import('../ImprovedProfile'),
     '/content': () => import('../pages/DashboardRouter'),
@@ -388,13 +389,18 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
               {/* Wallet Button - Icon and token count only */}
               <motion.button
                 onClick={() => {
-                  if (role === 'fan') {
+                  if (role === 'creator') {
+                    // Creators go to earnings page
+                    onNavigate('/earnings');
+                  } else if (role === 'fan') {
+                    // Fans get the wallet modal
                     setShowWalletModal(true);
                   } else {
+                    // Default to wallet page
                     onNavigate('/wallet');
                   }
                 }}
-                onMouseEnter={() => handleRoutePreload('/wallet')}
+                onMouseEnter={() => handleRoutePreload(role === 'creator' ? '/earnings' : '/wallet')}
                 className="relative group"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
