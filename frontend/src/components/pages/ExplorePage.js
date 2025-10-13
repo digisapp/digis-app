@@ -135,10 +135,18 @@ const ExplorePage = ({
   
   // Languages
   const languages = [
-    'English', 'Spanish', 'French', 'German', 'Italian', 
+    'English', 'Spanish', 'French', 'German', 'Italian',
     'Portuguese', 'Russian', 'Japanese', 'Korean', 'Chinese',
     'Arabic', 'Hindi', 'Dutch', 'Swedish', 'Polish'
   ];
+
+  // Debounced search function
+  const debouncedSearch = useCallback((value) => {
+    const timeoutId = setTimeout(() => {
+      setSearchTerm(value);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Fetch creators from API with pagination, filters, and retry logic
   const fetchCreators = useCallback(async (pageNum = 1, append = false, isRetry = false) => {

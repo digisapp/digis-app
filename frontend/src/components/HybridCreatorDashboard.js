@@ -859,7 +859,7 @@ const HybridCreatorDashboard = memo(({
   return (
     <div className="space-y-6">
       {/* Top Section: 3-Column Grid - Calls, Schedule, Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-16 pt-4">
 
         {/* Enhanced Calls Box */}
         <Card className="p-6 bg-white dark:bg-gray-800 shadow-xl">

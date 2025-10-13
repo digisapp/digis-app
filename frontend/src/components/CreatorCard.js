@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import CallRequestModal from './CallRequestModal';
 import CallConfirmationModal from './CallConfirmationModal';
 import MessageComposeModal from './MessageComposeModal';
+import TipModal from './TipModal';
 import {
   getStatusBadges,
   getCategoryGradient,
@@ -64,6 +65,7 @@ const CreatorCard = ({
   const [isVisible, setIsVisible] = useState(!isLazyLoaded);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [showMessageComposeModal, setShowMessageComposeModal] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
   const [selectedServiceType, setSelectedServiceType] = useState(null);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const navigate = useNavigate();
@@ -249,8 +251,14 @@ const CreatorCard = ({
     if (isDashboard && onOpenPricingModal) {
       onOpenPricingModal();
     } else {
-      setSelectedServiceType(serviceType);
-      setShowConfirmationModal(true);
+      // For message, show the message compose modal instead of confirmation
+      if (serviceType === 'message') {
+        setShowMessageComposeModal(true);
+      } else {
+        // For video and voice calls, show confirmation modal
+        setSelectedServiceType(serviceType);
+        setShowConfirmationModal(true);
+      }
     }
   };
 
@@ -297,7 +305,14 @@ const CreatorCard = ({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       onClick={(e) => {
-        if (onCardClick && !e.target.closest('button')) {
+        // Only trigger card click if not clicking on a button or interactive element
+        const target = e.target;
+        const isButton = target.closest('button');
+        const isInteractive = target.closest('a, input, textarea, select');
+
+        if (onCardClick && !isButton && !isInteractive) {
+          e.preventDefault();
+          e.stopPropagation();
           onCardClick();
         }
       }}
@@ -447,7 +462,10 @@ const CreatorCard = ({
 
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); if (onTip) onTip(creator); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowTipModal(true);
+              }}
               disabled={disabled}
               aria-label="Send gift"
               title="Send Gift"
@@ -519,6 +537,19 @@ const CreatorCard = ({
             setShowMessageComposeModal(false);
           }}
           creator={creator}
+        />
+      )}
+
+      {showTipModal && (
+        <TipModal
+          isOpen={showTipModal}
+          onClose={() => setShowTipModal(false)}
+          creator={creator}
+          tokenBalance={tokenBalance}
+          onTipSent={(amount) => {
+            if (onTip) onTip(creator, amount);
+            setShowTipModal(false);
+          }}
         />
       )}
 
