@@ -447,7 +447,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
               exit={{ scale: 0.95, y: -20 }}
               className="relative w-full max-w-2xl p-4 rounded-2xl"
               style={{
-                backgroundColor: theme === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(20px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(20px) saturate(180%)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
