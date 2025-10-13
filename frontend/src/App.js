@@ -336,28 +336,30 @@ const App = () => {
   // The initAuth useEffect has been removed (~400 lines) - see AuthContext.jsx for auth logic
   
   // Force fetch profile on mobile if we have user but no profile or wrong creator status
-  useEffect(() => {
-    if (isMobile && user) {
-      // Always fetch profile on mobile when user changes or on mount
-      if (!profile || !profile.id) {
-        console.log('📱 Mobile: Fetching profile for user:', user?.email);
-        fetchUserProfile(user);
-      } else {
-        // Check if we need to refresh based on mismatch
-        const storedCreatorStatus = localStorage.getItem('userIsCreator') === 'true';
-        const profileCreatorStatus = profile?.is_creator === true;
-        
-        if (storedCreatorStatus !== profileCreatorStatus) {
-          console.log('📱 Mobile creator status mismatch, refetching:', {
-            stored: storedCreatorStatus,
-            profile: profileCreatorStatus,
-            userEmail: user?.email
-          });
-          fetchUserProfile(user);
-        }
-      }
-    }
-  }, [isMobile, user?.id]); // Only depend on user.id to prevent loops
+  // DISABLED to prevent infinite loop on mobile homepage
+  // Profile is already fetched during login in MobileLandingPage
+  // useEffect(() => {
+  //   if (isMobile && user) {
+  //     // Always fetch profile on mobile when user changes or on mount
+  //     if (!profile || !profile.id) {
+  //       console.log('📱 Mobile: Fetching profile for user:', user?.email);
+  //       fetchUserProfile(user);
+  //     } else {
+  //       // Check if we need to refresh based on mismatch
+  //       const storedCreatorStatus = localStorage.getItem('userIsCreator') === 'true';
+  //       const profileCreatorStatus = profile?.is_creator === true;
+  //
+  //       if (storedCreatorStatus !== profileCreatorStatus) {
+  //         console.log('📱 Mobile creator status mismatch, refetching:', {
+  //           stored: storedCreatorStatus,
+  //           profile: profileCreatorStatus,
+  //           userEmail: user?.email
+  //         });
+  //         fetchUserProfile(user);
+  //       }
+  //     }
+  //   }
+  // }, [isMobile, user?.id]); // Only depend on user.id to prevent loops
 
   // NOTE: Initial view redirects now handled by AppRoutes (see / route logic)
 
@@ -897,28 +899,19 @@ const App = () => {
               });
 
               // Wait for state to propagate (next tick)
-              await new Promise(resolve => setTimeout(resolve, 0));
+              await new Promise(resolve => setTimeout(resolve, 100));
 
-              // Navigate based on role (already set in store)
+              // Navigate based on role (already set in store) - single navigation only
               const finalState = useHybridStore.getState();
               if (finalState.isAdmin) {
                 console.log('📱 Mobile: Navigating to admin');
-                startTransition(() => {
-                  setCurrentView('dashboard');
-                  navigate('/admin');
-                });
+                navigate('/admin', { replace: true });
               } else if (finalState.isCreator) {
                 console.log('📱 Mobile: Navigating to dashboard');
-                startTransition(() => {
-                  setCurrentView('dashboard');
-                  navigate('/dashboard');
-                });
+                navigate('/dashboard', { replace: true });
               } else {
                 console.log('📱 Mobile: Navigating to explore');
-                startTransition(() => {
-                  setCurrentView('explore');
-                  navigate('/explore');
-                });
+                navigate('/explore', { replace: true });
               }
             }}
           />
