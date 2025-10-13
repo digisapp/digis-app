@@ -28,10 +28,7 @@ import toast from 'react-hot-toast';
 
 const MobileNav = ({ onShowGoLive, onLogout }) => {
   // Use AuthContext as SINGLE SOURCE OF TRUTH
-  const { currentUser, isCreator, isAdmin, roleResolved } = useAuth();
-
-  // Compute role from AuthContext only (no store fallback to avoid drift)
-  const role = isCreator ? 'creator' : isAdmin ? 'admin' : 'fan';
+  const { currentUser, role, roleResolved } = useAuth();
 
   const { activePath, onNavigate, badges, tokenBalance } = useNavigation();
   const [hoveredItem, setHoveredItem] = useState(null);

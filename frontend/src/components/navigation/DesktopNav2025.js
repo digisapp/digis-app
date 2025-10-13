@@ -51,10 +51,7 @@ import { preload } from '../../lib/preload';
 
 const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
   // Use AuthContext as SINGLE SOURCE OF TRUTH
-  const { currentUser, isCreator, isAdmin, roleResolved } = useAuth();
-
-  // Compute role from AuthContext only (no store fallback to avoid drift)
-  const role = isCreator ? 'creator' : isAdmin ? 'admin' : 'fan';
+  const { currentUser, isCreator, isAdmin, role, roleResolved } = useAuth();
 
   const { activePath, onNavigate, badges = { notifications: 0 }, tokenBalance } = useNavigation();
   const storeTokenBalance = useHybridStore((state) => state.tokenBalance);

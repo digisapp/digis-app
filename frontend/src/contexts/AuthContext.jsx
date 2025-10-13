@@ -49,6 +49,14 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!user;
   const roleResolved = !!profile?.id && typeof profile?.is_creator === 'boolean'; // Role is fully resolved
 
+  // Canonical role string - centralized to avoid recomputation
+  const role = useMemo(() => {
+    if (!roleResolved) return null;
+    if (profile?.role === 'admin' || isAdmin) return 'admin';
+    if (profile?.is_creator || isCreator) return 'creator';
+    return 'fan';
+  }, [profile?.role, profile?.is_creator, isAdmin, isCreator, roleResolved]);
+
   // Canonical currentUser - single source of truth for UI components
   // Merges Supabase auth (id, email) with DB profile (username, display_name, role, etc.)
   const currentUser = useMemo(() => {
@@ -539,6 +547,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isCreator,
     isAdmin,
+    role,           // ⭐ CANONICAL role string ('creator' | 'admin' | 'fan' | null)
     roleResolved,
 
     // Actions
@@ -558,6 +567,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isCreator,
     isAdmin,
+    role,
     roleResolved,
     signOut,
     refreshProfile,
