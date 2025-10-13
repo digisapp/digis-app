@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
         .from('users')
         .select(`
           *,
-          token_balances!inner(balance, total_earned, total_spent, total_purchased)
+          token_balances(balance, total_earned, total_spent, total_purchased)
         `)
         .eq('id', userId)
         .single();
@@ -119,13 +119,16 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error;
 
       // Compute canonical role client-side (same logic as backend)
+      // Note: token_balances is an array when using LEFT JOIN
+      const tokenBalanceData = Array.isArray(data.token_balances) ? data.token_balances[0] : data.token_balances;
+
       const canonicalProfile = {
         ...data,
         // Token balance from join
-        token_balance: data.token_balances?.balance || 0,
-        total_earned: data.token_balances?.total_earned || 0,
-        total_spent: data.token_balances?.total_spent || 0,
-        total_purchased: data.token_balances?.total_purchased || 0,
+        token_balance: tokenBalanceData?.balance || 0,
+        total_earned: tokenBalanceData?.total_earned || 0,
+        total_spent: tokenBalanceData?.total_spent || 0,
+        total_purchased: tokenBalanceData?.total_purchased || 0,
 
         // Canonical role computation (matches backend logic in routes/auth.js)
         is_creator: data.is_creator === true ||
