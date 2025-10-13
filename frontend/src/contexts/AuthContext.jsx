@@ -49,6 +49,14 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!user;
   const roleResolved = !!profile?.id && typeof profile?.is_creator === 'boolean'; // Role is fully resolved
 
+  // Canonical currentUser - single source of truth for UI components
+  // Merges Supabase auth (id, email) with DB profile (username, display_name, role, etc.)
+  const currentUser = useMemo(() => {
+    // Prefer DB profile fields; fall back to auth user
+    if (profile && user) return { ...user, ...profile };
+    return profile || user || null;
+  }, [user, profile]);
+
   /**
    * Fetch canonical user role from /api/me (SINGLE SOURCE OF TRUTH)
    */
@@ -520,8 +528,9 @@ export const AuthProvider = ({ children }) => {
   // Memoize value to prevent unnecessary re-renders
   const value = useMemo(() => ({
     // State
-    user,
-    profile,
+    user,           // Keep for low-level needs (Supabase auth only)
+    profile,        // Keep for advanced needs (DB profile only)
+    currentUser,    // ⭐ CANONICAL - Use this in UI components
     tokenBalance,
     authLoading,
     error,
@@ -542,6 +551,7 @@ export const AuthProvider = ({ children }) => {
   }), [
     user,
     profile,
+    currentUser,
     tokenBalance,
     authLoading,
     error,
