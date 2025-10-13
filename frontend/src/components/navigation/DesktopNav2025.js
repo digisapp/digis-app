@@ -53,8 +53,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
   // Use AuthContext as SINGLE SOURCE OF TRUTH
   const { currentUser, isCreator, isAdmin, roleResolved } = useAuth();
 
-  // Fallback to AuthStore role for backward compatibility
-  const storeRole = useAuthStore((state) => state.role || 'fan');
+  // Compute role from AuthContext only (no store fallback to avoid drift)
   const role = isCreator ? 'creator' : isAdmin ? 'admin' : 'fan';
 
   const { activePath, onNavigate, badges = { notifications: 0 }, tokenBalance } = useNavigation();
@@ -479,7 +478,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
       <WalletQuickView
         isOpen={showWalletModal}
         onClose={() => setShowWalletModal(false)}
-        user={user}
+        user={currentUser}
         tokenBalance={effectiveTokenBalance}
         onTokenPurchase={() => {
           setShowWalletModal(false);
@@ -490,7 +489,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
       {/* Token Purchase Modal */}
       {showTokenPurchase && (
         <TokenPurchase
-          user={user}
+          user={currentUser}
           isModal={true}
           onClose={() => setShowTokenPurchase(false)}
           onSuccess={() => {

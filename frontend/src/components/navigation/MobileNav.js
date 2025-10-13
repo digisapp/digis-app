@@ -30,10 +30,8 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
   // Use AuthContext as SINGLE SOURCE OF TRUTH
   const { currentUser, isCreator, isAdmin, roleResolved } = useAuth();
 
-  // Fallback to AuthStore role for backward compatibility
-  const storeRole = useAuthStore((state) => state.role || 'fan');
+  // Compute role from AuthContext only (no store fallback to avoid drift)
   const role = isCreator ? 'creator' : isAdmin ? 'admin' : 'fan';
-  const authUser = useAuthStore((state) => state.user);
 
   const { activePath, onNavigate, badges, tokenBalance } = useNavigation();
   const [hoveredItem, setHoveredItem] = useState(null);
@@ -379,7 +377,7 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
                   <button
                     onClick={async (e) => {
                       e.stopPropagation();
-                      const username = authUser?.username || currentUser?.username || currentUser?.email?.split('@')[0] || 'creator';
+                      const username = currentUser?.username || currentUser?.email?.split('@')[0] || 'creator';
                       const profileUrl = `https://digis.cc/${username}`;
 
                       try {

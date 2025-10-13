@@ -44,6 +44,9 @@ export default defineConfig({
         ]
       },
       workbox: {
+        clientsClaim: true, // Take control of all pages immediately
+        skipWaiting: true, // Activate new service worker immediately
+        cleanupOutdatedCaches: true, // Clean up old caches
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
         runtimeCaching: [
