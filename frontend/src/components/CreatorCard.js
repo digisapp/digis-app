@@ -310,10 +310,21 @@ const CreatorCard = ({
         const isButton = target.closest('button');
         const isInteractive = target.closest('a, input, textarea, select');
 
+        console.log('CreatorCard clicked:', {
+          hasOnCardClick: !!onCardClick,
+          isButton: !!isButton,
+          isInteractive: !!isInteractive,
+          creator: creator.username,
+          target: e.target.tagName
+        });
+
         if (onCardClick && !isButton && !isInteractive) {
+          console.log('✅ Triggering onCardClick for creator:', creator.username);
           e.preventDefault();
           e.stopPropagation();
           onCardClick();
+        } else if (!onCardClick) {
+          console.warn('❌ No onCardClick handler provided for creator:', creator.username);
         }
       }}
       className={`
