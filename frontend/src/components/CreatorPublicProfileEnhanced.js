@@ -40,6 +40,8 @@ import { getSession, authedFetch } from '../utils/requireAuth';
 import socketService from '../services/socket';
 import toast from 'react-hot-toast';
 import { addBreadcrumb } from '../lib/sentry.client';
+import { useAuthGatedAction } from '../utils/withAuthGate';
+import { trackInteractionBlocked, trackInteractionAllowed } from '../utils/authMonitoring';
 import Auth from './Auth';
 import TokenPurchase from './TokenPurchase';
 import CreatorOffers from './CreatorOffers';
@@ -793,6 +795,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     fetchUserTokenBalance();
   }, [user]);
 
+  // Auth-gated action helper with monitoring
   const handleInteraction = async (action, data) => {
     // Check session (not profile) to avoid false negatives when profile is null but session is valid
     const session = await getSession();
@@ -810,32 +813,61 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
         }
       });
 
+      // Track blocked interaction
+      trackInteractionBlocked(action, safeUsername, { page: 'creator_public_profile', ...data });
+
       setAuthAction({ action, data });
       setShowAuthModal(true);
       return false;
     }
+
+    // Track successful interaction
+    trackInteractionAllowed(action, safeUsername, { page: 'creator_public_profile', ...data });
     return true;
   };
 
-  const handlePurchasePicture = async (picture) => {
-    if (!(await handleInteraction('purchase_picture', picture))) return;
-
-    if (user.tokenBalance < picture.price) {
-      setShowTokenPurchase(true);
-      return;
+  // Create auth-gated action runner with click lock protection
+  const runAuthGatedAction = useAuthGatedAction(
+    async () => {
+      const session = await getSession();
+      if (!session) {
+        setShowAuthModal(true);
+        return false;
+      }
+      return true;
+    },
+    {
+      onDenied: () => {
+        // Auth modal already shown in check
+      },
+      onError: (error) => {
+        console.error('Auth-gated action error:', error);
+        toast.error('Something went wrong. Please try again.');
+      }
     }
+  );
 
-    try {
-      await api.post('/content/purchase', {
-        contentId: picture.id,
-        contentType: 'picture',
-        price: picture.price
-      });
+  const handlePurchasePicture = (picture) => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('purchase_picture', picture);
 
-      setPurchasedContent(prev => new Set([...prev, picture.id]));
-    } catch (error) {
-      toast.error('Failed to purchase picture');
-    }
+      if (user.tokenBalance < picture.price) {
+        setShowTokenPurchase(true);
+        return;
+      }
+
+      try {
+        await api.post('/content/purchase', {
+          contentId: picture.id,
+          contentType: 'picture',
+          price: picture.price
+        });
+
+        setPurchasedContent(prev => new Set([...prev, picture.id]));
+      } catch (error) {
+        toast.error('Failed to purchase picture');
+      }
+    });
   };
 
   const handlePurchaseRecording = async (recording) => {
@@ -892,35 +924,41 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     window.open(recording.fileUrl, '_blank');
   };
   
-  const handlePurchaseVideo = async (video) => {
-    if (!(await handleInteraction('purchase_video', video))) return;
+  const handlePurchaseVideo = (video) => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('purchase_video', video);
 
-    if (user.tokenBalance < video.price) {
-      setShowTokenPurchase(true);
-      return;
-    }
+      if (user.tokenBalance < video.price) {
+        setShowTokenPurchase(true);
+        return;
+      }
 
-    try {
-      await api.post('/content/purchase', {
-        contentId: video.id,
-        contentType: 'video',
-        price: video.price
-      });
+      try {
+        await api.post('/content/purchase', {
+          contentId: video.id,
+          contentType: 'video',
+          price: video.price
+        });
 
-      setPurchasedContent(prev => new Set([...prev, video.id]));
-    } catch (error) {
-      toast.error('Failed to purchase video');
-    }
+        setPurchasedContent(prev => new Set([...prev, video.id]));
+      } catch (error) {
+        toast.error('Failed to purchase video');
+      }
+    });
   };
 
-  const handleStartVideoCall = async () => {
-    if (!(await handleInteraction('video_call', creator))) return;
-    setShowVideoCallModal(true);
+  const handleStartVideoCall = () => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('video_call', creator);
+      setShowVideoCallModal(true);
+    });
   };
 
-  const handleStartVoiceCall = async () => {
-    if (!(await handleInteraction('voice_call', creator))) return;
-    setShowVoiceCallModal(true);
+  const handleStartVoiceCall = () => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('voice_call', creator);
+      setShowVoiceCallModal(true);
+    });
   };
 
   const handleVideoCallStart = () => {
@@ -933,30 +971,34 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     setShowVoiceCallModal(false);
   };
 
-  const handlePurchaseDigital = async (digital) => {
-    if (!(await handleInteraction('digital_purchase', { creator, digital }))) return;
-    
-    try {
-      const response = await api.post('/api/digitals/purchase', {
-        digitalId: digital.id,
-        price: digital.price
-      });
-      
-      if (response.data.success) {
-        setPurchasedContent(prev => new Set([...prev, digital.id]));
-        setDigitals(prev => prev.map(d => d.id === digital.id ? {...d, isPurchased: true} : d));
-        toast.success('Digital content purchased successfully!');
+  const handlePurchaseDigital = (digital) => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('digital_purchase', { creator, digital });
+
+      try {
+        const response = await api.post('/api/digitals/purchase', {
+          digitalId: digital.id,
+          price: digital.price
+        });
+
+        if (response.data.success) {
+          setPurchasedContent(prev => new Set([...prev, digital.id]));
+          setDigitals(prev => prev.map(d => d.id === digital.id ? {...d, isPurchased: true} : d));
+          toast.success('Digital content purchased successfully!');
+        }
+      } catch (error) {
+        console.error('Error purchasing digital:', error);
+        toast.error('Failed to purchase digital content');
       }
-    } catch (error) {
-      console.error('Error purchasing digital:', error);
-      toast.error('Failed to purchase digital content');
-    }
+    });
   };
 
 
-  const handleSendMessage = async () => {
-    if (!(await handleInteraction('message', creator))) return;
-    setShowMessageModal(true);
+  const handleSendMessage = () => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('message', creator);
+      setShowMessageModal(true);
+    });
   };
 
   const handleMessageSent = (messageData) => {
@@ -966,15 +1008,19 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     // navigate(`/messages/${creator.username}`);
   };
 
-  const handleScheduleSession = async () => {
-    if (!(await handleInteraction('schedule', creator))) return;
-    // Navigate to schedule page or open schedule modal
-    navigate(`/schedule?creator=${creator.username}`);
+  const handleScheduleSession = () => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('schedule', creator);
+      // Navigate to schedule page or open schedule modal
+      navigate(`/schedule?creator=${creator.username}`);
+    });
   };
 
-  const handleSendTip = async () => {
-    if (!(await handleInteraction('tip', creator))) return;
-    setShowTipModal(true);
+  const handleSendTip = () => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('tip', creator);
+      setShowTipModal(true);
+    });
   };
 
   const handleTipSent = (amount) => {
@@ -984,45 +1030,49 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     setUserTokenBalance(prevBalance => prevBalance - amount);
   };
   
-  const handleShopProductClick = async (product) => {
-    if (!(await handleInteraction('shop_product', { creator, product }))) return;
-    
-    if (product.external_link) {
-      window.open(product.external_link, '_blank');
-    } else {
-      navigate(`/shop/${creator.username}/product/${product.id}`);
-    }
+  const handleShopProductClick = (product) => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('shop_product', { creator, product });
+
+      if (product.external_link) {
+        window.open(product.external_link, '_blank');
+      } else {
+        navigate(`/shop/${creator.username}/product/${product.id}`);
+      }
+    });
   };
   
-  const handleAddToCart = async (product) => {
-    if (!(await handleInteraction('add_to_cart', { creator, product }))) return;
-    
-    try {
-      const authToken = await getAuthToken();
-      const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/cart/add`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify({
-            productId: product.id,
-            quantity: 1
-          })
+  const handleAddToCart = (product) => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('add_to_cart', { creator, product });
+
+      try {
+        const authToken = await getAuthToken();
+        const response = await fetchWithRetry(
+          `${import.meta.env.VITE_BACKEND_URL}/api/shop/cart/add`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              productId: product.id,
+              quantity: 1
+            })
+          }
+        );
+
+        if (response.ok) {
+          toast.success(`${product.name} added to cart!`);
+        } else {
+          toast.error('Failed to add item to cart');
         }
-      );
-      
-      if (response.ok) {
-        toast.success(`${product.name} added to cart!`);
-      } else {
+      } catch (error) {
+        console.error('Add to cart error:', error);
         toast.error('Failed to add item to cart');
       }
-    } catch (error) {
-      console.error('Add to cart error:', error);
-      toast.error('Failed to add item to cart');
-    }
+    });
   };
   
   const handleUnlockStream = async () => {
@@ -1076,20 +1126,22 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     }
   };
 
-  const handleFollow = async () => {
-    if (!(await handleInteraction('follow', creator))) return;
+  const handleFollow = () => {
+    runAuthGatedAction(async () => {
+      await handleInteraction('follow', creator);
 
-    try {
-      if (isFollowing) {
-        await api.delete(`/creators/${creator.id}/unfollow`);
-        setIsFollowing(false);
-      } else {
-        await api.post(`/creators/${creator.id}/follow`);
-        setIsFollowing(true);
+      try {
+        if (isFollowing) {
+          await api.delete(`/creators/${creator.id}/unfollow`);
+          setIsFollowing(false);
+        } else {
+          await api.post(`/creators/${creator.id}/follow`);
+          setIsFollowing(true);
+        }
+      } catch (error) {
+        toast.error('Failed to update follow status');
       }
-    } catch (error) {
-      toast.error('Failed to update follow status');
-    }
+    });
   };
 
   if (loading) {
