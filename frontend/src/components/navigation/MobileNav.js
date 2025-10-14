@@ -185,34 +185,6 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
         
         
         <div className="flex items-center justify-around h-[72px] px-4 relative w-full">
-          {/* Floating Go Live Button (Center Action for Creators) */}
-          {centerAction && (
-            <motion.button
-              onClick={() => {
-                triggerHaptic('golive');
-                if (onShowGoLive && typeof onShowGoLive === 'function') {
-                  console.log('🎬 MobileNav: Go Live button clicked');
-                  onShowGoLive();
-                } else {
-                  console.error('⚠️ MobileNav: onShowGoLive not provided');
-                  toast.error('Go Live feature unavailable');
-                }
-              }}
-              className="absolute left-1/2 -translate-x-1/2 -top-6 w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full shadow-2xl flex items-center justify-center touch-manipulation z-10"
-              whileTap={{ scale: 0.90 }}
-              whileHover={{ scale: 1.05 }}
-              aria-label="Go Live"
-            >
-              <VideoCameraIcon className="w-8 h-8 text-white" strokeWidth={2.5} />
-              <motion.div
-                className="absolute inset-0 rounded-full bg-white"
-                initial={{ opacity: 0.3, scale: 1 }}
-                animate={{ opacity: 0, scale: 1.5 }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
-              />
-            </motion.button>
-          )}
-
           {bottomItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = activePath === item.path;
