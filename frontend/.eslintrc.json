@@ -22,7 +22,8 @@
     "sourceType": "module",
     "ecmaFeatures": {
       "jsx": true
-    }
+    },
+    "project": ["./tsconfig.json", "./tsconfig.node.json"]
   },
   "plugins": ["react-refresh", "@typescript-eslint", "react", "react-hooks", "jsx-a11y", "import"],
   "rules": {
@@ -35,6 +36,12 @@
       "warn",
       { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
     ],
+    "@typescript-eslint/no-misused-promises": [
+      "error",
+      { "checksConditionals": true, "checksVoidReturn": false }
+    ],
+    "@typescript-eslint/await-thenable": "error",
+    "no-constant-condition": ["error", { "checkLoops": false }],
     "react/prop-types": "off",
     "react/display-name": "off",
     "react-hooks/rules-of-hooks": "error",
