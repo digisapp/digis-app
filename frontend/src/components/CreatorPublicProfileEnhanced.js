@@ -145,12 +145,24 @@ ContentItem.displayName = 'ContentItem';
 const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsername, onClose }) => {
   const navigate = useNavigate();
   const { username: urlUsername } = useParams(); // Get username from URL params
-  const username = propUsername || urlUsername; // Use prop username if provided, otherwise use URL param
 
-  // Case-insensitive handle normalization: redirect if uppercase detected
-  const safeUsername = (username || '').toLowerCase();
+  // Decode percent-encoded URLs (handles pasted as %xx) to avoid double-encoding
+  const raw = propUsername || urlUsername || '';
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw; // Return raw if decode fails (malformed URL)
+    }
+  })();
+
+  // Normalize to lowercase for case-insensitive routing
+  const safeUsername = decoded.toLowerCase();
+  const username = decoded; // Use decoded for API calls
+
+  // Redirect if URL param doesn't match normalized version
   if (urlUsername && urlUsername !== safeUsername && !propUsername) {
-    return <Navigate to={`/creator/${safeUsername}`} replace />;
+    return <Navigate to={`/creator/${encodeURIComponent(safeUsername)}`} replace />;
   }
 
   const [creator, setCreator] = useState(null);
@@ -665,6 +677,46 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     });
   }, [creator, safeUsername]);
 
+  // SEO: Set document title and meta tags
+  useEffect(() => {
+    if (!creator || !safeUsername) return;
+
+    const displayName = creator.displayName || creator.username || safeUsername;
+    const bio = creator.bio || 'Creator on Digis';
+    const avatarUrl = creator.profilePic || creator.avatar_url || '';
+
+    // Set page title
+    if (typeof document !== 'undefined') {
+      document.title = `${displayName} | Digis`;
+
+      // Set or update meta tags
+      const setMetaTag = (property, content) => {
+        let meta = document.querySelector(`meta[property="${property}"]`);
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('property', property);
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', content);
+      };
+
+      setMetaTag('og:title', `${displayName} | Digis`);
+      setMetaTag('og:description', bio.slice(0, 180));
+      if (avatarUrl) {
+        setMetaTag('og:image', avatarUrl);
+      }
+
+      // Set canonical URL (lowercase normalized)
+      let canonical = document.querySelector('link[rel="canonical"]');
+      if (!canonical) {
+        canonical = document.createElement('link');
+        canonical.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute('href', `${window.location.origin}/creator/${encodeURIComponent(safeUsername)}`);
+    }
+  }, [creator, safeUsername]);
+
   // Fetch user token balance
   useEffect(() => {
     const fetchUserTokenBalance = async () => {
@@ -1023,17 +1075,26 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   }
 
   if (!creator) {
+    // Track not-found for analytics (spot typos, deleted users)
+    addBreadcrumb('profile_not_found', {
+      handle: safeUsername,
+      category: 'navigation',
+      level: 'warning'
+    });
+
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Creator not found</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">The creator @{username} doesn't exist</p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+        <div className="mx-auto max-w-xl p-8 text-center">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Creator not found</h1>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            That profile doesn't exist. Try exploring creators instead.
+          </p>
+          <Link
+            to="/explore"
+            className="mt-6 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 transition-colors"
           >
-            Go to Homepage
-          </button>
+            Explore creators
+          </Link>
         </div>
       </div>
     );
