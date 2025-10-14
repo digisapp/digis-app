@@ -92,11 +92,16 @@ export const AuthProvider = ({ children }) => {
 
   // Canonical role string - centralized to avoid recomputation
   const role = useMemo(() => {
-    if (!roleResolved) return null;
+    // Once backend confirms, use profile data
     if (profile?.role === 'admin' || isAdmin) return 'admin';
     if (profile?.is_creator || isCreator) return 'creator';
-    return 'fan';
-  }, [profile?.role, profile?.is_creator, isAdmin, isCreator, roleResolved]);
+
+    // Fall back to roleHint until profile lands (fast routing)
+    if (roleHint) return roleHint;
+
+    // Default to fan if user exists, null otherwise
+    return user ? 'fan' : null;
+  }, [profile?.role, profile?.is_creator, isAdmin, isCreator, roleHint, user]);
 
   // Canonical currentUser - single source of truth for UI components
   // Merges Supabase auth (id, email) with DB profile (username, display_name, role, etc.)
