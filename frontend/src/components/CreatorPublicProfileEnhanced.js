@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, memo, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import {
   PlayIcon,
@@ -145,6 +145,13 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   const navigate = useNavigate();
   const { username: urlUsername } = useParams(); // Get username from URL params
   const username = propUsername || urlUsername; // Use prop username if provided, otherwise use URL param
+
+  // Case-insensitive handle normalization: redirect if uppercase detected
+  const safeUsername = (username || '').toLowerCase();
+  if (urlUsername && urlUsername !== safeUsername && !propUsername) {
+    return <Navigate to={`/creator/${safeUsername}`} replace />;
+  }
+
   const [creator, setCreator] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pictures, setPictures] = useState([]);

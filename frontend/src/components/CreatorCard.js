@@ -10,6 +10,7 @@ import CallRequestModal from './CallRequestModal';
 import CallConfirmationModal from './CallConfirmationModal';
 import MessageComposeModal from './MessageComposeModal';
 import TipModal from './TipModal';
+import { addBreadcrumb } from '../lib/sentry.client';
 import {
   getStatusBadges,
   getCategoryGradient,
@@ -234,6 +235,17 @@ const CreatorCard = ({
     ? `/creator/${creator.slug.toLowerCase()}`
     : null;
 
+  // Dev warning for missing username/slug
+  useEffect(() => {
+    if (!profilePath && !creator.username && !creator.slug && import.meta.env.DEV) {
+      console.warn('[CreatorCard] Missing username/slug for creator:', {
+        id: creator.id,
+        displayName: creator.displayName,
+        supabase_id: creator.supabase_id
+      });
+    }
+  }, [profilePath, creator]);
+
   // Get aspect ratio class
   const getAspectRatioClass = () => {
     switch(aspectRatio) {
@@ -349,12 +361,19 @@ const CreatorCard = ({
           className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient} focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2`}
           onClick={(e) => {
             // Analytics: Track card click
+            addBreadcrumb('creator_card_click', {
+              handle: creator.username,
+              origin: 'explore',
+              category: 'navigation'
+            });
+
             if (onCardClick) {
               onCardClick();
             }
             console.log('🔗 Navigating to profile:', profilePath);
           }}
           aria-label={`View ${creator.displayName || creator.username}'s profile`}
+          title={`View @${creator.username}'s profile`}
         >
         {/* Video-First: Show video if available, otherwise image */}
         {hasVideo && creator.preview_video_url ? (
