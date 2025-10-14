@@ -685,6 +685,9 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     const bio = creator.bio || 'Creator on Digis';
     const avatarUrl = creator.profilePic || creator.avatar_url || '';
 
+    // Stash previous values for cleanup
+    const previousTitle = typeof document !== 'undefined' ? document.title : '';
+
     // Set page title
     if (typeof document !== 'undefined') {
       document.title = `${displayName} | Digis`;
@@ -715,6 +718,13 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
       }
       canonical.setAttribute('href', `${window.location.origin}/creator/${encodeURIComponent(safeUsername)}`);
     }
+
+    // Cleanup on unmount: restore defaults
+    return () => {
+      if (typeof document !== 'undefined' && previousTitle) {
+        document.title = 'Digis'; // Default app title
+      }
+    };
   }, [creator, safeUsername]);
 
   // Fetch user token balance

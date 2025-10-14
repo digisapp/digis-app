@@ -234,6 +234,20 @@ const CreatorCard = ({
   const handle = (creator.username || creator.slug || '').toLowerCase();
   const profilePath = handle ? `/creator/${encodeURIComponent(handle)}` : null;
 
+  // Prefetch profile on hover for snappier navigation
+  const prefetchProfile = useCallback(() => {
+    if (!handle) return;
+
+    // Fire-and-forget prefetch (snappier subsequent navigation)
+    const BASE_URL = import.meta.env.VITE_BACKEND_URL || '';
+    fetch(`${BASE_URL}/api/public/creators/${encodeURIComponent(handle)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    }).catch(() => {
+      // Silently fail - this is just a performance optimization
+    });
+  }, [handle]);
+
   // Dev warning for missing username/slug
   useEffect(() => {
     if (!profilePath && !creator.username && !creator.slug && import.meta.env.DEV) {
@@ -358,6 +372,8 @@ const CreatorCard = ({
         <Link
           to={profilePath}
           className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient} focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2`}
+          onMouseEnter={prefetchProfile}
+          onFocus={prefetchProfile}
           onClick={(e) => {
             // Guard against double navigation on rapid clicks
             if (navigatingRef.current) return;
