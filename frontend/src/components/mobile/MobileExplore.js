@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { getDefaultAvatarUrl } from '../../utils/avatarHelpers';
 import { isSelf } from '../../utils/creatorFilters';
@@ -682,6 +683,15 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
 
     </div>
   );
+};
+
+MobileExplore.propTypes = {
+  user: PropTypes.object,
+  onNavigate: PropTypes.func,
+  onCreatorSelect: PropTypes.func,
+  onTokenPurchase: PropTypes.func,
+  onStartVideoCall: PropTypes.func,
+  onStartVoiceCall: PropTypes.func
 };
 
 export default MobileExplore;

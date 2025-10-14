@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   HomeIcon,
@@ -718,6 +719,26 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
       </AnimatePresence>
     </div>
   );
+};
+
+NextLevelMobileApp.propTypes = {
+  user: PropTypes.shape({
+    id: PropTypes.string,
+    email: PropTypes.string,
+    username: PropTypes.string,
+    is_creator: PropTypes.bool,
+    role: PropTypes.string,
+    token_balance: PropTypes.number,
+    creator_type: PropTypes.string,
+    is_super_admin: PropTypes.bool,
+    profile_pic_url: PropTypes.string
+  }).isRequired,
+  logout: PropTypes.func.isRequired,
+  isCreator: PropTypes.bool
+};
+
+NextLevelMobileApp.defaultProps = {
+  isCreator: false
 };
 
 export default NextLevelMobileApp;

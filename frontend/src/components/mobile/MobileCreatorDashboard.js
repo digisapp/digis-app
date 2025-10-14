@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
   SparklesIcon,
@@ -1004,6 +1005,24 @@ const MobileCreatorDashboard = ({
 
     </div>
   );
+};
+
+MobileCreatorDashboard.propTypes = {
+  user: PropTypes.shape({
+    id: PropTypes.string,
+    username: PropTypes.string,
+    display_name: PropTypes.string,
+    email: PropTypes.string,
+    profile_pic_url: PropTypes.string
+  }).isRequired,
+  tokenBalance: PropTypes.number.isRequired,
+  onNavigate: PropTypes.func.isRequired,
+  onShowGoLive: PropTypes.func.isRequired,
+  onShowAvailability: PropTypes.func.isRequired,
+  onShowEarnings: PropTypes.func.isRequired,
+  onShowSettings: PropTypes.func.isRequired,
+  onShowContent: PropTypes.func.isRequired,
+  onShowMessages: PropTypes.func.isRequired
 };
 
 export default MobileCreatorDashboard;
