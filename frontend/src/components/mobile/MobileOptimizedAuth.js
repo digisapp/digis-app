@@ -148,22 +148,15 @@ const MobileOptimizedAuth = ({ onLogin, mode = 'signin', onClose }) => {
       };
       
       console.log('📱 Passing to onLogin:', fullUserData);
-      
-      // Immediately call onLogin with full data
+
+      // Call onLogin with full data - let PARENT handle navigation
       if (onLogin) {
         onLogin(fullUserData);
       }
-      
-      // Navigate to correct dashboard based on user type (using existing isCreatorUser)
-      const destination = isCreatorUser ? '/dashboard' : '/explore';
 
-      console.log(`📱 Redirecting ${isCreatorUser ? 'creator' : 'fan'} to ${destination}`);
-
-      // Use React Router navigation to preserve state
-      setTimeout(() => {
-        navigate(destination, { replace: true, state: { from: 'auth' } });
-        onLogin?.(userData);
-      }, 500);
+      // REMOVED: Redundant navigate() call
+      // Parent (App.js) will handle navigation based on AuthContext state
+      // This prevents double-navigation flicker
       
     } catch (error) {
       console.error('❌ Error syncing mobile user data:', error);

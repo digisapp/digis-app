@@ -259,6 +259,9 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
                   // Special handling for wallet popup button (fans only)
                   if (item.id === 'wallet-popup') {
                     setShowWalletModal(true);
+                  } else if (item.id === 'go-live') {
+                    // Wire Go Live center action for creators
+                    onShowGoLive?.();
                   } else {
                     item.path && onNavigate(item.path);
                   }

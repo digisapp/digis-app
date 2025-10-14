@@ -194,6 +194,14 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* Touch-safe interaction - faster taps, no ghost double-tap zoom */
+  .touch-safe {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
   
   /* Smooth scrolling with momentum */
   .mobile-scroll {

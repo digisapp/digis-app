@@ -15,6 +15,49 @@ const TOKEN_PACKAGES = [
   { tokens: 5000, price: 89.99, popular: false, savings: 45 }
 ];
 
+// Calculate price for any token amount using tiered interpolation
+const calculatePrice = (tokens) => {
+  // Find the two packages that bracket this amount
+  const sortedPackages = [...TOKEN_PACKAGES].sort((a, b) => a.tokens - b.tokens);
+
+  // If exact match, return that price
+  const exactMatch = sortedPackages.find(pkg => pkg.tokens === tokens);
+  if (exactMatch) return exactMatch.price;
+
+  // If less than smallest package, use that rate
+  if (tokens < sortedPackages[0].tokens) {
+    const rate = sortedPackages[0].price / sortedPackages[0].tokens;
+    return tokens * rate;
+  }
+
+  // If more than largest package, use that rate
+  if (tokens > sortedPackages[sortedPackages.length - 1].tokens) {
+    const rate = sortedPackages[sortedPackages.length - 1].price / sortedPackages[sortedPackages.length - 1].tokens;
+    return tokens * rate;
+  }
+
+  // Interpolate between two packages
+  for (let i = 0; i < sortedPackages.length - 1; i++) {
+    const lower = sortedPackages[i];
+    const upper = sortedPackages[i + 1];
+
+    if (tokens > lower.tokens && tokens < upper.tokens) {
+      const lowerRate = lower.price / lower.tokens;
+      const upperRate = upper.price / upper.tokens;
+
+      // Linear interpolation of rates
+      const ratio = (tokens - lower.tokens) / (upper.tokens - lower.tokens);
+      const rate = lowerRate + (upperRate - lowerRate) * ratio;
+
+      return tokens * rate;
+    }
+  }
+
+  // Fallback: use average rate
+  const avgRate = TOKEN_PACKAGES.reduce((sum, pkg) => sum + (pkg.price / pkg.tokens), 0) / TOKEN_PACKAGES.length;
+  return tokens * avgRate;
+};
+
 const QuickBuyWidget = ({ user, onSuccess, onClose }) => {
   const [selectedAmount, setSelectedAmount] = useState(QUICK_BUY_AMOUNTS[1]);
   const [loading, setLoading] = useState(false);
@@ -23,12 +66,13 @@ const QuickBuyWidget = ({ user, onSuccess, onClose }) => {
 
   useEffect(() => {
     if (stripe) {
+      const price = calculatePrice(selectedAmount);
       const pr = stripe.paymentRequest({
         country: 'US',
         currency: 'usd',
         total: {
           label: `${selectedAmount} Tokens`,
-          amount: selectedAmount * 5, // 5 cents per token
+          amount: Math.round(price * 100), // Convert to cents
         },
         requestPayerName: true,
         requestPayerEmail: true,
@@ -124,7 +168,7 @@ const QuickBuyWidget = ({ user, onSuccess, onClose }) => {
           >
             {amount} tokens
             <br />
-            ${(amount * 0.05).toFixed(2)}
+            ${calculatePrice(amount).toFixed(2)}
           </button>
         ))}
       </div>

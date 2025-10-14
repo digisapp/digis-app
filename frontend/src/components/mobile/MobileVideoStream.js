@@ -20,6 +20,8 @@ import {
   VideoCameraSlashIcon as VideoCameraSlashIconSolid
 } from '@heroicons/react/24/solid';
 import { useAgoraSession } from '../../hooks/useAgoraSession';
+import { fetchJSON } from '../../utils/http';
+import { getAuthToken } from '../../utils/auth-helpers';
 
 const MobileVideoStream = ({ 
   creator, 
@@ -58,23 +60,20 @@ const MobileVideoStream = ({
   // Token provider function with validation
   const tokenProvider = useCallback(async () => {
     try {
-      const response = await fetch('/api/agora/refresh-token', {
+      const BASE = import.meta.env.VITE_BACKEND_URL;
+      const auth = await getAuthToken();
+
+      const data = await fetchJSON(`${BASE}/api/agora/refresh-token`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
+        headers: { Authorization: `Bearer ${auth}` },
+        body: {
           channel,
           uid: user.id,
           role: getUserRole(),
           mode: sessionType === 'call_2way' ? 'rtc' : 'live'
-        })
+        }
       });
-      
-      if (!response.ok) throw new Error('Failed to get token');
-      const data = await response.json();
-      
+
       // Validate token response
       if (!data || typeof data.token !== 'string') {
         if (mountedRef.current) {
@@ -82,7 +81,7 @@ const MobileVideoStream = ({
         }
         throw new Error('Invalid token payload');
       }
-      
+
       return data.token;
     } catch (error) {
       console.error('Token provider error:', error);
@@ -97,18 +96,17 @@ const MobileVideoStream = ({
   // Paywall gate for private broadcasts with explicit failure
   const paywallGate = useCallback(async () => {
     if (!isPrivate) return true;
-    
+
     try {
-      const response = await fetch('/api/streams/validate-access', {
+      const BASE = import.meta.env.VITE_BACKEND_URL;
+      const auth = await getAuthToken();
+
+      const data = await fetchJSON(`${BASE}/api/streams/validate-access`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ channel, creatorId: creator.id })
+        headers: { Authorization: `Bearer ${auth}` },
+        body: { channel, creatorId: creator.id }
       });
-      
-      const data = await response.json();
+
       if (!data.hasAccess && mountedRef.current) {
         setError({ type: 'PAYWALL_BLOCKED' });
       }

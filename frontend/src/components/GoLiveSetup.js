@@ -263,8 +263,21 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
           // Create Agora client
           if (!clientRef.current) {
             clientRef.current = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+
+            // Add connection state monitoring for network feedback
+            clientRef.current.on('connection-state-change', (curState, revState, reason) => {
+              console.log('📡 Desktop connection state:', curState, 'reason:', reason);
+              if (curState === 'DISCONNECTED' && reason) {
+                toast.error('Connection lost. Please check your network.', {
+                  duration: 4000,
+                  icon: '🔌'
+                });
+              } else if (curState === 'CONNECTED') {
+                console.log('✅ Connected to Agora servers');
+              }
+            });
           }
-          
+
           // Create local tracks with specific settings
           const [videoTrack, audioTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
             {

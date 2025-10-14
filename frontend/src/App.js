@@ -1046,8 +1046,30 @@ const App = () => {
   console.log('📍 Route guard - isRoutedPage:', isRoutedPage, 'pathname:', location.pathname);
 
   // Mobile users get unified NextLevelMobileApp interface
-  if (isMobile && user && !isRoutedPage) {
+  // CRITICAL: Always render for mobile users, don't check isRoutedPage
+  if (isMobile && user) {
     console.log('📱 Rendering NextLevelMobileApp for authenticated mobile user');
+    console.log('📱 Mobile render state:', {
+      user: user?.email,
+      isCreator,
+      roleResolved,
+      authLoading,
+      pathname: location.pathname
+    });
+
+    // GUARD: Wait for both authLoading and roleResolved before rendering
+    // This prevents fan→creator layout flip on login
+    if (authLoading || !roleResolved) {
+      return (
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Authenticating…</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <ErrorBoundary>
         <Suspense fallback={

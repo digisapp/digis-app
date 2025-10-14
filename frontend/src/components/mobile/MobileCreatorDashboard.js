@@ -133,6 +133,25 @@ const MobileCreatorDashboard = ({
   const [currentSection, setCurrentSection] = useState(0);
   const sectionsRef = useRef([]);
 
+  // Click lock to prevent double-fire on mobile
+  const clickLock = useRef(false);
+
+  // Run action once with debounce to prevent double-tap issues
+  const runOnce = useCallback((fn) => {
+    if (clickLock.current) {
+      console.log('⏸️ Click locked, ignoring tap');
+      return;
+    }
+    clickLock.current = true;
+    try {
+      fn();
+    } finally {
+      setTimeout(() => {
+        clickLock.current = false;
+      }, 400);
+    }
+  }, []);
+
   useEffect(() => {
     console.log('🎯 MobileCreatorDashboard mounted');
     console.log('User data:', user);
@@ -524,31 +543,41 @@ const MobileCreatorDashboard = ({
       </div>
 
       {/* Quick Actions - Mobile Optimized Style */}
-      <div className="px-safe">
+      <div className="px-safe" style={{ position: 'relative', zIndex: 20 }}>
         <div className="px-3 -mt-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-2">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-2" style={{ position: 'relative', zIndex: 20 }}>
             <div className="grid grid-cols-4 gap-2">
               {quickActions.map((action) => (
-                <motion.button
+                <button
                   key={action.id}
-                  whileTap={{ scale: 0.95 }}
                   onClick={(e) => {
-                    console.log(`🔘 Button clicked: ${action.title}`);
                     e.preventDefault();
                     e.stopPropagation();
-                    // Haptic feedback
-                    if (window.navigator.vibrate) {
-                      window.navigator.vibrate(10);
-                    }
-                    if (action.onClick) {
-                      action.onClick();
-                    }
-                  }}
-                  onTouchStart={(e) => {
-                    console.log(`👆 Button touched: ${action.title}`);
-                    e.stopPropagation();
+
+                    runOnce(() => {
+                      console.log(`🔘 Button clicked: ${action.title}`);
+
+                      // Haptic feedback
+                      if (window.navigator.vibrate) {
+                        window.navigator.vibrate(10);
+                      }
+
+                      // Call handler
+                      if (action.onClick && typeof action.onClick === 'function') {
+                        console.log('✅ Calling handler for:', action.title);
+                        try {
+                          action.onClick();
+                          console.log('✅ Handler completed for:', action.title);
+                        } catch (error) {
+                          console.error('❌ Handler error:', error);
+                        }
+                      } else {
+                        console.error('❌ No handler for:', action.title);
+                      }
+                    });
                   }}
                   className={`
+                    touch-safe
                     relative
                     flex flex-col items-center justify-center
                     gap-1
@@ -557,34 +586,34 @@ const MobileCreatorDashboard = ({
                     transition-all duration-200
                     min-h-[60px]
                     ${action.color} text-white shadow-md
-                    transform hover:scale-105 active:scale-95
+                    transform active:scale-95
                     cursor-pointer select-none
                   `}
                   style={{
-                    touchAction: 'manipulation',
-                    WebkitTapHighlightColor: 'transparent',
-                    pointerEvents: 'auto',
                     position: 'relative',
-                    zIndex: 10
+                    zIndex: 30,
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none'
                   }}
                   aria-label={action.title}
                   type="button"
                 >
-                  <action.icon className="w-6 h-6 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-[11px] font-semibold leading-tight">
+                  <action.icon className="w-6 h-6 flex-shrink-0" strokeWidth={2} style={{ pointerEvents: 'none' }} />
+                  <span className="text-[11px] font-semibold leading-tight" style={{ pointerEvents: 'none' }}>
                     {action.title}
                   </span>
                   {action.badge > 0 && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
+                    <span
                       className="absolute -top-1 -right-1 bg-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-md min-w-[20px] text-center"
-                      style={{ color: action.id === 'messages' ? '#10b981' : '#ef4444' }}
+                      style={{
+                        color: action.id === 'messages' ? '#10b981' : '#ef4444',
+                        pointerEvents: 'none'
+                      }}
                     >
                       {action.badge > 99 ? '99+' : action.badge}
-                    </motion.span>
+                    </span>
                   )}
-                </motion.button>
+                </button>
               ))}
             </div>
           </div>

@@ -83,7 +83,11 @@ const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(purchaseData)
+        body: JSON.stringify({
+          ...purchaseData,
+          success_url: `${window.location.origin}/wallet?success=1`,
+          cancel_url: `${window.location.origin}/wallet?canceled=1`
+        })
       });
 
       if (response.ok) {

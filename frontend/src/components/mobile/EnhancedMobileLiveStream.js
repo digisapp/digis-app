@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import agoraLoader from '../../utils/AgoraLoader';
 import toast from 'react-hot-toast';
 import socketService from '../../utils/socket';
+import { fetchJSON } from '../../utils/http';
+import { getAuthToken } from '../../utils/auth-helpers';
 import {
   VideoCameraIcon,
   MicrophoneIcon,
@@ -304,12 +306,15 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
     renewTimerRef.current = setTimeout(async () => {
       try {
         console.log('[agora] Renewing token...');
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/agora/token`, {
+        const BASE = import.meta.env.VITE_BACKEND_URL;
+        const auth = await getAuthToken();
+
+        const { token } = await fetchJSON(`${BASE}/api/agora/refresh-token`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channelName: channel })
+          headers: { Authorization: `Bearer ${auth}` },
+          body: { channel }
         });
-        const { token } = await response.json();
+
         await clientRef.current?.renewToken(token);
         console.log('[agora] Token renewed successfully');
         scheduleRenew(); // Schedule next renewal
@@ -394,12 +399,15 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
       client.on('token-privilege-will-expire', async () => {
         console.log('[agora] Token privilege will expire, renewing...');
         try {
-          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/agora/token`, {
+          const BASE = import.meta.env.VITE_BACKEND_URL;
+          const auth = await getAuthToken();
+
+          const { token } = await fetchJSON(`${BASE}/api/agora/refresh-token`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ channelName: channel })
+            headers: { Authorization: `Bearer ${auth}` },
+            body: { channel }
           });
-          const { token } = await response.json();
+
           await client.renewToken(token);
           console.log('[agora] Token renewed via privilege-will-expire');
         } catch (error) {
@@ -416,15 +424,14 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
       }
 
       // Fetch RTC token from backend
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/agora/token`, {
+      const BASE = import.meta.env.VITE_BACKEND_URL;
+      const auth = await getAuthToken();
+
+      const { token, appId, uid } = await fetchJSON(`${BASE}/api/agora/token`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelName: channel })
+        headers: { Authorization: `Bearer ${auth}` },
+        body: { channelName: channel }
       });
-
-      if (!response.ok) throw new Error('Failed to get token');
-
-      const { token, appId, uid } = await response.json();
 
       // Join channel
       await client.join(appId, channel, token, uid || user?.id || null);

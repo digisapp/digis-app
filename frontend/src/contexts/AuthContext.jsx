@@ -46,7 +46,14 @@ export const AuthProvider = ({ children }) => {
   const [tokenBalance, setTokenBalance] = useState(0);
   const [authLoading, setAuthLoading] = useState(true);
   const [roleResolved, setRoleResolved] = useState(false);
-  const [roleHint, setRoleHint] = useState(null); // Fast hint from Supabase metadata
+  // Fast hint from Supabase metadata OR last-known role from localStorage
+  const [roleHint, setRoleHint] = useState(() => {
+    try {
+      return localStorage.getItem('digis:lastKnownRole') || null;
+    } catch {
+      return null;
+    }
+  });
   const [error, setError] = useState('');
 
   // Refs for throttling
@@ -91,17 +98,19 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!user;
 
   // Canonical role string - centralized to avoid recomputation
+  // NEVER downgrade from creator/admin to fan during refresh
   const role = useMemo(() => {
-    // Once backend confirms, use profile data
-    if (profile?.role === 'admin' || isAdmin) return 'admin';
+    // 1) Canonical when profile is ready (strongest truth)
+    if (profile?.is_admin || isAdmin) return 'admin';
     if (profile?.is_creator || isCreator) return 'creator';
+    if (profile?.id) return 'fan'; // Confirmed fan
 
-    // Fall back to roleHint until profile lands (fast routing)
+    // 2) Fast path: fall back to lastKnownRole (prevents creator→fan flash)
     if (roleHint) return roleHint;
 
-    // Default to fan if user exists, null otherwise
+    // 3) Truly unknown
     return user ? 'fan' : null;
-  }, [profile?.role, profile?.is_creator, isAdmin, isCreator, roleHint, user]);
+  }, [profile?.role, profile?.is_creator, profile?.is_admin, profile?.id, isAdmin, isCreator, roleHint, user]);
 
   // Canonical currentUser - single source of truth for UI components
   // Merges Supabase auth (id, email) with DB profile (username, display_name, role, etc.)
@@ -110,6 +119,22 @@ export const AuthProvider = ({ children }) => {
     if (profile && user) return { ...user, ...profile };
     return profile || user || null;
   }, [user, profile]);
+
+  /**
+   * Persist last-known role whenever profile is successfully resolved
+   * This prevents creator→fan flip on refresh (BFCache, slow network, etc.)
+   */
+  useEffect(() => {
+    if (profile?.id) {
+      const lkr = profile.is_admin ? 'admin' : profile.is_creator ? 'creator' : 'fan';
+      try {
+        localStorage.setItem('digis:lastKnownRole', lkr);
+        console.log('💾 Persisted lastKnownRole:', lkr);
+      } catch (e) {
+        console.warn('Failed to persist lastKnownRole:', e);
+      }
+    }
+  }, [profile?.id, profile?.is_creator, profile?.is_admin]);
 
   /**
    * Extract roleHint from Supabase session metadata for fast routing
@@ -503,10 +528,11 @@ export const AuthProvider = ({ children }) => {
 
     const initAuth = async () => {
       // CRITICAL: Hard timeout fallback to prevent infinite loading on slow devices
-      const MAX_BOOT_MS = 5000; // 5 seconds max boot time
+      // Mobile devices get longer timeout (10s) for slower 3G/4G networks
+      const MAX_BOOT_MS = (typeof window !== 'undefined' && window.innerWidth < 768) ? 10000 : 5000;
       const bootTimeout = setTimeout(() => {
         if (mounted) {
-          console.warn('⚠️ Hard auth timeout reached after 5s - forcing load complete');
+          console.warn(`⚠️ Hard auth timeout reached after ${MAX_BOOT_MS / 1000}s - forcing load complete`);
           setAuthLoading(false);
         }
       }, MAX_BOOT_MS);
@@ -613,6 +639,12 @@ export const AuthProvider = ({ children }) => {
           if (session?.user) {
             setUser(session.user);
           }
+          // CRITICAL: Mark role as resolved when using cache to prevent flickering
+          setRoleResolved(true);
+          console.log('✅ Role resolved from cache:', {
+            is_creator: cachedProfile.is_creator,
+            is_admin: cachedProfile.is_admin
+          });
         }
 
         if (session?.user && mounted) {
@@ -697,14 +729,18 @@ export const AuthProvider = ({ children }) => {
               clearTimeout(bootTimeout);
             } else {
               console.error('❌ No cached profile available and sync-user failed');
-              console.error('❌ Cannot proceed without profile data - retry sync-user or sign out');
+              console.warn('⚠️ Keeping existing profile to prevent role downgrade');
 
-              // Show error to user - don't create fake profile
-              setError('Unable to load your profile. Please refresh the page or sign in again.');
+              // CRITICAL: Don't set profile = null if we already have one (prevents role downgrade)
+              // This handles the case where a late/failed sync-user tries to clobber a good profile
+              if (!profile) {
+                // Only show error if we truly have no profile at all
+                setError('Unable to load your profile. Please refresh the page or sign in again.');
+              }
+
               setUser(session.user); // Keep session so they can sign out
-              setProfile(null); // Don't set fake profile
 
-              // Stop loading so error message shows
+              // Stop loading so error message shows (or app continues with cached data)
               setAuthLoading(false);
               clearTimeout(timeoutId);
               clearTimeout(bootTimeout);
@@ -808,6 +844,15 @@ export const AuthProvider = ({ children }) => {
       setAuthLoading(false);
     }
   }, [user, profile]);
+
+  // CRITICAL: Defer roleResolved until BOTH user AND profile exist
+  // This prevents mobile layout from rendering with wrong role (fan→creator flip)
+  useEffect(() => {
+    if (user && profile && !roleResolved) {
+      console.log('✅ AuthContext: Both user and profile exist - marking role as resolved');
+      setRoleResolved(true);
+    }
+  }, [user, profile, roleResolved]);
 
   // Invariant: Warn if role resolution takes >3s (dev only or DEBUG_UI)
   useEffect(() => {

@@ -34,6 +34,7 @@ import MobileOnboarding from './MobileOnboarding';
 import MobileCreatorDashboard from './MobileCreatorDashboard';
 import MobileExplore from './MobileExplore';
 import Wallet from '../Wallet';
+import { MobileStreamProvider } from '../../contexts/MobileStreamContext';
 // Lazy load heavy components for better performance
 const MobileVideoStream = lazy(() => import('./MobileVideoStream'));
 const GoLiveSetup = lazy(() => import('../GoLiveSetup'));
@@ -92,7 +93,10 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('digis_onboarding_completed');
   });
-  
+
+  // Grace period to prevent role/auth flicker loop
+  const [initComplete, setInitComplete] = useState(false);
+
   const scrollContainerRef = useRef(null);
   const pullDistance = useRef(0);
   const startY = useRef(0);
@@ -102,63 +106,29 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   // const fabScale = useSpring(1);
   // const pullToRefreshY = useSpring(-100);
 
-  // Auto-hide navigation on scroll with optimized performance
+  // Grace period effect - prevent auth/role flicker
   useEffect(() => {
-    const handleScroll = () => {
-      if (!tickingRef.current && mountedRef.current) {
-        tickingRef.current = true;
-        requestAnimationFrame(() => {
-          if (!mountedRef.current) return;
-          const currentScrollY = window.scrollY;
-          if (currentScrollY > lastScrollYRef.current && currentScrollY > 100) {
-            setIsNavHidden(true);
-          } else {
-            setIsNavHidden(false);
-          }
-          lastScrollYRef.current = currentScrollY;
-          tickingRef.current = false;
-        });
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    const timeout = setTimeout(() => setInitComplete(true), 1000);
+    return () => clearTimeout(timeout);
   }, []);
 
-  // Pull to refresh functionality
-  const handleTouchStart = (e) => {
-    if (window.scrollY === 0) {
-      startY.current = e.touches[0].clientY;
-    }
-  };
+  // Guard against render loop: Redirect non-creators away from dashboard
+  // ONLY run after role is fully resolved to prevent ping-pong
+  useEffect(() => {
+    // Don't run navigation logic until init is complete
+    if (!initComplete) return;
 
-  const handleTouchMove = (e) => {
-    if (window.scrollY === 0 && startY.current) {
-      const currentY = e.touches[0].clientY;
-      pullDistance.current = Math.max(0, currentY - startY.current);
-      
-      if (pullDistance.current > 0) {
-        // pullToRefreshY.set(Math.min(pullDistance.current / 2, 80));
-      }
+    if (!isCreator && activeTab === 'dashboard') {
+      console.log('❌ Not a creator, redirecting to explore via useEffect');
+      setActiveTab('explore');
     }
-  };
+  }, [initComplete, isCreator, activeTab]);
 
-  const handleTouchEnd = async () => {
-    if (pullDistance.current > 80) {
-      setRefreshing(true);
-      await refreshContent();
-      setRefreshing(false);
-    }
-    
-    pullDistance.current = 0;
-    startY.current = 0;
-    // pullToRefreshY.set(-100);
-  };
+  // REMOVED: Auto-hide navigation scroll listener (MobileUIProvider handles this globally)
+  // This prevents duplicate scroll listeners and scroll jitter
 
-  const refreshContent = async () => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    await fetchCreators();
-  };
+  // REMOVED: Pull-to-refresh touch handlers (MobileUIProvider handles these globally)
+  // This prevents duplicate touch listeners that can cause scroll jitter on iOS
 
   // Fetch creators with abort controller for cleanup
   const fetchCreators = useCallback(async () => {
@@ -441,9 +411,9 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
             </div>
           );
         }
-        // Fall through to explore for non-creators
-        console.log('❌ Not a creator, redirecting to explore');
-        setActiveTab('explore');
+        // REMOVED inline setState - handled by useEffect guard instead
+        // Fall through to explore for non-creators (redirect happens in useEffect)
+        console.log('❌ Not a creator, waiting for useEffect redirect');
         return null;
 
       default:
@@ -455,9 +425,21 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
     return <MobileOptimizedAuth />;
   }
 
+  // Grace period loading screen - prevents auth/role flicker
+  if (!initComplete) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (showOnboarding) {
     return (
-      <MobileOnboarding 
+      <MobileOnboarding
         onComplete={() => {
           localStorage.setItem('digis_onboarding_completed', 'true');
           setShowOnboarding(false);
@@ -478,6 +460,7 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   }, []);
 
   return (
+    <MobileStreamProvider>
     <div
       className="min-h-screen bg-gray-50"
       style={{
@@ -489,9 +472,6 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch'
       }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {/* Pull to Refresh Indicator */}
       <motion.div 
@@ -718,6 +698,7 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
         )}
       </AnimatePresence>
     </div>
+    </MobileStreamProvider>
   );
 };
 

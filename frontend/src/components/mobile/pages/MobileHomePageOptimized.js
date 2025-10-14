@@ -72,7 +72,13 @@ const MobileHomePageOptimized = memo(({ user, navigateTo }) => {
   // Set up intersection observer for infinite scroll
   useEffect(() => {
     if (!loadMoreRef.current) return;
-    
+
+    // Disconnect previous observer to prevent duplicate attach
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
     observerRef.current = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
@@ -85,12 +91,13 @@ const MobileHomePageOptimized = memo(({ user, navigateTo }) => {
       },
       { rootMargin: '100px' }
     );
-    
+
     observerRef.current.observe(loadMoreRef.current);
-    
+
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
+        observerRef.current = null;
       }
     };
   }, [hasMore, loading, page, activeCategory, fetchCreators]);
