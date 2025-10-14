@@ -335,7 +335,21 @@ const CreatorCard = ({
       `}
     >
       {/* Main Image Container */}
-      <div className={`relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient}`}>
+      <div
+        className={`relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient}`}
+        onClick={(e) => {
+          // Check if click is on the image area (not on buttons)
+          const target = e.target;
+          const isButton = target.closest('button');
+
+          if (onCardClick && !isButton) {
+            console.log('🖼️ Image area clicked - navigating to profile');
+            e.stopPropagation();
+            onCardClick();
+          }
+        }}
+        style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+      >
         {/* Video-First: Show video if available, otherwise image */}
         {hasVideo && creator.preview_video_url ? (
           <>
@@ -400,7 +414,7 @@ const CreatorCard = ({
           aria-pressed={isFollowing}
           aria-label={isFollowing ? 'Unfollow creator' : 'Follow creator'}
           className="absolute right-3 top-3 p-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                   hover:scale-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+                   hover:scale-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 z-20"
         >
           {isFollowing ? (
             <UserPlusIconSolid className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
@@ -421,7 +435,7 @@ const CreatorCard = ({
 
         {/* Glass Morphism Bottom Card - Better Hierarchy */}
         <div className="absolute inset-x-3 bottom-3 rounded-xl border border-white/10
-                      bg-black/40 backdrop-blur-xl p-3">
+                      bg-black/40 backdrop-blur-xl p-3 z-20">
           {/* Two-line name lockup */}
           <div className="mb-2">
             <div className="flex items-center gap-1.5">
