@@ -1017,9 +1017,19 @@ const App = () => {
   const routedRoots = [
     '/dashboard', '/messages', '/wallet', '/tv', '/classes', '/explore', '/call',
     '/subscriptions', '/following', '/schedule', '/admin', '/content', '/analytics',
-    '/collections', '/profile', '/settings', '/followers', '/subscribers', '/streaming', '/stream'
+    '/collections', '/profile', '/settings', '/followers', '/subscribers',
+    // 🔐 All live-related paths to prevent legacy renderer from double-mounting streaming UI
+    '/streaming', '/stream', '/live', '/go-live', '/go-live-setup'
   ];
-  const isRoutedPage = routedRoots.some(p => location.pathname.startsWith(p));
+
+  // Helper to check if pathname is streaming-related
+  const isStreamingPath = (pathname) =>
+    pathname.startsWith('/streaming') ||
+    pathname.startsWith('/live') ||
+    pathname.startsWith('/go-live') ||
+    pathname.startsWith('/stream');
+
+  const isRoutedPage = routedRoots.some(p => location.pathname.startsWith(p)) || isStreamingPath(location.pathname);
 
   // Authenticated user layout
   console.log('👤 Showing authenticated layout for user:', user?.email, 'isCreator:', isCreator);
@@ -1137,6 +1147,12 @@ const App = () => {
           <EnhancedAdminDashboard user={user} />
         ) : currentView === 'streaming' ? (
           (() => {
+            // 🚫 Hard guard: if URL is already a routed streaming page, don't double render
+            if (isStreamingPath(location.pathname)) {
+              console.log('⚠️ Streaming path detected in URL - blocking legacy render to prevent duplicate');
+              return null;
+            }
+
             // Extract creator username from URL if joining a stream
             const pathMatch = location.pathname.match(/^\/stream\/(.+)$/);
             const streamCreatorUsername = pathMatch ? pathMatch[1] : null;
