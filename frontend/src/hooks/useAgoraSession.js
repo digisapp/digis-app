@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AgoraRTC from 'agora-rtc-sdk-ng';
 
+// In-app browser detection (these browsers often block camera/mic)
+const inAppBrowserRE = /FBAN|FBAV|Instagram|Line|WeChat|Snapchat|Twitter|Pinterest/i;
+
 /**
  * Unified Agora hook for all session types
  * 
@@ -82,6 +85,31 @@ export function useAgoraSession({
   const is2WayCall = sessionType === 'call_2way';
   const audienceOnly = isBroadcast && role === 'audience';
 
+  // Attach playsinline attributes for iOS inline video playback
+  const ensureInlineVideo = useCallback((container) => {
+    if (!container) return;
+    container.setAttribute?.('playsinline', '');
+    container.setAttribute?.('webkit-playsinline', '');
+  }, []);
+
+  // Map media errors to user-friendly messages
+  const mapMediaError = useCallback((err) => {
+    const name = err?.name || err?.code || 'UnknownError';
+    if (name === 'NotAllowedError' || name === 'SecurityError') {
+      return 'Camera/Mic blocked by the browser. Please allow access in site settings.';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'No camera or microphone found on this device.';
+    }
+    if (name === 'OverconstrainedError') {
+      return 'Requested camera constraints not supported. Try default camera.';
+    }
+    if (name === 'AbortError') {
+      return 'Browser aborted device access. Try again.';
+    }
+    return `Go Live failed: ${err?.message || name}`;
+  }, []);
+
   // Ensure client exists with correct mode
   const ensureClient = useCallback(() => {
     if (!clientRef.current) {
@@ -94,12 +122,13 @@ export function useAgoraSession({
     return clientRef.current;
   }, [isBroadcast, needsH264, isMobile]);
 
-  // Play local video preview
+  // Play local video preview (with iOS playsinline support)
   const playLocal = useCallback((videoEl) => {
     if (videoTrackRef.current && videoEl) {
-      videoTrackRef.current.play(videoEl);
+      ensureInlineVideo(videoEl);
+      videoTrackRef.current.play(videoEl, { fit: 'cover' });
     }
-  }, []);
+  }, [ensureInlineVideo]);
 
   // Play remote user video
   const playRemote = useCallback((remoteUid, videoEl) => {
@@ -150,14 +179,20 @@ export function useAgoraSession({
     }
   }, [onError]);
 
-  // Clean up and leave session
+  // Clean up and leave session (critical for mobile to prevent "camera already in use")
   const hardCleanup = useCallback(async () => {
     console.log('🧹 Performing hard cleanup...');
-    
+
     // Clear token refresh timer
     if (tokenRefreshTimerRef.current) {
       clearTimeout(tokenRefreshTimerRef.current);
       tokenRefreshTimerRef.current = null;
+    }
+
+    // Clear stats interval
+    if (clientRef.current?._statsInterval) {
+      clearInterval(clientRef.current._statsInterval);
+      clientRef.current._statsInterval = null;
     }
 
     try {
@@ -179,17 +214,21 @@ export function useAgoraSession({
       console.warn('Failed to leave channel:', e);
     }
 
-    // Stop and close tracks
+    // Stop and close tracks (CRITICAL for mobile - releases camera/mic)
     try {
-      audioTrackRef.current?.stop();
-      audioTrackRef.current?.close();
+      if (audioTrackRef.current) {
+        audioTrackRef.current.stop();
+        audioTrackRef.current.close();
+      }
     } catch (e) {
       console.warn('Failed to close audio track:', e);
     }
 
     try {
-      videoTrackRef.current?.stop();
-      videoTrackRef.current?.close();
+      if (videoTrackRef.current) {
+        videoTrackRef.current.stop();
+        videoTrackRef.current.close();
+      }
     } catch (e) {
       console.warn('Failed to close video track:', e);
     }
@@ -204,6 +243,8 @@ export function useAgoraSession({
     setConnState('DISCONNECTED');
     setQuality('unknown');
     setStats({ bitrate: 0, packetLoss: 0, latency: 0 });
+
+    console.log('✅ Cleanup complete - camera/mic released');
   }, []);
 
   // Schedule token refresh
@@ -237,6 +278,11 @@ export function useAgoraSession({
     try {
       console.log(`🚀 Starting ${sessionType} session as ${role}`);
 
+      // Check HTTPS requirement (required for getUserMedia)
+      if (location.protocol !== 'https:') {
+        throw new Error('HTTPS_REQUIRED: Go Live requires HTTPS. Please use https://...');
+      }
+
       // Check system requirements before attempting to start
       const canStream = AgoraRTC.checkSystemRequirements();
       console.log('✅ Agora system check:', canStream);
@@ -250,6 +296,11 @@ export function useAgoraSession({
           hasGetUserMedia: !!(navigator.mediaDevices?.getUserMedia)
         });
         throw new Error('SYSTEM_REQUIREMENTS_NOT_MET: This browser doesn\'t support live streaming. Try updating your browser or switching to a modern browser like Chrome, Firefox, or Safari.');
+      }
+
+      // Avoid in-app browsers (Instagram/Facebook/TikTok/etc.) — they often block camera/mic
+      if (inAppBrowserRE.test(navigator.userAgent)) {
+        throw new Error('IN_APP_BROWSER: Please tap the ••• menu and choose "Open in Safari/Chrome" to use camera & mic.');
       }
 
       const client = ensureClient();
@@ -419,17 +470,19 @@ export function useAgoraSession({
           // Video configuration - optimized for mobile/network variance
           let videoConfig;
           if (isMobile) {
-            // Mobile: Conservative settings for battery and heat management
-            videoConfig = isBroadcast
-              ? { encoderConfig: '720p_1' } // 720p@15fps for mobile broadcast
-              : { encoderConfig: '480p_2' }; // 480p@30fps for mobile calls
+            // Mobile: Conservative settings for battery, heat, and older device compatibility
+            // Start with 480p for safety - can upgrade later based on stats
+            videoConfig = {
+              encoderConfig: needsH264 ? '480p_1' : '720p_1', // Safer default for iOS
+              facingMode: 'user' // Front camera by default
+            };
           } else {
             // Desktop: Higher quality but still reasonable
             videoConfig = isBroadcast
               ? { encoderConfig: '720p_3' } // 720p@30fps for desktop broadcast
               : { encoderConfig: '720p_2' }; // 720p@30fps for desktop calls
           }
-          
+
           [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
             audioConfig,
             videoConfig
@@ -468,14 +521,15 @@ export function useAgoraSession({
 
     } catch (error) {
       console.error('Failed to start session:', error);
-      onError?.({ type: 'START_FAILED', error });
-      throw error;
+      const friendlyError = mapMediaError(error);
+      onError?.({ type: 'START_FAILED', error, message: friendlyError });
+      throw new Error(friendlyError);
     }
   }, [
     sessionType, role, appId, channel, uid, tokenProvider, paywallGate,
     ensureClient, isBroadcast, isPrivateBroadcast, is2WayCall, audienceOnly,
     qualityLabel, previewTracks, hardCleanup, scheduleTokenRefresh,
-    onError, onStateChange, joined
+    onError, onStateChange, joined, needsH264, isMobile, mapMediaError
   ]);
 
   // End session
