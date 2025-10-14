@@ -1,12 +1,14 @@
-import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { Suspense, lazy, useCallback } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
+import { useModal, MODALS } from '../contexts/ModalContext';
 import ProtectedRoute from '../components/ProtectedRoute';
 import RouteErrorBoundary from '../components/ui/RouteErrorBoundary';
 import { RouteFallback, MobileRouteFallback } from '../components/ui/RouteFallback';
 import useRouteObservability from '../hooks/useRouteMonitoring';
 import { defaultPathFor, isRoleReady } from '../utils/routeHelpers';
+import toast from 'react-hot-toast';
 
 /**
  * Lazy-loaded pages - moved from App.js
@@ -72,10 +74,36 @@ const MobileCreatorProfile = lazy(() => import('../components/mobile/MobileCreat
 const AppRoutes = () => {
   const { currentUser, isCreator, isAdmin, tokenBalance, roleResolved, role } = useAuth();
   const { isMobile } = useDevice();
+  const { open: openModal } = useModal();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Route observability - tracks navigation performance and errors
   useRouteObservability();
+
+  // Unified Go Live handler for mobile creators
+  const handleShowGoLive = useCallback(() => {
+    console.log('🎬 AppRoutes: Opening Go Live setup for mobile');
+    if (isMobile) {
+      console.log('📱 Mobile detected - opening mobile live stream modal');
+      openModal(MODALS.MOBILE_LIVE_STREAM, {
+        onGoLive: (config) => {
+          console.log('🔴 Starting mobile stream with config:', config);
+          navigate('/streaming');
+          toast.success('Going live! 🎉');
+        }
+      });
+    } else {
+      console.log('🖥️ Desktop detected - opening desktop go live setup modal');
+      openModal(MODALS.GO_LIVE_SETUP, {
+        onGoLive: (config) => {
+          console.log('🔴 Starting desktop stream with config:', config);
+          navigate('/streaming');
+          toast.success('Going live! 🎉');
+        }
+      });
+    }
+  }, [isMobile, openModal, navigate]);
 
   // Loading fallback - branded for consistency
   const LoadingFallback = isMobile ? <MobileRouteFallback /> : <RouteFallback />;
@@ -117,7 +145,19 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             {isMobile ? (
-              isCreator ? <MobileDashboard user={currentUser} tokenBalance={tokenBalance} /> : <MobileFanDashboard user={currentUser} tokenBalance={tokenBalance} />
+              isCreator ? (
+                <MobileDashboard
+                  user={currentUser}
+                  tokenBalance={tokenBalance}
+                  onShowGoLive={handleShowGoLive}
+                  onNavigate={(view) => navigate(`/${view}`)}
+                />
+              ) : (
+                <MobileFanDashboard
+                  user={currentUser}
+                  tokenBalance={tokenBalance}
+                />
+              )
             ) : (
               <DashboardRouter user={currentUser} isCreator={isCreator} isAdmin={isAdmin} roleResolved={roleResolved} tokenBalance={tokenBalance} />
             )}
