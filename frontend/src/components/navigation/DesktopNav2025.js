@@ -45,6 +45,7 @@ import WalletQuickView from '../WalletQuickView';
 import TokenPurchase from '../TokenPurchase';
 import useHybridStore from '../../stores/useHybridStore';
 import useAuthStore from '../../stores/useAuthStore';
+import useStore from '../../stores/useStore';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { preload } from '../../lib/preload';
@@ -56,7 +57,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
   }, []);
 
   // Use AuthContext as SINGLE SOURCE OF TRUTH
-  const { currentUser, isCreator, isAdmin, role, roleResolved } = useAuth();
+  const { currentUser, isCreator, isAdmin, role, roleResolved, roleHint } = useAuth();
 
   // Debug log for QA (can be removed in production)
   if (process.env.NODE_ENV !== 'production') {
@@ -67,13 +68,13 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
     });
   }
 
-  // Hard guard: never render until role & user are ready
-  if (!roleResolved || !currentUser) {
-    return null; // nav waits until auth settles; app shows top-level fallback
-  }
+  // Let the component render; we have a skeleton for roleResolved=false below
+  // Only bail if signed out entirely
+  if (!currentUser) return null;
 
   const { activePath, onNavigate, badges = { notifications: 0 }, tokenBalance } = useNavigation();
   const storeTokenBalance = useHybridStore((state) => state.tokenBalance);
+  const theme = useStore((state) => state.theme); // Get theme from store instead of document.*
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showCreatorMenu, setShowCreatorMenu] = useState(false);
@@ -135,6 +136,9 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
 
   // Mock live viewer count animation and fetch token balance if needed
   useEffect(() => {
+    const ac = new AbortController();
+    let mounted = true;
+
     // Fetch token balance if it's not loaded
     if (effectiveTokenBalance === undefined && currentUser) {
       console.log('🔄 Token balance undefined, triggering fetch...');
@@ -142,6 +146,8 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
       const fetchBalance = async () => {
         try {
           const { data: { session } } = await (await import('../../config/supabase')).supabase.auth.getSession();
+          if (!mounted) return; // Component unmounted during async import
+
           if (session?.access_token) {
             const response = await fetch(
               `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
@@ -149,16 +155,23 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
                 headers: {
                   Authorization: `Bearer ${session.access_token}`,
                 },
+                signal: ac.signal
               }
             );
+            if (!mounted) return; // Component unmounted during fetch
+
             if (response.ok) {
               const data = await response.json();
               console.log('✅ Token balance fetched:', data.balance);
               // Update the store with the fetched balance
-              useHybridStore.getState().setTokenBalance(data.balance || 0);
+              if (mounted) {
+                useHybridStore.getState().setTokenBalance(data.balance || 0);
+              }
             }
           }
         } catch (error) {
+          // Ignore abort errors
+          if (error.name === 'AbortError') return;
           console.error('Error fetching token balance:', error);
         }
       };
@@ -167,10 +180,21 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
 
     if (role === 'creator') {
       const interval = setInterval(() => {
-        setLiveViewers(prev => Math.max(0, prev + Math.floor(Math.random() * 10 - 3)));
+        if (mounted) {
+          setLiveViewers(prev => Math.max(0, prev + Math.floor(Math.random() * 10 - 3)));
+        }
       }, 5000);
-      return () => clearInterval(interval);
+      return () => {
+        mounted = false;
+        ac.abort();
+        clearInterval(interval);
+      };
     }
+
+    return () => {
+      mounted = false;
+      ac.abort();
+    };
   }, [role, effectiveTokenBalance, currentUser, roleResolved]);
 
   // Scroll effect
@@ -255,7 +279,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
           scrolled ? 'shadow-2xl' : 'shadow-lg'
         }`}
         style={{
-          backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: theme === 'dark' ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)',
           backdropFilter: `blur(${scrolled ? '25px' : '15px'}) saturate(180%)`,
           WebkitBackdropFilter: `blur(${scrolled ? '25px' : '15px'}) saturate(180%)`,
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
@@ -269,10 +293,11 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
               <motion.div
                 className="flex items-center cursor-pointer group"
                 onClick={() => {
-                  // Navigate based on user role
-                  if (role === 'creator') {
+                  // Navigate based on user role - use roleHint fallback for fast boot
+                  const effectiveRole = role || roleHint;
+                  if (effectiveRole === 'creator') {
                     onNavigate('/dashboard');
-                  } else if (role === 'fan') {
+                  } else if (effectiveRole === 'fan') {
                     onNavigate('/explore');
                   } else {
                     onNavigate('/');
@@ -283,7 +308,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
               >
                 <div className="relative">
                   <img
-                    src={document.documentElement.classList.contains('dark') ? '/digis-logo-white.png' : '/digis-logo-black.png'}
+                    src={theme === 'dark' ? '/digis-logo-white.png' : '/digis-logo-black.png'}
                     alt="Digis"
                     className="h-8 w-auto object-contain"
                   />
@@ -464,7 +489,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
               exit={{ scale: 0.95, y: -20 }}
               className="relative w-full max-w-2xl p-4 rounded-2xl"
               style={{
-                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                backgroundColor: theme === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(20px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(20px) saturate(180%)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',

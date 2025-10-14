@@ -303,11 +303,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        <Route path="/stream/:username" element={
-          <ProtectedRoute>
-            <StreamingLayout user={currentUser} />
-          </ProtectedRoute>
-        } />
+        {/* Public stream watch page - allows signed-out users to watch (like Twitch/YouTube) */}
+        <Route path="/stream/:username" element={<StreamingLayout user={currentUser} />} />
 
         {/* Phase 3: Final 5 routes */}
         <Route path="/history" element={
