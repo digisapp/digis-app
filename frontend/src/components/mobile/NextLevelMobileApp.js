@@ -86,6 +86,8 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showGoLiveSetup, setShowGoLiveSetup] = useState(false);
+  const [showTokenPurchase, setShowTokenPurchase] = useState(false);
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('digis_onboarding_completed');
   });
@@ -256,6 +258,40 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
     setShowFabMenu(false);
   };
 
+  // Handle token purchase
+  const handleTokenPurchase = () => {
+    hapticFeedback('medium');
+    setShowTokenPurchase(true);
+  };
+
+  // Handle availability modal
+  const handleShowAvailability = () => {
+    hapticFeedback('medium');
+    setShowAvailabilityModal(true);
+  };
+
+  // Handle content navigation (for creators)
+  const handleShowContent = () => {
+    hapticFeedback('medium');
+    // Navigate to content tab if it exists, otherwise show analytics
+    setActiveTab('wallet'); // For now, redirect to wallet/earnings
+    console.log('Content studio not yet implemented - redirecting to wallet');
+  };
+
+  // Handle video call (for fans)
+  const handleStartVideoCall = (creator) => {
+    hapticFeedback('medium');
+    setSelectedCreator(creator);
+    setShowVideoCall(true);
+  };
+
+  // Handle voice call (for fans)
+  const handleStartVoiceCall = (creator) => {
+    hapticFeedback('medium');
+    console.log('Voice call not yet implemented:', creator);
+    // TODO: Implement voice call modal
+  };
+
   // Navigation items - memoized for performance
   const navItems = useMemo(() => isCreator ? [
     { id: 'dashboard', label: 'Dashboard', icon: HomeIcon, iconSolid: HomeIconSolid },
@@ -281,6 +317,9 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
             user={user}
             onNavigate={(path) => setActiveTab(path)}
             onCreatorSelect={handleCreatorSelect}
+            onTokenPurchase={handleTokenPurchase}
+            onStartVideoCall={handleStartVideoCall}
+            onStartVoiceCall={handleStartVoiceCall}
           />
         );
 
@@ -391,11 +430,11 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
                 user={user}
                 tokenBalance={user?.token_balance || 0}
                 onNavigate={(tab) => setActiveTab(tab)}
-                onShowGoLive={() => setShowGoLiveSetup(true)}
-                onShowAvailability={() => setActiveTab('settings')}
+                onShowGoLive={handleShowGoLive}
+                onShowAvailability={handleShowAvailability}
                 onShowEarnings={() => setActiveTab('wallet')}
                 onShowSettings={() => setActiveTab('settings')}
-                onShowContent={() => setActiveTab('content')}
+                onShowContent={handleShowContent}
                 onShowMessages={() => setActiveTab('messages')}
               />
             </div>
@@ -594,6 +633,72 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
               onCancel={() => setShowGoLiveSetup(false)}
             />
           </Suspense>
+        )}
+      </AnimatePresence>
+
+      {/* Token Purchase Modal */}
+      <AnimatePresence>
+        {showTokenPurchase && (
+          <Suspense fallback={
+            <div className="mobile-modal-fallback flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4" />
+                <p className="text-gray-600">Loading token purchase...</p>
+              </div>
+            </div>
+          }>
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="w-full max-w-md"
+              >
+                <TokenPurchase
+                  user={user}
+                  onClose={() => setShowTokenPurchase(false)}
+                  onSuccess={() => {
+                    setShowTokenPurchase(false);
+                    hapticFeedback('heavy');
+                  }}
+                />
+              </motion.div>
+            </div>
+          </Suspense>
+        )}
+      </AnimatePresence>
+
+      {/* Availability Modal Placeholder */}
+      <AnimatePresence>
+        {showAvailabilityModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md"
+            >
+              <h2 className="text-xl font-bold mb-4">Set Your Availability</h2>
+              <p className="text-gray-600 mb-6">
+                Availability calendar feature coming soon. For now, you can manage your schedule from Settings.
+              </p>
+              <button
+                onClick={() => {
+                  setShowAvailabilityModal(false);
+                  setActiveTab('settings');
+                }}
+                className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium"
+              >
+                Go to Settings
+              </button>
+              <button
+                onClick={() => setShowAvailabilityModal(false)}
+                className="w-full mt-2 text-gray-600 py-3"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
