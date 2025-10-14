@@ -248,13 +248,25 @@ const CreatorCard = ({
     });
   }, [handle]);
 
-  // Dev warning for missing username/slug
+  // Dev warning + observability for missing username/slug
   useEffect(() => {
-    if (!profilePath && !creator.username && !creator.slug && import.meta.env.DEV) {
-      console.warn('[CreatorCard] Missing username/slug for creator:', {
+    if (!profilePath && !creator.username && !creator.slug) {
+      const data = {
         id: creator.id,
         displayName: creator.displayName,
-        supabase_id: creator.supabase_id
+        supabase_id: creator.supabase_id,
+        category: creator.category
+      };
+
+      // Dev warning
+      if (import.meta.env.DEV) {
+        console.warn('[CreatorCard] Missing username/slug for creator:', data);
+      }
+
+      // Observability: Track data quality issues in production
+      addBreadcrumb('creator_card_no_handle', {
+        ...data,
+        category: 'data_quality'
       });
     }
   }, [profilePath, creator]);

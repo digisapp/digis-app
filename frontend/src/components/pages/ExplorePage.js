@@ -27,6 +27,29 @@ import { isSelf } from '../../utils/creatorFilters';
 import MobileLandingPage from '../mobile/MobileLandingPage';
 import MobileCreatorCard from '../mobile/MobileCreatorCard';
 import CreatorCard from '../CreatorCard';
+import { addBreadcrumb } from '../../lib/sentry.client';
+
+// Helper to slugify display names as a last-resort fallback
+const slugify = (s = '') =>
+  s
+    .normalize?.('NFKD')
+    .replace(/[^\w\s.-]/g, '')    // strip emojis/punctuation except . _ -
+    .trim()
+    .replace(/\s+/g, '-')         // spaces -> dashes
+    .toLowerCase();
+
+// Derive a safe handle from creator data with multiple fallbacks
+const deriveHandle = (c) => {
+  const candidate =
+    c?.username ||
+    c?.slug ||
+    c?.creator_handle ||
+    c?.user?.username ||
+    c?.profile?.username ||
+    slugify(c?.displayName || c?.name || '');
+
+  return (candidate || '').toLowerCase();
+};
 
 const ExplorePage = ({ 
   onCreatorSelect, 
@@ -207,10 +230,28 @@ const ExplorePage = ({
         
         // Use normalized creator data
         const transformedCreators = data.creators.map(normalizeCreator).filter(Boolean);
-        
+
         console.log('Fetched creators from API:', transformedCreators.length, 'creators');
         console.log('Sample creator data:', transformedCreators[0]);
-        
+
+        // Observability: Track data quality for missing handles
+        if (transformedCreators.length > 0) {
+          const creatorsWithoutHandle = transformedCreators.filter(c =>
+            !c.username && !c.slug && !c.creator_handle
+          );
+
+          if (creatorsWithoutHandle.length > 0) {
+            const percentage = Math.round((creatorsWithoutHandle.length / transformedCreators.length) * 100);
+            addBreadcrumb('explore_creators_missing_handles', {
+              total: transformedCreators.length,
+              missing: creatorsWithoutHandle.length,
+              percentage: `${percentage}%`,
+              page: pageNum,
+              category: 'data_quality'
+            });
+          }
+        }
+
         if (pageNum === 1) {
           setCreators(transformedCreators);
         } else {
@@ -770,15 +811,22 @@ const ExplorePage = ({
         ) : (
           /* Creator Cards Grid */
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
-            {filteredCreators.map((creator, index) => (
-              isMobile ? (
+            {filteredCreators.map((creator, index) => {
+              // Normalize creator handle before passing to card
+              const handle = deriveHandle(creator);
+              const normalized = {
+                ...creator,
+                // Ensure CreatorCard always finds one of these
+                username: handle || undefined,
+                slug: creator?.slug || undefined,
+                specialties: creator.specialties || creator.tags || (creator.creator_type ? [creator.creator_type] : ['General']),
+                languages: creator.languages || ['English']
+              };
+
+              return isMobile ? (
                 <CreatorCard
-                  key={creator.id || creator.uid || `creator-${index}`}
-                  creator={{
-                    ...creator,
-                    specialties: creator.specialties || creator.tags || (creator.creator_type ? [creator.creator_type] : ['General']),
-                    languages: creator.languages || ['English']
-                  }}
+                  key={creator.id || handle || `creator-${index}`}
+                  creator={normalized}
                   onSelect={() => {
                     if (onCreatorSelect) {
                       onCreatorSelect(creator);
@@ -797,12 +845,8 @@ const ExplorePage = ({
                 />
               ) : (
                 <CreatorCard
-                  key={creator.id || creator.uid || `creator-${index}`}
-                  creator={{
-                    ...creator,
-                    specialties: creator.specialties || creator.tags || (creator.creator_type ? [creator.creator_type] : ['General']),
-                    languages: creator.languages || ['English']
-                  }}
+                  key={creator.id || handle || `creator-${index}`}
+                  creator={normalized}
                   onJoinSession={(serviceType, confirmationData) => {
                   console.log('ExplorePage onJoinSession:', serviceType, confirmationData);
                   
@@ -846,8 +890,8 @@ const ExplorePage = ({
                 currentUserId={props.currentUserId || props.user?.id}
                 tokenBalance={props.tokenBalance || 0}
               />
-              )
-            ))}
+              );
+            })}
           </div>
         )}
 
