@@ -123,14 +123,16 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
       {/* Mobile Live Stream */}
       {isOpen(MODALS.MOBILE_LIVE_STREAM) && (
         <Suspense fallback={null}>
-          <MobileLiveStream
-            user={user}
-            onEnd={() => {
-              console.log('Mobile stream ended');
-              close(MODALS.MOBILE_LIVE_STREAM);
-            }}
-            streamConfig={getProps(MODALS.MOBILE_LIVE_STREAM).streamConfig}
-          />
+          <div data-golive-modal="true">
+            <MobileLiveStream
+              user={user}
+              onEnd={() => {
+                console.log('Mobile stream ended');
+                close(MODALS.MOBILE_LIVE_STREAM);
+              }}
+              streamConfig={getProps(MODALS.MOBILE_LIVE_STREAM).streamConfig}
+            />
+          </div>
         </Suspense>
       )}
 
