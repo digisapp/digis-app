@@ -1,7 +1,7 @@
 // src/components/CreatorCard.js
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { UserPlusIcon, VideoCameraIcon, PhoneIcon, ChatBubbleLeftRightIcon, GiftIcon, CheckBadgeIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { UserPlusIcon as UserPlusIconSolid, CheckBadgeIcon as CheckBadgeIconSolid } from '@heroicons/react/24/solid';
 import { getAuthToken } from '../utils/auth-helpers';
@@ -145,8 +145,9 @@ const CreatorCard = ({
   };
 
   const handleFollowClick = async (e) => {
-    e.stopPropagation();
-    
+    e.preventDefault(); // Prevent Link navigation
+    e.stopPropagation(); // Stop event from bubbling to card
+
     if (isLoadingFollow) return;
     
     // Optimistic updates
@@ -225,6 +226,13 @@ const CreatorCard = ({
   const imageData = getResponsiveImageUrls(creatorImage);
   const { isLive, isOnline } = getStatusBadges(creator);
   const categoryGradient = getCategoryGradient(creator.category || creator.creator_type);
+
+  // Profile path for navigation - fallback gracefully if no username
+  const profilePath = creator.username
+    ? `/creator/${creator.username.toLowerCase()}`
+    : creator.slug
+    ? `/creator/${creator.slug.toLowerCase()}`
+    : null;
 
   // Get aspect ratio class
   const getAspectRatioClass = () => {
@@ -334,22 +342,20 @@ const CreatorCard = ({
         focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2
       `}
     >
-      {/* Main Image Container */}
-      <div
-        className={`relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient}`}
-        onClick={(e) => {
-          // Check if click is on the image area (not on buttons)
-          const target = e.target;
-          const isButton = target.closest('button');
-
-          if (onCardClick && !isButton) {
-            console.log('🖼️ Image area clicked - navigating to profile');
-            e.stopPropagation();
-            onCardClick();
-          }
-        }}
-        style={{ cursor: onCardClick ? 'pointer' : 'default' }}
-      >
+      {/* Main Image Container - Wrapped in Link for reliable navigation */}
+      {profilePath ? (
+        <Link
+          to={profilePath}
+          className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient} focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2`}
+          onClick={(e) => {
+            // Analytics: Track card click
+            if (onCardClick) {
+              onCardClick();
+            }
+            console.log('🔗 Navigating to profile:', profilePath);
+          }}
+          aria-label={`View ${creator.displayName || creator.username}'s profile`}
+        >
         {/* Video-First: Show video if available, otherwise image */}
         {hasVideo && creator.preview_video_url ? (
           <>
@@ -366,6 +372,7 @@ const CreatorCard = ({
             {!window.matchMedia('(hover: hover)').matches && !showVideoPreview && (
               <button
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   setShowVideoPreview(true);
                 }}
@@ -459,7 +466,11 @@ const CreatorCard = ({
           <div className="grid grid-cols-3 gap-1.5">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handleServiceClickEnhanced('video'); }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleServiceClickEnhanced('video');
+              }}
               disabled={disabled}
               aria-label="Start video call"
               title="Video Call"
@@ -473,7 +484,11 @@ const CreatorCard = ({
 
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handleServiceClickEnhanced('message'); }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleServiceClickEnhanced('message');
+              }}
               disabled={disabled}
               aria-label="Send message"
               title="Message"
@@ -488,6 +503,7 @@ const CreatorCard = ({
             <button
               type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 setShowTipModal(true);
               }}
@@ -518,6 +534,204 @@ const CreatorCard = ({
             padding: '16px',
             color: 'white',
             zIndex: 10,
+            pointerEvents: 'none',
+            animation: 'fadeIn 0.3s ease'
+          }}>
+            <p style={{ fontSize: '13px', lineHeight: '1.5', marginBottom: '8px' }}>
+              {creator.bio}
+            </p>
+            {(creator.state || creator.country) && (
+              <p style={{ fontSize: '11px', opacity: 0.8 }}>
+                📍 {[creator.state, creator.country].filter(Boolean).join(', ')}
+              </p>
+            )}
+          </div>
+        )}
+      </Link>
+      ) : (
+        <div
+          className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient} opacity-60 cursor-not-allowed`}
+          title="Profile not available"
+        >
+        {/* Video-First: Show video if available, otherwise image */}
+        {hasVideo && creator.preview_video_url ? (
+          <>
+            <video
+              ref={videoRef}
+              src={creator.preview_video_url}
+              poster={creatorImage}
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            {/* Mobile play button */}
+            {!window.matchMedia('(hover: hover)').matches && !showVideoPreview && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowVideoPreview(true);
+                }}
+                className="absolute inset-0 flex items-center justify-center bg-black/20"
+                aria-label="Play preview video"
+              >
+                <div className="rounded-full bg-white/90 p-4 shadow-lg">
+                  <svg className="h-8 w-8 text-gray-800" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </button>
+            )}
+          </>
+        ) : (
+          <img
+            src={imageData?.src || creatorImage}
+            srcSet={imageData?.srcSet}
+            sizes={imageData?.sizes}
+            alt={`${creator.displayName || creator.username} profile`}
+            className="absolute inset-0 h-full w-full object-cover"
+            width={640}
+            height={aspectRatio === '1:1' ? 640 : aspectRatio === '4:5' ? 800 : 1136}
+            loading="lazy"
+            decoding="async"
+            onError={async (e) => {
+              const { generateAvatar } = await import('../utils/avatarGenerator');
+              e.target.src = generateAvatar(
+                creator.username || 'Creator',
+                creator.creator_type || creator.category,
+                400,
+                'circle'
+              );
+            }}
+          />
+        )}
+
+        {/* Gradient Overlay for Text Readability */}
+        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+
+        {/* Follow Button - Top Right */}
+        <button
+          type="button"
+          onClick={handleFollowClick}
+          disabled={isLoadingFollow}
+          aria-pressed={isFollowing}
+          aria-label={isFollowing ? 'Unfollow creator' : 'Follow creator'}
+          className="absolute right-3 top-3 p-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                   hover:scale-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 z-20"
+        >
+          {isFollowing ? (
+            <UserPlusIconSolid className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+          ) : (
+            <UserPlusIcon className="w-6 h-6 text-white drop-shadow-md" />
+          )}
+        </button>
+
+        {/* Status Badges with Precedence */}
+        {isLive ? (
+          <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-red-600/95 px-2.5 py-1 text-[11px] font-bold text-white shadow-md backdrop-blur-sm">
+            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+            LIVE
+          </div>
+        ) : isOnline ? (
+          <span className="absolute left-3 top-3 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 shadow-md" />
+        ) : null}
+
+        {/* Glass Morphism Bottom Card - Better Hierarchy */}
+        <div className="absolute inset-x-3 bottom-3 rounded-xl border border-white/10
+                      bg-black/40 backdrop-blur-xl p-3 z-20">
+          {/* Two-line name lockup */}
+          <div className="mb-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-white font-semibold text-sm truncate">
+                {creator.displayName || creator.username}
+              </span>
+              {creator.is_verified && (
+                <CheckBadgeIconSolid className="h-4 w-4 text-sky-400 flex-shrink-0" />
+              )}
+            </div>
+            <div className="text-xs text-white/70 truncate">@{creator.username}</div>
+          </div>
+
+          {/* Followers count only */}
+          <div className="mb-2.5 text-[11px] text-white/90 flex items-center gap-1">
+            <UserGroupIcon className="h-3.5 w-3.5" />
+            <span>{formatCompactNumber(creator.followerCount || creator.followers || 0)}</span>
+          </div>
+
+          {/* Icon-Only Action Buttons with Accessibility */}
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleServiceClickEnhanced('video');
+              }}
+              disabled={disabled}
+              aria-label="Start video call"
+              title="Video Call"
+              className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
+                       p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            >
+              <VideoCameraIcon className="w-5 h-5 text-white mx-auto" />
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleServiceClickEnhanced('message');
+              }}
+              disabled={disabled}
+              aria-label="Send message"
+              title="Message"
+              className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
+                       p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            >
+              <ChatBubbleLeftRightIcon className="w-5 h-5 text-white mx-auto" />
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowTipModal(true);
+              }}
+              disabled={disabled}
+              aria-label="Send gift"
+              title="Send Gift"
+              className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
+                       p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            >
+              <GiftIcon className="w-5 h-5 text-white mx-auto" />
+            </button>
+          </div>
+        </div>
+
+        {/* Hover Details Overlay */}
+        {isHovered && creator.bio && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '12px',
+            right: '12px',
+            transform: 'translateY(-50%)',
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '12px',
+            padding: '16px',
+            color: 'white',
+            zIndex: 10,
+            pointerEvents: 'none',
             animation: 'fadeIn 0.3s ease'
           }}>
             <p style={{ fontSize: '13px', lineHeight: '1.5', marginBottom: '8px' }}>
@@ -531,6 +745,7 @@ const CreatorCard = ({
           </div>
         )}
       </div>
+      )}
 
 
       {/* Enhanced Modals */}
