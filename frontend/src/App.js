@@ -1045,8 +1045,25 @@ const App = () => {
   console.log('👤 Showing authenticated layout for user:', user?.email, 'isCreator:', isCreator);
   console.log('📍 Route guard - isRoutedPage:', isRoutedPage, 'pathname:', location.pathname);
 
-  // Don't return early for mobile - let the main layout handle it with MobileNavigationEnhanced
-  // This ensures the navigation and content both render properly
+  // Mobile users get unified NextLevelMobileApp interface
+  if (isMobile && user && !isRoutedPage) {
+    console.log('📱 Rendering NextLevelMobileApp for authenticated mobile user');
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={
+          <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent" />
+          </div>
+        }>
+          <NextLevelMobileApp
+            user={user}
+            logout={handleSignOut}
+            isCreator={isCreator}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   // Desktop layout continues below
   return (
