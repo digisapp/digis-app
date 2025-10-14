@@ -94,10 +94,10 @@ import NotificationCenter from './NotificationCenter';
 // Import ItemModal for Add Product functionality
 import { ItemModal } from './CreatorShopManagement';
 
-const HybridCreatorDashboard = memo(({ 
-  user, 
+const HybridCreatorDashboard = memo(({
+  user,
   onNavigate,
-  onShowGoLive, 
+  onShowGoLive,
   onShowAvailability,
   onShowEarnings,
   onShowSettings,
@@ -107,6 +107,7 @@ const HybridCreatorDashboard = memo(({
   onContentUpdate: onExternalContentUpdate
 }) => {
   const navigate = useNavigate();
+  const [isNavigating, setIsNavigating] = useState(false);
   // Initialize profile data from user prop (from Zustand store) without fallback defaults
   // This prevents showing "Creator Name" / "creator" before API data loads
   const [profileData, setProfileData] = useState({
@@ -819,6 +820,21 @@ const HybridCreatorDashboard = memo(({
     setShowTicketedShowModal(true);
   };
   
+  // Debounced navigation helper to prevent double-clicks
+  const handleNavigateToPage = useCallback((path) => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+
+    if (onNavigate) {
+      onNavigate(path);
+    } else {
+      navigate(path);
+    }
+
+    // Reset after 800ms
+    setTimeout(() => setIsNavigating(false), 800);
+  }, [isNavigating, onNavigate, navigate]);
+
   const formatTime = (date) => {
     if (!date) return '';
     const d = new Date(date);
@@ -859,7 +875,7 @@ const HybridCreatorDashboard = memo(({
   return (
     <div className="space-y-6">
       {/* Top Section: 3-Column Grid - Calls, Schedule, Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-16 pt-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 content-below-nav" data-test="creator-dashboard-top-grid">
 
         {/* Enhanced Calls Box */}
         <Card className="p-6 bg-white dark:bg-gray-800 shadow-xl">
@@ -874,19 +890,20 @@ const HybridCreatorDashboard = memo(({
                   <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Upcoming</p>
                 </div>
               </div>
-              <Button
-                onClick={() => {
-                  if (onNavigate) {
-                    onNavigate('call-requests');
-                  } else {
-                    navigate('/call-requests');
-                  }
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNavigateToPage('/call-requests');
                 }}
-                className="text-xs px-2 py-1"
-                variant="secondary"
+                disabled={isNavigating}
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Manage call requests"
+                aria-disabled={isNavigating}
+                data-test="manage-calls"
               >
                 Manage
-              </Button>
+              </button>
             </div>
 
             {(() => {
@@ -1054,19 +1071,20 @@ const HybridCreatorDashboard = memo(({
                   <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Upcoming Events</p>
                 </div>
               </div>
-              <Button
-                onClick={() => {
-                  if (onNavigate) {
-                    onNavigate('schedule');
-                  } else {
-                    navigate('/schedule');
-                  }
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNavigateToPage('/schedule');
                 }}
-                className="text-xs px-2 py-1"
-                variant="secondary"
+                disabled={isNavigating}
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Manage schedule"
+                aria-disabled={isNavigating}
+                data-test="manage-schedule"
               >
                 Manage
-              </Button>
+              </button>
             </div>
 
             {upcomingSessions.length > 0 ? (

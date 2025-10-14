@@ -156,6 +156,19 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     }
   })();
 
+  // Reject empty or whitespace-only usernames
+  if (!decoded || !decoded.trim()) {
+    console.warn('Empty or whitespace username detected, redirecting to explore');
+    return <Navigate to="/explore" replace />;
+  }
+
+  // Reject punctuation-only usernames (e.g., ".", "_", "---")
+  const isPunctuationOnly = /^[\W_]+$/.test(decoded.trim());
+  if (isPunctuationOnly) {
+    console.warn('Punctuation-only username detected, redirecting to explore');
+    return <Navigate to="/explore" replace />;
+  }
+
   // Normalize to lowercase for case-insensitive routing
   const safeUsername = decoded.toLowerCase();
   const username = decoded; // Use decoded for API calls

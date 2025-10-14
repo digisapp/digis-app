@@ -38,6 +38,7 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
   const [showOffersModal, setShowOffersModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showTokenPurchase, setShowTokenPurchase] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const controls = useAnimation();
   const navRef = useRef(null);
   const menuRef = useRef(null);
@@ -534,33 +535,33 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
               <div className="my-2 border-t border-gray-200 dark:border-gray-800" />
 
               <button
+                data-test="mobile-logout-btn"
+                disabled={isLoggingOut}
                 onClick={async () => {
-                  console.log('Sign Out clicked');
+                  if (isLoggingOut) return;
+                  console.log('🔓 MobileNav: Sign Out clicked');
                   setShowProfileMenu(false);
+                  setIsLoggingOut(true);
 
                   try {
                     if (onLogout && typeof onLogout === 'function') {
-                      console.log('Calling onLogout function');
+                      console.log('🔓 MobileNav: Calling onLogout function');
                       await onLogout();
                     } else {
-                      console.log('onLogout not available, using fallback');
-                      // Fallback: clear local storage and reload
-                      localStorage.clear();
-                      sessionStorage.clear();
-                      window.location.href = '/';
+                      console.error('⚠️ MobileNav: onLogout not provided');
+                      toast.error('Unable to sign out. Please try again.');
                     }
                   } catch (error) {
-                    console.error('Error during logout:', error);
-                    // Force logout on error
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    window.location.href = '/';
+                    console.error('❌ MobileNav: Error during logout:', error);
+                    toast.error('Error signing out. Please try again.');
+                  } finally {
+                    setTimeout(() => setIsLoggingOut(false), 2000);
                   }
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400 ${isLoggingOut ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                <span className="font-medium">Sign Out</span>
+                <span className="font-medium">{isLoggingOut ? 'Signing out…' : 'Sign Out'}</span>
               </button>
             </div>
           </motion.div>

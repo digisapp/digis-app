@@ -70,6 +70,7 @@ const ProfileDropdown = ({
     maxQuantity: ''
   });
   const [stats, setStats] = useState({ followersCount: 0, subscribersCount: 0 });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const dropdownRef = useRef(null);
 
   // Merge user and profile data for consistent access
@@ -540,14 +541,22 @@ const ProfileDropdown = ({
                       
                       {/* Sign Out */}
                       <button
-                        onClick={() => {
+                        data-test="logout-btn"
+                        disabled={isLoggingOut}
+                        onClick={async () => {
+                          if (isLoggingOut) return;
+                          setIsLoggingOut(true);
                           setIsOpen(false);
-                          onSignOut();
+                          try {
+                            await onSignOut();
+                          } finally {
+                            setIsLoggingOut(false);
+                          }
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 text-red-600 dark:text-red-400"
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 text-red-600 dark:text-red-400 ${isLoggingOut ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                        <span className="font-medium">Sign Out</span>
+                        <span className="font-medium">{isLoggingOut ? 'Signing out…' : 'Sign Out'}</span>
                       </button>
                     </div>
                   </div>
@@ -714,19 +723,28 @@ const ProfileDropdown = ({
                 {!isActuallyAdmin && (
                 <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <button
-                    onClick={() => {
+                    data-test="logout-btn"
+                    disabled={isLoggingOut}
+                    onClick={async () => {
+                      if (isLoggingOut) return;
+                      setIsLoggingOut(true);
                       setIsOpen(false);
-                      onSignOut();
+                      try {
+                        await onSignOut();
+                      } finally {
+                        setIsLoggingOut(false);
+                      }
                     }}
-                    className="
+                    className={`
                       w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg
                       bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30
                       text-red-600 dark:text-red-400 font-medium
                       transition-all duration-200 group
-                    "
+                      ${isLoggingOut ? 'opacity-60 cursor-not-allowed' : ''}
+                    `}
                   >
                     <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                    <span>Sign Out</span>
+                    <span>{isLoggingOut ? 'Signing out…' : 'Sign Out'}</span>
                   </button>
                 </div>
                 )}

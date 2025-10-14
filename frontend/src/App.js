@@ -136,10 +136,21 @@ import CallNavigator from './components/CallNavigator';
 // Import preloading utilities
 import { preloadOnIdle } from './lib/preload';
 
+// Import auth constants
+import { LOGOUT_DEST } from './constants/auth';
+
+// Import Sentry utilities
+import { logLogoutOnce, resetLogoutBreadcrumb } from './utils/sentry';
+
 // Constants
 const FETCH_THROTTLE_MS = 5000; // 5 seconds between fetches
 
 const App = () => {
+  // Reset logout breadcrumb on app mount (handles browser restarts)
+  useEffect(() => {
+    resetLogoutBreadcrumb();
+  }, []);
+
   // Mount adapter hook to sync currentView ↔ URL (Phase 2: Gradual Route Migration)
   useViewRouter();
 
@@ -588,19 +599,37 @@ const App = () => {
   // Handle sign out
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
-      setUser(null);
-      logout(); // This will clear isCreator and isAdmin through Zustand
-      clearProfileCache(); // Clear the cached profile
-      // Stay on the same site after logout
-      startTransition(() => {
-        navigate('/');
+      console.log('🔓 handleSignOut: Starting logout process...');
+
+      // Log to Sentry for observability (dedupe guard prevents double-logging on rage-clicks)
+      logLogoutOnce({
+        user: user?.email,
+        timestamp: new Date().toISOString()
       });
-      // Removed success toast for production
-      // toast.success('Signed out successfully');
+
+      // Use AuthContext signOut for clean logout
+      const success = await authSignOut();
+
+      if (success) {
+        // Clear Zustand store
+        logout();
+
+        // Navigate to public destination (no flickering, prevents back-button loops)
+        console.log('✅ handleSignOut: Navigating to', LOGOUT_DEST);
+        navigate(LOGOUT_DEST, { replace: true });
+
+        toast.success('Successfully signed out');
+      } else {
+        throw new Error('Sign out failed');
+      }
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('❌ Sign out error:', error);
       toast.error('Failed to sign out');
+
+      // Force logout on error - use navigate instead of window.location
+      clearProfileCache();
+      logout();
+      navigate(LOGOUT_DEST, { replace: true });
     }
   };
 
@@ -647,6 +676,9 @@ const App = () => {
                   creator_type: user.creator_type,
                   email: user.email
                 });
+
+                // Reset logout breadcrumb flag on login (allows logging logout again later)
+                resetLogoutBreadcrumb();
 
                 // CRITICAL: Set profile FIRST, before setting user, to prevent role flip-flopping
                 if (user.profile || user.is_creator !== undefined || user.role) {
@@ -862,6 +894,9 @@ const App = () => {
             onLogin={async (user) => {
               console.log('📱 MobileLandingPage onLogin called with user:', user);
 
+              // Reset logout breadcrumb flag on login (allows logging logout again later)
+              resetLogoutBreadcrumb();
+
               // CRITICAL: Set profile FIRST, before setting user, to prevent role flip-flopping
               if (user.profile || user.is_creator !== undefined || user.role) {
                 const profileData = user.profile || user;
@@ -1044,7 +1079,7 @@ const App = () => {
         {/* Wrap ONLY legacy views in main tag for consistent styling */}
         {/* Only render when NOT on a routed page to prevent double-rendering */}
         {!isRoutedPage && (
-        <main className={isMobile ? '' : 'pt-20 p-6'}>
+        <main className={isMobile ? '' : 'pt-28 p-6'}>
           {currentView === 'profile' ? (
           isMobile ? (
             <>

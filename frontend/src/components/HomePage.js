@@ -23,6 +23,23 @@ const HomePage = ({ onSignIn, onSignUp }) => {
   const [logoFailed, setLogoFailed] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
+  // Reset page title and meta tags on mount
+  useEffect(() => {
+    document.title = 'Digis - Connect with Creators';
+
+    // Reset OG tags to default
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.content = 'Digis - Connect with Creators';
+
+    const ogDescription = document.querySelector('meta[property="og:description"]');
+    if (ogDescription) ogDescription.content = 'Connect with your favorite creators through video calls, live streams, and exclusive content.';
+
+    const ogImage = document.querySelector('meta[property="og:image"]');
+    if (ogImage) ogImage.content = 'https://digis.cc/og-image.png';
+
+    console.log('📄 HomePage: Reset page title and meta tags');
+  }, []);
+
   useEffect(() => {
     // Viewport-aware video autoplay with IntersectionObserver
     const videoRefs = [videoRef1.current, videoRef2.current, videoRef3.current].filter(Boolean);

@@ -132,7 +132,7 @@ const AppRoutes = () => {
 
         <Route path="/wallet" element={
           <ProtectedRoute>
-            {isMobile ? <MobileWallet user={currentUser} tokenBalance={tokenBalance} /> : <WalletPage user={currentUser} tokenBalance={tokenBalance} />}
+            {isMobile ? <MobileWallet user={currentUser} tokenBalance={tokenBalance} /> : <WalletPage user={currentUser} tokenBalance={tokenBalance} isCreator={isCreator} isAdmin={isAdmin} />}
           </ProtectedRoute>
         } />
 

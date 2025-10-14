@@ -196,6 +196,42 @@ export const setSentryUser = (user) => {
 };
 
 /**
+ * Dedupe guard for logout breadcrumbs
+ * Prevents double-logging if a user rage-clicks the logout button
+ */
+let logoutBreadcrumbLogged = false;
+
+/**
+ * Log logout breadcrumb (once per session)
+ * Use this specifically for logout events to avoid duplicates
+ */
+export const logLogoutOnce = (data = {}) => {
+  if (logoutBreadcrumbLogged) {
+    console.log('🔄 Logout breadcrumb already logged, skipping duplicate');
+    return;
+  }
+
+  logoutBreadcrumbLogged = true;
+  Sentry.addBreadcrumb({
+    message: 'logout',
+    category: 'auth',
+    level: 'info',
+    data: {
+      ...data,
+      timestamp: new Date().toISOString()
+    },
+    timestamp: Date.now() / 1000,
+  });
+};
+
+/**
+ * Reset logout breadcrumb flag (called on login)
+ */
+export const resetLogoutBreadcrumb = () => {
+  logoutBreadcrumbLogged = false;
+};
+
+/**
  * Add custom breadcrumb for tracking user actions
  */
 export const addSentryBreadcrumb = (message, category = 'user', level = 'info', data = {}) => {

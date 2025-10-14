@@ -399,17 +399,17 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
               <motion.button
                 onClick={() => {
                   if (role === 'creator') {
-                    // Creators go to earnings page
-                    onNavigate('/earnings');
+                    // Creators go to wallet page
+                    onNavigate('/wallet');
                   } else if (role === 'fan') {
-                    // Fans get the wallet modal
-                    setShowWalletModal(true);
+                    // Fans also go to wallet page
+                    onNavigate('/wallet');
                   } else {
                     // Default to wallet page
                     onNavigate('/wallet');
                   }
                 }}
-                onMouseEnter={() => handleRoutePreload(role === 'creator' ? '/earnings' : '/wallet')}
+                onMouseEnter={() => handleRoutePreload('/wallet')}
                 className="relative group"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

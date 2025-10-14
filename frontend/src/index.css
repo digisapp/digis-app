@@ -86,6 +86,18 @@
 
 /* Safe area utilities for mobile devices */
 @layer utilities {
+  /* Content spacing below fixed navigation */
+  @media (min-width: 768px) {
+    .content-below-nav {
+      padding-top: calc(var(--nav-height) + var(--nav-gap));
+    }
+  }
+
+  /* Scroll margin for anchor links with sticky nav */
+  [id] {
+    scroll-margin-top: calc(var(--nav-height) + 12px);
+  }
+
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
@@ -352,6 +364,10 @@
 
 @layer base {
   :root {
+    /* Navigation Layout Variables */
+    --nav-height: 80px;  /* Desktop navigation height (5rem = 80px from DesktopNav2025) */
+    --nav-gap: 32px;     /* Visual breathing room below nav (increased for better spacing) */
+
     /* Miami Beach Luxury Color Palette */
     --miami-cyan: #00d4ff;
     --miami-magenta: #ff006e;

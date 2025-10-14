@@ -229,9 +229,9 @@ const CreatorCard = ({
   const { isLive, isOnline } = getStatusBadges(creator);
   const categoryGradient = getCategoryGradient(creator.category || creator.creator_type);
 
-  // Profile path for navigation - fallback gracefully if no username
+  // Profile path for navigation - fallback to ID if no username
   // Use encodeURIComponent for safety with special chars (dots, non-ASCII, etc.)
-  const handle = (creator.username || creator.slug || '').toLowerCase();
+  const handle = (creator.username || creator.slug || creator.id || '').toString().toLowerCase();
   const profilePath = handle ? `/creator/${encodeURIComponent(handle)}` : null;
 
   // Prefetch profile on hover for snappier navigation
@@ -351,13 +351,10 @@ const CreatorCard = ({
           target: e.target.tagName
         });
 
-        if (onCardClick && !isButton && !isInteractive) {
-          console.log('✅ Triggering onCardClick for creator:', creator.username);
-          e.preventDefault();
+        // Don't prevent default - let the Link handle navigation
+        // Only stop propagation for buttons
+        if (isButton) {
           e.stopPropagation();
-          onCardClick();
-        } else if (!onCardClick) {
-          console.warn('❌ No onCardClick handler provided for creator:', creator.username);
         }
       }}
       className={`
@@ -376,7 +373,10 @@ const CreatorCard = ({
           onFocus={prefetchProfile}
           onClick={(e) => {
             // Guard against double navigation on rapid clicks
-            if (navigatingRef.current) return;
+            if (navigatingRef.current) {
+              e.preventDefault();
+              return;
+            }
             navigatingRef.current = true;
             setTimeout(() => { navigatingRef.current = false; }, 1000);
 
@@ -387,10 +387,8 @@ const CreatorCard = ({
               category: 'navigation'
             });
 
-            if (onCardClick) {
-              onCardClick();
-            }
             console.log('🔗 Navigating to profile:', profilePath);
+            // Let React Router Link handle the navigation
           }}
           aria-label={`View ${creator.displayName || creator.username}'s profile`}
           title={`View @${creator.username}'s profile`}

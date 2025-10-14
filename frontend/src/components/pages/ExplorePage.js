@@ -493,7 +493,7 @@ const ExplorePage = ({
   return (
     <div className={`min-h-screen ${isMobile ? 'bg-gradient-to-br from-purple-50 via-white to-pink-50' : 'bg-gray-50 dark:bg-gray-900'}`}>
       {/* Filters Bar */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <div className="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 content-below-nav">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-5">
 
           {/* Search and Filters Row */}
