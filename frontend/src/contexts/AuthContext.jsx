@@ -5,6 +5,9 @@ import { syncUserRole, clearRoleCache } from '../utils/roleVerification';
 import { loadProfileCache, saveProfileCache, clearProfileCache } from '../utils/profileCache';
 import useAuthStore from '../stores/useAuthStore';
 import { authLogger } from '../utils/logger';
+import { isRole } from '../utils/routeHelpers';
+import { addBreadcrumb, setTag } from '../lib/sentry.client';
+import toast from 'react-hot-toast';
 
 /**
  * AuthContext - Single Source of Truth for Authentication
@@ -31,6 +34,10 @@ export const useAuth = () => {
 
 const FETCH_THROTTLE_MS = 5000; // 5 seconds between fetches
 
+// Circuit breaker for sync-user failures
+const CIRCUIT_BREAKER_DELAYS = [5000, 15000, 60000]; // 5s → 15s → 60s backoff
+const CIRCUIT_BREAKER_STORAGE_KEY = 'auth_circuit_breaker_state';
+
 export const AuthProvider = ({ children }) => {
   // State
   const [user, setUser] = useState(null);
@@ -42,6 +49,38 @@ export const AuthProvider = ({ children }) => {
   // Refs for throttling
   const fetchInProgress = useRef({ profile: false, balance: false });
   const lastFetch = useRef({ profile: 0, balance: 0 });
+
+  // Circuit breaker state - persisted in sessionStorage to survive reloads during outages
+  // In-memory fallback for Safari private mode or storage-denied scenarios
+  const inMemoryCircuitBreaker = useRef({ lastAttempt: 0, backoffIndex: 0, failureCount: 0 });
+  const storageAvailable = useRef(true);
+
+  // Load initial state from sessionStorage with fallback
+  const loadCircuitBreakerState = () => {
+    try {
+      const stored = sessionStorage.getItem(CIRCUIT_BREAKER_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          lastAttempt: parsed.lastAttempt || 0,
+          backoffIndex: parsed.backoffIndex || 0,
+          failureCount: parsed.failureCount || 0
+        };
+      }
+    } catch (e) {
+      // Storage denied (Safari private mode, quota exceeded, etc.)
+      storageAvailable.current = false;
+      return inMemoryCircuitBreaker.current; // Use in-memory fallback
+    }
+    return { lastAttempt: 0, backoffIndex: 0, failureCount: 0 };
+  };
+
+  const initialState = loadCircuitBreakerState();
+  const syncUserFailureCount = useRef(initialState.failureCount);
+  const lastSyncUserAttempt = useRef(initialState.lastAttempt);
+  const syncUserBackoffIndex = useRef(initialState.backoffIndex);
+  const authSyncFailedLogged = useRef(false); // Only log once per session
+  const wasInBackoff = useRef(false); // Track if we were in backoff mode for recovery log
 
   // Computed values - use canonical role from /api/me (single source of truth)
   const isCreator = profile?.is_creator === true;  // Backend computes this canonically
@@ -64,6 +103,149 @@ export const AuthProvider = ({ children }) => {
     if (profile && user) return { ...user, ...profile };
     return profile || user || null;
   }, [user, profile]);
+
+  /**
+   * Circuit breaker: Check if we should attempt sync-user based on failure history
+   */
+  const shouldAttemptSyncUser = useCallback(() => {
+    const now = Date.now();
+    const backoffDelay = CIRCUIT_BREAKER_DELAYS[Math.min(syncUserBackoffIndex.current, CIRCUIT_BREAKER_DELAYS.length - 1)];
+    const timeSinceLastAttempt = now - lastSyncUserAttempt.current;
+
+    if (timeSinceLastAttempt < backoffDelay) {
+      console.log(`⏸️ Circuit breaker: Skipping sync-user (backoff: ${backoffDelay}ms, elapsed: ${timeSinceLastAttempt}ms)`);
+      return false;
+    }
+
+    return true;
+  }, []);
+
+  /**
+   * Circuit breaker: Record sync-user success (resets backoff)
+   */
+  const recordSyncUserSuccess = useCallback(() => {
+    // Log recovery if we were in backoff
+    if (wasInBackoff.current) {
+      wasInBackoff.current = false;
+      const debugEnabled = import.meta.env.VITE_DEBUG_UI === 'true' || process.env.NODE_ENV !== 'production';
+      const eventData = {
+        event: 'auth_sync_recovered',
+        previousFailureCount: syncUserFailureCount.current,
+        timestamp: new Date().toISOString()
+      };
+
+      if (debugEnabled) {
+        console.log('✅ Auth sync recovered:', eventData);
+      } else {
+        // Production: Send recovery breadcrumb to close the loop
+        addBreadcrumb('auth_sync_recovered', {
+          category: 'auth',
+          level: 'info',
+          ...eventData
+        });
+      }
+
+      // Emit CustomEvent for dev tools / UI badges
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:circuit', {
+          detail: { state: 'ok', previousFailures: syncUserFailureCount.current }
+        }));
+      }
+    }
+
+    syncUserFailureCount.current = 0;
+    syncUserBackoffIndex.current = 0;
+    authSyncFailedLogged.current = false;
+
+    // Clear sessionStorage on success (with fallback)
+    try {
+      if (storageAvailable.current) {
+        sessionStorage.removeItem(CIRCUIT_BREAKER_STORAGE_KEY);
+      } else {
+        // Use in-memory fallback
+        inMemoryCircuitBreaker.current = { lastAttempt: 0, backoffIndex: 0, failureCount: 0 };
+      }
+    } catch (e) {
+      // Storage still denied - use in-memory
+      storageAvailable.current = false;
+      inMemoryCircuitBreaker.current = { lastAttempt: 0, backoffIndex: 0, failureCount: 0 };
+    }
+  }, []);
+
+  /**
+   * Circuit breaker: Record sync-user failure (increments backoff)
+   */
+  const recordSyncUserFailure = useCallback(() => {
+    wasInBackoff.current = true; // Track that we entered backoff mode
+    syncUserFailureCount.current += 1;
+    lastSyncUserAttempt.current = Date.now();
+
+    // Increment backoff index (capped at max delay)
+    if (syncUserBackoffIndex.current < CIRCUIT_BREAKER_DELAYS.length - 1) {
+      syncUserBackoffIndex.current += 1;
+    }
+
+    // Persist circuit breaker state to sessionStorage (survives full reload during outages)
+    // With in-memory fallback for Safari private mode
+    try {
+      if (storageAvailable.current) {
+        sessionStorage.setItem(CIRCUIT_BREAKER_STORAGE_KEY, JSON.stringify({
+          lastAttempt: lastSyncUserAttempt.current,
+          backoffIndex: syncUserBackoffIndex.current,
+          failureCount: syncUserFailureCount.current
+        }));
+      } else {
+        // Use in-memory fallback
+        inMemoryCircuitBreaker.current = {
+          lastAttempt: lastSyncUserAttempt.current,
+          backoffIndex: syncUserBackoffIndex.current,
+          failureCount: syncUserFailureCount.current
+        };
+      }
+    } catch (e) {
+      // Storage denied - switch to in-memory fallback
+      storageAvailable.current = false;
+      inMemoryCircuitBreaker.current = {
+        lastAttempt: lastSyncUserAttempt.current,
+        backoffIndex: syncUserBackoffIndex.current,
+        failureCount: syncUserFailureCount.current
+      };
+    }
+
+    // Log telemetry once per session
+    if (!authSyncFailedLogged.current) {
+      authSyncFailedLogged.current = true;
+      const debugEnabled = import.meta.env.VITE_DEBUG_UI === 'true' || process.env.NODE_ENV !== 'production';
+      const eventData = {
+        event: 'auth_sync_failed',
+        failureCount: syncUserFailureCount.current,
+        backoffDelay: CIRCUIT_BREAKER_DELAYS[syncUserBackoffIndex.current],
+        timestamp: new Date().toISOString()
+      };
+
+      if (debugEnabled) {
+        console.warn('🔴 Auth sync failed (circuit breaker active):', eventData);
+      } else {
+        // Production: Send to Sentry as breadcrumb
+        addBreadcrumb('auth_sync_failed', {
+          category: 'auth',
+          level: 'warning',
+          ...eventData
+        });
+      }
+
+      // Emit CustomEvent for dev tools / UI badges
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:circuit', {
+          detail: {
+            state: 'backoff',
+            failureCount: syncUserFailureCount.current,
+            backoffDelay: CIRCUIT_BREAKER_DELAYS[syncUserBackoffIndex.current]
+          }
+        }));
+      }
+    }
+  }, []);
 
   /**
    * Fetch canonical user role from /api/me (SINGLE SOURCE OF TRUTH)
@@ -319,6 +501,13 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (session?.user && mounted) {
+          // Circuit breaker: Skip if in backoff period
+          if (!shouldAttemptSyncUser()) {
+            console.log('⏸️ Using cached profile (circuit breaker active)');
+            setAuthLoading(false);
+            return;
+          }
+
           // Sync user with backend
           try {
             const response = await fetch(
@@ -347,6 +536,9 @@ export const AuthProvider = ({ children }) => {
                 is_admin: userData.is_admin
               });
 
+              // Circuit breaker: Reset on success
+              recordSyncUserSuccess();
+
               setUser(session.user);
               setProfile(userData);
               saveProfileCache(userData, session);
@@ -362,6 +554,8 @@ export const AuthProvider = ({ children }) => {
               // Fetch token balance
               setTimeout(() => fetchTokenBalance(session.user), 200);
             } else {
+              // Circuit breaker: Record failure
+              recordSyncUserFailure();
               // Log detailed error response
               const errorData = await response.json().catch(() => ({}));
               console.error('❌ sync-user failed (HTTP error):', {
@@ -396,6 +590,9 @@ export const AuthProvider = ({ children }) => {
               setUser(session.user);
             }
           } catch (syncError) {
+            // Circuit breaker: Record failure
+            recordSyncUserFailure();
+
             console.error('❌ Backend sync network error:', syncError);
 
             // Use cached profile as fallback
@@ -495,6 +692,129 @@ export const AuthProvider = ({ children }) => {
       setAuthLoading(false);
     }
   }, [user, profile]);
+
+  // Invariant: Warn if role resolution takes >3s (dev only or DEBUG_UI)
+  useEffect(() => {
+    const debugEnabled = import.meta.env.VITE_DEBUG_UI === 'true' || process.env.NODE_ENV !== 'production';
+    if (!currentUser || roleResolved) return;
+
+    const timeoutId = setTimeout(() => {
+      if (currentUser && !roleResolved) {
+        const eventData = {
+          event: 'role_resolution_slow',
+          uid: currentUser.id,
+          elapsed: '3000ms',
+          hasProfile: !!profile,
+          profileKeys: profile ? Object.keys(profile) : []
+        };
+
+        if (debugEnabled) {
+          console.warn('⚠️ Slow role resolution detected:', eventData);
+        } else {
+          // Production: Send to Sentry as breadcrumb
+          addBreadcrumb('role_resolution_slow', {
+            category: 'auth',
+            level: 'warning',
+            ...eventData
+          });
+        }
+      }
+    }, 3000);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentUser, roleResolved, profile]);
+
+  // Invariant: Warn if role is invalid (dev only or DEBUG_UI)
+  useEffect(() => {
+    const debugEnabled = import.meta.env.VITE_DEBUG_UI === 'true' || process.env.NODE_ENV !== 'production';
+
+    if (roleResolved && role && !isRole(role)) {
+      const eventData = {
+        event: 'invalid_role',
+        role,
+        profile_role: profile?.role,
+        is_creator: profile?.is_creator,
+        is_admin: profile?.is_admin
+      };
+
+      if (debugEnabled) {
+        console.warn('⚠️ Invalid role detected after resolution:', eventData);
+      } else {
+        // Production: Send to Sentry as breadcrumb
+        addBreadcrumb('invalid_role', {
+          category: 'auth',
+          level: 'error',
+          ...eventData
+        });
+      }
+    }
+  }, [roleResolved, role, profile]);
+
+  // Observability: Log auth boot event once (dev only or DEBUG_UI)
+  const authBootLogged = useRef(false);
+  useEffect(() => {
+    const debugEnabled = import.meta.env.VITE_DEBUG_UI === 'true' || process.env.NODE_ENV !== 'production';
+    if (!(!authLoading && currentUser && roleResolved && !authBootLogged.current)) return;
+
+    authBootLogged.current = true;
+
+    // SSR-safe: Coalesce navigator.userAgent for edge/SSR environments
+    const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone/i.test(navigator?.userAgent || '');
+    const eventData = {
+      event: 'auth_boot',
+      role,
+      roleResolved: true,
+      uid: currentUser.id,
+      device: isMobile ? 'mobile' : 'desktop',
+      hasTokenBalance: tokenBalance !== undefined,
+      timestamp: new Date().toISOString()
+    };
+
+    if (debugEnabled) {
+      console.log('🚀 Auth boot complete:', eventData);
+    } else {
+      // Production: Send to Sentry as breadcrumb
+      addBreadcrumb('auth_boot', {
+        category: 'auth',
+        level: 'info',
+        ...eventData
+      });
+
+      // Set Sentry tag for issue grouping by role
+      setTag('role', role || 'guest');
+    }
+  }, [authLoading, currentUser, roleResolved, role, tokenBalance]);
+
+  // Listen for circuit breaker events and show non-blocking toast (once per session)
+  const circuitBreakerToastShown = useRef(false);
+  useEffect(() => {
+    const handleCircuitEvent = (event) => {
+      const { state } = event.detail;
+
+      if (state === 'backoff' && !circuitBreakerToastShown.current) {
+        circuitBreakerToastShown.current = true;
+        // Non-blocking, auto-dismiss toast
+        toast('We\'re syncing your account. You can keep browsing.', {
+          duration: 4000,
+          icon: '🔄',
+          position: 'bottom-center',
+          style: {
+            background: '#6366f1',
+            color: '#fff',
+            fontSize: '14px'
+          }
+        });
+      } else if (state === 'ok') {
+        // Reset flag so toast can show again in future outages
+        circuitBreakerToastShown.current = false;
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('auth:circuit', handleCircuitEvent);
+      return () => window.removeEventListener('auth:circuit', handleCircuitEvent);
+    }
+  }, []);
 
   // Memoize value to prevent unnecessary re-renders
   const value = useMemo(() => ({

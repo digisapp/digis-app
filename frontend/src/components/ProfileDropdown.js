@@ -553,10 +553,10 @@ const ProfileDropdown = ({
                   </div>
                 ) : (
                   /* Normal navigation for non-admin users */
-                  <div className={isActuallyCreator ? "grid grid-cols-2 gap-2" : "space-y-3"}>
+                  <div className={isActuallyCreator ? "grid grid-cols-2 gap-2" : "space-y-3"} data-test={isActuallyCreator ? undefined : "fan-tools"}>
                   {/* Left Column - Creator Tools (only shown for creators) */}
                   {isActuallyCreator && (
-                  <div className="space-y-3 min-w-0">
+                  <div className="space-y-3 min-w-0" data-test="creator-tools">
                     <div className="px-2 py-1">
                       <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creator Tools</h3>
                     </div>

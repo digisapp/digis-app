@@ -52,19 +52,19 @@ const MobileLandingPage = React.memo(({ onLogin }) => {
 
       if (isSignUp) {
         const { user } = await signUp(email, password);
-        
+
         // Create user profile
         const token = await getAuthToken();
         const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/create-profile`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             username: username || email.split('@')[0],
             displayName: username || email.split('@')[0],
-            bio: '', 
+            bio: '',
             profilePicture: null,
             accountType: 'user'
           })
@@ -74,21 +74,22 @@ const MobileLandingPage = React.memo(({ onLogin }) => {
           throw new Error('Failed to create profile');
         }
 
-        // Sync with backend
-        await syncUserData(user);
-        
+        // Sync with backend and get full user data with role
+        const userData = await syncUserData(user);
+
         setSuccess('Account created! Welcome to Digis!');
         setTimeout(() => {
-          onLogin?.(user);
+          // Pass the full userData to onLogin
+          onLogin?.(userData || user);
         }, 1500);
       } else {
         const { user } = await signIn(email, password);
-        
-        // Sync with backend
-        await syncUserData(user);
-        
-        // Immediately redirect after successful login
-        onLogin?.(user);
+
+        // Sync with backend and get full user data with role
+        const userData = await syncUserData(user);
+
+        // Pass the full userData (including is_creator, role, etc) to onLogin
+        onLogin?.(userData || user);
       }
     } catch (error) {
       let errorMessage = error.message;
@@ -125,9 +126,32 @@ const MobileLandingPage = React.memo(({ onLogin }) => {
 
       if (!response.ok) {
         console.error('Failed to sync user data');
+        return null;
       }
+
+      const data = await response.json();
+
+      // The user object needs fields at top level for role detection to work
+      const userData = data.user;
+
+      console.log('✅ User data synced with role:', {
+        username: userData?.username,
+        is_creator: userData?.is_creator,
+        role: userData?.role
+      });
+
+      // Return user with fields at top level AND nested in profile
+      return {
+        ...userData,
+        id: userData.id,
+        email: userData.email,
+        is_creator: userData.is_creator,
+        role: userData.role,
+        profile: userData  // Also nest it for compatibility
+      };
     } catch (error) {
       console.error('Error syncing user data:', error);
+      return null;
     }
   };
 

@@ -148,19 +148,108 @@ export function clearUser() {
 }
 
 /**
- * Add breadcrumb for debugging context
+ * Set a tag for grouping issues/events
+ * Only sends in production (not Vercel preview deployments)
  *
  * Usage:
- *   addBreadcrumb('User clicked submit button', { formId: 'login' });
+ *   setTag('role', 'creator');
  */
-export function addBreadcrumb(message, data) {
+export function setTag(key, value) {
   if (!import.meta.env.PROD) return;
 
-  if (window.Sentry) {
-    window.Sentry.addBreadcrumb({
-      message,
-      data,
-      level: 'info',
-    });
+  // Only send in production Vercel environment (not preview)
+  const vercelEnv = (import.meta.env.VERCEL_ENV || '').toLowerCase();
+  if (vercelEnv && vercelEnv !== 'production') return;
+
+  try {
+    if (typeof window !== 'undefined' && window.Sentry) {
+      window.Sentry.setTag(key, value);
+    }
+  } catch (error) {
+    // Silently fail
+    console.debug('[sentry] setTag failed:', error);
+  }
+}
+
+/**
+ * Rate limiting for breadcrumbs (prevent spam during edge loops)
+ */
+const breadcrumbCache = new Map();
+const BREADCRUMB_RATE_LIMIT_MS = 2000; // 2 seconds
+
+/**
+ * Scrub PII from breadcrumb data
+ */
+function scrubPII(data) {
+  if (!data) return data;
+
+  const scrubbed = { ...data };
+
+  // Remove emails
+  if (scrubbed.email) {
+    delete scrubbed.email;
+  }
+
+  // Keep uid but mask long UUIDs to first 8 chars for privacy
+  if (scrubbed.uid && typeof scrubbed.uid === 'string' && scrubbed.uid.length > 16) {
+    scrubbed.uid = scrubbed.uid.substring(0, 8) + '...';
+  }
+
+  return scrubbed;
+}
+
+/**
+ * Add breadcrumb for debugging context
+ *
+ * Features:
+ * - Always safe to call (no-op if Sentry not initialized)
+ * - Rate limited to prevent spam (2s window per event type)
+ * - Auto-scrubs PII (emails, long UUIDs)
+ * - Only sends in production (not Vercel preview deployments)
+ *
+ * Usage:
+ *   addBreadcrumb('user_action', { action: 'click', target: 'button' });
+ */
+export function addBreadcrumb(message, data = {}) {
+  // No-op in development (tree-shaking safe)
+  if (!import.meta.env.PROD) return;
+
+  // Only send in production Vercel environment (not preview)
+  const vercelEnv = (import.meta.env.VERCEL_ENV || '').toLowerCase();
+  if (vercelEnv && vercelEnv !== 'production') return;
+
+  try {
+    // Rate limiting: ignore duplicate events within 2s window
+    const cacheKey = `${message}_${JSON.stringify(data)}`;
+    const now = Date.now();
+    const lastSent = breadcrumbCache.get(cacheKey);
+
+    if (lastSent && now - lastSent < BREADCRUMB_RATE_LIMIT_MS) {
+      return; // Throttled
+    }
+
+    breadcrumbCache.set(cacheKey, now);
+
+    // Clean up old cache entries (keep last 50)
+    if (breadcrumbCache.size > 50) {
+      const firstKey = breadcrumbCache.keys().next().value;
+      breadcrumbCache.delete(firstKey);
+    }
+
+    // Scrub PII before sending
+    const scrubbedData = scrubPII(data);
+
+    // Send to Sentry if available
+    if (typeof window !== 'undefined' && window.Sentry) {
+      window.Sentry.addBreadcrumb({
+        message,
+        data: scrubbedData,
+        level: data.level || 'info',
+        category: data.category || 'app',
+      });
+    }
+  } catch (error) {
+    // Silently fail - don't break app if Sentry has issues
+    console.debug('[sentry] Breadcrumb failed:', error);
   }
 }

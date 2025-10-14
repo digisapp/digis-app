@@ -43,14 +43,10 @@ const DashboardRouter = ({
   // Debug logging
   console.log('🔀 DashboardRouter - isCreator:', isCreator, 'roleResolved:', roleResolved, 'user:', user?.email, 'isMobile:', isMobile);
 
-  // Check multiple sources for creator status to be absolutely sure
-  const isDefinitelyCreator = isCreator ||
-    user?.is_creator === true ||
-    user?.role === 'creator' ||
-    localStorage.getItem('isCreator') === 'true';
-
-  if (isDefinitelyCreator) {
-    console.log('✅ Confirmed creator status - showing creator dashboard');
+  // SINGLE SOURCE OF TRUTH: Use isCreator prop from AuthContext only
+  // No fallback to user.is_creator, user.role, or localStorage
+  if (isCreator) {
+    console.log('✅ Creator status confirmed from AuthContext - showing creator dashboard');
 
     // For mobile creators, show the MobileCreatorDashboard
     if (isMobile) {
@@ -124,10 +120,10 @@ const DashboardRouter = ({
 
   // Use React Router navigate for fans
   useEffect(() => {
-    if (!isDefinitelyCreator && roleResolved) {
+    if (!isCreator && roleResolved) {
       navigate('/explore', { replace: true });
     }
-  }, [isDefinitelyCreator, roleResolved, navigate]);
+  }, [isCreator, roleResolved, navigate]);
 
   // Show mobile fan dashboard while redirecting (only after role is resolved)
   if (isMobile) {

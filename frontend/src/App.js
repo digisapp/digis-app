@@ -125,6 +125,7 @@ import Modals from './components/modals/Modals';
 // Import gradual route migration utilities
 import AppRoutes from './routes/AppRoutes';
 import useViewRouter from './routes/useViewRouter';
+import { defaultPathFor } from './utils/routeHelpers';
 
 // Import analytics bridge
 import AuthAnalyticsBridge from './components/AuthAnalyticsBridge';
@@ -686,27 +687,23 @@ const App = () => {
                 // Close auth modal
                 setShowAuth(false);
 
-                // Navigate based on role (already set in store)
-                const finalState = useHybridStore.getState();
-                if (finalState.isAdmin) {
-                  console.log('🖥️ Desktop: Navigating to admin');
-                  startTransition(() => {
-                    navigate('/admin');
-                    setCurrentView('admin');
-                  });
-                } else if (finalState.isCreator) {
-                  console.log('🖥️ Desktop: Navigating to dashboard');
-                  startTransition(() => {
-                    navigate('/dashboard');
-                    setCurrentView('dashboard');
-                  });
-                } else {
-                  console.log('🖥️ Desktop: Navigating to explore');
-                  startTransition(() => {
-                    navigate('/explore');
-                    setCurrentView('explore');
-                  });
-                }
+                // Single source of truth: determine role from profileData
+                const userRole = profileData.role === 'admin' ? 'admin' :
+                                profileData.is_creator ? 'creator' : 'fan';
+                const targetPath = defaultPathFor(userRole);
+
+                console.log('🖥️ Desktop: Navigating based on canonical role:', {
+                  role: userRole,
+                  targetPath,
+                  profileData: { is_creator: profileData.is_creator, role: profileData.role }
+                });
+
+                startTransition(() => {
+                  navigate(targetPath);
+                  // Also update legacy currentView for compatibility
+                  const viewMap = { '/admin': 'admin', '/dashboard': 'dashboard', '/explore': 'explore' };
+                  setCurrentView(viewMap[targetPath] || 'explore');
+                });
               }}
               onModeSwitch={(mode) => setAuthMode(mode)}
               onBack={() => {
@@ -901,18 +898,18 @@ const App = () => {
               // Wait for state to propagate (next tick)
               await new Promise(resolve => setTimeout(resolve, 100));
 
-              // Navigate based on role (already set in store) - single navigation only
-              const finalState = useHybridStore.getState();
-              if (finalState.isAdmin) {
-                console.log('📱 Mobile: Navigating to admin');
-                navigate('/admin', { replace: true });
-              } else if (finalState.isCreator) {
-                console.log('📱 Mobile: Navigating to dashboard');
-                navigate('/dashboard', { replace: true });
-              } else {
-                console.log('📱 Mobile: Navigating to explore');
-                navigate('/explore', { replace: true });
-              }
+              // Single source of truth: determine role from profileData
+              const userRole = profileData.role === 'admin' ? 'admin' :
+                              profileData.is_creator ? 'creator' : 'fan';
+              const targetPath = defaultPathFor(userRole);
+
+              console.log('📱 Mobile: Navigating based on canonical role:', {
+                role: userRole,
+                targetPath,
+                profileData: { is_creator: profileData.is_creator, role: profileData.role }
+              });
+
+              navigate(targetPath, { replace: true });
             }}
           />
         </MobileUIProvider>

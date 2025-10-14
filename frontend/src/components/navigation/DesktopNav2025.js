@@ -53,6 +53,15 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
   // Use AuthContext as SINGLE SOURCE OF TRUTH
   const { currentUser, isCreator, isAdmin, role, roleResolved } = useAuth();
 
+  // Debug log for QA (can be removed in production)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🧭 DesktopNav Menu role:', role, {
+      isCreator,
+      isAdmin,
+      roleResolved
+    });
+  }
+
   // Hard guard: never render until role & user are ready
   if (!roleResolved || !currentUser) {
     return null; // nav waits until auth settles; app shows top-level fallback

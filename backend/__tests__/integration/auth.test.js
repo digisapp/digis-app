@@ -271,7 +271,7 @@ describe('Auth API Integration Tests', () => {
       const response = await request(server)
         .get('/api/auth/migration-status')
         .set('Authorization', `Bearer ${authToken}`);
-      
+
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
@@ -283,6 +283,56 @@ describe('Auth API Integration Tests', () => {
           isCreator: false
         }
       });
+    });
+  });
+
+  describe('GET /api/auth/me - Role Normalization', () => {
+    it('should return normalized lowercase role values', async () => {
+      const response = await request(server)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('role');
+
+      // Role should be one of the normalized values
+      expect(['creator', 'admin', 'fan', null]).toContain(response.body.role);
+
+      // Role should be lowercase (never "Creator", "ADMIN", etc.)
+      if (response.body.role) {
+        expect(response.body.role).toBe(response.body.role.toLowerCase());
+      }
+    });
+
+    it('should derive role from is_creator and is_admin flags correctly', async () => {
+      const response = await request(server)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+
+      // Validate role derivation logic
+      if (response.body.is_admin) {
+        expect(response.body.role).toBe('admin');
+      } else if (response.body.is_creator) {
+        expect(response.body.role).toBe('creator');
+      } else {
+        expect(response.body.role).toBe('fan');
+      }
+    });
+
+    it('should include is_creator and is_admin boolean flags', async () => {
+      const response = await request(server)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('is_creator');
+      expect(response.body).toHaveProperty('is_admin');
+
+      // Both should be boolean values
+      expect(typeof response.body.is_creator).toBe('boolean');
+      expect(typeof response.body.is_admin).toBe('boolean');
     });
   });
 });

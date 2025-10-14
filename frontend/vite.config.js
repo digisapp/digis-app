@@ -49,6 +49,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true, // Clean up old caches
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
+        // CRITICAL: Never cache API routes (especially auth endpoints)
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -62,6 +64,16 @@ export default defineConfig({
               cacheableResponse: {
                 statuses: [0, 200]
               }
+            }
+          },
+          // CRITICAL: Explicitly exclude all API routes from caching
+          // This prevents stale auth responses during backend outages
+          {
+            urlPattern: /^.*\/api\/.*/i,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'api-no-cache',
+              networkTimeoutSeconds: 10,
             }
           }
         ]

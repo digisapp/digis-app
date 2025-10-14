@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -21,16 +21,57 @@ const ProtectedRoute = ({
   requireAdmin = false,
   fallbackPath = '/'
 }) => {
-  const { user, authLoading, isCreator, isAdmin, profile, roleResolved, currentUser } = useAuth();
+  const { user, authLoading, isCreator, isAdmin, profile, roleResolved, currentUser, role } = useAuth();
   const location = useLocation();
+  const [showSlowLoadingMessage, setShowSlowLoadingMessage] = useState(false);
+
+  // Debug log for QA (can be removed in production)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔒 ProtectedRoute guard:', {
+      path: location.pathname,
+      authLoading,
+      roleResolved,
+      role,
+      requireCreator,
+      requireAdmin
+    });
+  }
+
+  // Show "Still loading..." message after 3s for slow role resolution
+  useEffect(() => {
+    if (authLoading || !roleResolved || !currentUser) {
+      const timer = setTimeout(() => {
+        setShowSlowLoadingMessage(true);
+      }, 3000);
+
+      return () => {
+        clearTimeout(timer);
+        setShowSlowLoadingMessage(false);
+      };
+    } else {
+      setShowSlowLoadingMessage(false);
+    }
+  }, [authLoading, roleResolved, currentUser]);
 
   // Hard guard: never render children until role & user are ready
+  // Show lightweight skeleton to avoid layout jump
   if (authLoading || !roleResolved || !currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">Verifying access...</p>
+          {/* Show "Still loading..." after 3s to reassure users */}
+          {showSlowLoadingMessage && (
+            <p className="text-gray-500 dark:text-gray-500 text-xs mt-2 animate-pulse">
+              Still loading...
+            </p>
+          )}
+          {/* Subtle skeleton - prevents "nothing → content" jump */}
+          <div className="mt-8 space-y-3 max-w-md mx-auto">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto animate-pulse"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto animate-pulse"></div>
+          </div>
         </div>
       </div>
     );

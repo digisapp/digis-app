@@ -6,6 +6,7 @@ import ProtectedRoute from '../components/ProtectedRoute';
 import RouteErrorBoundary from '../components/ui/RouteErrorBoundary';
 import { RouteFallback, MobileRouteFallback } from '../components/ui/RouteFallback';
 import useRouteObservability from '../hooks/useRouteMonitoring';
+import { defaultPathFor, isRoleReady } from '../utils/routeHelpers';
 
 /**
  * Lazy-loaded pages - moved from App.js
@@ -69,7 +70,7 @@ const MobileCreatorProfile = lazy(() => import('../components/mobile/MobileCreat
  * location.pathname is the single source of truth
  */
 const AppRoutes = () => {
-  const { currentUser, isCreator, isAdmin, tokenBalance, roleResolved } = useAuth();
+  const { currentUser, isCreator, isAdmin, tokenBalance, roleResolved, role } = useAuth();
   const { isMobile } = useDevice();
   const location = useLocation();
 
@@ -86,9 +87,13 @@ const AppRoutes = () => {
         {/* Public Routes */}
         <Route path="/" element={
           currentUser ? (
-            isAdmin ? <Navigate to="/admin" replace /> :
-            isCreator ? <Navigate to="/dashboard" replace /> :
-            <Navigate to="/explore" replace />
+            // Guard: Don't redirect until role is resolved
+            !roleResolved || !isRoleReady(roleResolved, role) ? (
+              <RouteFallback />
+            ) : (
+              // Single source of truth for role-based routing
+              <Navigate to={defaultPathFor(role)} replace />
+            )
           ) : (
             <HomePage />
           )
@@ -274,9 +279,13 @@ const AppRoutes = () => {
         {/* Catch-all - Redirect to appropriate home */}
         <Route path="*" element={
           currentUser ? (
-            isAdmin ? <Navigate to="/admin" replace /> :
-            isCreator ? <Navigate to="/dashboard" replace /> :
-            <Navigate to="/explore" replace />
+            // Guard: Don't redirect until role is resolved
+            !roleResolved || !isRoleReady(roleResolved, role) ? (
+              <RouteFallback />
+            ) : (
+              // Single source of truth for role-based routing
+              <Navigate to={defaultPathFor(role)} replace />
+            )
           ) : (
             <Navigate to="/" replace />
           )

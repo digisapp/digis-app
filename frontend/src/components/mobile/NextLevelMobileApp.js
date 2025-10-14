@@ -44,19 +44,22 @@ const TVPage = lazy(() => import('../pages/TVPage'));
 import '../../styles/next-level-mobile.css';
 import '../../styles/mobile-nav-override.css';
 
-const NextLevelMobileApp = ({ user, logout }) => {
-  // Check if user is a creator - memoized for performance
-  const isCreator = useMemo(() => {
-    return Boolean(
-      user && (
-        user.is_creator === true ||
-        user.role === 'creator' ||
-        user.role === 'admin' ||
-        user.creator_type ||
-        user.is_super_admin === true
-      )
-    );
-  }, [user]);
+/**
+ * NextLevelMobileApp - Legacy Mobile UI Component
+ *
+ * Status: Ready but currently unused in App.js
+ * Props:
+ * - user: Current user object
+ * - logout: Logout callback
+ * - isCreator: Boolean from AuthContext (SINGLE SOURCE OF TRUTH)
+ *
+ * Note: Component signature cleaned up to only accept necessary props.
+ * If re-enabled, ensure parent passes isCreator from useAuth() hook.
+ */
+const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
+  // SINGLE SOURCE OF TRUTH: Use isCreator prop from parent (which gets it from AuthContext)
+  // Never derive from user.role, user.is_creator, or localStorage
+  const isCreator = propIsCreator || false;
   
   console.log('🚀 NextLevelMobileApp Debug:', {
     user,
