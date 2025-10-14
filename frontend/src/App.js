@@ -632,6 +632,9 @@ const App = () => {
         localStorage.removeItem('userIsCreator');
         console.log('🧹 Cleared localStorage auth data');
 
+        // Safety net: reset view state to prevent stale view rehydration
+        setCurrentView('explore');
+
         // Navigate to public destination (no flickering, prevents back-button loops)
         console.log('✅ handleSignOut: Navigating to', LOGOUT_DEST);
         navigate(LOGOUT_DEST, { replace: true });
@@ -651,6 +654,9 @@ const App = () => {
       // Clear localStorage even on error
       localStorage.removeItem('userRole');
       localStorage.removeItem('userIsCreator');
+
+      // Safety net: reset view state even on error
+      setCurrentView('explore');
 
       navigate(LOGOUT_DEST, { replace: true });
     }
@@ -703,9 +709,11 @@ const App = () => {
                 // Reset logout breadcrumb flag on login (allows logging logout again later)
                 resetLogoutBreadcrumb();
 
+                // CRITICAL: Always define profileData first to avoid block-scope bugs
+                let profileData = user.profile || user;
+
                 // CRITICAL: Set profile FIRST, before setting user, to prevent role flip-flopping
                 if (user.profile || user.is_creator !== undefined || user.role) {
-                  const profileData = user.profile || user;
                   console.log('🖥️ Desktop: Setting profile BEFORE user to prevent flip-flop:', {
                     is_creator: profileData.is_creator,
                     role: profileData.role,
@@ -742,15 +750,15 @@ const App = () => {
                 // Close auth modal
                 setShowAuth(false);
 
-                // Single source of truth: determine role from profileData
-                const userRole = profileData.role === 'admin' ? 'admin' :
-                                profileData.is_creator ? 'creator' : 'fan';
+                // Single source of truth: determine role from profileData (now safe!)
+                const userRole = profileData?.role === 'admin' ? 'admin' :
+                                profileData?.is_creator ? 'creator' : 'fan';
                 const targetPath = defaultPathFor(userRole);
 
                 console.log('🖥️ Desktop: Navigating based on canonical role:', {
                   role: userRole,
                   targetPath,
-                  profileData: { is_creator: profileData.is_creator, role: profileData.role }
+                  profileData: { is_creator: profileData?.is_creator, role: profileData?.role }
                 });
 
                 startTransition(() => {
@@ -920,9 +928,11 @@ const App = () => {
               // Reset logout breadcrumb flag on login (allows logging logout again later)
               resetLogoutBreadcrumb();
 
+              // CRITICAL: Always define profileData first to avoid block-scope bugs
+              let profileData = user.profile || user;
+
               // CRITICAL: Set profile FIRST, before setting user, to prevent role flip-flopping
               if (user.profile || user.is_creator !== undefined || user.role) {
-                const profileData = user.profile || user;
                 console.log('📱 Mobile: Setting profile BEFORE user to prevent flip-flop:', {
                   is_creator: profileData.is_creator,
                   role: profileData.role,
@@ -956,18 +966,19 @@ const App = () => {
               // Wait for state to propagate (next tick)
               await new Promise(resolve => setTimeout(resolve, 100));
 
-              // Single source of truth: determine role from profileData
-              const userRole = profileData.role === 'admin' ? 'admin' :
-                              profileData.is_creator ? 'creator' : 'fan';
+              // Single source of truth: determine role from profileData (now safe with optional chaining!)
+              const userRole = profileData?.role === 'admin' ? 'admin' :
+                              profileData?.is_creator ? 'creator' : 'fan';
               const targetPath = defaultPathFor(userRole);
 
               console.log('📱 Mobile: Navigating based on canonical role:', {
                 role: userRole,
                 targetPath,
-                profileData: { is_creator: profileData.is_creator, role: profileData.role }
+                profileData: { is_creator: profileData?.is_creator, role: profileData?.role }
               });
 
-              navigate(targetPath, { replace: true });
+              // Do not navigate here; AppRoutes will redirect once roleResolved is true.
+              // Removing navigate() prevents URL↔view tug-of-war with useViewRouter.
             }}
           />
         </MobileUIProvider>
