@@ -25,6 +25,10 @@ const swaggerSpecs = require('../config/swagger');
 // Remove sensitive console.logs - using secure logger instead
 logger.info('Starting Digis backend server...');
 
+// Log feature flags on startup
+const { logFeatureStatus } = require('../utils/featureFlags');
+logFeatureStatus();
+
 // Load environment variables with comprehensive validation
 try {
   // On Vercel/serverless, env vars are injected automatically - skip dotenv loading
@@ -231,6 +235,8 @@ try {
   const digitalsRoutes = require('../routes/digitals');
   const metaRoutes = require('../routes/meta');
   const emergencyRoutes = require('../routes/emergency-reset');
+  const fansRoutes = require('../routes/fans');
+  const callsRoutes = require('../routes/calls');
 
   // Apply metrics middleware
   const metricsCollector = require('../utils/metrics-collector');
@@ -320,6 +326,8 @@ try {
   app.use('/api/digitals', rateLimiters.upload || ((req, res, next) => next()), digitalsRoutes);
   app.use('/api/metrics', rateLimiters.analytics || ((req, res, next) => next()), monitoringRoutes);
   app.use('/api/storage', rateLimiters.upload || ((req, res, next) => next()), storageRoutes);
+  app.use('/api/fans', rateLimiters.api || ((req, res, next) => next()), fansRoutes);
+  app.use('/api/calls', rateLimiters.api || ((req, res, next) => next()), callsRoutes);
   app.use('/api', metaRoutes); // Deployment metadata endpoint (no auth required)
   app.use('/api', emergencyRoutes); // Emergency reset endpoints (NO AUTH, NO RATE LIMITING)
   app.use('/webhooks', webhookRoutes); // No rate limiting for webhooks
@@ -597,7 +605,16 @@ const gracefulShutdown = () => {
   } catch (error) {
     console.error('Error stopping loyalty jobs:', error);
   }
-  
+
+  // Stop call expiration job
+  try {
+    const callExpirationJob = require('../jobs/expire-call-invitations');
+    callExpirationJob.stop();
+    console.log('Call expiration job stopped');
+  } catch (error) {
+    console.error('Error stopping call expiration job:', error);
+  }
+
   process.exit(0);
 };
 
@@ -690,6 +707,11 @@ server.listen(PORT, HOST, () => {
     const loyaltyPerkDeliveryJob = require('../jobs/loyalty-perk-delivery');
     loyaltyPerkDeliveryJob.start();
     console.log('🎁 Loyalty perk delivery jobs initialized');
+
+    // Initialize call invitation expiration job
+    const callExpirationJob = require('../jobs/expire-call-invitations');
+    callExpirationJob.start();
+    console.log('📞 Call invitation expiration job initialized (runs every 30s)');
   } else if (isServerless) {
     console.log('⏰ Serverless environment - cron jobs will be triggered via QStash (see /api/inngest/trigger)');
   }

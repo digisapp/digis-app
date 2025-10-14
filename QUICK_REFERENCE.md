@@ -1,117 +1,75 @@
-# 🚀 Quick Reference - Deploy Now!
+# Quick Reference Card
+## Fan Privacy & Calls System
 
-## ⚡ 3-Step Deploy (5 minutes)
+---
 
-### Step 1: Set Environment Variables (2 min)
+## 🚀 Deploy in 3 Steps
 
-**Backend (Vercel):**
 ```bash
-vercel env add ABLY_API_KEY
-# Paste: T0HI7A.Er1OCA:r2HsGKDl05ja3hOdh8dZeICZF8gY-vGTZH9ahoeEdN4
+# 1. Migrate
+pg_dump $DATABASE_URL > backup.sql
+npm run migrate
+
+# 2. Deploy (flags OFF)
+vercel env add FEATURE_CALLS false
+vercel --prod
+
+# 3. Enable incrementally
+vercel env add FEATURE_CALLS true
+vercel --prod
 ```
 
-**Frontend (Vercel):**
+**Rollback**: `vercel env add FEATURE_CALLS false && vercel --prod`
+
+---
+
+## 📁 Files Created
+
+### Backend
+- `migrations/132_fan_privacy_and_calls.sql` - Database schema
+- `migrations/132_fan_privacy_and_calls_DOWN.sql` - Rollback script
+- `routes/fans.js` - Fan privacy API (8 endpoints)
+- `routes/calls.js` - Calls API (7 endpoints)
+- `utils/agoraUid.js` - Stable UID generation
+- `utils/featureFlags.js` - Feature flag system
+- `middleware/optionalAuth.js` - Soft auth for public pages
+- `jobs/expire-call-invitations.js` - Auto-expire job
+
+### Frontend
+- `components/settings/FanPrivacySettings.jsx` - Privacy UI
+
+### Documentation
+- `FAN_PRIVACY_IMPLEMENTATION.md` - Technical spec
+- `PRODUCTION_DEPLOY_CHECKLIST.md` - Deployment guide
+- `PRODUCTION_READY_SUMMARY.md` - Overview
+
+---
+
+## 🚩 Feature Flags
+
 ```bash
-vercel env add VITE_USE_ABLY
-# Paste: true
+# In Vercel environment variables
+FEATURE_FAN_PRIVACY=true        # Safe ✅
+FEATURE_FAN_MINI_PROFILE=true   # Safe ✅
+FEATURE_CALLS=false             # Test first ⚠️
+FEATURE_FAN_SHARE_CARD=false    # Optional ℹ️
 ```
 
 ---
 
-### Step 2: Deploy (2 min)
+## 🚨 Emergency Commands
+
 ```bash
-git push origin main
-```
+# Disable calls immediately
+vercel env add FEATURE_CALLS false && vercel --prod
 
-Vercel will auto-deploy! ✅
+# Rollback deployment
+vercel rollback
 
----
-
-### Step 3: Verify (1 min)
-```bash
-# Check logs
-vercel logs --production
-
-# Should see:
-# ✅ "Ably is initialized"
-# ✅ No Socket.io errors
+# Rollback database (DESTRUCTIVE)
+psql $DATABASE_URL < migrations/132_fan_privacy_and_calls_DOWN.sql
 ```
 
 ---
 
-## ✅ What Was Fixed Today
-
-| Issue | Before | After |
-|-------|--------|-------|
-| Session queries | 79 seconds ⏰ | <100ms ⚡ |
-| WebSocket on Vercel | Broken ❌ | Ably working ✅ |
-| Unused code | 1,309 lines 📦 | Deleted 🗑️ |
-| Security middleware | Error ❌ | Fixed ✅ |
-
----
-
-## 🔑 Your Ably Key (Backend)
-```
-T0HI7A.Er1OCA:r2HsGKDl05ja3hOdh8dZeICZF8gY-vGTZH9ahoeEdN4
-```
-
----
-
-## 📝 Commit Info
-- **Hash**: `4dcbe9f`
-- **Message**: "feat: migrate to Ably for Vercel-compatible real-time"
-- **Files changed**: 37 files
-- **Lines changed**: +5,355 / -1,706
-
----
-
-## ✅ Checklist
-
-Before deploying:
-- [x] Database migration applied ✅
-- [x] Code committed ✅
-- [ ] ABLY_API_KEY set in Vercel
-- [ ] VITE_USE_ABLY=true set in frontend
-- [ ] Git pushed to main
-- [ ] Vercel deployed
-
-After deploying:
-- [ ] Test session query speed
-- [ ] Test Ably endpoint
-- [ ] Test real-time features
-- [ ] Check Vercel logs for errors
-
----
-
-## 🆘 Quick Troubleshooting
-
-**Issue**: Session query still slow
-```bash
-# Verify indexes exist
-psql $DATABASE_URL -c "SELECT COUNT(*) FROM pg_indexes WHERE tablename='sessions';"
-# Should show: 13
-```
-
-**Issue**: Ably not connecting
-```bash
-# Check if key is set
-vercel env ls | grep ABLY
-```
-
-**Issue**: Frontend using Socket.io
-```bash
-# Check if flag is set
-vercel env ls | grep VITE_USE_ABLY
-```
-
----
-
-## 📚 Full Documentation
-
-- **DEPLOYMENT_COMPLETE.md** - Complete deployment summary
-- **DEPLOYMENT_NOTES.md** - Detailed instructions
-- **CORRECTED_STATUS.md** - What you already had vs what was added
-
----
-
-**Ready to deploy?** Run Step 1 above! ⬆️
+**Full docs**: `FAN_PRIVACY_IMPLEMENTATION.md` | `PRODUCTION_DEPLOY_CHECKLIST.md`
