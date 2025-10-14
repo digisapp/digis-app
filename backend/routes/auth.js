@@ -66,6 +66,23 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
   const rid = req.headers['x-request-id'] || uuidv4();
   const TIMEOUT_MS = 1500; // 1.5 second timeout
 
+  // Environment variable validation
+  const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL'];
+  const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+  if (missingVars.length > 0) {
+    console.error('❌ sync-user missing environment variables', {
+      rid,
+      missing: missingVars
+    });
+    return res.status(500).json({
+      success: false,
+      rid,
+      error: 'SERVER_CONFIG_ERROR',
+      message: 'Server configuration error - missing required environment variables',
+      hint: process.env.NODE_ENV === 'development' ? `Missing: ${missingVars.join(', ')}` : undefined
+    });
+  }
+
   // CORS headers for cross-origin requests
   const ALLOWED_ORIGINS = [
     'https://digis.cc',
@@ -100,11 +117,39 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
 
   // Main handler promise
   const handlerPromise = (async () => {
+    // Validate request body
     const { supabaseId, email, metadata } = req.body;
 
-    // Verify authentication
+    if (!supabaseId || !email) {
+      console.error('❌ sync-user missing required fields', { rid, body: req.body });
+      return fail(400, {
+        error: 'MISSING_FIELDS',
+        message: 'supabaseId and email are required',
+        required: ['supabaseId', 'email']
+      });
+    }
+
+    // Verify authentication (verifySupabaseToken middleware should have set req.user)
     if (!req.user || !req.user.id) {
-      return fail(401, { error: 'UNAUTHENTICATED', message: 'No valid user in token' });
+      console.error('❌ sync-user no user in request', { rid, hasAuthHeader: !!req.headers.authorization });
+      return fail(401, {
+        error: 'UNAUTHENTICATED',
+        message: 'No valid user in token. Authentication required.',
+        hint: 'Ensure Authorization header is present and valid'
+      });
+    }
+
+    // Verify supabaseId matches authenticated user
+    if (req.user.id !== supabaseId) {
+      console.error('❌ sync-user ID mismatch', {
+        rid,
+        tokenUserId: req.user.id,
+        bodySupabaseId: supabaseId
+      });
+      return fail(403, {
+        error: 'ID_MISMATCH',
+        message: 'Token user ID does not match request supabaseId'
+      });
     }
 
     // Log token claims for debugging
@@ -148,12 +193,44 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       RETURNING id
     `;
 
-    await pool.query(upsertUserQuery, [
-      supabaseId,
-      email,
-      metadata?.username,
-      metadata?.username
-    ]);
+    try {
+      await pool.query(upsertUserQuery, [
+        supabaseId,
+        email,
+        metadata?.username,
+        metadata?.username
+      ]);
+    } catch (dbError) {
+      console.error('❌ sync-user DB upsert user failed', {
+        rid,
+        code: dbError.code,
+        message: dbError.message,
+        detail: dbError.detail
+      });
+
+      if (dbError.code === '23505') {
+        return fail(409, {
+          error: 'DUPLICATE_USER',
+          message: 'User with this ID already exists',
+          code: dbError.code
+        });
+      }
+
+      if (dbError.code === '22P02') {
+        return fail(400, {
+          error: 'INVALID_UUID',
+          message: 'Invalid user ID format',
+          code: dbError.code
+        });
+      }
+
+      return fail(500, {
+        error: 'DB_UPSERT_FAILED',
+        message: 'Failed to create or update user in database',
+        code: dbError.code,
+        detail: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+      });
+    }
 
     // IDEMPOTENT: Ensure token balance exists
     const upsertTokenBalanceQuery = `
@@ -170,65 +247,108 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       ON CONFLICT (user_id) DO NOTHING
     `;
 
-    await pool.query(upsertTokenBalanceQuery, [supabaseId]);
+    try {
+      await pool.query(upsertTokenBalanceQuery, [supabaseId]);
+    } catch (dbError) {
+      console.error('❌ sync-user DB upsert token balance failed', {
+        rid,
+        code: dbError.code,
+        message: dbError.message
+      });
+      // Non-fatal: token balance can be created later
+    }
 
     // Now fetch the complete profile
-    const checkQuery = `
-      SELECT * FROM users
-      WHERE id = $1::uuid
-      LIMIT 1
-    `;
-
-    const existingUser = await pool.query(checkQuery, [supabaseId]);
+    let existingUser;
+    try {
+      const checkQuery = `
+        SELECT * FROM users
+        WHERE id = $1::uuid
+        LIMIT 1
+      `;
+      existingUser = await pool.query(checkQuery, [supabaseId]);
+    } catch (dbError) {
+      console.error('❌ sync-user DB fetch user failed', {
+        rid,
+        code: dbError.code,
+        message: dbError.message
+      });
+      return fail(500, {
+        error: 'DB_FETCH_FAILED',
+        message: 'Failed to fetch user from database',
+        code: dbError.code
+      });
+    }
 
     if (existingUser.rows.length > 0) {
       // User exists, update their info and fetch complete profile with token balance
       const user = existingUser.rows[0];
 
-      const updateQuery = `
-        UPDATE users
-        SET
-          supabase_id = $1,
-          email_verified = true,
-          last_active = NOW(),
-          updated_at = NOW()
-        WHERE id = $2
-        RETURNING id
-      `;
-
-      await pool.query(updateQuery, [supabaseId, user.id]);
+      try {
+        const updateQuery = `
+          UPDATE users
+          SET
+            supabase_id = $1,
+            email_verified = true,
+            last_active = NOW(),
+            updated_at = NOW()
+          WHERE id = $2
+          RETURNING id
+        `;
+        await pool.query(updateQuery, [supabaseId, user.id]);
+      } catch (dbError) {
+        console.error('❌ sync-user DB update user failed', {
+          rid,
+          code: dbError.code,
+          message: dbError.message
+        });
+        // Non-fatal: we can still return the profile
+      }
 
       // Fetch complete user profile with token balance
-      const profileQuery = `
-        SELECT
-          u.id,
-          u.supabase_id,
-          u.email,
-          u.username,
-          u.display_name,
-          u.bio,
-          u.profile_pic_url,
-          u.is_creator,
-          u.is_super_admin,
-          u.role,
-          u.creator_type,
-          u.price_per_min,
-          u.verified,
-          u.email_verified,
-          u.created_at,
-          u.updated_at,
-          u.last_active,
-          COALESCE(tb.balance, 0) as token_balance,
-          COALESCE(tb.total_purchased, 0) as total_purchased,
-          COALESCE(tb.total_spent, 0) as total_spent,
-          COALESCE(tb.total_earned, 0) as total_earned
-        FROM users u
-        LEFT JOIN token_balances tb ON tb.user_id = u.id
-        WHERE u.id = $1::uuid
-        LIMIT 1
-      `;
-
-      const profileResult = await pool.query(profileQuery, [user.id]);
+      let profileResult;
+      try {
+        const profileQuery = `
+          SELECT
+            u.id,
+            u.supabase_id,
+            u.email,
+            u.username,
+            u.display_name,
+            u.bio,
+            u.profile_pic_url,
+            u.is_creator,
+            u.is_super_admin,
+            u.role,
+            u.creator_type,
+            u.price_per_min,
+            u.verified,
+            u.email_verified,
+            u.created_at,
+            u.updated_at,
+            u.last_active,
+            COALESCE(tb.balance, 0) as token_balance,
+            COALESCE(tb.total_purchased, 0) as total_purchased,
+            COALESCE(tb.total_spent, 0) as total_spent,
+            COALESCE(tb.total_earned, 0) as total_earned
+          FROM users u
+          LEFT JOIN token_balances tb ON tb.user_id = u.id
+          WHERE u.id = $1::uuid
+          LIMIT 1
+        `;
+        profileResult = await pool.query(profileQuery, [user.id]);
+      } catch (dbError) {
+        console.error('❌ sync-user DB fetch profile failed', {
+          rid,
+          code: dbError.code,
+          message: dbError.message
+        });
+        return fail(500, {
+          error: 'DB_PROFILE_FETCH_FAILED',
+          message: 'Failed to fetch user profile from database',
+          code: dbError.code
+        });
+      }
 
       if (!profileResult.rows || profileResult.rows.length === 0) {
         return fail(404, {

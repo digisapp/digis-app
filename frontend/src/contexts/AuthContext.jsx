@@ -512,8 +512,9 @@ export const AuthProvider = ({ children }) => {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
+                ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
               },
+              credentials: 'include', // Include cookies for cross-origin requests
               body: JSON.stringify({
                 supabaseId: session.user.id,
                 email: session.user.email,
@@ -598,8 +599,9 @@ export const AuthProvider = ({ children }) => {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
+                ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
               },
+              credentials: 'include', // Include cookies for cross-origin requests
               body: JSON.stringify({
                 supabaseId: session.user.id,
                 email: session.user.email,
