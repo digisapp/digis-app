@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { LOGOUT_DEST } from '../constants/auth';
+import UnauthSplash from './UnauthSplash';
 
 /**
  * Protected Route Component (Outlet-based - no cloning!)
@@ -13,17 +15,18 @@ import { useAuth } from '../contexts/AuthContext';
  * Props:
  * - requireCreator: boolean - requires creator role
  * - requireAdmin: boolean - requires admin role
- * - fallbackPath: string - where to redirect on access denied (default: '/')
+ * - fallbackPath: string - where to redirect on access denied (default: LOGOUT_DEST)
  */
 const ProtectedRoute = ({
   children,
   requireCreator = false,
   requireAdmin = false,
-  fallbackPath = '/'
+  fallbackPath = LOGOUT_DEST
 }) => {
   const { user, authLoading, isCreator, isAdmin, profile, roleResolved, currentUser, role } = useAuth();
   const location = useLocation();
   const [showSlowLoadingMessage, setShowSlowLoadingMessage] = useState(false);
+  const [showUnauthSplash, setShowUnauthSplash] = useState(false);
 
   // Debug log for QA (can be removed in production)
   if (process.env.NODE_ENV !== 'production') {
@@ -77,9 +80,14 @@ const ProtectedRoute = ({
     );
   }
 
-  // Not authenticated? Redirect to login (save current location for redirect after login)
+  // Not authenticated? Show splash for ~300-500ms then redirect
   if (!user) {
-    return <Navigate to="/" state={{ from: location }} replace />;
+    if (!showUnauthSplash) {
+      // Show splash briefly to smooth UX
+      setTimeout(() => setShowUnauthSplash(true), 400);
+      return <UnauthSplash />;
+    }
+    return <Navigate to={LOGOUT_DEST} state={{ from: location }} replace />;
   }
 
   // Check role requirements

@@ -1,5 +1,8 @@
 import { supabase } from './supabase-auth';
 import logger from './logger';
+import { LOGOUT_DEST } from '../constants/auth';
+import { addSentryBreadcrumb } from './sentry';
+import { analytics } from '../lib/analytics';
 
 // API configuration
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
@@ -301,22 +304,130 @@ class ApiClient {
 // Create singleton instance
 const apiClient = new ApiClient();
 
+// Module-level flag to prevent concurrent redirects
+let isRedirecting = false;
+
 // Add default error interceptor for auth errors
 apiClient.addErrorInterceptor(async (error) => {
-  if (error.status === 401) {
-    logger.warn('Authentication error, refreshing session...');
+  // Only redirect on 401/403 if the user is actually NOT authenticated
+  // This prevents surprise kicks while legitimately logged in
+  if (error.status === 401 || error.status === 403) {
+    // Guard: Prevent concurrent redirects from multiple failed requests
+    if (isRedirecting) {
+      logger.debug('Redirect already in progress, skipping');
+      return;
+    }
+
+    logger.warn('Auth error detected, checking session...');
+
     try {
-      const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
-      if (!refreshError && session) {
-        logger.info('Session refreshed successfully');
-        // Optionally retry the original request here
-      } else {
-        logger.error('Failed to refresh session:', refreshError);
-        // Redirect to login
-        window.location.href = '/auth';
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      // If no session exists, user is not authenticated - redirect to public page
+      if (!session || sessionError) {
+        logger.warn('No valid session found, redirecting to LOGOUT_DEST');
+
+        // Log to Sentry for observability
+        addSentryBreadcrumb('auth_api_redirect', 'auth', 'info', {
+          reason: 'no_session',
+          status: error.status,
+          timestamp: new Date().toISOString()
+        });
+
+        // Track analytics event
+        analytics.track('auth_api_redirect', {
+          reason: 'no_session',
+          status: error.status,
+          timestamp: new Date().toISOString()
+        });
+
+        isRedirecting = true;
+        // Use navigate with replace to prevent back-button loops
+        const { useNavigate } = await import('react-router-dom');
+        // Since we can't use hooks here, use window.location as fallback
+        // The navigate hook should be used in components
+        window.location.replace(LOGOUT_DEST);
+        return;
+      }
+
+      // Session exists but got 401 - try refresh
+      if (error.status === 401) {
+        logger.info('Valid session but 401 received, attempting refresh...');
+        const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+
+        if (!refreshError && newSession) {
+          logger.info('Session refreshed successfully');
+
+          // Guard: Check if page marked as signed-out (prevents stale tab re-auth)
+          try {
+            if (sessionStorage.getItem('signedOutAt')) {
+              logger.info('Skip retry: page marked signed-out');
+
+              addSentryBreadcrumb('auth_api_redirect', 'auth', 'info', {
+                reason: 'stale_tab_signed_out',
+                status: error.status,
+                timestamp: new Date().toISOString()
+              });
+
+              // Track analytics event
+              analytics.track('auth_api_redirect', {
+                reason: 'stale_tab_signed_out',
+                status: error.status,
+                timestamp: new Date().toISOString()
+              });
+
+              isRedirecting = true;
+              window.location.replace(LOGOUT_DEST);
+              return;
+            }
+          } catch (e) {
+            // Ignore storage errors
+          }
+
+          // Original request will be retried automatically if retryable
+        } else {
+          logger.error('Failed to refresh session:', refreshError);
+
+          // Log to Sentry for observability
+          addSentryBreadcrumb('auth_api_redirect', 'auth', 'warning', {
+            reason: 'refresh_failed',
+            status: error.status,
+            timestamp: new Date().toISOString()
+          });
+
+          // Track analytics event
+          analytics.track('auth_api_redirect', {
+            reason: 'refresh_failed',
+            status: error.status,
+            timestamp: new Date().toISOString()
+          });
+
+          isRedirecting = true;
+          window.location.replace(LOGOUT_DEST);
+        }
       }
     } catch (e) {
-      logger.error('Session refresh error:', e);
+      logger.error('Session check error:', e);
+
+      // Log to Sentry for observability
+      addSentryBreadcrumb('auth_api_redirect', 'auth', 'error', {
+        reason: 'session_check_error',
+        status: error.status,
+        error: e.message,
+        timestamp: new Date().toISOString()
+      });
+
+      // Track analytics event
+      analytics.track('auth_api_redirect', {
+        reason: 'session_check_error',
+        status: error.status,
+        error: e.message,
+        timestamp: new Date().toISOString()
+      });
+
+      // On error checking session, redirect to be safe
+      isRedirecting = true;
+      window.location.replace(LOGOUT_DEST);
     }
   }
 });

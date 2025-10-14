@@ -402,10 +402,63 @@ export const AuthProvider = ({ children }) => {
   }, [user, fetchUserProfile]);
 
   /**
+   * Teardown side effects on logout (prevents "zombie" redirects)
+   * Cancels any in-flight operations that might try to navigate
+   */
+  const teardownOnLogout = useCallback(() => {
+    try {
+      // Clear any throttling state
+      fetchInProgress.current = { profile: false, balance: false };
+      lastFetch.current = { profile: 0, balance: 0 };
+
+      // Reset circuit breaker state
+      if (storageAvailable.current) {
+        try {
+          sessionStorage.removeItem(CIRCUIT_BREAKER_STORAGE_KEY);
+        } catch (e) {
+          // Ignore storage errors
+        }
+      }
+      inMemoryCircuitBreaker.current = { lastAttempt: 0, backoffIndex: 0, failureCount: 0 };
+      syncUserFailureCount.current = 0;
+      lastSyncUserAttempt.current = 0;
+      syncUserBackoffIndex.current = 0;
+
+      // Clear service worker caches (if enabled)
+      if ('caches' in window) {
+        caches.keys().then(keys => {
+          keys.forEach(cacheName => {
+            caches.delete(cacheName);
+            console.log(`🧹 Deleted cache: ${cacheName}`);
+          });
+        }).catch(err => {
+          console.warn('Cache cleanup warning (non-critical):', err);
+        });
+      }
+
+      console.log('🧹 Cleanup completed on logout');
+    } catch (error) {
+      console.error('Teardown error (non-critical):', error);
+    }
+  }, []);
+
+  /**
    * Sign out
    */
   const signOut = useCallback(async () => {
     try {
+      console.log('🔓 Starting sign out process...');
+
+      // Mark page as signed-out to prevent stale tabs from re-authing
+      try {
+        sessionStorage.setItem('signedOutAt', String(Date.now()));
+      } catch (e) {
+        // Ignore storage errors (Safari private mode)
+      }
+
+      // Teardown side effects before signing out
+      teardownOnLogout();
+
       await supabase.auth.signOut();
       setUser(null);
       setProfile(null);
@@ -413,11 +466,15 @@ export const AuthProvider = ({ children }) => {
       clearProfileCache();
       clearRoleCache();
       console.log('✅ Signed out successfully');
+
+      // Return success - navigation will be handled by calling component
+      return true;
     } catch (error) {
       console.error('Sign out error:', error);
       setError('Failed to sign out');
+      return false;
     }
-  }, []);
+  }, [teardownOnLogout]);
 
   /**
    * Initialize authentication on mount
@@ -459,6 +516,14 @@ export const AuthProvider = ({ children }) => {
             if (response.ok) {
               const data = await response.json();
               const userData = data.user;
+
+              // Clear signedOutAt flag on successful login
+              try {
+                sessionStorage.removeItem('signedOutAt');
+              } catch (e) {
+                // Ignore storage errors
+              }
+
               setProfile(userData);
               saveProfileCache(userData, session);
               if (userData.token_balance !== undefined) {
@@ -631,6 +696,9 @@ export const AuthProvider = ({ children }) => {
         }
       }, 10000);
 
+      // Guard to prevent double redirects on sign-out
+      const hasRedirectedOnSignOut = { current: false };
+
       // Subscribe to auth changes
       const unsubscribe = subscribeToAuthChanges(async (event, session) => {
         if (!mounted) return;
@@ -650,7 +718,17 @@ export const AuthProvider = ({ children }) => {
             setTimeout(() => fetchUserProfile(session.user), 100);
             setTimeout(() => fetchTokenBalance(session.user), 200);
           } else {
-            // Signed out
+            // Signed out - guard against double redirects
+            if (event === 'SIGNED_OUT' && !hasRedirectedOnSignOut.current) {
+              hasRedirectedOnSignOut.current = true;
+              console.log('🔓 Auth state change: User signed out');
+              addBreadcrumb('auth_signed_out', {
+                category: 'auth',
+                level: 'info',
+                timestamp: new Date().toISOString()
+              });
+            }
+
             setUser(null);
             setProfile(null);
             setTokenBalance(0);
