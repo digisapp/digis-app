@@ -71,10 +71,8 @@ export default defineConfig({
           {
             urlPattern: /^.*\/api\/.*/i,
             handler: 'NetworkOnly',
-            options: {
-              cacheName: 'api-no-cache',
-              networkTimeoutSeconds: 10,
-            }
+            // Note: NetworkOnly doesn't support networkTimeoutSeconds
+            // If network fails, it will fail immediately (no cache fallback)
           }
         ]
       }
