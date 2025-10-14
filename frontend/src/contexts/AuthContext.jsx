@@ -552,6 +552,14 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
+        // If NO session exists, stop loading immediately (public homepage)
+        if (!session?.user && mounted) {
+          console.log('✅ No session found - showing public homepage');
+          setAuthLoading(false);
+          clearTimeout(timeoutId);
+          return; // Exit early for public users
+        }
+
         // Set cached profile immediately if we have one
         if (cachedProfile && mounted) {
           console.log('📦 Loading cached profile:', cachedProfile.username);
