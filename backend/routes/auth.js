@@ -66,6 +66,27 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
   const rid = req.headers['x-request-id'] || uuidv4();
   const TIMEOUT_MS = 1500; // 1.5 second timeout
 
+  // CORS headers for cross-origin requests
+  const ALLOWED_ORIGINS = [
+    'https://digis.cc',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ];
+  const origin = req.headers.origin;
+
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID');
+  }
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
   // Helper for consistent error responses
   const fail = (code, payload) => {
     console.error('❌ sync-user fail', { rid, code, ...payload });

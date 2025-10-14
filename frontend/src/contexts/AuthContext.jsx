@@ -8,6 +8,7 @@ import { authLogger } from '../utils/logger';
 import { isRole } from '../utils/routeHelpers';
 import { addBreadcrumb, setTag } from '../lib/sentry.client';
 import toast from 'react-hot-toast';
+import { fetchWithTimeout, safeFetch } from '../utils/fetchWithTimeout';
 
 /**
  * AuthContext - Single Source of Truth for Authentication
@@ -505,52 +506,49 @@ export const AuthProvider = ({ children }) => {
         // Fetch full profile
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && mounted) {
-          try {
-            const response = await fetch(
-              `${import.meta.env.VITE_BACKEND_URL}/api/auth/sync-user`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({
-                  supabaseId: session.user.id,
-                  email: session.user.email,
-                  metadata: session.user.user_metadata
-                })
-              }
-            );
-
-            if (response.ok) {
-              const data = await response.json();
-              const userData = data.user;
-
-              // Clear signedOutAt flag on successful login
-              try {
-                sessionStorage.removeItem('signedOutAt');
-              } catch (e) {
-                // Ignore storage errors
-              }
-
-              setProfile(userData);
-              saveProfileCache(userData, session);
-              if (userData.token_balance !== undefined) {
-                setTokenBalance(userData.token_balance);
-              }
-              setAuthLoading(false);
-              clearTimeout(bootTimeout);
-              return;
-            } else {
-              const errorData = await response.json().catch(() => ({}));
-              console.error('❌ AppBootstrap sync failed:', {
-                status: response.status,
-                error: errorData.error,
-                message: errorData.message
-              });
+          const result = await safeFetch(
+            `${import.meta.env.VITE_BACKEND_URL}/api/auth/sync-user`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                supabaseId: session.user.id,
+                email: session.user.email,
+                metadata: session.user.user_metadata
+              }),
+              timeout: 6000 // 6 second timeout
             }
-          } catch (error) {
-            console.error('Error syncing from AppBootstrap:', error);
+          );
+
+          if (result.ok && result.data?.user) {
+            const userData = result.data.user;
+
+            // Clear signedOutAt flag on successful login
+            try {
+              sessionStorage.removeItem('signedOutAt');
+            } catch (e) {
+              // Ignore storage errors
+            }
+
+            setProfile(userData);
+            saveProfileCache(userData, session);
+            if (userData.token_balance !== undefined) {
+              setTokenBalance(userData.token_balance);
+            }
+            setAuthLoading(false);
+            clearTimeout(bootTimeout);
+            return;
+          } else {
+            console.warn('⚠️ AppBootstrap sync-user failed (non-blocking):', {
+              status: result.status,
+              error: result.error
+            });
+            // Fail open - don't block the app
+            setAuthLoading(false);
+            clearTimeout(bootTimeout);
           }
         }
       }
@@ -593,120 +591,86 @@ export const AuthProvider = ({ children }) => {
             return;
           }
 
-          // Sync user with backend
-          try {
-            const response = await fetch(
-              `${import.meta.env.VITE_BACKEND_URL}/api/auth/sync-user`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({
-                  supabaseId: session.user.id,
-                  email: session.user.email,
-                  metadata: session.user.user_metadata
-                })
-              }
-            );
-
-            if (response.ok) {
-              const data = await response.json();
-              const userData = data.user;
-
-              console.log('✅ sync-user success:', {
-                username: userData.username,
-                is_creator: userData.is_creator,
-                is_admin: userData.is_admin
-              });
-
-              // Circuit breaker: Reset on success
-              recordSyncUserSuccess();
-
-              setUser(session.user);
-              setProfile(userData);
-              saveProfileCache(userData, session);
-
-              if (userData.token_balance !== undefined) {
-                setTokenBalance(userData.token_balance);
-              }
-
-              setError('');
-              setAuthLoading(false);
-              clearTimeout(timeoutId);
-              clearTimeout(bootTimeout);
-
-              // Fetch token balance
-              setTimeout(() => fetchTokenBalance(session.user), 200);
-            } else {
-              // Circuit breaker: Record failure
-              recordSyncUserFailure();
-              // Log detailed error response
-              const errorData = await response.json().catch(() => ({}));
-              console.error('❌ sync-user failed (HTTP error):', {
-                status: response.status,
-                error: errorData.error,
-                message: errorData.message,
-                detail: errorData.detail
-              });
-
-              // Backend failed - use cached profile if available
-              console.log('⚠️ Backend sync failed, checking cache...');
-              const cachedProfile = loadProfileCache();
-
-              if (cachedProfile && mounted) {
-                console.log('✅ Using cached profile as fallback');
-                setUser(session.user);
-                setProfile(cachedProfile);
-                setTokenBalance(cachedProfile.token_balance || 0);
-                setError('');
-                setAuthLoading(false);
-                clearTimeout(timeoutId);
-                clearTimeout(bootTimeout);
-                return; // Success via cache!
-              }
-
-              // No cache available - stop loading but don't sign out
-              console.error('❌ Backend sync failed and no cache available');
-              setError('Unable to connect to server. Please check your connection.');
-              setAuthLoading(false);
-              clearTimeout(timeoutId);
-              clearTimeout(bootTimeout);
-
-              // Keep the session active - don't sign out automatically
-              setUser(session.user);
+          // Sync user with backend - fail open with timeout
+          const result = await safeFetch(
+            `${import.meta.env.VITE_BACKEND_URL}/api/auth/sync-user`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                supabaseId: session.user.id,
+                email: session.user.email,
+                metadata: session.user.user_metadata
+              }),
+              timeout: 6000 // 6 second timeout
             }
-          } catch (syncError) {
-            // Circuit breaker: Record failure
-            recordSyncUserFailure();
+          );
 
-            console.error('❌ Backend sync network error:', syncError);
+          if (result.ok && result.data?.user) {
+            const userData = result.data.user;
 
-            // Use cached profile as fallback
-            const cachedProfile = loadProfileCache();
+            console.log('✅ sync-user success:', {
+              username: userData.username,
+              is_creator: userData.is_creator,
+              is_admin: userData.is_admin
+            });
 
-            if (cachedProfile && mounted) {
-              console.log('✅ Using cached profile after network error');
-              setUser(session.user);
-              setProfile(cachedProfile);
-              setTokenBalance(cachedProfile.token_balance || 0);
-              setError('');
-              setAuthLoading(false);
-              clearTimeout(timeoutId);
-              clearTimeout(bootTimeout);
-              return; // Success via cache!
+            // Circuit breaker: Reset on success
+            recordSyncUserSuccess();
+
+            setUser(session.user);
+            setProfile(userData);
+            saveProfileCache(userData, session);
+
+            if (userData.token_balance !== undefined) {
+              setTokenBalance(userData.token_balance);
             }
 
-            // No cache available - stop loading but don't sign out
-            console.error('❌ Network error and no cache available');
-            setError('Unable to connect to server. Please check your connection.');
+            setError('');
             setAuthLoading(false);
             clearTimeout(timeoutId);
             clearTimeout(bootTimeout);
 
-            // Keep the session active - don't sign out automatically
-            setUser(session.user);
+            // Fetch token balance
+            setTimeout(() => fetchTokenBalance(session.user), 200);
+          } else {
+            // Circuit breaker: Record failure
+            recordSyncUserFailure();
+
+            console.warn('⚠️ sync-user failed (non-blocking):', {
+              status: result.status,
+              error: result.error
+            });
+
+            // Backend failed - use cached profile if available
+            const cachedProfile = loadProfileCache();
+
+            if (cachedProfile && mounted) {
+              console.log('✅ Using cached profile as fallback');
+              setUser(session.user);
+              setProfile(cachedProfile);
+              setTokenBalance(cachedProfile.token_balance || 0);
+              setError('');
+            } else {
+              console.warn('⚠️ No cached profile available - continuing without profile');
+              setUser(session.user);
+              // Set minimal profile so app doesn't block
+              setProfile({
+                id: session.user.id,
+                email: session.user.email,
+                username: session.user.email?.split('@')[0] || 'user',
+                is_creator: false,
+                is_admin: false
+              });
+            }
+
+            // FAIL OPEN - Always stop loading, don't block the app
+            setAuthLoading(false);
+            clearTimeout(timeoutId);
+            clearTimeout(bootTimeout);
           }
         }
       } catch (error) {
