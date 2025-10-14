@@ -8,14 +8,18 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { analytics } from '../lib/analytics';
+import { addBreadcrumb, setTag } from '../lib/sentry.client';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Monitor route changes and log performance metrics
  */
 export function useRouteMonitoring() {
   const location = useLocation();
+  const { role, roleHint, roleResolved } = useAuth();
   const previousPath = useRef(location.pathname);
   const navigationStart = useRef(Date.now());
+  const firstNavigationLogged = useRef(false);
 
   useEffect(() => {
     const currentPath = location.pathname;
@@ -44,11 +48,49 @@ export function useRouteMonitoring() {
 
       analytics.navigate(previousPath.current, currentPath, duration);
 
+      // Production observability: Log first navigation with auth context
+      if (!firstNavigationLogged.current && (role || roleHint)) {
+        firstNavigationLogged.current = true;
+
+        addBreadcrumb({
+          category: 'navigation',
+          level: 'info',
+          message: 'First navigation after auth',
+          data: {
+            to: currentPath,
+            from: previousPath.current,
+            duration_ms: duration,
+            role: role || roleHint || 'unknown',
+            roleResolved,
+            usedRoleHint: !role && !!roleHint
+          }
+        });
+
+        // Set Sentry tags for issue grouping
+        setTag('auth.role', role || roleHint || 'unknown');
+        setTag('auth.roleResolved', String(roleResolved));
+      }
+
+      // Production observability: Log slow navigations (>2s)
+      if (duration > 2000) {
+        addBreadcrumb({
+          category: 'navigation',
+          level: 'warning',
+          message: 'Slow navigation detected',
+          data: {
+            to: currentPath,
+            from: previousPath.current,
+            duration_ms: duration,
+            role: role || roleHint || 'guest'
+          }
+        });
+      }
+
       // Update refs for next navigation
       previousPath.current = currentPath;
       navigationStart.current = Date.now();
     }
-  }, [location.pathname]);
+  }, [location.pathname, role, roleHint, roleResolved]);
 }
 
 /**
