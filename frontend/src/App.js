@@ -1017,7 +1017,7 @@ const App = () => {
   const routedRoots = [
     '/dashboard', '/messages', '/wallet', '/tv', '/classes', '/explore', '/call',
     '/subscriptions', '/following', '/schedule', '/admin', '/content', '/analytics',
-    '/collections', '/profile', '/settings', '/followers', '/subscribers'
+    '/collections', '/profile', '/settings', '/followers', '/subscribers', '/streaming', '/stream'
   ];
   const isRoutedPage = routedRoots.some(p => location.pathname.startsWith(p));
 
