@@ -46,10 +46,23 @@ export function useAgoraSession({
   const [localVideoEnabled, setLocalVideoEnabled] = useState(true);
   const [stats, setStats] = useState({ bitrate: 0, packetLoss: 0, latency: 0 });
 
-  const isSafari = useMemo(
-    () => /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
-    []
-  );
+  // Comprehensive iOS/Safari detection
+  // ALL browsers on iOS use WebKit (Safari engine), so they all need h264
+  const needsH264 = useMemo(() => {
+    const ua = navigator.userAgent;
+
+    // iOS devices (iPhone, iPad, iPod) - all browsers on iOS use WebKit
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+
+    // Safari on any platform
+    const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+
+    // Android devices might also benefit from h264 for better compatibility
+    const isAndroid = /android/i.test(ua);
+
+    // Use h264 for iOS, Safari, or mobile Android
+    return isIOS || isSafari || (isAndroid && isMobile);
+  }, [isMobile]);
 
   // Map Agora quality scale (1-6) to labels
   const qualityLabel = useCallback((q) => {
@@ -73,13 +86,13 @@ export function useAgoraSession({
   const ensureClient = useCallback(() => {
     if (!clientRef.current) {
       const mode = isBroadcast ? 'live' : 'rtc';
-      const codec = isSafari ? 'h264' : 'vp8';
-      
-      console.log(`🎥 Creating Agora client - Mode: ${mode}, Codec: ${codec}`);
+      const codec = needsH264 ? 'h264' : 'vp8';
+
+      console.log(`🎥 Creating Agora client - Mode: ${mode}, Codec: ${codec}, Mobile: ${isMobile}, Needs H264: ${needsH264}`);
       clientRef.current = AgoraRTC.createClient({ mode, codec });
     }
     return clientRef.current;
-  }, [isBroadcast, isSafari]);
+  }, [isBroadcast, needsH264, isMobile]);
 
   // Play local video preview
   const playLocal = useCallback((videoEl) => {
@@ -223,6 +236,22 @@ export function useAgoraSession({
   const start = useCallback(async () => {
     try {
       console.log(`🚀 Starting ${sessionType} session as ${role}`);
+
+      // Check system requirements before attempting to start
+      const canStream = AgoraRTC.checkSystemRequirements();
+      console.log('✅ Agora system check:', canStream);
+
+      if (!canStream) {
+        // Log detailed environment info for debugging
+        console.error('❌ System requirements not met:', {
+          userAgent: navigator.userAgent,
+          isHTTPS: location.protocol === 'https:',
+          hasMediaDevices: !!navigator.mediaDevices,
+          hasGetUserMedia: !!(navigator.mediaDevices?.getUserMedia)
+        });
+        throw new Error('SYSTEM_REQUIREMENTS_NOT_MET: This browser doesn\'t support live streaming. Try updating your browser or switching to a modern browser like Chrome, Firefox, or Safari.');
+      }
+
       const client = ensureClient();
 
       // Private broadcast paywall check for audience
