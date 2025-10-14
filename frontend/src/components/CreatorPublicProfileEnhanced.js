@@ -36,6 +36,7 @@ import { HeartIcon as HeartSolid, LockClosedIcon } from '@heroicons/react/24/sol
 import api from '../services/api';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 import { getAuthToken } from '../utils/supabase-auth';
+import { getSession, authedFetch } from '../utils/requireAuth';
 import socketService from '../services/socket';
 import toast from 'react-hot-toast';
 import { addBreadcrumb } from '../lib/sentry.client';
@@ -792,13 +793,21 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     fetchUserTokenBalance();
   }, [user]);
 
-  const handleInteraction = (action, data) => {
-    if (!user) {
+  const handleInteraction = async (action, data) => {
+    // Check session (not profile) to avoid false negatives when profile is null but session is valid
+    const session = await getSession();
+
+    if (!session) {
       // Track auth wall shown for gated CTAs
-      addBreadcrumb('auth_wall_shown', {
-        handle: safeUsername,
-        intent: action,
-        category: 'auth'
+      addBreadcrumb({
+        category: 'auth',
+        level: 'info',
+        message: 'Auth wall shown',
+        data: {
+          handle: safeUsername,
+          intent: action,
+          page: 'creator_public_profile'
+        }
       });
 
       setAuthAction({ action, data });
@@ -809,7 +818,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
 
   const handlePurchasePicture = async (picture) => {
-    if (!handleInteraction('purchase_picture', picture)) return;
+    if (!(await handleInteraction('purchase_picture', picture))) return;
 
     if (user.tokenBalance < picture.price) {
       setShowTokenPurchase(true);
@@ -884,7 +893,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
   
   const handlePurchaseVideo = async (video) => {
-    if (!handleInteraction('purchase_video', video)) return;
+    if (!(await handleInteraction('purchase_video', video)) return;
 
     if (user.tokenBalance < video.price) {
       setShowTokenPurchase(true);
@@ -905,12 +914,12 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
 
   const handleStartVideoCall = () => {
-    if (!handleInteraction('video_call', creator)) return;
+    if (!(await handleInteraction('video_call', creator)) return;
     setShowVideoCallModal(true);
   };
 
   const handleStartVoiceCall = () => {
-    if (!handleInteraction('voice_call', creator)) return;
+    if (!(await handleInteraction('voice_call', creator)) return;
     setShowVoiceCallModal(true);
   };
 
@@ -925,7 +934,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
 
   const handlePurchaseDigital = async (digital) => {
-    if (!handleInteraction('digital_purchase', { creator, digital })) return;
+    if (!(await handleInteraction('digital_purchase', { creator, digital })) return;
     
     try {
       const response = await api.post('/api/digitals/purchase', {
@@ -946,7 +955,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
 
 
   const handleSendMessage = () => {
-    if (!handleInteraction('message', creator)) return;
+    if (!(await handleInteraction('message', creator)) return;
     setShowMessageModal(true);
   };
 
@@ -958,13 +967,13 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
 
   const handleScheduleSession = () => {
-    if (!handleInteraction('schedule', creator)) return;
+    if (!(await handleInteraction('schedule', creator)) return;
     // Navigate to schedule page or open schedule modal
     navigate(`/schedule?creator=${creator.username}`);
   };
 
   const handleSendTip = () => {
-    if (!handleInteraction('tip', creator)) return;
+    if (!(await handleInteraction('tip', creator)) return;
     setShowTipModal(true);
   };
 
@@ -976,7 +985,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
   
   const handleShopProductClick = (product) => {
-    if (!handleInteraction('shop_product', { creator, product })) return;
+    if (!(await handleInteraction('shop_product', { creator, product })) return;
     
     if (product.external_link) {
       window.open(product.external_link, '_blank');
@@ -986,7 +995,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
   
   const handleAddToCart = async (product) => {
-    if (!handleInteraction('add_to_cart', { creator, product })) return;
+    if (!(await handleInteraction('add_to_cart', { creator, product })) return;
     
     try {
       const authToken = await getAuthToken();
@@ -1068,7 +1077,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
 
   const handleFollow = async () => {
-    if (!handleInteraction('follow', creator)) return;
+    if (!(await handleInteraction('follow', creator)) return;
 
     try {
       if (isFollowing) {

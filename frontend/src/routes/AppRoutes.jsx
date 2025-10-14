@@ -158,10 +158,10 @@ const AppRoutes = () => {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
 
-        {/* Creator Public Profiles */}
-        <Route path="/creator/:username" element={<CreatorPublicProfileEnhanced />} />
-        <Route path="/:username/shop" element={<PublicCreatorShop />} />
-        <Route path="/:username/digitals" element={<DigitalsPage />} />
+        {/* Creator Public Profiles - Public pages pass currentUser for soft auth */}
+        <Route path="/creator/:username" element={<CreatorPublicProfileEnhanced user={currentUser} />} />
+        <Route path="/:username/shop" element={<PublicCreatorShop user={currentUser} />} />
+        <Route path="/:username/digitals" element={<DigitalsPage user={currentUser} />} />
 
         {/* Protected Routes - Require Authentication */}
         <Route path="/explore" element={
