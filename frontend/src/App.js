@@ -215,22 +215,26 @@ const App = () => {
 
   // Sync localStorage when profile changes to ensure consistency
   useEffect(() => {
-    if (profile) {
-      const profileIsCreator = profile.is_creator === true;
-      const currentLocalStorage = localStorage.getItem('userIsCreator');
+    // Only sync when both user and profile exist to prevent updates after logout
+    if (!user || !profile) return;
 
-      // Only update if different to avoid unnecessary writes
-      if (currentLocalStorage !== String(profileIsCreator)) {
-        console.log('🔄 Syncing localStorage: userIsCreator =', profileIsCreator);
-        localStorage.setItem('userIsCreator', String(profileIsCreator));
-      }
+    const profileIsCreator = profile.is_creator === true;
+    const currentLocalStorage = localStorage.getItem('userIsCreator');
+
+    // Only update if different to avoid unnecessary writes
+    if (currentLocalStorage !== String(profileIsCreator)) {
+      console.log('🔄 Syncing localStorage: userIsCreator =', profileIsCreator);
+      localStorage.setItem('userIsCreator', String(profileIsCreator));
     }
-  }, [profile?.is_creator, profile]);
+  }, [user, profile?.is_creator, profile]);
 
   // NOTE: URL ↔ view syncing now handled by useViewRouter adapter hook
 
   // Debug creator status for both mobile and desktop
   useEffect(() => {
+    // Skip if user is not logged in to prevent logging after logout
+    if (!user) return;
+
     const deviceType = isMobile ? '📱 Mobile' : '🖥️ Desktop';
     console.log(`${deviceType} State Check:`, {
       user: user?.email,
@@ -399,6 +403,9 @@ const App = () => {
 
   // Service initialization (from NewApp.js)
   useEffect(() => {
+    // Only initialize services when user is logged in
+    if (!user) return;
+
     const initializeServices = async () => {
 
       // Initialize optional services with individual error handling
@@ -620,6 +627,11 @@ const App = () => {
         // Clear Zustand store
         logout();
 
+        // Clear localStorage to prevent stale data causing re-render loops
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userIsCreator');
+        console.log('🧹 Cleared localStorage auth data');
+
         // Navigate to public destination (no flickering, prevents back-button loops)
         console.log('✅ handleSignOut: Navigating to', LOGOUT_DEST);
         navigate(LOGOUT_DEST, { replace: true });
@@ -635,6 +647,11 @@ const App = () => {
       // Force logout on error - use navigate instead of window.location
       clearProfileCache();
       logout();
+
+      // Clear localStorage even on error
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userIsCreator');
+
       navigate(LOGOUT_DEST, { replace: true });
     }
   };
