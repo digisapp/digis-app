@@ -9,7 +9,7 @@ const EnhancedCreatorDiscovery = lazy(() => import('../EnhancedCreatorDiscovery'
 const PrivacySettings = lazy(() => import('../PrivacySettings'));
 const CreatorApplication = lazy(() => import('../CreatorApplication'));
 const GoLiveSetup = lazy(() => import('../GoLiveSetup'));
-const MobileLiveStream = lazy(() => import('../mobile/MobileLiveStream'));
+const EnhancedMobileLiveStream = lazy(() => import('../mobile/EnhancedMobileLiveStream'));
 const TipModal = lazy(() => import('../TipModal'));
 const EnhancedSchedule = lazy(() => import('../EnhancedSchedule'));
 const FanEngagement = lazy(() => import('../FanEngagement'));
@@ -120,17 +120,20 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
         </Suspense>
       )}
 
-      {/* Mobile Live Stream */}
+      {/* Enhanced Mobile Live Stream */}
       {isOpen(MODALS.MOBILE_LIVE_STREAM) && (
         <Suspense fallback={null}>
           <div data-golive-modal="true">
-            <MobileLiveStream
+            <EnhancedMobileLiveStream
               user={user}
               onEnd={() => {
                 console.log('Mobile stream ended');
                 close(MODALS.MOBILE_LIVE_STREAM);
               }}
               streamConfig={getProps(MODALS.MOBILE_LIVE_STREAM).streamConfig}
+              channel={getProps(MODALS.MOBILE_LIVE_STREAM).channel || `stream_${user?.id}_${Date.now()}`}
+              isCreator={getProps(MODALS.MOBILE_LIVE_STREAM).isCreator !== undefined ?
+                getProps(MODALS.MOBILE_LIVE_STREAM).isCreator : true}
             />
           </div>
         </Suspense>

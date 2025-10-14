@@ -194,7 +194,7 @@ const AppRoutes = () => {
 
         <Route path="/messages" element={
           <ProtectedRoute>
-            {isMobile ? <MobileMessages user={currentUser} /> : <MessagesPage user={currentUser} />}
+            {isMobile ? <MobileMessages user={currentUser} isCreator={isCreator} /> : <MessagesPage user={currentUser} isCreator={isCreator} />}
           </ProtectedRoute>
         } />
 

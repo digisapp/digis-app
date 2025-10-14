@@ -39,7 +39,6 @@ const CreatorKYCVerification = lazy(() => import('./components/CreatorKYCVerific
 const StreamingLoadingSkeleton = lazy(() => import('./components/StreamingLoadingSkeleton'));
 const GoLiveSetup = lazy(() => import('./components/GoLiveSetup'));
 const MobileGoLive = lazy(() => import('./components/mobile/MobileGoLive'));
-const MobileLiveStream = lazy(() => import('./components/mobile/MobileLiveStream'));
 
 // Lazy load interaction components
 const TipModal = lazy(() => import('./components/TipModal'));
