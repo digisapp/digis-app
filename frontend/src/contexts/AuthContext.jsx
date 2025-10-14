@@ -484,6 +484,15 @@ export const AuthProvider = ({ children }) => {
     let timeoutId;
 
     const initAuth = async () => {
+      // CRITICAL: Hard timeout fallback to prevent infinite loading on slow devices
+      const MAX_BOOT_MS = 5000; // 5 seconds max boot time
+      const bootTimeout = setTimeout(() => {
+        if (mounted) {
+          console.warn('⚠️ Hard auth timeout reached after 5s - forcing load complete');
+          setAuthLoading(false);
+        }
+      }, MAX_BOOT_MS);
+
       // Check if AppBootstrap already authenticated
       const authStoreState = useAuthStore?.getState?.();
       if (authStoreState?.authStatus === 'ready' && authStoreState?.user) {
@@ -530,6 +539,7 @@ export const AuthProvider = ({ children }) => {
                 setTokenBalance(userData.token_balance);
               }
               setAuthLoading(false);
+              clearTimeout(bootTimeout);
               return;
             } else {
               const errorData = await response.json().catch(() => ({}));
@@ -557,6 +567,7 @@ export const AuthProvider = ({ children }) => {
           console.log('✅ No session found - showing public homepage');
           setAuthLoading(false);
           clearTimeout(timeoutId);
+          clearTimeout(bootTimeout);
           return; // Exit early for public users
         }
 
@@ -578,6 +589,7 @@ export const AuthProvider = ({ children }) => {
           if (!shouldAttemptSyncUser()) {
             console.log('⏸️ Using cached profile (circuit breaker active)');
             setAuthLoading(false);
+            clearTimeout(bootTimeout);
             return;
           }
 
@@ -623,6 +635,7 @@ export const AuthProvider = ({ children }) => {
               setError('');
               setAuthLoading(false);
               clearTimeout(timeoutId);
+              clearTimeout(bootTimeout);
 
               // Fetch token balance
               setTimeout(() => fetchTokenBalance(session.user), 200);
@@ -650,6 +663,7 @@ export const AuthProvider = ({ children }) => {
                 setError('');
                 setAuthLoading(false);
                 clearTimeout(timeoutId);
+                clearTimeout(bootTimeout);
                 return; // Success via cache!
               }
 
@@ -658,6 +672,7 @@ export const AuthProvider = ({ children }) => {
               setError('Unable to connect to server. Please check your connection.');
               setAuthLoading(false);
               clearTimeout(timeoutId);
+              clearTimeout(bootTimeout);
 
               // Keep the session active - don't sign out automatically
               setUser(session.user);
@@ -679,6 +694,7 @@ export const AuthProvider = ({ children }) => {
               setError('');
               setAuthLoading(false);
               clearTimeout(timeoutId);
+              clearTimeout(bootTimeout);
               return; // Success via cache!
             }
 
@@ -687,6 +703,7 @@ export const AuthProvider = ({ children }) => {
             setError('Unable to connect to server. Please check your connection.');
             setAuthLoading(false);
             clearTimeout(timeoutId);
+            clearTimeout(bootTimeout);
 
             // Keep the session active - don't sign out automatically
             setUser(session.user);

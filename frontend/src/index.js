@@ -7,6 +7,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { initSentry } from './utils/sentry';
 import { initializeTheme } from './utils/theme-init';
+import { initServiceWorkerHotfix } from './utils/runtime-sw-hotfix';
 import './index.css';
 import './styles/utilities.css';
 import './styles/enhanced-landing.css';
@@ -15,6 +16,9 @@ import './styles/mobile-experience-enhanced.css';
 import './styles/mobile-viewport-fix.css';
 import App from './App';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+
+// Initialize Service Worker hotfix FIRST to clear stale caches
+initServiceWorkerHotfix();
 
 // Initialize Sentry for error tracking
 initSentry();

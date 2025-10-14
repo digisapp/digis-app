@@ -6,6 +6,7 @@ import { useModal, MODALS } from '../contexts/ModalContext';
 import ProtectedRoute from '../components/ProtectedRoute';
 import RouteErrorBoundary from '../components/ui/RouteErrorBoundary';
 import { RouteFallback, MobileRouteFallback } from '../components/ui/RouteFallback';
+import DebugHUD from '../components/ui/DebugHUD';
 import useRouteObservability from '../hooks/useRouteMonitoring';
 import { defaultPathFor, isRoleReady } from '../utils/routeHelpers';
 import toast from 'react-hot-toast';
@@ -74,12 +75,36 @@ const MobileCreatorProfile = lazy(() => import('../components/mobile/MobileCreat
 const AppRoutes = () => {
   const { currentUser, isCreator, isAdmin, tokenBalance, roleResolved, role } = useAuth();
   const { isMobile } = useDevice();
-  const { open: openModal } = useModal();
+  const { open: openModal, close: closeModal } = useModal();
   const location = useLocation();
   const navigate = useNavigate();
 
   // Route observability - tracks navigation performance and errors
   useRouteObservability();
+
+  // Handlers for HomePage sign in/up buttons
+  const handleSignIn = useCallback(() => {
+    if (isMobile) {
+      // Mobile users will be redirected to MobileLandingPage
+      navigate('/', { replace: true });
+    } else {
+      // Desktop: Open auth modal (if we add one) or navigate to auth page
+      // For now, let's just show a toast - you can add a proper auth modal later
+      toast('Please sign in through the auth page');
+      // TODO: Add SIGN_IN modal to MODALS and open it here
+    }
+  }, [isMobile, navigate]);
+
+  const handleSignUp = useCallback(() => {
+    if (isMobile) {
+      // Mobile users will be redirected to MobileLandingPage
+      navigate('/', { replace: true });
+    } else {
+      // Desktop: Open auth modal (if we add one) or navigate to auth page
+      toast('Please sign up through the auth page');
+      // TODO: Add SIGN_UP modal to MODALS and open it here
+    }
+  }, [isMobile, navigate]);
 
   // Unified Go Live handler for mobile creators
   const handleShowGoLive = useCallback(() => {
@@ -110,6 +135,9 @@ const AppRoutes = () => {
 
   return (
     <RouteErrorBoundary>
+      {/* Debug HUD - shows when ?debug=1 is in URL */}
+      <DebugHUD />
+
       <Suspense fallback={LoadingFallback}>
         <Routes>
         {/* Public Routes */}
@@ -123,7 +151,7 @@ const AppRoutes = () => {
               <Navigate to={defaultPathFor(role)} replace />
             )
           ) : (
-            <HomePage />
+            <HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />
           )
         } />
 
