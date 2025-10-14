@@ -94,6 +94,7 @@ import NotificationCenter from './NotificationCenter';
 // Import ItemModal for Add Product functionality
 import { ItemModal } from './CreatorShopManagement';
 
+// HYBRID_CREATOR_DASHBOARD_ACTIVE - This is the active component file
 const HybridCreatorDashboard = memo(({
   user,
   onNavigate,
@@ -106,6 +107,11 @@ const HybridCreatorDashboard = memo(({
   contentData: externalContentData,
   onContentUpdate: onExternalContentUpdate
 }) => {
+  // Mount beacon for diagnostics
+  useEffect(() => {
+    console.info("[MOUNT] HybridCreatorDashboard.js");
+  }, []);
+
   const navigate = useNavigate();
   const [isNavigating, setIsNavigating] = useState(false);
   // Initialize profile data from user prop (from Zustand store) without fallback defaults
@@ -824,6 +830,8 @@ const HybridCreatorDashboard = memo(({
   const handleNavigateToPage = useCallback((path) => {
     if (isNavigating) return;
     setIsNavigating(true);
+
+    console.log(`[Nav] ${path} { hasOnNavigate: ${!!onNavigate} }`);
 
     if (onNavigate) {
       onNavigate(path);

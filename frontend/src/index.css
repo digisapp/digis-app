@@ -86,11 +86,9 @@
 
 /* Safe area utilities for mobile devices */
 @layer utilities {
-  /* Content spacing below fixed navigation */
-  @media (min-width: 768px) {
-    .content-below-nav {
-      padding-top: calc(var(--nav-height) + var(--nav-gap));
-    }
+  /* Content spacing below fixed navigation - UNIVERSAL (not just desktop) */
+  .content-below-nav {
+    padding-top: calc(var(--nav-height) + var(--nav-gap));
   }
 
   /* Scroll margin for anchor links with sticky nav */

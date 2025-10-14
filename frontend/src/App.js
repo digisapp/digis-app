@@ -146,6 +146,12 @@ import { logLogoutOnce, resetLogoutBreadcrumb } from './utils/sentry';
 const FETCH_THROTTLE_MS = 5000; // 5 seconds between fetches
 
 const App = () => {
+  // Build stamp for tracking deployed version
+  useEffect(() => {
+    window.__DIGIS_BUILD__ = { commit: "b4b32aa", at: new Date().toISOString() };
+    console.info("[DIGIS] build", window.__DIGIS_BUILD__);
+  }, []);
+
   // Reset logout breadcrumb on app mount (handles browser restarts)
   useEffect(() => {
     resetLogoutBreadcrumb();

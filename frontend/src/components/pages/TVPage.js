@@ -54,6 +54,11 @@ import VODPurchaseModal from '../VODPurchaseModal';
 import DigisWatermark from '../DigisWatermark';
 
 const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onTokenPurchase }) => {
+  // Mount beacon for diagnostics
+  useEffect(() => {
+    console.info("[MOUNT] TVPage.js");
+  }, []);
+
   const [liveStreams, setLiveStreams] = useState([]);
   const [filteredStreams, setFilteredStreams] = useState([]);
   const [loading, setLoading] = useState(true);

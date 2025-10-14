@@ -50,6 +50,11 @@ import toast from 'react-hot-toast';
 import { preload } from '../../lib/preload';
 
 const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
+  // Mount beacon for diagnostics
+  useEffect(() => {
+    console.info("[MOUNT] DesktopNav2025.js");
+  }, []);
+
   // Use AuthContext as SINGLE SOURCE OF TRUTH
   const { currentUser, isCreator, isAdmin, role, roleResolved } = useAuth();
 
@@ -398,16 +403,8 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
               {/* Wallet Button - Icon and token count only */}
               <motion.button
                 onClick={() => {
-                  if (role === 'creator') {
-                    // Creators go to wallet page
-                    onNavigate('/wallet');
-                  } else if (role === 'fan') {
-                    // Fans also go to wallet page
-                    onNavigate('/wallet');
-                  } else {
-                    // Default to wallet page
-                    onNavigate('/wallet');
-                  }
+                  console.log("[Nav] Wallet → /wallet");
+                  onNavigate('/wallet');
                 }}
                 onMouseEnter={() => handleRoutePreload('/wallet')}
                 className="relative group"
