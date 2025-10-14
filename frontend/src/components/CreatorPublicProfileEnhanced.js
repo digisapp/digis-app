@@ -38,6 +38,7 @@ import { fetchWithRetry } from '../utils/fetchWithRetry';
 import { getAuthToken } from '../utils/supabase-auth';
 import socketService from '../services/socket';
 import toast from 'react-hot-toast';
+import { addBreadcrumb } from '../lib/sentry.client';
 import Auth from './Auth';
 import TokenPurchase from './TokenPurchase';
 import CreatorOffers from './CreatorOffers';
@@ -648,6 +649,22 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     }
   }, [username]);
 
+  // Track profile view for analytics
+  useEffect(() => {
+    if (!creator || !safeUsername) return;
+
+    // Determine source from referrer
+    const source = typeof document !== 'undefined' && document.referrer?.includes('/explore')
+      ? 'explore'
+      : 'direct';
+
+    addBreadcrumb('profile_view', {
+      handle: safeUsername,
+      source,
+      category: 'navigation'
+    });
+  }, [creator, safeUsername]);
+
   // Fetch user token balance
   useEffect(() => {
     const fetchUserTokenBalance = async () => {
@@ -702,6 +719,13 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
 
   const handleInteraction = (action, data) => {
     if (!user) {
+      // Track auth wall shown for gated CTAs
+      addBreadcrumb('auth_wall_shown', {
+        handle: safeUsername,
+        intent: action,
+        category: 'auth'
+      });
+
       setAuthAction({ action, data });
       setShowAuthModal(true);
       return false;

@@ -72,6 +72,7 @@ const CreatorCard = ({
   const navigate = useNavigate();
   const cardRef = useRef(null);
   const videoTimeoutRef = useRef(null);
+  const navigatingRef = useRef(false); // Guard against double navigation on rapid clicks
   const reducedMotion = prefersReducedMotion();
 
   // Check if creator has preview video
@@ -229,11 +230,9 @@ const CreatorCard = ({
   const categoryGradient = getCategoryGradient(creator.category || creator.creator_type);
 
   // Profile path for navigation - fallback gracefully if no username
-  const profilePath = creator.username
-    ? `/creator/${creator.username.toLowerCase()}`
-    : creator.slug
-    ? `/creator/${creator.slug.toLowerCase()}`
-    : null;
+  // Use encodeURIComponent for safety with special chars (dots, non-ASCII, etc.)
+  const handle = (creator.username || creator.slug || '').toLowerCase();
+  const profilePath = handle ? `/creator/${encodeURIComponent(handle)}` : null;
 
   // Dev warning for missing username/slug
   useEffect(() => {
@@ -360,6 +359,11 @@ const CreatorCard = ({
           to={profilePath}
           className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient} focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2`}
           onClick={(e) => {
+            // Guard against double navigation on rapid clicks
+            if (navigatingRef.current) return;
+            navigatingRef.current = true;
+            setTimeout(() => { navigatingRef.current = false; }, 1000);
+
             // Analytics: Track card click
             addBreadcrumb('creator_card_click', {
               handle: creator.username,
