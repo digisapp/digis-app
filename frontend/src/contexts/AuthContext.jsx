@@ -656,23 +656,31 @@ export const AuthProvider = ({ children }) => {
               setProfile(cachedProfile);
               setTokenBalance(cachedProfile.token_balance || 0);
               setError('');
+              setAuthLoading(false);
+              clearTimeout(timeoutId);
+              clearTimeout(bootTimeout);
             } else {
-              console.warn('⚠️ No cached profile available - continuing without profile');
-              setUser(session.user);
-              // Set minimal profile so app doesn't block
-              setProfile({
-                id: session.user.id,
-                email: session.user.email,
-                username: session.user.email?.split('@')[0] || 'user',
-                is_creator: false,
-                is_admin: false
-              });
-            }
+              console.error('❌ No cached profile available and sync-user failed');
+              console.error('❌ Cannot proceed without profile data - retry sync-user or sign out');
 
-            // FAIL OPEN - Always stop loading, don't block the app
-            setAuthLoading(false);
-            clearTimeout(timeoutId);
-            clearTimeout(bootTimeout);
+              // Show error to user - don't create fake profile
+              setError('Unable to load your profile. Please refresh the page or sign in again.');
+              setUser(session.user); // Keep session so they can sign out
+              setProfile(null); // Don't set fake profile
+
+              // Stop loading so error message shows
+              setAuthLoading(false);
+              clearTimeout(timeoutId);
+              clearTimeout(bootTimeout);
+
+              // Auto-retry after 3 seconds if we're in circuit breaker backoff
+              setTimeout(async () => {
+                if (shouldAttemptSyncUser() && mounted) {
+                  console.log('🔄 Auto-retrying sync-user after failure...');
+                  window.location.reload(); // Simple reload to retry
+                }
+              }, 3000);
+            }
           }
         }
       } catch (error) {
