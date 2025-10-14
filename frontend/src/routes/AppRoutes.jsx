@@ -73,7 +73,7 @@ const MobileCreatorProfile = lazy(() => import('../components/mobile/MobileCreat
  * location.pathname is the single source of truth
  */
 const AppRoutes = () => {
-  const { currentUser, isCreator, isAdmin, tokenBalance, roleResolved, role } = useAuth();
+  const { currentUser, isCreator, isAdmin, tokenBalance, roleResolved, role, roleHint } = useAuth();
   const { isMobile } = useDevice();
   const { open: openModal, close: closeModal } = useModal();
   const location = useLocation();
@@ -143,12 +143,12 @@ const AppRoutes = () => {
         {/* Public Routes */}
         <Route path="/" element={
           currentUser ? (
-            // Guard: Don't redirect until role is resolved
-            !roleResolved || !isRoleReady(roleResolved, role) ? (
-              <RouteFallback />
+            // Fast routing: Use roleHint for immediate redirect, fallback to roleResolved
+            (roleResolved || roleHint) ? (
+              <Navigate to={defaultPathFor(role || roleHint)} replace />
             ) : (
-              // Single source of truth for role-based routing
-              <Navigate to={defaultPathFor(role)} replace />
+              // Small placeholder while waiting for role resolution (not a spinner)
+              <RouteFallback />
             )
           ) : (
             <HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />
@@ -347,12 +347,11 @@ const AppRoutes = () => {
         {/* Catch-all - Redirect to appropriate home */}
         <Route path="*" element={
           currentUser ? (
-            // Guard: Don't redirect until role is resolved
-            !roleResolved || !isRoleReady(roleResolved, role) ? (
-              <RouteFallback />
+            // Fast routing: Use roleHint for immediate redirect, fallback to roleResolved
+            (roleResolved || roleHint) ? (
+              <Navigate to={defaultPathFor(role || roleHint)} replace />
             ) : (
-              // Single source of truth for role-based routing
-              <Navigate to={defaultPathFor(role)} replace />
+              <RouteFallback />
             )
           ) : (
             <Navigate to="/" replace />

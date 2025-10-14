@@ -45,6 +45,8 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [tokenBalance, setTokenBalance] = useState(0);
   const [authLoading, setAuthLoading] = useState(true);
+  const [roleResolved, setRoleResolved] = useState(false);
+  const [roleHint, setRoleHint] = useState(null); // Fast hint from Supabase metadata
   const [error, setError] = useState('');
 
   // Refs for throttling
@@ -87,7 +89,6 @@ export const AuthProvider = ({ children }) => {
   const isCreator = profile?.is_creator === true;  // Backend computes this canonically
   const isAdmin = profile?.is_admin === true;      // Backend computes this canonically
   const isAuthenticated = !!user;
-  const roleResolved = !!profile?.id && typeof profile?.is_creator === 'boolean'; // Role is fully resolved
 
   // Canonical role string - centralized to avoid recomputation
   const role = useMemo(() => {
@@ -104,6 +105,17 @@ export const AuthProvider = ({ children }) => {
     if (profile && user) return { ...user, ...profile };
     return profile || user || null;
   }, [user, profile]);
+
+  /**
+   * Extract roleHint from Supabase session metadata for fast routing
+   * This allows "/" to redirect immediately without waiting for backend
+   */
+  const extractRoleHint = useCallback((session) => {
+    if (!session?.user) return null;
+    const meta = session.user.user_metadata || session.user.app_metadata || {};
+    const hint = meta.role || (meta.is_creator ? 'creator' : null);
+    return hint;
+  }, []);
 
   /**
    * Circuit breaker: Check if we should attempt sync-user based on failure history
@@ -506,6 +518,10 @@ export const AuthProvider = ({ children }) => {
         // Fetch full profile
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && mounted) {
+          // Set roleHint early for fast routing
+          const hint = extractRoleHint(session);
+          if (hint) setRoleHint(hint);
+
           const result = await safeFetch(
             `${import.meta.env.VITE_BACKEND_URL}/api/auth/sync-user`,
             {
@@ -539,6 +555,7 @@ export const AuthProvider = ({ children }) => {
             if (userData.token_balance !== undefined) {
               setTokenBalance(userData.token_balance);
             }
+            setRoleResolved(true); // Mark role as resolved
             setAuthLoading(false);
             clearTimeout(bootTimeout);
             return;
@@ -547,7 +564,8 @@ export const AuthProvider = ({ children }) => {
               status: result.status,
               error: result.error
             });
-            // Fail open - don't block the app
+            // Fail open - don't block the app, mark role resolved to unblock ProtectedRoute
+            setRoleResolved(true);
             setAuthLoading(false);
             clearTimeout(bootTimeout);
           }
@@ -568,6 +586,15 @@ export const AuthProvider = ({ children }) => {
           clearTimeout(timeoutId);
           clearTimeout(bootTimeout);
           return; // Exit early for public users
+        }
+
+        // Set roleHint early for fast routing (before backend call)
+        if (session?.user && mounted) {
+          const hint = extractRoleHint(session);
+          if (hint) {
+            console.log('🚀 Fast roleHint from metadata:', hint);
+            setRoleHint(hint);
+          }
         }
 
         // Set cached profile immediately if we have one
@@ -632,6 +659,7 @@ export const AuthProvider = ({ children }) => {
             }
 
             setError('');
+            setRoleResolved(true); // Mark role as resolved
             setAuthLoading(false);
             clearTimeout(timeoutId);
             clearTimeout(bootTimeout);
@@ -646,6 +674,9 @@ export const AuthProvider = ({ children }) => {
               status: result.status,
               error: result.error
             });
+
+            // Fail open: mark role resolved even on failure to unblock ProtectedRoute
+            setRoleResolved(true);
 
             // Backend failed - use cached profile if available
             const cachedProfile = loadProfileCache();
@@ -685,6 +716,9 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Error checking session:', error);
+        // Fail open: mark role resolved even on exception to unblock ProtectedRoute
+        setRoleResolved(true);
+        setAuthLoading(false);
       }
 
       // Timeout fallback - reduced from 30s to 10s
@@ -909,6 +943,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     role,           // ⭐ CANONICAL role string ('creator' | 'admin' | 'fan' | null)
     roleResolved,
+    roleHint,       // 🚀 Fast hint from Supabase metadata (before backend sync)
 
     // Actions
     signOut,
@@ -929,6 +964,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     role,
     roleResolved,
+    roleHint,
     signOut,
     refreshProfile,
     fetchTokenBalance,
