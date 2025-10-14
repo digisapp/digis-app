@@ -23,10 +23,11 @@ const ProtectedRoute = ({
   requireAdmin = false,
   fallbackPath = LOGOUT_DEST
 }) => {
-  const { user, authLoading, isCreator, isAdmin, profile, roleResolved, currentUser, role } = useAuth();
+  const { user, authLoading, isCreator, isAdmin, profile, roleResolved, role } = useAuth();
   const location = useLocation();
   const [showSlowLoadingMessage, setShowSlowLoadingMessage] = useState(false);
   const [showUnauthSplash, setShowUnauthSplash] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
 
   // Debug log for QA (can be removed in production)
   if (process.env.NODE_ENV !== 'production') {
@@ -42,7 +43,7 @@ const ProtectedRoute = ({
 
   // Show "Still loading..." message after 3s for slow role resolution
   useEffect(() => {
-    if (authLoading || !roleResolved || !currentUser) {
+    if (authLoading || !roleResolved || !user) {
       const timer = setTimeout(() => {
         setShowSlowLoadingMessage(true);
       }, 3000);
@@ -54,11 +55,20 @@ const ProtectedRoute = ({
     } else {
       setShowSlowLoadingMessage(false);
     }
-  }, [authLoading, roleResolved, currentUser]);
+  }, [authLoading, roleResolved, user]);
 
-  // Hard guard: never render children until role & user are ready
-  // Show lightweight skeleton to avoid layout jump
-  if (authLoading || !roleResolved || !currentUser) {
+  // Hard cap: after 6s, fail open (render children) instead of blocking forever
+  useEffect(() => {
+    if (authLoading || !roleResolved || !user) {
+      const t = setTimeout(() => setTimedOut(true), 6000);
+      return () => clearTimeout(t);
+    } else {
+      setTimedOut(false);
+    }
+  }, [authLoading, roleResolved, user]);
+
+  // Guard while booting, but only briefly; then fail open after timeout
+  if ((authLoading || !roleResolved || !user) && !timedOut) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -90,13 +100,13 @@ const ProtectedRoute = ({
     return <Navigate to={LOGOUT_DEST} state={{ from: location }} replace />;
   }
 
-  // Check role requirements
-  if (requireAdmin && !isAdmin) {
+  // Check role requirements ONLY once role is resolved (don't block route render)
+  if (roleResolved && requireAdmin && !isAdmin) {
     // Silent redirect for admin routes (security - don't reveal they exist)
     return <Navigate to={fallbackPath} replace />;
   }
 
-  if (requireCreator && !isCreator && !isAdmin) {
+  if (roleResolved && requireCreator && !isCreator && !isAdmin) {
     // Show access denied for creator routes
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -127,9 +137,22 @@ const ProtectedRoute = ({
     );
   }
 
+  // If we timed out (backend hiccup), render children with a soft warning banner
+  // Feature code paths can still check profile/isCreator as needed.
+  const WarningBanner = timedOut && !roleResolved ? (
+    <div className="fixed top-0 left-0 right-0 z-50 p-2 text-xs text-yellow-900 bg-yellow-100 border-b border-yellow-200 text-center">
+      We couldn't verify your access right now. Some features may be limited. <button className="underline" onClick={() => window.location.replace('/?nocache=1')}>Retry</button>
+    </div>
+  ) : null;
+
   // Use Outlet pattern for nested routes (prevents cloning issues)
   // If children are provided (direct usage), render them
-  return children || <Outlet />;
+  return (
+    <>
+      {WarningBanner}
+      {children || <Outlet />}
+    </>
+  );
 };
 
 export default ProtectedRoute;
