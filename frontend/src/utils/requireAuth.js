@@ -189,9 +189,118 @@ export async function requireAuthSimple(action, onAuthenticated, onUnauthenticat
   }
 }
 
+/**
+ * Simplified auth gate - for use in onClick handlers
+ * Shorter syntax than requireAuthSimple
+ *
+ * @param {Function} openAuthModal - Callback to open auth modal
+ * @param {Function} onAuthenticated - Callback if authenticated (receives session)
+ * @param {object} options - Additional options (action name, context)
+ * @returns {Promise<void>}
+ */
+export async function requireAuthOr(openAuthModal, onAuthenticated, options = {}) {
+  const { action = 'action', context = {} } = options;
+  const session = await getSession();
+
+  if (!session?.access_token) {
+    // Track intent for resumption after auth
+    if (typeof window !== 'undefined' && action) {
+      try {
+        sessionStorage.setItem('postAuthIntent', JSON.stringify({
+          action,
+          ...context,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        // Ignore storage errors (Safari private mode)
+      }
+    }
+
+    // Track auth wall
+    addBreadcrumb({
+      category: 'auth',
+      level: 'info',
+      message: 'Auth wall shown',
+      data: { action, ...context }
+    });
+
+    return openAuthModal();
+  }
+
+  // Authenticated - execute action
+  return onAuthenticated(session);
+}
+
+/**
+ * Resume pending intent after successful authentication
+ * Call this after login/signup completes
+ *
+ * @param {Function} handlers - Map of action names to handler functions
+ * @returns {Promise<boolean>} true if intent was resumed, false if none pending
+ *
+ * Example:
+ * ```js
+ * await resumePendingIntent({
+ *   follow: async (intent) => await followCreator(intent.target),
+ *   tip: async (intent) => openTipModal(intent.target),
+ *   message: async (intent) => openMessageModal(intent.target)
+ * });
+ * ```
+ */
+export async function resumePendingIntent(handlers = {}) {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    const pendingStr = sessionStorage.getItem('postAuthIntent');
+    if (!pendingStr) return false;
+
+    const intent = JSON.parse(pendingStr);
+
+    // Clear immediately to prevent double-execution
+    sessionStorage.removeItem('postAuthIntent');
+
+    // Check if intent is stale (>5 minutes old)
+    const age = Date.now() - (intent.timestamp || 0);
+    if (age > 5 * 60 * 1000) {
+      console.log('🕐 Intent expired (>5min), skipping:', intent.action);
+      return false;
+    }
+
+    // Execute handler if registered
+    const handler = handlers[intent.action];
+    if (handler) {
+      console.log('▶️ Resuming post-auth intent:', intent.action);
+      await handler(intent);
+      return true;
+    }
+
+    console.warn('⚠️ No handler registered for intent:', intent.action);
+    return false;
+  } catch (error) {
+    console.error('Error resuming intent:', error);
+    return false;
+  }
+}
+
+/**
+ * Clear any pending post-auth intent
+ * Use this when user explicitly cancels auth flow
+ */
+export function clearPendingIntent() {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem('postAuthIntent');
+  } catch (e) {
+    // Ignore storage errors
+  }
+}
+
 export default {
   getSession,
   authedFetch,
   useRequireAuth,
-  requireAuthSimple
+  requireAuthSimple,
+  requireAuthOr,
+  resumePendingIntent,
+  clearPendingIntent
 };
