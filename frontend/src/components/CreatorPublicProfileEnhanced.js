@@ -893,7 +893,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
   
   const handlePurchaseVideo = async (video) => {
-    if (!(await handleInteraction('purchase_video', video)) return;
+    if (!(await handleInteraction('purchase_video', video))) return;
 
     if (user.tokenBalance < video.price) {
       setShowTokenPurchase(true);
@@ -913,13 +913,13 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     }
   };
 
-  const handleStartVideoCall = () => {
-    if (!(await handleInteraction('video_call', creator)) return;
+  const handleStartVideoCall = async () => {
+    if (!(await handleInteraction('video_call', creator))) return;
     setShowVideoCallModal(true);
   };
 
-  const handleStartVoiceCall = () => {
-    if (!(await handleInteraction('voice_call', creator)) return;
+  const handleStartVoiceCall = async () => {
+    if (!(await handleInteraction('voice_call', creator))) return;
     setShowVoiceCallModal(true);
   };
 
@@ -934,7 +934,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
 
   const handlePurchaseDigital = async (digital) => {
-    if (!(await handleInteraction('digital_purchase', { creator, digital })) return;
+    if (!(await handleInteraction('digital_purchase', { creator, digital }))) return;
     
     try {
       const response = await api.post('/api/digitals/purchase', {
@@ -954,8 +954,8 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
 
 
-  const handleSendMessage = () => {
-    if (!(await handleInteraction('message', creator)) return;
+  const handleSendMessage = async () => {
+    if (!(await handleInteraction('message', creator))) return;
     setShowMessageModal(true);
   };
 
@@ -966,14 +966,14 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     // navigate(`/messages/${creator.username}`);
   };
 
-  const handleScheduleSession = () => {
-    if (!(await handleInteraction('schedule', creator)) return;
+  const handleScheduleSession = async () => {
+    if (!(await handleInteraction('schedule', creator))) return;
     // Navigate to schedule page or open schedule modal
     navigate(`/schedule?creator=${creator.username}`);
   };
 
-  const handleSendTip = () => {
-    if (!(await handleInteraction('tip', creator)) return;
+  const handleSendTip = async () => {
+    if (!(await handleInteraction('tip', creator))) return;
     setShowTipModal(true);
   };
 
@@ -984,8 +984,8 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     setUserTokenBalance(prevBalance => prevBalance - amount);
   };
   
-  const handleShopProductClick = (product) => {
-    if (!(await handleInteraction('shop_product', { creator, product })) return;
+  const handleShopProductClick = async (product) => {
+    if (!(await handleInteraction('shop_product', { creator, product }))) return;
     
     if (product.external_link) {
       window.open(product.external_link, '_blank');
@@ -995,7 +995,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
   
   const handleAddToCart = async (product) => {
-    if (!(await handleInteraction('add_to_cart', { creator, product })) return;
+    if (!(await handleInteraction('add_to_cart', { creator, product }))) return;
     
     try {
       const authToken = await getAuthToken();
@@ -1077,7 +1077,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   };
 
   const handleFollow = async () => {
-    if (!(await handleInteraction('follow', creator)) return;
+    if (!(await handleInteraction('follow', creator))) return;
 
     try {
       if (isFollowing) {
