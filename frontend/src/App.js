@@ -68,6 +68,7 @@ const PictureInPicture = lazy(() => import('./components/PictureInPicture'));
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import ErrorPage from './components/ErrorPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import HydrationGate from './components/HydrationGate';
 
 // Mobile components - lazy load for better initial bundle size
 import { MobileUIProvider } from './components/mobile/MobileUIProvider';
@@ -921,7 +922,7 @@ const App = () => {
       console.log('📱 Rendering mobile landing for unauthenticated user');
       return (
         <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>
-        <div suppressHydrationWarning>
+        <HydrationGate fallback={<div className="min-h-screen bg-white" />}>
         <MobileUIProvider>
           <MobileLandingPage
             onLogin={async (user) => {
@@ -984,7 +985,7 @@ const App = () => {
             }}
           />
         </MobileUIProvider>
-        </div>
+        </HydrationGate>
         </Suspense>
       );
     }
