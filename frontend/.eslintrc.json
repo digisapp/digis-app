@@ -64,6 +64,21 @@
         "message": "❌ Do not use setCurrentView(). Use navigate('/path') or setView(navigate, 'view') instead. See src/routes/setView.ts"
       }
     ],
+    "no-restricted-globals": [
+      "warn",
+      {
+        "name": "localStorage",
+        "message": "⚠️  SSR Warning: localStorage accessed during render may cause hydration mismatch. Use within useEffect() or wrap component with <HydrationGate>. See src/components/HydrationGate.jsx"
+      },
+      {
+        "name": "sessionStorage",
+        "message": "⚠️  SSR Warning: sessionStorage accessed during render may cause hydration mismatch. Use within useEffect() or wrap component with <HydrationGate>. See src/components/HydrationGate.jsx"
+      },
+      {
+        "name": "matchMedia",
+        "message": "⚠️  SSR Warning: matchMedia accessed during render may cause hydration mismatch. Use within useEffect() or wrap component with <HydrationGate>. See src/components/HydrationGate.jsx"
+      }
+    ],
     "import/no-cycle": ["error", { "maxDepth": 1 }],
     "jsx-a11y/heading-order": "error"
   },

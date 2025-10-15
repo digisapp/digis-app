@@ -1,5 +1,5 @@
 // Digis Service Worker for PWA functionality
-// Version 1.0.2 - Fixed navigation handling in development
+// Version 1.0.3 - Added build-based cache versioning for clean deployments
 
 // Only register on frontend port
 if (self.location.port === '3001') {
@@ -7,7 +7,10 @@ if (self.location.port === '3001') {
   self.registration.unregister();
 }
 
-const CACHE_NAME = 'digis-v1.2.2';
+// Build-based cache versioning ensures clean deployments
+// Increment BUILD_NUMBER on each deploy to force cache refresh
+const BUILD_NUMBER = '20251015-001'; // Format: YYYYMMDD-XXX
+const CACHE_NAME = `digis-v${BUILD_NUMBER}`;
 const OFFLINE_URL = '/offline.html';
 
 // URLs to cache for offline functionality
