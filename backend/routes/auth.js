@@ -1170,7 +1170,11 @@ router.post('/clear-role-cache', verifySupabaseToken, (req, res) => {
  * @swagger
  * /auth/session:
  *   get:
- *     summary: Get current user session with unified role (SINGLE SOURCE OF TRUTH)
+ *     summary: Get current user session with authoritative role (SINGLE SOURCE OF TRUTH - NO CACHE)
+ *     description: |
+ *       Returns authoritative user role and profile directly from database.
+ *       NO CDN/device caching. This is the canonical endpoint for role resolution.
+ *       Frontend should call this on login/refresh to get the true server role.
  *     tags: [Authentication]
  *     security:
  *       - bearerAuth: []
@@ -1182,90 +1186,94 @@ router.post('/clear-role-cache', verifySupabaseToken, (req, res) => {
  *             schema:
  *               type: object
  *               properties:
- *                 success:
+ *                 ok:
  *                   type: boolean
- *                 session:
+ *                 user:
  *                   type: object
  *                   properties:
- *                     userId:
+ *                     supabaseId:
  *                       type: string
  *                       format: uuid
- *                     email:
+ *                     dbId:
  *                       type: string
- *                     username:
- *                       type: string
- *                     role:
- *                       type: string
- *                       enum: [fan, creator, admin]
- *                     is_creator:
- *                       type: boolean
- *                     is_admin:
- *                       type: boolean
- *                     permissions:
+ *                       format: uuid
+ *                     roles:
  *                       type: array
  *                       items:
  *                         type: string
- *                     role_version:
- *                       type: integer
- *                     user:
- *                       type: object
+ *                       example: ["creator"]
+ *                     isCreator:
+ *                       type: boolean
+ *                     isAdmin:
+ *                       type: boolean
  *       401:
  *         description: Not authenticated
+ *       404:
+ *         description: User not found
  */
 router.get('/session', verifySupabaseToken, async (req, res) => {
   try {
-    const userId = req.user?.id || req.userId;
+    const supabaseId = req.user?.id || req.userId;
 
-    if (!userId) {
+    if (!supabaseId) {
       return res.status(401).json({
-        success: false,
+        ok: false,
         error: 'Not authenticated'
       });
     }
 
-    // Get role from database (single source of truth)
-    const userRole = await getUserRole(userId);
+    // CRITICAL: Query database directly - NO cache, NO guessing
+    // This is the single source of truth for roles
+    const query = `
+      SELECT
+        u.id as db_id,
+        u.supabase_id,
+        COALESCE(u.is_creator, false) as is_creator,
+        COALESCE(u.is_super_admin, false) as is_admin
+      FROM users u
+      WHERE u.supabase_id = $1
+      LIMIT 1
+    `;
 
-    if (!userRole) {
+    const result = await pool.query(query, [supabaseId]);
+
+    if (result.rows.length === 0) {
       return res.status(404).json({
-        success: false,
+        ok: false,
         error: 'User not found'
       });
     }
 
-    // Compute permissions based on role
-    const permissions = [];
-    if (userRole.isAdmin) {
-      permissions.push('admin:all', 'creator:all', 'fan:all');
-    } else if (userRole.isCreator) {
-      permissions.push('creator:manage', 'creator:earnings', 'creator:analytics', 'fan:all');
-    } else {
-      permissions.push('fan:all');
-    }
+    const user = result.rows[0];
 
-    // Return unified session object
+    // Build roles array
+    const roles = [];
+    if (user.is_creator) roles.push('creator');
+    if (user.is_admin) roles.push('admin');
+    // Default to 'fan' if no other roles
+    if (roles.length === 0) roles.push('fan');
+
+    // Prevent CDN/device caching - force fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
+    // Return canonical session
     return res.json({
-      success: true,
-      session: {
-        userId: userRole.id,
-        email: userRole.email,
-        username: userRole.username,
-        role: userRole.primaryRole, // "creator" | "fan" | "admin"
-        is_creator: userRole.isCreator,
-        is_admin: userRole.isAdmin,
-        permissions,
-        role_version: 1, // Increment this when role changes
-        user: {
-          id: userRole.id,
-          email: userRole.email,
-          username: userRole.username
-        }
+      ok: true,
+      user: {
+        supabaseId: user.supabase_id,
+        dbId: user.db_id,
+        roles,
+        isCreator: user.is_creator,
+        isAdmin: user.is_admin
       }
     });
+
   } catch (error) {
-    console.error('Error getting session:', error);
+    console.error('❌ Error getting session:', error);
     return res.status(500).json({
-      success: false,
+      ok: false,
       error: 'Failed to get session'
     });
   }
