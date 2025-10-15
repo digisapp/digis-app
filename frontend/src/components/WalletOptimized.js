@@ -522,23 +522,36 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
     return (
       <div className="space-y-6">
         {/* Token Balance Card */}
-        <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-2xl p-8 shadow-2xl">
-          <div className="flex items-center justify-between">
+        <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-2xl p-6 md:p-8 shadow-2xl">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold mb-4">Your Token Balance</h2>
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Your Token Balance</h2>
               <div className="flex items-baseline gap-3">
-                <span className="text-5xl font-bold">{walletData.tokens.toLocaleString()}</span>
-                <span className="text-xl opacity-90">tokens</span>
+                <span className="text-4xl md:text-5xl font-bold">{walletData.tokens.toLocaleString()}</span>
+                <span className="text-lg md:text-xl opacity-90">tokens</span>
               </div>
-              <p className="text-lg opacity-75 mt-2">≈ {formatTokensAsUsd(walletData.tokens)}</p>
+              <p className="text-base md:text-lg opacity-75 mt-2">≈ {formatTokensAsUsd(walletData.tokens)}</p>
             </div>
-            <WalletIcon className="w-20 h-20 opacity-20" />
+            <WalletIcon className="w-16 h-16 md:w-20 md:h-20 opacity-20" />
           </div>
+
+          {/* Primary CTA - Prominent above the fold */}
+          <button
+            onClick={() => handlePurchaseClick()}
+            disabled={startingPurchase}
+            aria-label="Buy tokens - primary action"
+            className={`w-full bg-white text-purple-600 hover:bg-gray-50 active:bg-gray-100 px-6 py-4 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 ${
+              startingPurchase ? 'opacity-60 cursor-not-allowed' : ''
+            }`}
+          >
+            <CurrencyDollarIcon className="w-6 h-6" />
+            {startingPurchase ? 'Opening Purchase...' : 'Buy Tokens'}
+          </button>
         </div>
 
-        {/* Quick Purchase Options */}
+        {/* Quick Purchase Packs - Secondary Options */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Buy Tokens</h3>
+          <h3 className="text-base md:text-lg font-semibold mb-4 text-gray-900 dark:text-white">Quick Buy Packs</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {(() => {
               const validPacks = validatePurchasePacks(TOKEN_PURCHASE_PACKS) ? TOKEN_PURCHASE_PACKS : [];
@@ -577,28 +590,23 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
               });
             })()}
           </div>
-          
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => handlePurchaseClick()}
-              disabled={startingPurchase}
-              aria-label="Buy custom token amount"
-              className={`w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 ${
-                startingPurchase ? 'opacity-60 cursor-not-allowed' : ''
-              }`}
-            >
-              <CurrencyDollarIcon className="w-5 h-5" />
-              {startingPurchase ? 'Opening...' : 'Custom Amount'}
-            </button>
-          </div>
+          <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-4">
+            Or use the "Buy Tokens" button above for custom amounts
+          </p>
         </div>
 
-        {/* Recent Transactions */}
+        {/* Recent Transactions - With Empty State */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Recent Spending</h3>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Your recent token transactions will appear here
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Recent Activity</h3>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mb-4">
+              <CurrencyDollarIcon className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+            </div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+              No transactions yet
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs">
+              Your token purchases and spending will appear here. Buy tokens to start connecting with creators!
             </p>
           </div>
         </div>
@@ -737,8 +745,14 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
               {chartData.daily.length > 0 ? (
                 <MemoizedAreaChart data={chartData.daily} />
               ) : (
-                <div className="h-full flex items-center justify-center text-gray-500">
-                  <p>No data available</p>
+                <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mb-4">
+                    <ArrowTrendingUpIcon className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <p className="font-medium text-gray-900 dark:text-white mb-1">No earnings yet</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+                    Share your profile link and start creating content to see your earnings grow here!
+                  </p>
                 </div>
               )}
             </ChartWhenVisible>
@@ -751,8 +765,14 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
               {chartData.breakdown.length > 0 ? (
                 <MemoizedBarChart data={chartData.breakdown} />
               ) : (
-                <div className="h-full flex items-center justify-center text-gray-500">
-                  <p>No data available</p>
+                <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mb-4">
+                    <ChartBarIcon className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <p className="font-medium text-gray-900 dark:text-white mb-1">No revenue streams yet</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+                    Enable video calls, tips, and subscriptions to start earning from multiple sources.
+                  </p>
                 </div>
               )}
             </ChartWhenVisible>
