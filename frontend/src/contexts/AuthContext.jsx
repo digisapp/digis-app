@@ -132,8 +132,10 @@ export const AuthProvider = ({ children }) => {
   const role = useMemo(() => {
     if (profile?.is_admin === true || isAdmin) return 'admin';
     if (profile?.is_creator === true || isCreator) return 'creator';
-    return user ? 'fan' : null;
-  }, [profile?.is_admin, profile?.is_creator, isAdmin, isCreator, user]);
+    if (!user) return null;           // logged out
+    if (!roleResolved) return null;   // ⚠️ don't guess yet → prevents fan flash
+    return 'fan';                     // only after we've truly resolved
+  }, [profile?.is_admin, profile?.is_creator, isAdmin, isCreator, user, roleResolved]);
 
   // Canonical currentUser - single source of truth for UI components
   // Merges Supabase auth (id, email) with DB profile (username, display_name, role, etc.)
@@ -653,9 +655,10 @@ export const AuthProvider = ({ children }) => {
           if (session?.user) {
             setUser(session.user);
           }
-          // CRITICAL: Mark role as resolved when using cache to prevent flickering
-          setRoleResolved(true);
-          console.log('✅ Role resolved from cache:', {
+          // IMPORTANT: DO NOT set roleResolved = true here
+          // Wait for fresh backend data to ensure we have the latest role
+          // This prevents showing fan account briefly when user is actually a creator
+          console.log('📦 Cached profile loaded (waiting for fresh data to resolve role):', {
             is_creator: cachedProfile.is_creator,
             is_admin: cachedProfile.is_admin
           });

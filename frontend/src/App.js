@@ -725,22 +725,13 @@ const App = () => {
                 // Close auth modal
                 setShowAuth(false);
 
-                // Single source of truth: determine role from profileData (now safe!)
-                const userRole = profileData?.role === 'admin' ? 'admin' :
-                                profileData?.is_creator ? 'creator' : 'fan';
-                const targetPath = defaultPathFor(userRole);
+                // Let AuthContext resolve the role, then AppRoutes will handle navigation
+                // DO NOT navigate here - prevents fan flash when user is actually a creator
+                console.log('🖥️ Desktop: Auth complete, waiting for roleResolved before navigation');
 
-                console.log('🖥️ Desktop: Navigating based on canonical role:', {
-                  role: userRole,
-                  targetPath,
-                  profileData: { is_creator: profileData?.is_creator, role: profileData?.role }
-                });
-
+                // Navigate to root and let AppRoutes redirect based on resolved role
                 startTransition(() => {
-                  navigate(targetPath);
-                  // Also update legacy currentView for compatibility
-                  const viewMap = { '/admin': 'admin', '/dashboard': 'dashboard', '/explore': 'explore' };
-                  setCurrentView(viewMap[targetPath] || 'explore');
+                  navigate('/');
                 });
               }}
               onModeSwitch={(mode) => setAuthMode(mode)}
