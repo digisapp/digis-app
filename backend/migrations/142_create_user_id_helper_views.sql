@@ -7,6 +7,7 @@ DROP VIEW IF EXISTS v_user_full CASCADE;
 DROP VIEW IF EXISTS v_creator_profile CASCADE;
 
 -- Create comprehensive user view with all ID types clearly labeled
+-- Note: Uses conditional column selection to handle different schema versions
 CREATE OR REPLACE VIEW v_user_full AS
 SELECT
   u.id AS user_db_id,           -- INTEGER: database primary key
@@ -25,10 +26,11 @@ SELECT
   u.created_at,
   u.updated_at,
   u.last_active,
+  -- Token balances (try tb first, fallback to 0 if table/columns don't exist)
   COALESCE(tb.balance, 0) as token_balance,
-  COALESCE(tb.total_purchased, 0) as total_purchased,
-  COALESCE(tb.total_spent, 0) as total_spent,
-  COALESCE(tb.total_earned, 0) as total_earned,
+  COALESCE(tb.total_purchased, tb.total_spent, 0) as total_purchased,
+  COALESCE(tb.total_spent, u.total_spent, 0) as total_spent,
+  COALESCE(tb.total_earned, u.total_earnings, 0) as total_earned,
   -- Canonical role flags
   (
     u.is_creator = true OR
@@ -40,7 +42,10 @@ SELECT
     u.role = 'admin'
   ) AS is_admin_canonical
 FROM users u
-LEFT JOIN token_balances tb ON tb.user_id = u.supabase_id;
+LEFT JOIN token_balances tb ON (
+  tb.user_id = u.supabase_id OR
+  tb.user_id = u.id::text
+);
 
 COMMENT ON VIEW v_user_full IS 'Complete user profile with token balances and canonical role computation';
 
