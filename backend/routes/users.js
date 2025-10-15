@@ -883,10 +883,10 @@ router.get('/creators', authenticateToken, async (req, res) => {
       queryParams.push(category);
       paramIndex++;
     }
-    
+
     // Languages filter (for now, we'll skip this as it's not in the database)
     // TODO: Add languages column to users table
-    
+
     // Determine sort field based on sort parameter
     let orderByClause = 'u.created_at DESC';
     switch(sort || sortBy) {
@@ -912,14 +912,15 @@ router.get('/creators', authenticateToken, async (req, res) => {
         orderByClause = `u.${sort || sortBy} ${validSortOrder}`;
         break;
     }
-    
+
     // Add limit and offset params
     queryParams.push(actualLimit);
     queryParams.push(actualOffset);
-    
+
     const whereClause = whereConditions.join(' AND ');
-    
-    const result = await pool.query(
+
+    // Use req.pg (dedicated client with JWT context) instead of pool
+    const result = await req.pg.query(
       `SELECT
          u.id::text as id,
          COALESCE(u.supabase_id, u.id) as uid,
@@ -968,7 +969,7 @@ router.get('/creators', authenticateToken, async (req, res) => {
     // Get total count with same filters
     const countParams = queryParams.slice(0, -2); // Remove limit and offset (and currentUserId if exists)
     const countParamsClean = currentUserId ? countParams.slice(0, -1) : countParams;
-    const countResult = await pool.query(
+    const countResult = await req.pg.query(
       `SELECT COUNT(*) as total FROM users u ${joinClause} WHERE ${whereClause}`,
       countParamsClean
     );
@@ -1027,6 +1028,10 @@ router.get('/creators', authenticateToken, async (req, res) => {
     }));
 
     logger.info('✅ Creators retrieved successfully:', creators.length);
+
+    // Commit the transaction
+    await req.pg.query('COMMIT');
+
     res.json({
       creators: creators,
       total: parseInt(countResult.rows[0].total),
@@ -1037,6 +1042,15 @@ router.get('/creators', authenticateToken, async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+    // Rollback transaction on error
+    if (req.pg) {
+      try {
+        await req.pg.query('ROLLBACK');
+      } catch (rollbackError) {
+        logger.error('❌ Rollback failed:', rollbackError);
+      }
+    }
+
     logger.error('❌ Creators GET error:', error);
     res.status(500).json({
       error: 'Failed to retrieve creators',

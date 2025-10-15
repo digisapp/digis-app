@@ -8,6 +8,9 @@ const { getVerifiedRole, getUserRole, clearRoleCache } = require('../middleware/
 const { sendCreatorWelcomeEmail, sendFanWelcomeEmail } = require('../services/emailService');
 const { sessions, users: usersCache, TTL } = require('../utils/redis');
 
+// Helper to use req.pg if available (with JWT context), otherwise fall back to pool
+const db = (req) => req.pg || pool;
+
 /**
  * @swagger
  * /auth/sync-user:
@@ -194,7 +197,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     `;
 
     try {
-      await pool.query(upsertUserQuery, [
+      await db(req).query(upsertUserQuery, [
         supabaseId,
         email,
         metadata?.username,
@@ -248,7 +251,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     `;
 
     try {
-      await pool.query(upsertTokenBalanceQuery, [supabaseId]);
+      await db(req).query(upsertTokenBalanceQuery, [supabaseId]);
     } catch (dbError) {
       console.error('❌ sync-user DB upsert token balance failed', {
         rid,
@@ -266,7 +269,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         WHERE id = $1::uuid
         LIMIT 1
       `;
-      existingUser = await pool.query(checkQuery, [supabaseId]);
+      existingUser = await db(req).query(checkQuery, [supabaseId]);
     } catch (dbError) {
       console.error('❌ sync-user DB fetch user failed', {
         rid,
@@ -295,7 +298,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
           WHERE id = $2
           RETURNING id
         `;
-        await pool.query(updateQuery, [supabaseId, user.id]);
+        await db(req).query(updateQuery, [supabaseId, user.id]);
       } catch (dbError) {
         console.error('❌ sync-user DB update user failed', {
           rid,
@@ -336,7 +339,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
           WHERE u.id = $1::uuid
           LIMIT 1
         `;
-        profileResult = await pool.query(profileQuery, [user.id]);
+        profileResult = await db(req).query(profileQuery, [user.id]);
       } catch (dbError) {
         console.error('❌ sync-user DB fetch profile failed', {
           rid,
@@ -408,6 +411,15 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
 
       console.log('✅ sync-user success', { rid, username: completeProfile.username, is_creator: completeProfile.is_creator });
 
+      // Commit transaction
+      if (req.pg) {
+        try {
+          await req.pg.query('COMMIT');
+        } catch (commitError) {
+          console.error('⚠️ Commit failed (non-fatal):', commitError.message);
+        }
+      }
+
       return res.json({
         success: true,
         rid,
@@ -456,7 +468,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         // Check if username already exists and regenerate if needed
         let attempts = 0;
         while (attempts < 10) {
-          const checkUsername = await pool.query(
+          const checkUsername = await db(req).query(
             'SELECT id FROM users WHERE username = $1',
             [username]
           );
@@ -489,7 +501,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       ) RETURNING *
     `;
     
-    const newUser = await pool.query(insertQuery, [
+    const newUser = await db(req).query(insertQuery, [
       supabaseId,
       email,
       username,
@@ -501,7 +513,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     // If signing up as creator, create an application
     if (accountType === 'creator' && metadata?.username) {
       const applicationId = uuidv4();
-      await pool.query(`
+      await db(req).query(`
         INSERT INTO creator_applications (
           id,
           supabase_user_id,
@@ -520,13 +532,13 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       // Send real-time notification to admins
       try {
         // Get all admin users
-        const adminsQuery = await pool.query(
+        const adminsQuery = await db(req).query(
           'SELECT id FROM users WHERE is_super_admin = true'
         );
         
         // Create notification for each admin
         for (const admin of adminsQuery.rows) {
-          await pool.query(`
+          await db(req).query(`
             INSERT INTO notifications (
               id,
               recipient_id,
@@ -569,7 +581,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     }
     
     // Create token balance for new user
-    await pool.query(`
+    await db(req).query(`
       INSERT INTO token_balances (
         user_id,
         balance,
@@ -606,6 +618,15 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
                 rawNewUser.role === 'admin'
     };
 
+    // Commit transaction
+    if (req.pg) {
+      try {
+        await req.pg.query('COMMIT');
+      } catch (commitError) {
+        console.error('⚠️ Commit failed (non-fatal):', commitError.message);
+      }
+    }
+
     return res.json({
       success: true,
       user: canonicalNewUser,
@@ -639,6 +660,15 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       supabaseId: req.body?.supabaseId,
       email: req.body?.email
     });
+
+    // Rollback transaction on error
+    if (req.pg) {
+      try {
+        await req.pg.query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('⚠️ Rollback failed:', rollbackError.message);
+      }
+    }
 
     return res.status(500).json({
       success: false,
@@ -739,7 +769,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       LIMIT 1
     `;
 
-    const result = await pool.query(query, [supabaseId]);
+    const result = await db(req).query(query, [supabaseId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -790,7 +820,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     } = req.body;
     
     // Check if user is a fan (not creator)
-    const userCheck = await pool.query(
+    const userCheck = await db(req).query(
       'SELECT is_creator, username FROM users WHERE id = $1::uuid',
       [userId]
     );
@@ -830,7 +860,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
         LIMIT 1
       `;
       
-      const existing = await pool.query(checkQuery, [username, userId, userId]);
+      const existing = await db(req).query(checkQuery, [username, userId, userId]);
       
       if (existing.rows.length > 0) {
         return res.status(400).json({
@@ -888,7 +918,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     
     values.push(userId, userId);
     
-    const result = await pool.query(updateQuery, values);
+    const result = await db(req).query(updateQuery, values);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -970,7 +1000,7 @@ router.post('/apply-creator', authenticateToken, async (req, res) => {
     
     const userIdValue = req.user.supabase_id || req.body.userId;
     
-    const result = await pool.query(insertQuery, [
+    const result = await db(req).query(insertQuery, [
       applicationId,
       userIdValue,
       req.user.supabase_id,
@@ -1008,7 +1038,7 @@ router.get('/check-username/:username', async (req, res) => {
       WHERE LOWER(username) = LOWER($1)
     `;
     
-    const result = await pool.query(query, [username]);
+    const result = await db(req).query(query, [username]);
     const isAvailable = result.rows[0].count === '0';
     
     res.json({
@@ -1041,29 +1071,29 @@ router.delete('/account', authenticateToken, async (req, res) => {
     }
     
     // Start transaction
-    await pool.query('BEGIN');
+    await db(req).query('BEGIN');
     
     try {
       // Delete user data in correct order due to foreign key constraints
-      await pool.query('DELETE FROM tips WHERE tipper_id = $1 OR supabase_tipper_id = $2', [userId, userId]);
-      await pool.query('DELETE FROM followers WHERE follower_id = $1 OR supabase_follower_id = $2', [userId, userId]);
-      await pool.query('DELETE FROM creator_subscriptions WHERE subscriber_id = $1 OR supabase_subscriber_id = $2', [userId, userId]);
-      await pool.query('DELETE FROM token_transactions WHERE user_id = $1 OR supabase_user_id = $2', [userId, userId]);
-      await pool.query('DELETE FROM token_balances WHERE user_id = $1 OR supabase_user_id = $2', [userId, userId]);
-      await pool.query('DELETE FROM payments WHERE user_id = $1 OR supabase_user_id = $2', [userId, userId]);
+      await db(req).query('DELETE FROM tips WHERE tipper_id = $1 OR supabase_tipper_id = $2', [userId, userId]);
+      await db(req).query('DELETE FROM followers WHERE follower_id = $1 OR supabase_follower_id = $2', [userId, userId]);
+      await db(req).query('DELETE FROM creator_subscriptions WHERE subscriber_id = $1 OR supabase_subscriber_id = $2', [userId, userId]);
+      await db(req).query('DELETE FROM token_transactions WHERE user_id = $1 OR supabase_user_id = $2', [userId, userId]);
+      await db(req).query('DELETE FROM token_balances WHERE user_id = $1 OR supabase_user_id = $2', [userId, userId]);
+      await db(req).query('DELETE FROM payments WHERE user_id = $1 OR supabase_user_id = $2', [userId, userId]);
       
       // Delete sessions where user is either creator or member
-      await pool.query(`
+      await db(req).query(`
         DELETE FROM sessions 
         WHERE fan_id IN (SELECT id FROM users WHERE id = $1::uuid OR id = $2::uuid)
         OR creator_id IN (SELECT id FROM users WHERE id = $1::uuid OR id = $2::uuid)
       `, [userId, userId]);
       
       // Finally delete the user
-      await pool.query('DELETE FROM users WHERE id = $1::uuid OR id = $2::uuid', [userId, userId]);
+      await db(req).query('DELETE FROM users WHERE id = $1::uuid OR id = $2::uuid', [userId, userId]);
       
       // Commit transaction
-      await pool.query('COMMIT');
+      await db(req).query('COMMIT');
       
       // Delete from Supabase Auth if we have a Supabase ID
       if (req.user.supabase_id) {
@@ -1082,7 +1112,7 @@ router.delete('/account', authenticateToken, async (req, res) => {
       });
       
     } catch (error) {
-      await pool.query('ROLLBACK');
+      await db(req).query('ROLLBACK');
       throw error;
     }
     
@@ -1235,7 +1265,7 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
       LIMIT 1
     `;
 
-    const result = await pool.query(query, [supabaseId]);
+    const result = await db(req).query(query, [supabaseId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -1340,7 +1370,7 @@ router.get('/me', verifySupabaseToken, async (req, res) => {
       LIMIT 1
     `;
 
-    const result = await pool.query(query, [userId]);
+    const result = await db(req).query(query, [userId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -1380,7 +1410,7 @@ router.get('/me', verifySupabaseToken, async (req, res) => {
 // Temporary debugging endpoint - check database connectivity
 router.get('/debug-db', async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW() as current_time, version() as pg_version');
+    const result = await db(req).query('SELECT NOW() as current_time, version() as pg_version');
 
     res.json({
       success: true,
