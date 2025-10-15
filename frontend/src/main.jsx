@@ -20,6 +20,27 @@ if (import.meta.env.PROD) {
   initWebVitals();
 }
 
+// ONE-TIME CLEANUP: Purge legacy role hints from localStorage
+// These keys are no longer used - AuthContext is the single source of truth
+try {
+  const legacyKeys = [
+    'userRole',
+    'userIsCreator',
+    'role',
+    'legacyRoleHint',
+    'isCreator',
+    'isAdmin'
+  ];
+  legacyKeys.forEach(key => {
+    if (localStorage.getItem(key) !== null) {
+      console.log(`🧹 Removing legacy localStorage key: ${key}`);
+      localStorage.removeItem(key);
+    }
+  });
+} catch (e) {
+  // Ignore storage errors (Safari private mode, etc.)
+}
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
