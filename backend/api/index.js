@@ -59,6 +59,10 @@ try {
   process.exit(1);
 }
 
+// Load PostgreSQL JWT middleware for RLS support
+const { withPgAndJwt } = require('../middleware/pg-with-jwt');
+console.log('✅ PostgreSQL RLS middleware loaded');
+
 // Initialize Express app
 const app = express();
 console.log('Express app created');
@@ -243,7 +247,7 @@ try {
   // Apply metrics middleware
   const metricsCollector = require('../utils/metrics-collector');
   app.use(metricsCollector.httpMetricsMiddleware());
-  
+
   // Mount v1 routes
   app.use('/api/v1', v1Routes);
 
