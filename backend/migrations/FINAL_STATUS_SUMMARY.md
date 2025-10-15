@@ -228,13 +228,52 @@ This confirms RLS is not blocking service role operations.
 
 ---
 
+## ⚠️ CRITICAL: Production Issue Discovered
+
+### Issue: 500 Errors on Vercel After RLS Migration
+
+**Symptoms**:
+- `/api/auth/sync-user` - 500 errors
+- `/api/users/creators` - 500 errors
+- All backend API endpoints failing
+
+**Root Cause**:
+The backend uses a regular PostgreSQL connection pool (`DATABASE_URL`) which:
+1. **RESPECTS RLS** (doesn't bypass it like service role should)
+2. Has **no `auth.uid()` context** (returns NULL)
+3. All RLS policies using `auth.uid()` fail when it's NULL
+
+**Backend Connection Analysis**:
+```javascript
+// backend/utils/db.js uses regular PostgreSQL pool
+const pool = new Pool(connectionConfig);  // Respects RLS!
+
+// backend/routes/*.js use this pool
+const { pool } = require('../utils/db');
+router.get('/creators', async (req, res) => {
+  const result = await pool.query('SELECT * FROM users WHERE is_creator = TRUE');
+  // ^ This query is subject to RLS policies!
+});
+```
+
+**Solution**: Run `FIX_BACKEND_RLS_BYPASS.sql`
+
+This migration grants BYPASSRLS privilege to the postgres role, allowing the backend to bypass RLS (as intended for service-level operations).
+
+```sql
+ALTER ROLE postgres BYPASSRLS;
+```
+
+---
+
 ## Final Recommendation
 
-### Do Now ✅
-1. ✅ **Test your application thoroughly** (see checklist above)
-2. ✅ **Monitor logs for 24-48 hours**
-3. 🟡 **Run `DROP_DUPLICATE_INDEXES.sql`** (low risk, immediate benefit)
-4. 🟡 **Configure 3 Auth settings** in Supabase Dashboard (5 minutes)
+### Do Now ✅ CRITICAL
+1. ⚠️ **Run `FIX_BACKEND_RLS_BYPASS.sql` IMMEDIATELY** (fixes production 500 errors)
+2. ✅ **Test your application thoroughly** (see checklist above)
+3. ✅ **Monitor logs for 24-48 hours**
+4. 🟡 **Run `DROP_DUPLICATE_INDEXES.sql`** (low risk, immediate benefit)
+5. 🟡 **Configure 3 Auth settings** in Supabase Dashboard (5 minutes)
 
 ### Do Later ⏸️
 - Monitor performance in production
