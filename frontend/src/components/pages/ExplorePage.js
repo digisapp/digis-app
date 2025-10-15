@@ -29,6 +29,7 @@ import MobileLandingPage from '../mobile/MobileLandingPage';
 import MobileCreatorCard from '../mobile/MobileCreatorCard';
 import CreatorCard from '../CreatorCard';
 import { addBreadcrumb } from '../../lib/sentry.client';
+import { getAuthToken } from '../../utils/supabase-auth';
 
 // Helper to slugify display names as a last-resort fallback
 const slugify = (s = '') =>
@@ -217,13 +218,20 @@ const ExplorePage = ({
       const backendUrl = import.meta.env.VITE_BACKEND_URL ||
         (window.location.hostname === 'localhost' ? 'http://localhost:3005' : `http://${window.location.hostname}:3005`);
 
+      // Get auth token for authenticated requests
+      const authToken = await getAuthToken();
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
       const response = await fetchWithRetry(
         `${backendUrl}/api/users/creators?${params.toString()}`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers,
           retries: 3,
           retryDelay: 1000
         }
@@ -596,7 +604,7 @@ const ExplorePage = ({
               title={showFollowing ? 'Show all creators' : 'Show only creators you follow'}
             >
               <UserPlusIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">Following</span>
+              <span className="hidden md:inline">Following</span>
             </button>
 
             {/* Filter Buttons */}

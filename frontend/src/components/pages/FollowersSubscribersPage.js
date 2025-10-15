@@ -211,7 +211,7 @@ const FollowersSubscribersPage = ({ user, isCreator, initialTab }) => {
   // Remove unnecessary creator check - if they can access this page, they have the right permissions
 
   return (
-    <div className="space-y-6 pt-6">
+    <div className="space-y-6 content-below-nav px-4 sm:px-6 lg:px-8">
       {/* Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
         <div className="flex border-b border-gray-200 dark:border-gray-700">

@@ -372,7 +372,7 @@
   :root {
     /* Navigation Layout Variables */
     --nav-height: 80px;  /* Desktop navigation height (5rem = 80px from DesktopNav2025) */
-    --nav-gap: 32px;     /* Visual breathing room below nav (increased for better spacing) */
+    --nav-gap: 16px;     /* Visual breathing room below nav */
 
     /* Miami Beach Luxury Color Palette */
     --miami-cyan: #00d4ff;
