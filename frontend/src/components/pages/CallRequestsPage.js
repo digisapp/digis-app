@@ -25,6 +25,7 @@ import {
 import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { getAuthToken } from '../../utils/supabase-auth';
 import toast from 'react-hot-toast';
+import Container from '../ui/Container';
 
 const CallRequestsPage = ({ user }) => {
   const [requests, setRequests] = useState([]);
@@ -364,9 +365,9 @@ const CallRequestsPage = ({ user }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Container className="py-6 md:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -384,7 +385,7 @@ const CallRequestsPage = ({ user }) => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -781,7 +782,7 @@ const CallRequestsPage = ({ user }) => {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </Container>
     </div>
   );
 };

@@ -30,6 +30,7 @@ import toast from 'react-hot-toast';
 import ClassScheduler from '../ClassScheduler';
 import ClassReviewModal from '../ClassReviewModal';
 import ClassReviews from '../ClassReviews';
+import Container from '../ui/Container';
 
 const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
   const [classes, setClasses] = useState([]);
@@ -442,7 +443,7 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header - Clean style for desktop */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 content-below-nav">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Container className="py-6 md:py-8">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap flex-1">
               {/* Search bar - Now visible on mobile */}
@@ -518,10 +519,10 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
               </motion.button>
             )}
           </div>
-        </div>
+        </Container>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <Container className="py-8 space-y-8">
 
 
       {/* Classes Grid */}
@@ -552,11 +553,11 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
             </p>
           </motion.div>
         ) : (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
           >
             {filteredClasses.map((classItem, index) => (
               <motion.div
@@ -900,7 +901,7 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
           </motion.div>
         )}
       </AnimatePresence>
-      </div>
+      </Container>
     </div>
   );
 };

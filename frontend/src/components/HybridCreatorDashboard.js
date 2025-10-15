@@ -884,7 +884,7 @@ const HybridCreatorDashboard = memo(({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       {/* Top Section: 3-Column Grid - Calls, Schedule, Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 content-below-nav" data-test="creator-dashboard-top-grid">
 

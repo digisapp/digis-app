@@ -52,6 +52,7 @@ import StreamPreviewModal from '../StreamPreviewModal';
 import TVSubscriptionModal from '../TVSubscriptionModal';
 import VODPurchaseModal from '../VODPurchaseModal';
 import DigisWatermark from '../DigisWatermark';
+import Container from '../ui/Container';
 
 const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onTokenPurchase }) => {
   // Mount beacon for diagnostics
@@ -738,8 +739,8 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
 
       {/* Clean Header - Hidden on mobile */}
       <div className="hidden md:block bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 content-below-nav">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-          <div className="w-full max-w-7xl mx-auto">
+        <Container className="py-6 md:py-8">
+          <div className="w-full">
             {/* Search Bar and Filters - All on one row for desktop */}
             <div className="flex items-center gap-3 flex-wrap">
               {/* Enhanced Search Bar with "Explore TV" placeholder */}
@@ -904,12 +905,12 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
               )}
             </div>
           </div>
-        </div>
+        </Container>
       </div>
 
       {/* Content with Sidebar */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-        <div className="w-full max-w-7xl mx-auto">
+      <Container className="py-8">
+        <div className="w-full">
           <div className="flex gap-6">
             {/* Filters Sidebar */}
             <AnimatePresence>
@@ -988,7 +989,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                 </div>
                 
                 <div className="relative">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     {trendingStreams.slice(0, 3).map((stream, index) => {
                       const CategoryIcon = VideoCameraIcon;
                       const isHovered = hoveredStream === stream.id;
@@ -1173,7 +1174,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                 <p className="text-gray-500 dark:text-gray-400">Check back later for scheduled content</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {upcomingStreams.map((stream, index) => (
                   <motion.div
                     key={stream.id}
@@ -1250,7 +1251,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
                 <p className="text-gray-500 dark:text-gray-400">Past streams will appear here</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {replays.map((replay, index) => (
                   <motion.div
                     key={replay.id}
@@ -1487,9 +1488,9 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
         )}
           </div>
         </div>
-      </div>
+      </Container>
     </div>
-        
+
       {/* Stream Queue (Fixed Position) */}
         {streamQueue.length > 0 && (
           <motion.div
