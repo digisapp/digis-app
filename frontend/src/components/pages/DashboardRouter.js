@@ -71,14 +71,23 @@ const DashboardRouter = ({
         user={user}
         contentData={contentData}
         onContentUpdate={onContentUpdate}
-        onNavigate={(path) => {
+        onNavigate={(rawPath) => {
+          // Normalize: strip leading slash for comparisons, keep original for actual navigation
+          const path = typeof rawPath === 'string' ? rawPath : '';
+          const key = path.startsWith('/') ? path.slice(1) : path;
+
           if (path === '/connect?section=experiences') {
             // Use the onShowExperiences prop which properly navigates
             if (onShowExperiences) {
               onShowExperiences();
             }
-          } else if (path === 'calls' || path === 'call-requests') {
+          } else if (key === 'calls' || key === 'call-requests') {
             // Navigate to the calls/call-requests page
+            if (onNavigate) {
+              onNavigate(path);
+            }
+          } else if (key === 'schedule') {
+            // Navigate to the schedule page
             if (onNavigate) {
               onNavigate(path);
             }

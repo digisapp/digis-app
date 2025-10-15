@@ -901,6 +901,7 @@ const HybridCreatorDashboard = memo(({
               <button
                 type="button"
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   handleNavigateToPage('/call-requests');
                 }}
@@ -908,7 +909,7 @@ const HybridCreatorDashboard = memo(({
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Manage call requests"
                 aria-disabled={isNavigating}
-                data-test="manage-calls"
+                data-testid="manage-calls"
               >
                 Manage
               </button>
@@ -1082,6 +1083,7 @@ const HybridCreatorDashboard = memo(({
               <button
                 type="button"
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   handleNavigateToPage('/schedule');
                 }}
@@ -1089,7 +1091,7 @@ const HybridCreatorDashboard = memo(({
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Manage schedule"
                 aria-disabled={isNavigating}
-                data-test="manage-schedule"
+                data-testid="manage-schedule"
               >
                 Manage
               </button>
