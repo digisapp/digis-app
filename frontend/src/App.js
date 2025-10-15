@@ -77,7 +77,7 @@ const MobileMessages = lazy(() => import('./components/mobile/MobileMessages'));
 const MobileCreatorDashboard = lazy(() => import('./components/mobile/MobileCreatorDashboard'));
 const MobileFanDashboard = lazy(() => import('./components/mobile/MobileFanDashboard'));
 const MobileContent = lazy(() => import('./components/mobile/MobileContent'));
-const MobileWallet = lazy(() => import('./components/mobile/MobileWallet'));
+const MobileWallet = lazy(() => import('./components/mobile/pages/MobileWalletPage'));
 const MobileTokenPurchase = lazy(() => import('./components/mobile/MobileTokenPurchase'));
 const MobileCalls = lazy(() => import('./components/mobile/MobileCalls'));
 const MobileAnalytics = lazy(() => import('./components/mobile/MobileAnalytics'));

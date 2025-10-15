@@ -1,10 +1,15 @@
-import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
 import { supabase } from '../utils/supabase-auth.js';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import MobileTokenPurchase from './mobile/MobileTokenPurchase';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useOpenBuyTokens } from '../utils/openBuyTokens';
+import {
+  TOKEN_PAYOUT_USD_PER_TOKEN,
+  TOKEN_USD_FORMAT,
+  estimatePayoutUsd
+} from '../config/wallet-config';
 import { 
   CalendarIcon,
   ChartBarIcon,
@@ -80,6 +85,40 @@ const MemoizedBarChart = memo(({ data }) => (
     </BarChart>
   </ResponsiveContainer>
 ));
+
+// Lazy-in-view chart wrapper using Intersection Observer for performance
+const ChartWhenVisible = ({ children, fallback = null }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '100px' }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="h-full w-full">
+      {isVisible ? children : fallback || (
+        <div className="h-full flex items-center justify-center text-gray-500">
+          <p>Loading chart...</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Collapsible card component for mobile
 const CollapsibleCard = ({ title, icon: Icon, children, defaultOpen = true }) => {
@@ -272,7 +311,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
   }, []);
 
   const formatCurrency = useCallback((amount) => {
-    return `$${(amount * 0.05).toFixed(2)}`;
+    return TOKEN_USD_FORMAT.format(amount * TOKEN_PAYOUT_USD_PER_TOKEN);
   }, []);
 
   const formatTokens = useCallback((tokens) => {
@@ -401,7 +440,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
                 <span className="text-5xl font-bold">{walletData.tokens.toLocaleString()}</span>
                 <span className="text-xl opacity-90">tokens</span>
               </div>
-              <p className="text-lg opacity-75 mt-2">≈ ${(walletData.tokens * 0.05).toFixed(2)} USD</p>
+              <p className="text-lg opacity-75 mt-2">≈ {formatCurrency(walletData.tokens)}</p>
             </div>
             <WalletIcon className="w-20 h-20 opacity-20" />
           </div>
@@ -632,25 +671,29 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
       <div className="space-y-6">
         <CollapsibleCard title="Earnings Trend" icon={ChartBarIcon} defaultOpen={true}>
           <div className="h-64 md:h-72">
-            {chartsLoaded && chartData.daily.length > 0 ? (
-              <MemoizedAreaChart data={chartData.daily} />
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                <p>Loading chart...</p>
-              </div>
-            )}
+            <ChartWhenVisible>
+              {chartData.daily.length > 0 ? (
+                <MemoizedAreaChart data={chartData.daily} />
+              ) : (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  <p>No data available</p>
+                </div>
+              )}
+            </ChartWhenVisible>
           </div>
         </CollapsibleCard>
 
         <CollapsibleCard title="Revenue Breakdown" icon={ChartBarIcon} defaultOpen={false}>
           <div className="h-64 md:h-72">
-            {chartsLoaded && chartData.breakdown.length > 0 ? (
-              <MemoizedBarChart data={chartData.breakdown} />
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                <p>Loading chart...</p>
-              </div>
-            )}
+            <ChartWhenVisible>
+              {chartData.breakdown.length > 0 ? (
+                <MemoizedBarChart data={chartData.breakdown} />
+              ) : (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  <p>No data available</p>
+                </div>
+              )}
+            </ChartWhenVisible>
           </div>
         </CollapsibleCard>
       </div>

@@ -12,6 +12,11 @@ import {
 import { useMobileUI } from '../MobileUIProvider';
 import { useApi, api } from '../../../utils/mobileApi';
 import { MobileSkeleton, MobileErrorState } from '../MobileUIStates';
+import {
+  TOKEN_PAYOUT_USD_PER_TOKEN,
+  TOKEN_USD_FORMAT,
+  estimatePayoutUsd
+} from '../../../config/wallet-config';
 
 const MobileWalletPage = memo(({ user, navigateTo }) => {
   const [balance, setBalance] = useState(0);
@@ -110,8 +115,7 @@ const MobileWalletPage = memo(({ user, navigateTo }) => {
 
   // Token to USD formatter
   const formatTokenValue = useCallback((tokens) => {
-    const usdValue = tokens * 0.05; // Assuming 1 token = $0.05
-    return `$${usdValue.toFixed(2)} USD`;
+    return TOKEN_USD_FORMAT.format(tokens * TOKEN_PAYOUT_USD_PER_TOKEN);
   }, []);
 
   // Format date with timezone awareness
