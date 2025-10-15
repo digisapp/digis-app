@@ -210,9 +210,9 @@ const ImageCropperModal = ({
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
             onAnimationComplete={() => {
               setReady(true);
               // Force react-easy-crop to recompute layout (iOS Safari)
