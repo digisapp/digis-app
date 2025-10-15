@@ -921,6 +921,7 @@ const App = () => {
       console.log('📱 Rendering mobile landing for unauthenticated user');
       return (
         <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>
+        <div suppressHydrationWarning>
         <MobileUIProvider>
           <MobileLandingPage
             onLogin={async (user) => {
@@ -983,10 +984,11 @@ const App = () => {
             }}
           />
         </MobileUIProvider>
+        </div>
         </Suspense>
       );
     }
-    
+
     // Desktop routing
     console.log('📍 Desktop routing - rendering Routes with pathname:', location.pathname);
     return (
