@@ -39,7 +39,6 @@ import MessageTemplatesModal from './MessageTemplatesModal';
 import MentionNotification from './MentionNotification';
 import BroadcastMessageModal from './BroadcastMessageModal';
 import RealTimeNotificationsHybrid from './RealTimeNotificationsHybrid';
-import NewConversationModal from './messages/NewConversationModal';
 import { getAuthToken } from '../utils/supabase-auth';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 
@@ -58,7 +57,6 @@ const EnhancedMessagesPage = ({
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [newMessage, setNewMessage] = useState('');
-  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   
   // Inbox management
   const [activeTab, setActiveTab] = useState('all');
@@ -868,39 +866,6 @@ const EnhancedMessagesPage = ({
     setBulkActionMode(false);
   };
   
-  // Handle starting a new conversation
-  const handleStartNewConversation = (newConversation, initialMessage) => {
-    // Add the new conversation to the list
-    setConversations(prev => [newConversation, ...prev]);
-    
-    // Select the new conversation
-    setSelectedConversation(newConversation);
-    
-    // If there's an initial message, send it
-    if (initialMessage) {
-      setMessages([{
-        id: Date.now().toString(),
-        content: initialMessage,
-        sender: user?.uid,
-        sender_name: user?.name || user?.username,
-        timestamp: new Date(),
-        isRead: false,
-        status: 'sending'
-      }]);
-      
-      // Actually send the message
-      sendMessage(initialMessage);
-    } else {
-      setMessages([]);
-    }
-    
-    // Hide conversation list on mobile
-    if (isMobile) {
-      setShowConversationList(false);
-    }
-  };
-
-
   // Conversation item component
   const ConversationItem = ({ conversation }) => {
     const isSelected = selectedConversation?.id === conversation.id;
@@ -1500,21 +1465,12 @@ const EnhancedMessagesPage = ({
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
                 {conversations.length === 0 ? 'No conversations yet' : 'Select a conversation'}
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {conversations.length === 0
-                  ? isCreator ? 'Start a new conversation to connect with fans' : 'No conversations yet. Interact with creators to start messaging.'
+                  ? 'No conversations yet. Interact with others to start messaging.'
                   : 'Choose a conversation from the sidebar to start messaging'
                 }
               </p>
-              {conversations.length === 0 && isCreator && (
-                <button
-                  onClick={() => setShowNewConversationModal(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all"
-                >
-                  <PlusIcon className="w-5 h-5 inline mr-2" />
-                  Start New Conversation
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -1547,14 +1503,6 @@ const EnhancedMessagesPage = ({
           isCreatorView={true}
         />
       )}
-      
-      {/* New Conversation Modal */}
-      <NewConversationModal
-        isOpen={showNewConversationModal}
-        onClose={() => setShowNewConversationModal(false)}
-        onStartConversation={handleStartNewConversation}
-        isCreator={isCreator}
-      />
     </div>
   );
 };
