@@ -941,8 +941,9 @@ export const AuthProvider = ({ children }) => {
         ...eventData
       });
 
-      // Set Sentry tag for issue grouping by role
-      setTag('role', role || 'guest');
+      // Set Sentry tags for issue grouping and debugging
+      setTag('auth.role', role || 'unknown');
+      setTag('auth.roleResolved', String(roleResolved));
     }
   }, [authLoading, currentUser, roleResolved, role, tokenBalance]);
 
