@@ -332,7 +332,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
             COALESCE(tb.total_spent, 0) as total_spent,
             COALESCE(tb.total_earned, 0) as total_earned
           FROM users u
-          LEFT JOIN token_balances tb ON tb.user_id = u.id
+          LEFT JOIN token_balances tb ON tb.user_id = u.supabase_id
           WHERE u.id = $1::uuid
           LIMIT 1
         `;
@@ -694,45 +694,80 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
 // Get current user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.supabase_id || req.user.supabase_id;
-    
+    const supabaseId = req.user?.supabase_id || req.user?.id;
+
+    if (!supabaseId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authenticated - missing user ID'
+      });
+    }
+
     const query = `
-      SELECT 
-        u.*,
-        tb.balance as token_balance,
-        tb.total_purchased,
-        tb.total_spent,
-        tb.total_earned,
+      SELECT
+        u.id,
+        u.supabase_id,
+        u.email,
+        u.username,
+        u.display_name,
+        u.bio,
+        u.profile_pic_url,
+        u.is_creator,
+        u.is_super_admin,
+        u.role,
+        u.creator_type,
+        u.verified,
+        u.email_verified,
+        u.created_at,
+        u.updated_at,
+        u.last_active,
+        COALESCE(tb.balance, 0) as token_balance,
+        COALESCE(tb.total_purchased, 0) as total_purchased,
+        COALESCE(tb.total_spent, 0) as total_spent,
+        COALESCE(tb.total_earned, 0) as total_earned,
         (
-          SELECT COUNT(*) FROM followers 
+          SELECT COUNT(*) FROM followers
           WHERE creator_id = u.id
         ) as follower_count,
         (
-          SELECT COUNT(*) FROM followers 
-          WHERE follower_id = u.id OR followed_id = u.id
+          SELECT COUNT(*) FROM followers
+          WHERE follower_id = u.supabase_id
         ) as following_count
       FROM users u
-      LEFT JOIN token_balances tb ON 
-        tb.supabase_user_id = u.supabase_id OR 
-        tb.user_id = u.supabase_id
-      WHERE u.id = $1::uuid OR u.id = $2::uuid
+      LEFT JOIN token_balances tb ON tb.user_id = u.supabase_id
+      WHERE u.id = $1::uuid OR u.supabase_id = $1
       LIMIT 1
     `;
-    
-    const result = await pool.query(query, [userId, userId]);
-    
+
+    const result = await pool.query(query, [supabaseId]);
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'User profile not found'
       });
     }
-    
+
+    // Apply canonical role computation
+    const rawProfile = result.rows[0];
+    const profile = {
+      ...rawProfile,
+      is_creator: rawProfile.is_creator === true ||
+                  rawProfile.role === 'creator' ||
+                  (rawProfile.creator_type !== null && rawProfile.creator_type !== undefined),
+      is_admin: rawProfile.is_super_admin === true ||
+                rawProfile.role === 'admin',
+      token_balance: parseFloat(rawProfile.token_balance) || 0,
+      total_purchased: parseFloat(rawProfile.total_purchased) || 0,
+      total_spent: parseFloat(rawProfile.total_spent) || 0,
+      total_earned: parseFloat(rawProfile.total_earned) || 0
+    };
+
     res.json({
       success: true,
-      profile: result.rows[0]
+      profile
     });
-    
+
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({
