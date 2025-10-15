@@ -9,7 +9,9 @@ import {
   TOKEN_PAYOUT_USD_PER_TOKEN,
   TOKEN_USD_FORMAT,
   TOKEN_PURCHASE_PACKS,
-  estimatePayoutUsd
+  validatePurchasePacks,
+  estimatePayoutUsd,
+  formatUsd
 } from '../config/wallet-config';
 import { 
   CalendarIcon,
@@ -451,37 +453,54 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Buy Tokens</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {TOKEN_PURCHASE_PACKS.map((pack) => (
-              <button
-                key={pack.tokens}
-                onClick={() => {
-                  try {
-                    openBuyTokens({
-                      onSuccess: (tokensAdded) => {
-                        if (onTokenUpdate) {
-                          onTokenUpdate(tokensAdded);
-                        }
-                        // Refresh wallet data
-                        fetchWalletData();
-                        toast.success(`✅ ${tokensAdded} tokens added to your account!`);
+            {(() => {
+              const validPacks = validatePurchasePacks(TOKEN_PURCHASE_PACKS) ? TOKEN_PURCHASE_PACKS : [];
+              if (!validPacks.length) {
+                console.error('Invalid TOKEN_PURCHASE_PACKS config');
+                return (
+                  <div className="col-span-full text-center py-6 text-gray-500 dark:text-gray-400">
+                    Unable to load purchase options. Please contact support.
+                  </div>
+                );
+              }
+              return validPacks.map((pack) => {
+                const costPerToken = pack.priceUsd / pack.tokens;
+                return (
+                  <button
+                    key={pack.tokens}
+                    onClick={() => {
+                      try {
+                        openBuyTokens({
+                          onSuccess: (tokensAdded) => {
+                            if (onTokenUpdate) {
+                              onTokenUpdate(tokensAdded);
+                            }
+                            // Refresh wallet data
+                            fetchWalletData();
+                            toast.success(`✅ ${tokensAdded} tokens added to your account!`);
+                          }
+                        });
+                      } catch (error) {
+                        console.error('Error opening buy tokens modal:', error);
+                        toast.error('Failed to open token purchase. Please refresh the page and try again.');
                       }
-                    });
-                  } catch (error) {
-                    console.error('Error opening buy tokens modal:', error);
-                    toast.error('Failed to open token purchase. Please refresh the page and try again.');
-                  }
-                }}
-                className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-500 dark:hover:border-purple-400 transition-all group hover:shadow-lg"
-              >
-                <div className="text-2xl font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
-                  {pack.tokens}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">tokens</div>
-                <div className="text-lg font-semibold text-purple-600 dark:text-purple-400 mt-2">
-                  ${pack.priceUsd}
-                </div>
-              </button>
-            ))}
+                    }}
+                    className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-500 dark:hover:border-purple-400 transition-all group hover:shadow-lg"
+                  >
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
+                      {pack.tokens.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">tokens</div>
+                    <div className="text-lg font-semibold text-purple-600 dark:text-purple-400 mt-2">
+                      ${pack.priceUsd}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      ~${costPerToken.toFixed(2)}/token
+                    </div>
+                  </button>
+                );
+              });
+            })()}
           </div>
           
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -572,6 +591,9 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Control your twice-monthly payouts and update your banking details via Stripe.
             </p>
+            <div className="mt-2 text-xs text-purple-600 dark:text-purple-400 font-medium">
+              Payout rate: {formatUsd(TOKEN_PAYOUT_USD_PER_TOKEN)} per token
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {/* Manage Banking (Stripe) */}

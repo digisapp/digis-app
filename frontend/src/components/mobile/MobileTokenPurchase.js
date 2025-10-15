@@ -8,7 +8,7 @@ import {
 import { CreditCardIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import { getAuthToken } from '../../utils/auth-helpers';
-import { TOKEN_PURCHASE_PACKS } from '../../config/wallet-config';
+import { TOKEN_PURCHASE_PACKS, validatePurchasePacks } from '../../config/wallet-config';
 
 const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
   const [selectedPackage, setSelectedPackage] = useState(null);
@@ -35,14 +35,21 @@ const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
     }
   ];
 
-  // Map TOKEN_PURCHASE_PACKS to UI packages with colors
-  const tokenPackages = TOKEN_PURCHASE_PACKS.map((pack, index) => ({
-    id: index + 1,
-    tokens: pack.tokens,
-    price: pack.priceUsd,
-    perToken: pack.priceUsd / pack.tokens,
-    ...colorSchemes[index % colorSchemes.length]
-  }));
+  // Map TOKEN_PURCHASE_PACKS to UI packages with colors and validate
+  const tokenPackages = (() => {
+    const validPacks = validatePurchasePacks(TOKEN_PURCHASE_PACKS) ? TOKEN_PURCHASE_PACKS : [];
+    if (!validPacks.length) {
+      console.error('Invalid TOKEN_PURCHASE_PACKS config');
+      return [];
+    }
+    return validPacks.map((pack, index) => ({
+      id: index + 1,
+      tokens: pack.tokens,
+      price: pack.priceUsd,
+      perToken: pack.priceUsd / pack.tokens,
+      ...colorSchemes[index % colorSchemes.length]
+    }));
+  })();
 
   const handlePurchase = async () => {
     if (!selectedPackage && !customAmount) {
@@ -151,7 +158,12 @@ const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
             <div className="flex-1 overflow-y-auto overflow-x-hidden">
               {/* Token Packages - Full Width Horizontal */}
               <div className="px-4 py-3 space-y-2">
-                {tokenPackages.map((pkg) => (
+                {tokenPackages.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p className="font-medium">Unable to load purchase options</p>
+                    <p className="text-sm mt-1">Please contact support if this persists.</p>
+                  </div>
+                ) : tokenPackages.map((pkg) => (
                   <motion.button
                     key={pkg.id}
                     whileTap={{ scale: 0.98 }}
@@ -190,14 +202,23 @@ const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
                         </div>
                       </div>
 
-                      {/* Right side - Price */}
+                      {/* Right side - Price and check */}
                       <div className="flex items-center gap-2">
-                        <div className={`text-xl font-bold ${
-                          selectedPackage?.id === pkg.id
-                            ? 'text-white'
-                            : 'bg-gradient-to-r ' + pkg.color + ' bg-clip-text text-transparent'
-                        }`}>
-                          ${pkg.price}
+                        <div className="flex flex-col items-end gap-0.5">
+                          <div className={`text-xl font-bold ${
+                            selectedPackage?.id === pkg.id
+                              ? 'text-white'
+                              : 'bg-gradient-to-r ' + pkg.color + ' bg-clip-text text-transparent'
+                          }`}>
+                            ${pkg.price}
+                          </div>
+                          <div className={`text-[10px] ${
+                            selectedPackage?.id === pkg.id
+                              ? 'text-white/70'
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`}>
+                            ~${pkg.perToken.toFixed(2)}/token
+                          </div>
                         </div>
                         {selectedPackage?.id === pkg.id && (
                           <motion.div
