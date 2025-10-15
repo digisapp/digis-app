@@ -313,6 +313,17 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
     return () => clearTimeout(timer);
   }, []);
 
+  // Unified purchase success handler (optimistic + server refresh)
+  const onTokensPurchased = useCallback((tokensAdded) => {
+    if (!tokensAdded || Number.isNaN(tokensAdded)) return;
+    // Optimistic update
+    setWalletData((prev) => ({ ...prev, tokens: (prev?.tokens || 0) + tokensAdded }));
+    // Then refresh from server
+    fetchWalletData().catch(() => {
+      // Keep optimistic value on error; user still sees update
+    });
+  }, [fetchWalletData]);
+
   const formatTokensAsUsd = useCallback((tokens) => {
     return TOKEN_USD_FORMAT.format(tokens * TOKEN_PAYOUT_USD_PER_TOKEN);
   }, []);
@@ -472,11 +483,10 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
                       try {
                         openBuyTokens({
                           onSuccess: (tokensAdded) => {
+                            onTokensPurchased(tokensAdded);
                             if (onTokenUpdate) {
                               onTokenUpdate(tokensAdded);
                             }
-                            // Refresh wallet data
-                            fetchWalletData();
                             toast.success(`✅ ${tokensAdded} tokens added to your account!`);
                           }
                         });
@@ -510,11 +520,10 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
                 try {
                   openBuyTokens({
                     onSuccess: (tokensAdded) => {
+                      onTokensPurchased(tokensAdded);
                       if (onTokenUpdate) {
                         onTokenUpdate(tokensAdded);
                       }
-                      // Refresh wallet data
-                      fetchWalletData();
                       toast.success(`✅ ${tokensAdded} tokens added to your account!`);
                     }
                   });
@@ -560,11 +569,10 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
                 try {
                   openBuyTokens({
                     onSuccess: (tokensAdded) => {
+                      onTokensPurchased(tokensAdded);
                       if (onTokenUpdate) {
                         onTokenUpdate(tokensAdded);
                       }
-                      // Refresh wallet data
-                      fetchWalletData();
                       toast.success(`✅ ${tokensAdded} tokens added to your account!`);
                     }
                   });
