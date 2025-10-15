@@ -21,93 +21,61 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 // Digis Token Packages - Optimized Pricing Tiers
 const TOKEN_PACKAGES = [
-  { 
+  {
     id: 'starter',
-    tokens: 50, 
-    price: 5.00, 
-    value: 'Try it out',
+    tokens: 50,
+    price: 5.00,
     popular: false,
-    badge: 'Starter',
     savings: 0,
-    perToken: 0.10,
-    bonus: '0%'
+    perToken: 0.10
   },
-  { 
+  {
     id: 'basic',
-    tokens: 200, 
-    price: 19.00, 
-    value: 'Great for beginners',
+    tokens: 200,
+    price: 19.00,
     popular: false,
-    badge: '5% Savings',
     savings: 5,
-    perToken: 0.095,
-    bonus: '5%'
+    perToken: 0.095
   },
-  { 
+  {
     id: 'popular',
-    tokens: 433, 
-    price: 39.00, 
-    value: 'Most popular',
+    tokens: 433,
+    price: 39.00,
     popular: true,
-    badge: '10% Savings',
     savings: 10,
-    perToken: 0.09,
-    bonus: '10%'
+    perToken: 0.09
   },
-  { 
+  {
     id: 'value',
-    tokens: 812, 
-    price: 69.00, 
-    value: 'Best value',
+    tokens: 812,
+    price: 69.00,
     popular: false,
-    badge: '15% Savings',
     savings: 15,
-    perToken: 0.085,
-    bonus: '15%'
+    perToken: 0.085
   },
-  { 
+  {
     id: 'premium',
-    tokens: 1488, 
-    price: 119.00, 
-    value: 'Premium pack',
+    tokens: 1488,
+    price: 119.00,
     popular: false,
-    badge: '20% Savings',
     savings: 20,
-    perToken: 0.08,
-    bonus: '20%'
+    perToken: 0.08
   },
-  { 
-    id: 'elite',
-    tokens: 2653, 
-    price: 199.00, 
-    value: 'Elite savings',
-    popular: false,
-    badge: '25% Savings',
-    savings: 25,
-    perToken: 0.075,
-    bonus: '25%'
-  },
-  { 
+  {
     id: 'vip',
-    tokens: 4986, 
-    price: 349.00, 
-    value: 'VIP experience',
+    tokens: 4986,
+    price: 349.00,
     popular: false,
-    badge: '30% Savings',
     savings: 30,
-    perToken: 0.07,
-    bonus: '30%'
+    perToken: 0.07
   },
-  { 
+  {
     id: 'whale',
-    tokens: 8446, 
-    price: 549.00, 
-    value: 'Ultimate package',
+    tokens: 8446,
+    price: 549.00,
     popular: false,
-    badge: '35% Savings',
     savings: 35,
-    perToken: 0.065,
-    bonus: '35%'
+    perToken: 0.065
   }
 ];
 
@@ -431,20 +399,10 @@ const ImprovedTokenPurchase = ({
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
           <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-xs font-bold flex items-center gap-1">
             <StarIcon className="w-3 h-3" />
-            {pkg.badge}
+            Most Popular
           </div>
         </div>
       )}
-
-      {/* Other Badges */}
-      {!pkg.popular && pkg.badge && (
-        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-          <div className={`${pkg.savings >= 20 ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gray-600 dark:bg-gray-400'} text-white ${pkg.savings < 20 ? 'dark:text-gray-900' : ''} px-4 py-1 rounded-full text-xs font-medium`}>
-            {pkg.badge}
-          </div>
-        </div>
-      )}
-
 
       {/* Content */}
       <div className="text-center">
@@ -454,24 +412,10 @@ const ImprovedTokenPurchase = ({
         <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
           Tokens
         </div>
-        
-        <div className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+
+        <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
           ${pkg.price}
         </div>
-        
-        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-          {pkg.value}
-        </div>
-        
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          ${pkg.perToken.toFixed(3)}/token
-        </div>
-        
-        {pkg.savings > 0 && (
-          <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-            Save ${((0.10 - pkg.perToken) * pkg.tokens).toFixed(2)}
-          </div>
-        )}
       </div>
 
       {/* Selection Indicator */}
@@ -532,12 +476,7 @@ const ImprovedTokenPurchase = ({
         tabIndex={-1}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {isGift ? 'Gift Tokens' : 'Purchase Tokens'}
-            </h2>
-          </div>
+        <div className="flex items-center justify-end mb-8">
           {onClose && (
             <button
               onClick={onClose}
