@@ -42,10 +42,48 @@ const CIRCUIT_BREAKER_STORAGE_KEY = 'auth_circuit_breaker_state';
 export const AuthProvider = ({ children }) => {
   // State
   const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfileRaw] = useState(null);
   const [tokenBalance, setTokenBalance] = useState(0);
   const [authLoading, setAuthLoading] = useState(true);
   const [roleResolved, setRoleResolved] = useState(false);
+
+  // Protected setProfile - prevents role downgrade
+  const setProfile = useCallback((newProfile) => {
+    if (!newProfile) {
+      setProfileRaw(newProfile);
+      return;
+    }
+
+    setProfileRaw((currentProfile) => {
+      // CRITICAL: Never downgrade from creator/admin to fan
+      if (currentProfile?.is_creator === true && newProfile.is_creator !== true) {
+        console.warn('🛡️ Blocked creator→fan downgrade attempt:', {
+          current: { username: currentProfile.username, is_creator: currentProfile.is_creator },
+          attempted: { username: newProfile.username, is_creator: newProfile.is_creator }
+        });
+        // Keep existing creator profile, just update token balance if provided
+        return {
+          ...currentProfile,
+          ...(newProfile.token_balance !== undefined ? { token_balance: newProfile.token_balance } : {})
+        };
+      }
+
+      if (currentProfile?.is_admin === true && newProfile.is_admin !== true) {
+        console.warn('🛡️ Blocked admin→fan downgrade attempt:', {
+          current: { username: currentProfile.username, is_admin: currentProfile.is_admin },
+          attempted: { username: newProfile.username, is_admin: newProfile.is_admin }
+        });
+        // Keep existing admin profile, just update token balance if provided
+        return {
+          ...currentProfile,
+          ...(newProfile.token_balance !== undefined ? { token_balance: newProfile.token_balance } : {})
+        };
+      }
+
+      // Safe update - no downgrade detected
+      return newProfile;
+    });
+  }, []);
   // Fast hint from Supabase metadata OR last-known role from localStorage
   const [roleHint, setRoleHint] = useState(() => {
     try {
@@ -101,14 +139,25 @@ export const AuthProvider = ({ children }) => {
   // NEVER downgrade from creator/admin to fan during refresh
   const role = useMemo(() => {
     // 1) Canonical when profile is ready (strongest truth)
-    if (profile?.is_admin || isAdmin) return 'admin';
-    if (profile?.is_creator || isCreator) return 'creator';
-    if (profile?.id) return 'fan'; // Confirmed fan
+    if (profile?.is_admin === true || isAdmin) return 'admin';
+    if (profile?.is_creator === true || isCreator) return 'creator';
 
-    // 2) Fast path: fall back to lastKnownRole (prevents creator→fan flash)
+    // 2) CRITICAL: Check lastKnownRole BEFORE defaulting to fan
+    // This prevents creator→fan downgrade if profile.is_creator becomes falsy temporarily
+    if (roleHint && (roleHint === 'creator' || roleHint === 'admin')) {
+      console.log('🛡️ Protected role downgrade - using lastKnownRole:', roleHint);
+      return roleHint;
+    }
+
+    // 3) Only downgrade to fan if we have explicit confirmation (profile exists AND is_creator is false)
+    if (profile?.id && profile?.is_creator === false && profile?.is_admin === false) {
+      return 'fan';
+    }
+
+    // 4) Fast path fallback
     if (roleHint) return roleHint;
 
-    // 3) Truly unknown
+    // 5) Truly unknown - default to fan for logged-in users
     return user ? 'fan' : null;
   }, [profile?.role, profile?.is_creator, profile?.is_admin, profile?.id, isAdmin, isCreator, roleHint, user]);
 
