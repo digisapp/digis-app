@@ -792,10 +792,26 @@ router.get('/fan-stats/:fanId', authenticateToken, async (req, res) => {
 // Get creator's followers
 router.get('/followers', authenticateToken, async (req, res) => {
   try {
-    const creatorId = req.user.supabase_id;
-    
+    const supabaseId = req.user.supabase_id || req.user.id;
+
+    // First, get the user's database ID from their supabase_id
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1 OR id = $1',
+      [supabaseId]
+    );
+
+    if (!userResult.rows || userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const creatorDbId = userResult.rows[0].id;
+
     // Get followers with user details
     // IMPORTANT: Exclude the creator from their own followers list
+    // Note: follower_id uses supabase_id, creator_id uses database id
     const query = `
       SELECT
         u.id,
@@ -808,30 +824,50 @@ router.get('/followers', authenticateToken, async (req, res) => {
       FROM followers f
       JOIN users u ON u.supabase_id = f.follower_id
       WHERE f.creator_id = $1
-        AND f.follower_id != $1
+        AND f.follower_id != $2
       ORDER BY f.created_at DESC
     `;
 
-    const result = await pool.query(query, [creatorId]);
-    
+    const result = await pool.query(query, [creatorDbId, supabaseId]);
+
     res.json({
       success: true,
       followers: result.rows
     });
-    
+
   } catch (error) {
     logger.error('Error fetching followers:', error);
-    res.status(500).json({ error: 'Failed to fetch followers' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch followers',
+      message: error.message
+    });
   }
 });
 
 // Get creator's subscribers
 router.get('/subscribers', authenticateToken, async (req, res) => {
   try {
-    const creatorId = req.user.supabase_id;
-    
+    const supabaseId = req.user.supabase_id || req.user.id;
+
+    // First, get the user's database ID from their supabase_id
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1 OR id = $1',
+      [supabaseId]
+    );
+
+    if (!userResult.rows || userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const creatorDbId = userResult.rows[0].id;
+
     // Get active subscribers with tier info
     // IMPORTANT: Exclude the creator from their own subscribers list
+    // Note: user_id uses supabase_id, creator_id uses database id
     const query = `
       SELECT
         u.id,
@@ -845,56 +881,81 @@ router.get('/subscribers', authenticateToken, async (req, res) => {
       FROM subscriptions s
       JOIN users u ON u.supabase_id = s.user_id
       WHERE s.creator_id = $1
-        AND s.user_id != $1
+        AND s.user_id != $2
         AND s.status = 'active'
         AND (s.expires_at IS NULL OR s.expires_at > NOW())
       ORDER BY s.created_at DESC
     `;
-    
-    const result = await pool.query(query, [creatorId]);
-    
+
+    const result = await pool.query(query, [creatorDbId, supabaseId]);
+
     res.json({
       success: true,
       subscribers: result.rows
     });
-    
+
   } catch (error) {
     logger.error('Error fetching subscribers:', error);
-    res.status(500).json({ error: 'Failed to fetch subscribers' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch subscribers',
+      message: error.message
+    });
   }
 });
 
 // Get creator stats (followers and subscribers count)
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
-    const creatorId = req.user.supabase_id;
-    
+    const supabaseId = req.user.supabase_id || req.user.id;
+
+    // First, get the user's database ID from their supabase_id
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1 OR id = $1',
+      [supabaseId]
+    );
+
+    if (!userResult.rows || userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const creatorDbId = userResult.rows[0].id;
+
     // Get followers count (excluding self)
+    // Note: follower_id uses supabase_id, creator_id uses database id
     const followersResult = await pool.query(
-      'SELECT COUNT(*) as count FROM followers WHERE creator_id = $1 AND follower_id != $1',
-      [creatorId]
+      'SELECT COUNT(*) as count FROM followers WHERE creator_id = $1 AND follower_id != $2',
+      [creatorDbId, supabaseId]
     );
 
     // Get active subscribers count (excluding self)
+    // Note: user_id uses supabase_id, creator_id uses database id
     const subscribersResult = await pool.query(
       `SELECT COUNT(*) as count
        FROM subscriptions
        WHERE creator_id = $1
-         AND user_id != $1
+         AND user_id != $2
          AND status = 'active'
          AND (expires_at IS NULL OR expires_at > NOW())`,
-      [creatorId]
+      [creatorDbId, supabaseId]
     );
-    
+
     res.json({
       success: true,
       followersCount: parseInt(followersResult.rows[0].count) || 0,
       subscribersCount: parseInt(subscribersResult.rows[0].count) || 0
     });
-    
+
   } catch (error) {
     logger.error('Error fetching creator stats:', error);
-    res.status(500).json({ error: 'Failed to fetch creator stats' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch creator stats',
+      message: error.message
+    });
   }
 });
 
