@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import Cropper from 'react-easy-crop';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon, PhotoIcon, CameraIcon } from '@heroicons/react/24/outline';
@@ -18,6 +18,8 @@ const ImageCropperModal = ({
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [rotation, setRotation] = useState(0);
   const [ready, setReady] = useState(false);
+  const containerRef = useRef(null);
+  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
 
   const onCropChange = (crop) => {
     setCrop(crop);
@@ -31,17 +33,49 @@ const ImageCropperModal = ({
     setRotation(rotation);
   };
 
+  // Lock body scroll while modal is open (iOS/Safari friendly)
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  // Observe container to compute an explicit cropSize (prevents top-left "stuck" bug)
+  useEffect(() => {
+    if (!isOpen || !containerRef.current) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const cr = entry.contentRect;
+      setContainerSize({ w: cr.width, h: cr.height });
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [isOpen]);
+
+  const cropSize = React.useMemo(() => {
+    const s = Math.round(Math.min(containerSize.w, containerSize.h) * 0.9); // 90% of the shortest side
+    return s > 0 ? { width: s, height: s } : undefined;
+  }, [containerSize]);
+
   const onCropAreaComplete = useCallback((croppedArea, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
   const onMediaLoaded = useCallback(({ naturalWidth, naturalHeight }) => {
-    // Center and ensure a comfortable starting zoom so mask is visible
+    // Center
     setCrop({ x: 0, y: 0 });
-    // Conservative initial zoom cap
-    const aspect = naturalWidth / naturalHeight;
-    setZoom((z) => Math.max(1, Math.min(z, 1.2)));
-  }, []);
+    // Fit image into the computed cropSize
+    if (cropSize) {
+      const fitW = cropSize.width / naturalWidth;
+      const fitH = cropSize.height / naturalHeight;
+      const fit = Math.max(fitW, fitH); // ensure the crop area is fully covered
+      setZoom(Math.max(1, Number(fit.toFixed(3))));
+    } else {
+      setZoom(1);
+    }
+  }, [cropSize]);
 
   const createImage = (url) =>
     new Promise((resolve, reject) => {
@@ -74,13 +108,12 @@ const ImageCropperModal = ({
     const maxSize = Math.max(image.width, image.height);
     const safeArea = 2 * ((maxSize / 2) * Math.sqrt(2));
 
+    // draw rotated image to a large temp area
     canvas.width = safeArea;
     canvas.height = safeArea;
-
     ctx.translate(safeArea / 2, safeArea / 2);
     ctx.rotate(getRadianAngle(rotation));
     ctx.translate(-safeArea / 2, -safeArea / 2);
-
     ctx.drawImage(
       image,
       safeArea / 2 - image.width * 0.5,
@@ -89,24 +122,57 @@ const ImageCropperModal = ({
 
     const data = ctx.getImageData(0, 0, safeArea, safeArea);
 
-    canvas.width = pixelCrop.width;
-    canvas.height = pixelCrop.height;
+    // Respect device pixel ratio for crisp avatars
+    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+    canvas.width = Math.floor(pixelCrop.width * dpr);
+    canvas.height = Math.floor(pixelCrop.height * dpr);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
 
     ctx.putImageData(
       data,
-      0 - safeArea / 2 + image.width * 0.5 - pixelCrop.x,
-      0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y
+      Math.round(0 - safeArea / 2 + image.width * 0.5 - pixelCrop.x) * dpr,
+      Math.round(0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y) * dpr
     );
 
+    // If round avatar requested, mask to a circle and export PNG (transparent)
+    if (cropShape === 'round') {
+      const circleCanvas = document.createElement('canvas');
+      const cctx = circleCanvas.getContext('2d');
+      circleCanvas.width = canvas.width;
+      circleCanvas.height = canvas.height;
+
+      // Draw circular mask
+      cctx.save();
+      cctx.beginPath();
+      cctx.arc(circleCanvas.width / 2, circleCanvas.height / 2, Math.min(circleCanvas.width, circleCanvas.height) / 2, 0, Math.PI * 2);
+      cctx.closePath();
+      cctx.clip();
+      cctx.drawImage(canvas, 0, 0);
+      cctx.restore();
+
+      return new Promise((resolve) => {
+        circleCanvas.toBlob((blob) => {
+          if (!blob) {
+            console.error('Canvas is empty');
+            return;
+          }
+          const file = new File([blob], 'avatar.png', { type: 'image/png' });
+          const fileUrl = URL.createObjectURL(file);
+          resolve({ blob: file, url: fileUrl });
+        }, 'image/png');
+      });
+    }
+
+    // Otherwise export high-quality JPEG rectangle
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
         if (!blob) {
           console.error('Canvas is empty');
           return;
         }
-        blob.name = 'cropped.jpeg';
-        const fileUrl = URL.createObjectURL(blob);
-        resolve({ blob, url: fileUrl });
+        const file = new File([blob], 'cropped.jpeg', { type: 'image/jpeg' });
+        const fileUrl = URL.createObjectURL(file);
+        resolve({ blob: file, url: fileUrl });
       }, 'image/jpeg', 0.95);
     });
   };
@@ -173,7 +239,10 @@ const ImageCropperModal = ({
             {/* Content */}
             <div className="p-6 space-y-6">
               {/* Cropper Area */}
-              <div className="relative h-64 sm:h-80 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden">
+              <div
+                ref={containerRef}
+                className="relative h-64 sm:h-80 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden"
+              >
                 {ready && (
                   <Cropper
                     image={imageSrc}
@@ -182,6 +251,7 @@ const ImageCropperModal = ({
                     rotation={rotation}
                     aspect={aspectRatio}
                     cropShape={cropShape}
+                    cropSize={cropSize}
                     onCropChange={onCropChange}
                     onCropComplete={onCropAreaComplete}
                     onZoomChange={onZoomChange}
@@ -192,9 +262,7 @@ const ImageCropperModal = ({
                     style={{
                       containerStyle: {
                         backgroundColor: '#1f2937',
-                        // Critical for iOS touch/drag inside transformed containers
                         touchAction: 'none',
-                        // Be explicit in case an ancestor toggles pointer events
                         pointerEvents: 'auto'
                       }
                     }}

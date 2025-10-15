@@ -28,7 +28,8 @@ import {
   DocumentTextIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  XMarkIcon
+  XMarkIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline';
 import CreatorSubscriptionSimple from './CreatorSubscriptionSimple';
 import ImageCropperModal from './ImageCropperModal';
@@ -354,35 +355,39 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
   const handleCroppedImage = async (croppedImage) => {
     setSaving(true);
     setError('');
-    
+
     try {
       // Convert blob URL to file
       const imageResponse = await fetch(croppedImage.url);
       const blob = await imageResponse.blob();
       const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' });
-      
+
       const downloadURL = await uploadProfileImage(file, user.id);
-      
+
+      // Update local UI first
       if (cropperMode === 'profile') {
         setPic(downloadURL);
         setPreviewImage(downloadURL);
         toast.success('Profile picture updated!');
-      } else if (cropperMode === 'banner') {
+      } else {
         setBannerUrl(downloadURL);
         setPreviewBanner(downloadURL);
         toast.success('Banner image updated!');
       }
-      
+
       // Auto-save the profile
       const token = (await supabase.auth.getSession()).data.session?.access_token;
+      // IMPORTANT: avoid state races — use the latest values explicitly
+      const nextProfilePicUrl = (cropperMode === 'profile') ? downloadURL : (pic || '');
+      const nextBannerUrl = (cropperMode === 'banner') ? downloadURL : (bannerUrl || '');
       const profileData = {
         uid: user.id,
         email: user.email,
         username: username.trim() || user.email.split('@')[0],
         display_name: displayName,
         bio: bio.trim(),
-        profile_pic_url: downloadURL, // Use the new profile pic URL
-        banner_url: bannerUrl,
+        profile_pic_url: nextProfilePicUrl,
+        banner_url: nextBannerUrl,
         is_creator: isCreator,
         social_links: socialLinks
       };
@@ -416,16 +421,26 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to save profile picture');
-        // Revert profile pic on error
-        setPic('');
-        setPreviewImage('');
+        // Revert on error
+        if (cropperMode === 'profile') {
+          setPic('');
+          setPreviewImage('');
+        } else {
+          setBannerUrl('');
+          setPreviewBanner('');
+        }
       }
     } catch (error) {
       console.error('Error uploading image:', error);
       setError('Failed to upload image');
-      // Revert profile pic on error
-      setPic('');
-      setPreviewImage('');
+      // Revert on error
+      if (cropperMode === 'profile') {
+        setPic('');
+        setPreviewImage('');
+      } else {
+        setBannerUrl('');
+        setPreviewBanner('');
+      }
     } finally {
       setSaving(false);
     }
@@ -452,16 +467,16 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
     setSaving(true);
     setError('');
     setSuccess('Uploading banner...');
-    
+
     try {
       // Upload banner image
       const downloadURL = await uploadProfileImage(file, user.id);
-      
-      setBannerPic(downloadURL);
+
+      // Correct setter name + instant preview
+      setBannerUrl(downloadURL);
       setPreviewBanner(downloadURL);
       setSuccess('Banner uploaded successfully!');
-      setSaving(false);
-      
+
       // Don't auto-save, let user save manually
       setTimeout(() => setSuccess(''), 3000);
       return;
