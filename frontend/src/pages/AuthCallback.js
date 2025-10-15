@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handleAuthCallback } from '../utils/supabase-auth';
 import api from '../services/api-hybrid';
@@ -10,11 +10,7 @@ const AuthCallback = () => {
   const navigate = useNavigate();
   const { setUser, setIsAuthenticated } = React.useContext(AppContext);
 
-  useEffect(() => {
-    handleCallback();
-  }, []);
-
-  const handleCallback = async () => {
+  const handleCallback = useCallback(async () => {
     try {
       // Handle the OAuth callback
       const { session, error: callbackError } = await handleAuthCallback();
@@ -63,7 +59,11 @@ const AuthCallback = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, setUser, setIsAuthenticated]);
+
+  useEffect(() => {
+    handleCallback();
+  }, [handleCallback]);
 
   if (loading) {
     return (
