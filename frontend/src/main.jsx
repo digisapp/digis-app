@@ -2,26 +2,8 @@
 import './utils/console-override.js';
 
 // Validate environment configuration before app starts
-try {
-  // This will throw if required env vars are missing or invalid
-  await import('./config/runtime.js');
-} catch (error) {
-  console.error('❌ Environment configuration error:', error.message);
-  document.body.innerHTML = `
-    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: system-ui; padding: 20px;">
-      <div style="max-width: 600px; text-align: center;">
-        <h1 style="color: #ef4444; margin-bottom: 16px;">Configuration Error</h1>
-        <pre style="background: #f3f4f6; padding: 16px; border-radius: 8px; text-align: left; overflow: auto;">
-${error.message}
-        </pre>
-        <p style="margin-top: 16px; color: #6b7280;">
-          Please contact support or check your environment configuration.
-        </p>
-      </div>
-    </div>
-  `;
-  throw error;
-}
+// NOTE: Import is synchronous - validation happens at parse time
+import './config/runtime.js';
 
 // Initialize observability (analytics + error tracking)
 import { initAnalytics } from './lib/analytics';
@@ -141,7 +123,24 @@ try {
   console.log('ReactDOM root created');
 
   root.render(
-    <React.Suspense fallback={null}>
+    <React.Suspense fallback={
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '4px solid rgba(255,255,255,0.3)',
+          borderTop: '4px solid white',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+      </div>
+    }>
       <ErrorBoundary>
         <BrowserRouter>
           <QueryClientProvider client={queryClient}>

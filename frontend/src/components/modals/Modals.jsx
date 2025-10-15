@@ -14,6 +14,20 @@ const TipModal = lazy(() => import('../TipModal'));
 const EnhancedSchedule = lazy(() => import('../EnhancedSchedule'));
 const FanEngagement = lazy(() => import('../FanEngagement'));
 
+// Simple loading spinner for modal suspense boundaries
+const ModalLoader = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+    <div style={{
+      width: '24px',
+      height: '24px',
+      border: '3px solid rgba(147, 51, 234, 0.3)',
+      borderTop: '3px solid rgb(147, 51, 234)',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    }} />
+  </div>
+);
+
 /**
  * Modals - Centralized modal rendering
  *
@@ -54,7 +68,7 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
 
       {/* Mobile Token Purchase Modal */}
       {isOpen(MODALS.MOBILE_TOKEN_PURCHASE) && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ModalLoader />}>
           <MobileTokenPurchase
             isOpen={true}
             onClose={() => close(MODALS.MOBILE_TOKEN_PURCHASE)}
@@ -70,7 +84,7 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
 
       {/* Enhanced Creator Discovery Modal */}
       {isOpen(MODALS.CREATOR_DISCOVERY) && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ModalLoader />}>
           <EnhancedCreatorDiscovery
             user={user}
             onClose={() => close(MODALS.CREATOR_DISCOVERY)}
@@ -80,7 +94,7 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
 
       {/* Privacy Settings Modal */}
       {isOpen(MODALS.PRIVACY_SETTINGS) && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ModalLoader />}>
           <PrivacySettings
             user={user}
             onClose={() => close(MODALS.PRIVACY_SETTINGS)}
@@ -90,7 +104,7 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
 
       {/* Creator Application Modal */}
       {isOpen(MODALS.CREATOR_APPLICATION) && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ModalLoader />}>
           <CreatorApplication
             onClose={() => close(MODALS.CREATOR_APPLICATION)}
             onSuccess={() => {
@@ -104,7 +118,7 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
 
       {/* Go Live Setup Modal - Desktop only */}
       {isOpen(MODALS.GO_LIVE_SETUP) && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ModalLoader />}>
           <GoLiveSetup
             user={user}
             onCancel={() => {
@@ -122,7 +136,7 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
 
       {/* Enhanced Mobile Live Stream */}
       {isOpen(MODALS.MOBILE_LIVE_STREAM) && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ModalLoader />}>
           <div data-golive-modal="true">
             <EnhancedMobileLiveStream
               user={user}
@@ -141,7 +155,7 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
 
       {/* Tip Modal */}
       {isOpen(MODALS.TOKEN_TIPPING) && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ModalLoader />}>
           <TipModal
             isOpen={true}
             onClose={() => close(MODALS.TOKEN_TIPPING)}
@@ -158,7 +172,7 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
 
       {/* Availability Calendar Modal */}
       {isOpen(MODALS.AVAILABILITY_CALENDAR) && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ModalLoader />}>
           <EnhancedSchedule
             user={user}
             onClose={() => close(MODALS.AVAILABILITY_CALENDAR)}
@@ -168,7 +182,7 @@ const Modals = ({ user, tokenBalance, onTokenUpdate, onNavigate }) => {
 
       {/* Fan Engagement Modal */}
       {isOpen(MODALS.FAN_ENGAGEMENT) && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ModalLoader />}>
           <FanEngagement
             user={user}
             tokenBalance={tokenBalance}
