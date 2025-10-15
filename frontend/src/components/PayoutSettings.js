@@ -8,10 +8,12 @@ import {
   ShieldCheckIcon,
   CheckIcon,
   InformationCircleIcon,
-  WalletIcon
+  WalletIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { api } from '../services/api';
 import { supabase } from '../utils/supabase-auth.js';
+import { getAuthToken } from '../utils/supabase-auth-enhanced';
 import Button from './ui/Button';
 import LoadingSpinner from './ui/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -27,7 +29,12 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [stripeAccount, setStripeAccount] = useState(null);
-  
+  const [lastFetchTime, setLastFetchTime] = useState(null);
+
+  // Payout activity states
+  const [payouts, setPayouts] = useState([]);
+  const [payoutsLoading, setPayoutsLoading] = useState(true);
+
   // Withdrawal settings states
   const [autoWithdrawEnabled, setAutoWithdrawEnabled] = useState(false);
   const [reservedBalance, setReservedBalance] = useState(0);
@@ -41,6 +48,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
     fetchStripeAccount();
     fetchWithdrawalSettings();
     fetchWalletData();
+    fetchPayouts();
   }, []);
   
   const fetchWalletData = useCallback(async () => {
@@ -142,6 +150,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
     try {
       const response = await api.creatorPayouts.getStripeAccount();
       setStripeAccount(response.data);
+      setLastFetchTime(Date.now());
     } catch (error) {
       if (retryCount < 3) {
         console.warn(`Retrying fetchStripeAccount (${retryCount + 1}/3)...`);
@@ -149,6 +158,25 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
       } else {
         console.error('Failed to fetch Stripe account:', error);
       }
+    }
+  };
+
+  const fetchPayouts = async () => {
+    try {
+      setPayoutsLoading(true);
+      const authToken = await getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stripe/payouts`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPayouts(data.payouts || []);
+      }
+    } catch (error) {
+      console.error('Error fetching payouts:', error);
+    } finally {
+      setPayoutsLoading(false);
     }
   };
 
@@ -167,12 +195,33 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
 
   const handleStripeSetup = async () => {
     try {
-      const response = await api.creatorPayouts.createStripeAccount();
-      if (response.data.onboardingUrl) {
-        window.location.href = response.data.onboardingUrl;
+      const authToken = await getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stripe/account-link`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          refresh_url: window.location.href,
+          return_url: window.location.href
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create account link');
       }
+
+      const data = await response.json();
+      if (!data.url) {
+        throw new Error('No account link returned');
+      }
+
+      // Redirect to Stripe
+      window.location.assign(data.url);
     } catch (error) {
-      toast.error('Failed to start Stripe setup');
+      console.error('Stripe setup error:', error);
+      toast.error(error.message || 'Unable to open Stripe setup');
     }
   };
 
@@ -218,33 +267,169 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <ShieldCheckIcon className="w-5 h-5" />
-            Banking Status
+            Banking Information
           </h2>
         </div>
         <div className="p-6">
           {stripeAccount?.hasAccount && stripeAccount?.account?.payouts_enabled ? (
-            <div className="flex items-center gap-3 text-green-600 dark:text-green-400">
-              <CheckIcon className="w-5 h-5" />
-              <span className="font-medium">Banking setup complete</span>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-green-600 dark:text-green-400 mb-4">
+                <CheckIcon className="w-5 h-5" />
+                <span className="font-medium">Banking setup complete</span>
+              </div>
+
+              {/* Account Details */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Status</span>
+                  <span className="text-sm text-gray-900 dark:text-white font-semibold">Active</span>
+                </div>
+
+                {stripeAccount.account?.business_profile?.name && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Business Name</span>
+                    <span className="text-sm text-gray-900 dark:text-white">{stripeAccount.account.business_profile.name}</span>
+                  </div>
+                )}
+
+                {stripeAccount.account?.country && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Country</span>
+                    <span className="text-sm text-gray-900 dark:text-white">{stripeAccount.account.country}</span>
+                  </div>
+                )}
+
+                {stripeAccount.account?.email && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</span>
+                    <span className="text-sm text-gray-900 dark:text-white">{stripeAccount.account.email}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Payouts Enabled</span>
+                  <span className="text-sm text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
+                    <CheckIcon className="w-4 h-4" />
+                    Yes
+                  </span>
+                </div>
+
+                {stripeAccount.account?.charges_enabled && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Charges Enabled</span>
+                    <span className="text-sm text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
+                      <CheckIcon className="w-4 h-4" />
+                      Yes
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Last Updated Timestamp */}
+              {lastFetchTime && (
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <ClockIcon className="w-4 h-4" />
+                  <span>Last updated {Math.floor((Date.now() - lastFetchTime) / 60000)} minutes ago</span>
+                </div>
+              )}
+
+              {/* Update Banking Button */}
+              <div className="space-y-2">
+                <Button
+                  variant="secondary"
+                  onClick={handleStripeSetup}
+                  icon={<CogIcon className="w-5 h-5" />}
+                  aria-label="Update banking information"
+                  onKeyDown={(e) => e.key === 'Enter' && handleStripeSetup()}
+                >
+                  Update Banking Information
+                </Button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  Add or change your bank account details
+                </p>
+              </div>
             </div>
           ) : (
             <div>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Complete your Stripe account setup to receive payouts
               </p>
-              <Button
-                variant="primary"
-                onClick={handleStripeSetup}
-                icon={<BanknotesIcon className="w-5 h-5" />}
-                aria-label="Complete banking setup with Stripe"
-                onKeyDown={(e) => e.key === 'Enter' && handleStripeSetup()}
-              >
-                Complete Banking Setup
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  variant="primary"
+                  onClick={handleStripeSetup}
+                  icon={<BanknotesIcon className="w-5 h-5" />}
+                  aria-label="Set up payouts with Stripe"
+                  onKeyDown={(e) => e.key === 'Enter' && handleStripeSetup()}
+                >
+                  Set up Payouts
+                </Button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  Connect your bank account to start receiving payments
+                </p>
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Payout Activity */}
+      {stripeAccount?.hasAccount && stripeAccount?.account?.payouts_enabled && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <BanknotesIcon className="w-5 h-5" />
+              Payout Activity
+            </h2>
+          </div>
+          <div className="p-6">
+            {payoutsLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                ))}
+              </div>
+            ) : payouts.length > 0 ? (
+              <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                {payouts.map((payout) => (
+                  <li key={payout.id} className="py-3 flex justify-between items-center text-sm">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {new Date(payout.arrival_date * 1000).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {payout.description || 'Payout'}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        ${(payout.amount / 100).toFixed(2)}
+                      </span>
+                      <span className={`px-2 py-1 text-xs font-medium uppercase rounded-full ${
+                        payout.status === 'paid'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          : payout.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                        {payout.status}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                No payouts yet. Your payout history will appear here once you start receiving payments.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Automatic Payout Information */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6">
