@@ -216,6 +216,7 @@ try {
   const tvSubscriptionRoutes = require('../routes/tv-subscription');
   const connectRoutes = require('../routes/connect');
   const creatorPayoutRoutes = require('../routes/creator-payouts');
+  const stripeRoutes = require('../routes/stripe');
   const stripeWebhookRoutes = require('../routes/stripe-webhooks');
   const recordingRoutes = require('../routes/recording');
   const contentRoutes = require('../routes/content');
@@ -309,6 +310,7 @@ try {
   app.use('/api/live-shopping', rateLimiters.api || ((req, res, next) => next()), require('../routes/live-shopping'));
   app.use('/api/connect', rateLimiters.api || ((req, res, next) => next()), connectRoutes);
   app.use('/api/creator-payouts', rateLimiters.api || ((req, res, next) => next()), creatorPayoutRoutes);
+  app.use('/api/stripe', rateLimiters.api || ((req, res, next) => next()), stripeRoutes);
   app.use('/api/privacy', rateLimiters.api || ((req, res, next) => next()), privacyRoutes);
   app.use('/api/recording', rateLimiters.streaming || ((req, res, next) => next()), recordingRoutes);
   app.use('/api/content', rateLimiters.upload || ((req, res, next) => next()), contentRoutes);
@@ -330,6 +332,11 @@ try {
   app.use('/api/calls', rateLimiters.api || ((req, res, next) => next()), callsRoutes);
   app.use('/api', metaRoutes); // Deployment metadata endpoint (no auth required)
   app.use('/api', emergencyRoutes); // Emergency reset endpoints (NO AUTH, NO RATE LIMITING)
+
+  // Internal cron endpoints (custom auth via header)
+  const payoutCronRoutes = require('../routes/cron/payouts');
+  app.use('/internal/payouts', payoutCronRoutes); // Cron-protected payout endpoints
+
   app.use('/webhooks', webhookRoutes); // No rate limiting for webhooks
   app.use('/webhooks', stripeWebhookRoutes); // No rate limiting for webhooks
   

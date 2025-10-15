@@ -15,7 +15,7 @@ class StripeConnectService {
         return { accountId: existingAccount.rows[0].stripe_account_id };
       }
 
-      // Create Stripe Connect account
+      // Create Stripe Connect account with manual payout schedule
       const account = await stripe.accounts.create({
         type: 'express',
         country: creatorData.country || 'US',
@@ -25,6 +25,13 @@ class StripeConnectService {
           transfers: { requested: true }
         },
         business_type: 'individual',
+        settings: {
+          payouts: {
+            schedule: {
+              interval: 'manual' // Manual payouts for 1st & 15th schedule
+            }
+          }
+        },
         metadata: {
           creator_id: creatorId
         }
@@ -70,8 +77,21 @@ class StripeConnectService {
     try {
       const account = await stripe.accounts.retrieve(accountId);
 
+      // Ensure manual payout schedule is set
+      if (account.settings?.payouts?.schedule?.interval !== 'manual') {
+        await stripe.accounts.update(accountId, {
+          settings: {
+            payouts: {
+              schedule: {
+                interval: 'manual'
+              }
+            }
+          }
+        });
+      }
+
       await pool.query(
-        `UPDATE creator_stripe_accounts 
+        `UPDATE creator_stripe_accounts
          SET account_status = $1,
              charges_enabled = $2,
              payouts_enabled = $3,
@@ -99,79 +119,81 @@ class StripeConnectService {
     }
   }
 
-  // Create a payout to creator's bank account
+  // Create a manual payout directly from creator's connected account
   async createPayout(payoutData) {
     const client = await pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 
-      const { payoutId, creatorId, amount, stripeAccountId } = payoutData;
+      const { payoutId, creatorId, amount, stripeAccountId, currency = 'usd', cycleDate } = payoutData;
 
-      // Create transfer to connected account
-      const transfer = await stripe.transfers.create({
-        amount: Math.round(amount * 100), // Convert to cents
-        currency: 'usd',
-        destination: stripeAccountId,
-        description: `Payout for period ending ${payoutData.periodEnd}`,
-        metadata: {
-          payout_id: payoutId,
-          creator_id: creatorId
-        }
-      });
+      // Generate idempotency key for this payout (prevents duplicates)
+      const idempotencyKey = `payout:${stripeAccountId}:${cycleDate || new Date().toISOString().split('T')[0]}:${currency}`;
 
-      // Create payout from connected account to bank
+      // First, check the available balance in the connected account
+      const balance = await stripe.balance.retrieve({ stripeAccount: stripeAccountId });
+      const availableBalance = balance.available.find(b => b.currency === currency);
+
+      if (!availableBalance || availableBalance.amount < amount) {
+        throw new Error(`Insufficient balance in connected account. Available: ${availableBalance?.amount || 0}, Required: ${amount}`);
+      }
+
+      // Create payout directly from connected account to creator's bank
       const payout = await stripe.payouts.create(
         {
-          amount: Math.round(amount * 100),
-          currency: 'usd',
+          amount: Math.round(amount), // Amount should already be in cents
+          currency: currency,
           description: `Digis creator payout`,
           metadata: {
             payout_id: payoutId,
-            creator_id: creatorId
+            creator_id: creatorId,
+            cycle_date: cycleDate || new Date().toISOString().split('T')[0]
           }
         },
         {
-          stripeAccount: stripeAccountId
+          stripeAccount: stripeAccountId,
+          idempotencyKey: idempotencyKey
         }
       );
 
       // Update payout record
       await client.query(
-        `UPDATE creator_payouts 
+        `UPDATE creator_payouts
          SET stripe_payout_id = $1,
-             stripe_transfer_id = $2,
              status = 'processing',
-             processed_at = NOW()
-         WHERE id = $3`,
-        [payout.id, transfer.id, payoutId]
+             processed_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $2`,
+        [payout.id, payoutId]
       );
 
       // Create notification
       await client.query(
-        `INSERT INTO payout_notifications 
+        `INSERT INTO payout_notifications
          (creator_id, payout_id, notification_type, title, message)
-         VALUES ($1, $2, 'payout_initiated', 'Payout Initiated', 
+         VALUES ($1, $2, 'payout_initiated', 'Payout Initiated',
                  'Your payout of $' || $3 || ' has been initiated and will arrive in 2-5 business days.')`,
-        [creatorId, payoutId, amount.toFixed(2)]
+        [creatorId, payoutId, (amount / 100).toFixed(2)]
       );
 
       await client.query('COMMIT');
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         payoutId: payout.id,
-        transferId: transfer.id,
-        arrivalDate: payout.arrival_date 
+        arrivalDate: payout.arrival_date,
+        amount: payout.amount / 100
       };
     } catch (error) {
       await client.query('ROLLBACK');
-      
+
       // Update payout as failed
       await pool.query(
-        `UPDATE creator_payouts 
+        `UPDATE creator_payouts
          SET status = 'failed',
-             failure_reason = $1
+             failure_reason = $1,
+             updated_at = NOW()
          WHERE id = $2`,
         [error.message, payoutData.payoutId]
       );
@@ -248,6 +270,44 @@ class StripeConnectService {
       };
     } catch (error) {
       console.error('Error retrieving balance:', error);
+      throw error;
+    }
+  }
+
+  // Get payout history for a connected account
+  async getPayoutHistory(stripeAccountId, options = {}) {
+    try {
+      const { limit = 50, startingAfter, endingBefore } = options;
+
+      const payouts = await stripe.payouts.list(
+        {
+          limit,
+          ...(startingAfter && { starting_after: startingAfter }),
+          ...(endingBefore && { ending_before: endingBefore })
+        },
+        {
+          stripeAccount: stripeAccountId
+        }
+      );
+
+      return {
+        payouts: payouts.data.map(p => ({
+          id: p.id,
+          amount: p.amount / 100,
+          currency: p.currency,
+          status: p.status,
+          arrival_date: p.arrival_date,
+          created: p.created,
+          description: p.description,
+          failure_code: p.failure_code,
+          failure_message: p.failure_message,
+          method: p.method,
+          type: p.type
+        })),
+        hasMore: payouts.has_more
+      };
+    } catch (error) {
+      console.error('Error retrieving payout history:', error);
       throw error;
     }
   }

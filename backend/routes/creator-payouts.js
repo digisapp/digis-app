@@ -110,24 +110,31 @@ router.get('/stripe-account', authenticateToken, requireCreator, async (req, res
   try {
     const creatorId = req.user.supabase_id;
 
-    // Check if account exists
+    // Check if account exists in creator_stripe_accounts table
     const accountQuery = `
       SELECT
-        u.stripe_account_id,
+        csa.stripe_account_id,
+        csa.account_status,
+        csa.charges_enabled,
+        csa.payouts_enabled,
+        csa.details_submitted,
+        csa.country,
+        csa.currency,
         u.email,
-        u.country
-      FROM users u
-      WHERE u.supabase_id = $1
+        u.display_name
+      FROM creator_stripe_accounts csa
+      JOIN users u ON u.supabase_id = csa.creator_id
+      WHERE csa.creator_id = $1
     `;
     const accountResult = await pool.query(accountQuery, [creatorId]);
 
     if (accountResult.rows.length > 0) {
       const account = accountResult.rows[0];
-      
+
       // Update status from Stripe
       if (account.stripe_account_id) {
         const status = await stripeConnect.updateAccountStatus(account.stripe_account_id);
-        
+
         return res.json({
           hasAccount: true,
           account: {
@@ -395,28 +402,28 @@ router.post('/request-payout', authenticateToken, requireCreator, async (req, re
     const canReceiveResult = await pool.query(canReceiveQuery, [creatorId]);
 
     if (!canReceiveResult.rows[0].can_receive) {
-      return res.status(400).json({ 
-        error: 'You cannot receive payouts. Please complete your Stripe account setup.' 
+      return res.status(400).json({
+        error: 'You cannot receive payouts. Please complete your Stripe account setup.'
       });
     }
 
     // Get pending balance
     const balanceQuery = 'SELECT * FROM get_creator_pending_balance($1)';
     const balanceResult = await pool.query(balanceQuery, [creatorId]);
-    
+
     const { total_tokens, total_usd } = balanceResult.rows[0];
 
     if (total_usd < 50) {
-      return res.status(400).json({ 
-        error: `Minimum payout amount is $50. Current balance: $${total_usd}` 
+      return res.status(400).json({
+        error: `Minimum payout amount is $50. Current balance: $${total_usd}`
       });
     }
 
     // Create manual payout
     const today = new Date();
     const payoutResult = await pool.query(
-      `INSERT INTO creator_payouts 
-       (creator_id, payout_period_start, payout_period_end, tokens_earned, 
+      `INSERT INTO creator_payouts
+       (creator_id, payout_period_start, payout_period_end, tokens_earned,
         usd_amount, platform_fee_amount, net_payout_amount, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
        RETURNING *`,
@@ -433,8 +440,8 @@ router.post('/request-payout', authenticateToken, requireCreator, async (req, re
 
     // Link earnings to payout
     await pool.query(
-      `UPDATE creator_earnings 
-       SET payout_id = $1 
+      `UPDATE creator_earnings
+       SET payout_id = $1
        WHERE creator_id = $2 AND payout_id IS NULL`,
       [payoutResult.rows[0].id, creatorId]
     );
