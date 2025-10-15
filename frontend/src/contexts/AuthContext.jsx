@@ -975,6 +975,8 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Memoize value to prevent unnecessary re-renders
+  // CRITICAL: Do NOT include setUser/setProfile in dependencies
+  // They are stable references and including them causes infinite loops in production
   const value = useMemo(() => ({
     // State
     user,           // Keep for low-level needs (Supabase auth only)
@@ -1013,7 +1015,9 @@ export const AuthProvider = ({ children }) => {
     signOut,
     refreshProfile,
     fetchTokenBalance,
-    updateTokenBalance
+    updateTokenBalance,
+    // NOTE: setUser and setProfile are intentionally omitted
+    // They are stable setState functions and don't need to be dependencies
   ]);
 
   return (

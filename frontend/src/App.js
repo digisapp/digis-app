@@ -221,7 +221,11 @@ const App = () => {
   // NOTE: URL ↔ view syncing now handled by useViewRouter adapter hook
 
   // Debug creator status for both mobile and desktop
+  // CRITICAL: Only run in development to avoid production re-render loops
   useEffect(() => {
+    // Skip in production to prevent excessive re-renders
+    if (import.meta.env.MODE === 'production') return;
+
     // Skip if user is not logged in to prevent logging after logout
     if (!user) return;
 
@@ -266,6 +270,8 @@ const App = () => {
   
   // Debug showAuth changes
   useEffect(() => {
+    // Skip in production to prevent excessive re-renders
+    if (import.meta.env.MODE === 'production') return;
     console.log('🔴 showAuth changed to:', showAuth);
   }, [showAuth]);
 
@@ -574,6 +580,8 @@ const App = () => {
 
   // Debug currentView changes
   useEffect(() => {
+    // Skip in production to prevent excessive re-renders
+    if (import.meta.env.MODE === 'production') return;
     console.log('currentView changed to:', currentView);
   }, [currentView]);
 
