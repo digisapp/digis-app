@@ -1488,8 +1488,8 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
         )}
           </div>
         </div>
+        </div>
       </Container>
-    </div>
 
       {/* Stream Queue (Fixed Position) */}
         {streamQueue.length > 0 && (
