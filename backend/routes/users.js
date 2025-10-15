@@ -820,7 +820,7 @@ router.get('/public/creators', async (req, res) => {
 });
 
 // Get creators list with enhanced filtering
-router.get('/creators', async (req, res) => {
+router.get('/creators', authenticateToken, async (req, res) => {
   const {
     limit = 20,
     page = 1,
@@ -837,6 +837,9 @@ router.get('/creators', async (req, res) => {
   const actualLimit = parseInt(limit);
   const actualOffset = page ? (parseInt(page) - 1) * actualLimit : parseInt(offset);
 
+  // Get current user's ID for follow status check
+  const currentUserId = req.user?.supabase_id;
+
   logger.info('👥 Creators GET request:', {
     limit: actualLimit,
     offset: actualOffset,
@@ -846,6 +849,7 @@ router.get('/creators', async (req, res) => {
     sort,
     sortBy,
     sortOrder,
+    currentUserId: currentUserId ? '***' : undefined,
     excludeUserId: excludeUserId ? '***' : undefined,
     timestamp: new Date().toISOString()
   });
@@ -906,18 +910,18 @@ router.get('/creators', async (req, res) => {
     const whereClause = whereConditions.join(' AND ');
     
     const result = await pool.query(
-      `SELECT 
+      `SELECT
          u.id::text as id,
          COALESCE(u.supabase_id, u.id) as uid,
-         u.username, 
+         u.username,
          u.email,
          u.display_name,
-         u.bio, 
-         u.profile_pic_url, 
+         u.bio,
+         u.profile_pic_url,
          u.creator_type,
-         COALESCE(u.stream_price, 100) as stream_price, 
-         COALESCE(u.video_price, 150) as video_price, 
-         COALESCE(u.voice_price, 50) as voice_price, 
+         COALESCE(u.stream_price, 100) as stream_price,
+         COALESCE(u.video_price, 150) as video_price,
+         COALESCE(u.voice_price, 50) as voice_price,
          COALESCE(u.message_price, 50) as message_price,
          COALESCE(u.text_message_price, 50) as text_message_price,
          COALESCE(u.image_message_price, 100) as image_message_price,
@@ -925,23 +929,29 @@ router.get('/creators', async (req, res) => {
          COALESCE(u.video_message_price, 200) as video_message_price,
          u.state,
          u.country,
-         u.created_at, 
-         u.updated_at, 
-         u.total_sessions, 
+         u.created_at,
+         u.updated_at,
+         u.total_sessions,
          u.total_earnings,
          u.last_active,
          u.is_verified,
-         CASE 
-           WHEN u.last_active > NOW() - INTERVAL '5 minutes' THEN true 
-           ELSE false 
+         CASE
+           WHEN u.last_active > NOW() - INTERVAL '5 minutes' THEN true
+           ELSE false
          END as is_online,
          false as is_streaming,
-         (SELECT COUNT(*) FROM follows f WHERE f.creator_id = u.id) as follower_count
+         (SELECT COUNT(*) FROM follows f WHERE f.creator_id = u.id) as follower_count,
+         ${currentUserId ? `
+         EXISTS(
+           SELECT 1 FROM followers
+           WHERE creator_id = u.id
+           AND follower_id = $${paramIndex + 2}
+         ) as is_following` : 'false as is_following'}
        FROM public.users u
        WHERE ${whereClause}
        ORDER BY ${orderByClause}
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      queryParams
+      currentUserId ? [...queryParams, currentUserId] : queryParams
     );
 
     // Get total count with same filters
@@ -995,6 +1005,10 @@ router.get('/creators', async (req, res) => {
       is_verified: creator.is_verified || false,
       isVerified: creator.is_verified || false,
       follower_count: parseInt(creator.follower_count || 0),
+      followerCount: parseInt(creator.follower_count || 0),
+      followers: parseInt(creator.follower_count || 0),
+      isFollowing: creator.is_following || false,
+      is_following: creator.is_following || false,
       languages: ['English'], // Default for now
       responseTime: '< 1 hour', // Default for now
       response_time: '< 1 hour'
