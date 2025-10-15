@@ -831,12 +831,15 @@ const HybridCreatorDashboard = memo(({
     if (isNavigating) return;
     setIsNavigating(true);
 
-    console.log(`[Nav] ${path} { hasOnNavigate: ${!!onNavigate} }`);
+    // Normalize path to always have leading slash
+    const normalizedPath = path?.startsWith('/') ? path : `/${path}`;
+
+    console.log(`[Nav] ${normalizedPath} { hasOnNavigate: ${!!onNavigate} }`);
 
     if (onNavigate) {
-      onNavigate(path);
+      onNavigate(normalizedPath);
     } else {
-      navigate(path);
+      navigate(normalizedPath);
     }
 
     // Reset after 800ms
@@ -906,7 +909,7 @@ const HybridCreatorDashboard = memo(({
                   handleNavigateToPage('/call-requests');
                 }}
                 disabled={isNavigating}
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Manage call requests"
                 aria-disabled={isNavigating}
                 data-testid="manage-calls"
@@ -1088,7 +1091,7 @@ const HybridCreatorDashboard = memo(({
                   handleNavigateToPage('/schedule');
                 }}
                 disabled={isNavigating}
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Manage schedule"
                 aria-disabled={isNavigating}
                 data-testid="manage-schedule"

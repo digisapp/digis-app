@@ -72,30 +72,33 @@ const DashboardRouter = ({
         contentData={contentData}
         onContentUpdate={onContentUpdate}
         onNavigate={(rawPath) => {
-          // Normalize: strip leading slash for comparisons, keep original for actual navigation
+          // Normalize: ensure path starts with /
           const path = typeof rawPath === 'string' ? rawPath : '';
-          const key = path.startsWith('/') ? path.slice(1) : path;
+          const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+          const key = normalizedPath.slice(1); // Remove leading slash for comparison
 
-          if (path === '/connect?section=experiences') {
+          console.log('🔀 DashboardRouter onNavigate:', { rawPath, normalizedPath, key });
+
+          if (normalizedPath === '/connect?section=experiences') {
             // Use the onShowExperiences prop which properly navigates
             if (onShowExperiences) {
               onShowExperiences();
             }
           } else if (key === 'calls' || key === 'call-requests') {
-            // Navigate to the calls/call-requests page
-            if (onNavigate) {
-              onNavigate(path);
-            }
+            // Navigate to /call-requests using React Router
+            console.log('→ Navigating to /call-requests');
+            navigate('/call-requests');
           } else if (key === 'schedule') {
-            // Navigate to the schedule page
-            if (onNavigate) {
-              onNavigate(path);
-            }
+            // Navigate to /schedule using React Router
+            console.log('→ Navigating to /schedule');
+            navigate('/schedule');
           } else {
-            console.log('Navigate to:', path);
-            // Try to navigate using the onNavigate prop for other views
+            console.log('→ Fallback navigation to:', normalizedPath);
+            // Try onNavigate prop first, fallback to React Router
             if (onNavigate) {
-              onNavigate(path);
+              onNavigate(normalizedPath);
+            } else {
+              navigate(normalizedPath);
             }
           }
         }}
