@@ -186,6 +186,9 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
   const [releaseIntent, setReleaseIntent] = useState(null);
   const [intentLoading, setIntentLoading] = useState(false);
 
+  // Purchase flow state (prevent double-tap)
+  const [startingPurchase, setStartingPurchase] = useState(false);
+
   // Cache for API responses
   const [cache, setCache] = useState({});
 
@@ -280,7 +283,13 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
 
   useEffect(() => {
     fetchWalletData();
-  }, [fetchWalletData]);
+
+    // Log telemetry: wallet viewed
+    console.log('[wallet_telemetry] wallet_viewed', {
+      role: isCreator ? 'creator' : 'fan',
+      device: isMobile ? 'mobile' : 'desktop'
+    });
+  }, [fetchWalletData, isCreator, isMobile]);
 
   useEffect(() => {
     if (isCreator) {
@@ -323,6 +332,73 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
       // Keep optimistic value on error; user still sees update
     });
   }, [fetchWalletData]);
+
+  // Unified purchase handler with double-tap protection
+  const handlePurchaseClick = useCallback(async (packInfo = null) => {
+    if (startingPurchase) return; // Prevent double-tap
+
+    try {
+      setStartingPurchase(true);
+
+      // Log telemetry
+      if (packInfo) {
+        console.log('[wallet_telemetry] token_pack_selected', {
+          pack: packInfo.tokens,
+          price: packInfo.priceUsd,
+          perToken: (packInfo.priceUsd / packInfo.tokens).toFixed(3),
+          role: isCreator ? 'creator' : 'fan'
+        });
+      }
+      console.log('[wallet_telemetry] token_purchase_started', {
+        type: packInfo ? 'pack' : 'custom',
+        role: isCreator ? 'creator' : 'fan'
+      });
+
+      openBuyTokens({
+        onSuccess: (tokensAdded) => {
+          setStartingPurchase(false);
+          onTokensPurchased(tokensAdded);
+          if (onTokenUpdate) {
+            onTokenUpdate(tokensAdded);
+          }
+
+          // Standardized success toast
+          const newBalance = (walletData?.tokens || 0) + tokensAdded;
+          toast.success(`+${tokensAdded.toLocaleString()} tokens added! New balance: ${newBalance.toLocaleString()}`);
+
+          // Log success telemetry
+          console.log('[wallet_telemetry] token_purchase_succeeded', {
+            tokensAdded,
+            balanceAfter: newBalance,
+            role: isCreator ? 'creator' : 'fan'
+          });
+        },
+        onError: (error) => {
+          setStartingPurchase(false);
+          // Standardized error toast
+          toast.error('Unable to complete purchase. Please check your payment method and try again.');
+
+          // Log failure telemetry
+          console.error('[wallet_telemetry] token_purchase_failed', {
+            error: error?.message || 'unknown',
+            error_code: error?.code || 'unknown',
+            role: isCreator ? 'creator' : 'fan'
+          });
+        },
+        onClose: () => {
+          setStartingPurchase(false);
+        }
+      });
+    } catch (error) {
+      setStartingPurchase(false);
+      toast.error('Could not start purchase. Please refresh the page and try again.');
+      console.error('[wallet_telemetry] token_purchase_failed', {
+        error: error?.message || 'unknown',
+        error_code: 'start_failed',
+        role: isCreator ? 'creator' : 'fan'
+      });
+    }
+  }, [startingPurchase, isCreator, openBuyTokens, onTokensPurchased, onTokenUpdate, walletData]);
 
   const formatTokensAsUsd = useCallback((tokens) => {
     return TOKEN_USD_FORMAT.format(tokens * TOKEN_PAYOUT_USD_PER_TOKEN);
@@ -479,23 +555,12 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
                 return (
                   <button
                     key={pack.tokens}
-                    onClick={() => {
-                      try {
-                        openBuyTokens({
-                          onSuccess: (tokensAdded) => {
-                            onTokensPurchased(tokensAdded);
-                            if (onTokenUpdate) {
-                              onTokenUpdate(tokensAdded);
-                            }
-                            toast.success(`✅ ${tokensAdded} tokens added to your account!`);
-                          }
-                        });
-                      } catch (error) {
-                        console.error('Error opening buy tokens modal:', error);
-                        toast.error('Failed to open token purchase. Please refresh the page and try again.');
-                      }
-                    }}
-                    className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-500 dark:hover:border-purple-400 transition-all group hover:shadow-lg"
+                    onClick={() => handlePurchaseClick(pack)}
+                    disabled={startingPurchase}
+                    aria-label={`Buy ${pack.tokens.toLocaleString()} tokens for $${pack.priceUsd}`}
+                    className={`p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-500 dark:hover:border-purple-400 transition-all group hover:shadow-lg ${
+                      startingPurchase ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
                   >
                     <div className="text-2xl font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                       {pack.tokens.toLocaleString()}
@@ -515,27 +580,15 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
           
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <button
-              onClick={() => {
-                console.log('Custom amount Buy Tokens button clicked');
-                try {
-                  openBuyTokens({
-                    onSuccess: (tokensAdded) => {
-                      onTokensPurchased(tokensAdded);
-                      if (onTokenUpdate) {
-                        onTokenUpdate(tokensAdded);
-                      }
-                      toast.success(`✅ ${tokensAdded} tokens added to your account!`);
-                    }
-                  });
-                } catch (error) {
-                  console.error('Error opening buy tokens modal:', error);
-                  toast.error('Failed to open token purchase. Please refresh the page and try again.');
-                }
-              }}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              onClick={() => handlePurchaseClick()}
+              disabled={startingPurchase}
+              aria-label="Buy custom token amount"
+              className={`w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 ${
+                startingPurchase ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
             >
               <CurrencyDollarIcon className="w-5 h-5" />
-              Custom Amount
+              {startingPurchase ? 'Opening...' : 'Custom Amount'}
             </button>
           </div>
         </div>
@@ -564,27 +617,15 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
             <div className="text-3xl md:text-4xl font-bold">{formatTokens(walletData.tokens)}</div>
             <div className="text-xs md:text-sm opacity-75 mt-1">{formatTokensAsUsd(walletData.tokens)} USD</div>
             <button
-              onClick={() => {
-                console.log('Buy Tokens button clicked');
-                try {
-                  openBuyTokens({
-                    onSuccess: (tokensAdded) => {
-                      onTokensPurchased(tokensAdded);
-                      if (onTokenUpdate) {
-                        onTokenUpdate(tokensAdded);
-                      }
-                      toast.success(`✅ ${tokensAdded} tokens added to your account!`);
-                    }
-                  });
-                } catch (error) {
-                  console.error('Error opening buy tokens modal:', error);
-                  toast.error('Failed to open token purchase. Please refresh the page and try again.');
-                }
-              }}
-              className="mt-3 bg-white/20 hover:bg-white/30 backdrop-blur px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium"
+              onClick={() => handlePurchaseClick()}
+              disabled={startingPurchase}
+              aria-label="Buy tokens"
+              className={`mt-3 bg-white/20 hover:bg-white/30 backdrop-blur px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium ${
+                startingPurchase ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
             >
               <CurrencyDollarIcon className="w-4 h-4" />
-              Buy Tokens
+              {startingPurchase ? 'Opening...' : 'Buy Tokens'}
             </button>
           </div>
           <WalletIcon className="w-10 h-10 md:w-12 md:h-12 text-white/20" />
