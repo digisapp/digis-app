@@ -8,6 +8,7 @@ import {
 import { CreditCardIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import { getAuthToken } from '../../utils/auth-helpers';
+import { TOKEN_PURCHASE_PACKS } from '../../config/wallet-config';
 
 const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
   const [selectedPackage, setSelectedPackage] = useState(null);
@@ -15,47 +16,33 @@ const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
 
-  const tokenPackages = [
+  // Color schemes for each package tier
+  const colorSchemes = [
     {
-      id: 1,
-      tokens: 100,
-      price: 10,
       color: 'from-blue-400 to-blue-600',
       bgColor: 'from-blue-50 to-blue-100',
       darkBgColor: 'from-blue-900/20 to-blue-800/20',
-      perToken: 0.10
     },
     {
-      id: 2,
-      tokens: 500,
-      price: 45,
-      savings: 'Save $5',
       color: 'from-purple-400 to-purple-600',
       bgColor: 'from-purple-50 to-purple-100',
       darkBgColor: 'from-purple-900/20 to-purple-800/20',
-      perToken: 0.09
     },
     {
-      id: 3,
-      tokens: 1000,
-      price: 80,
-      savings: 'Save $20',
       color: 'from-pink-400 to-pink-600',
       bgColor: 'from-pink-50 to-pink-100',
       darkBgColor: 'from-pink-900/20 to-pink-800/20',
-      perToken: 0.08
-    },
-    {
-      id: 4,
-      tokens: 2500,
-      price: 175,
-      savings: 'Save $75',
-      color: 'from-orange-400 to-orange-600',
-      bgColor: 'from-orange-50 to-orange-100',
-      darkBgColor: 'from-orange-900/20 to-orange-800/20',
-      perToken: 0.07
     }
   ];
+
+  // Map TOKEN_PURCHASE_PACKS to UI packages with colors
+  const tokenPackages = TOKEN_PURCHASE_PACKS.map((pack, index) => ({
+    id: index + 1,
+    tokens: pack.tokens,
+    price: pack.priceUsd,
+    perToken: pack.priceUsd / pack.tokens,
+    ...colorSchemes[index % colorSchemes.length]
+  }));
 
   const handlePurchase = async () => {
     if (!selectedPackage && !customAmount) {
@@ -203,17 +190,6 @@ const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
                         </div>
                       </div>
 
-                      {/* Center - Savings badge if applicable */}
-                      {pkg.savings && (
-                        <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          selectedPackage?.id === pkg.id
-                            ? 'bg-white/20 text-white'
-                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        }`}>
-                          {pkg.savings}
-                        </div>
-                      )}
-
                       {/* Right side - Price */}
                       <div className="flex items-center gap-2">
                         <div className={`text-xl font-bold ${
@@ -270,11 +246,6 @@ const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
                       <div className="text-xs font-semibold text-gray-900 dark:text-white">
                         {selectedPackage.tokens.toLocaleString()} tokens
                       </div>
-                      {selectedPackage?.savings && (
-                        <div className="text-xs text-green-600 dark:text-green-400">
-                          {selectedPackage.savings}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </motion.div>

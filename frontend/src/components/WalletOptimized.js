@@ -8,6 +8,7 @@ import { useOpenBuyTokens } from '../utils/openBuyTokens';
 import {
   TOKEN_PAYOUT_USD_PER_TOKEN,
   TOKEN_USD_FORMAT,
+  TOKEN_PURCHASE_PACKS,
   estimatePayoutUsd
 } from '../config/wallet-config';
 import { 
@@ -310,8 +311,8 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
     return () => clearTimeout(timer);
   }, []);
 
-  const formatCurrency = useCallback((amount) => {
-    return TOKEN_USD_FORMAT.format(amount * TOKEN_PAYOUT_USD_PER_TOKEN);
+  const formatTokensAsUsd = useCallback((tokens) => {
+    return TOKEN_USD_FORMAT.format(tokens * TOKEN_PAYOUT_USD_PER_TOKEN);
   }, []);
 
   const formatTokens = useCallback((tokens) => {
@@ -440,7 +441,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
                 <span className="text-5xl font-bold">{walletData.tokens.toLocaleString()}</span>
                 <span className="text-xl opacity-90">tokens</span>
               </div>
-              <p className="text-lg opacity-75 mt-2">≈ {formatCurrency(walletData.tokens)}</p>
+              <p className="text-lg opacity-75 mt-2">≈ {formatTokensAsUsd(walletData.tokens)}</p>
             </div>
             <WalletIcon className="w-20 h-20 opacity-20" />
           </div>
@@ -449,15 +450,10 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
         {/* Quick Purchase Options */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Buy Tokens</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { tokens: 100, price: 5, bonus: null },
-              { tokens: 500, price: 25, bonus: '10% bonus' },
-              { tokens: 1000, price: 50, bonus: '20% bonus' },
-              { tokens: 2500, price: 125, bonus: '30% bonus' }
-            ].map((option) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {TOKEN_PURCHASE_PACKS.map((pack) => (
               <button
-                key={option.tokens}
+                key={pack.tokens}
                 onClick={() => {
                   try {
                     openBuyTokens({
@@ -478,17 +474,12 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
                 className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-500 dark:hover:border-purple-400 transition-all group hover:shadow-lg"
               >
                 <div className="text-2xl font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
-                  {option.tokens}
+                  {pack.tokens}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">tokens</div>
                 <div className="text-lg font-semibold text-purple-600 dark:text-purple-400 mt-2">
-                  ${option.price}
+                  ${pack.priceUsd}
                 </div>
-                {option.bonus && (
-                  <div className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
-                    {option.bonus}
-                  </div>
-                )}
               </button>
             ))}
           </div>
@@ -543,7 +534,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
           <div className="flex-1">
             <h3 className="text-sm md:text-base font-medium opacity-90 mb-1">Available Balance</h3>
             <div className="text-3xl md:text-4xl font-bold">{formatTokens(walletData.tokens)}</div>
-            <div className="text-xs md:text-sm opacity-75 mt-1">{formatCurrency(walletData.tokens)} USD</div>
+            <div className="text-xs md:text-sm opacity-75 mt-1">{formatTokensAsUsd(walletData.tokens)} USD</div>
             <button
               onClick={() => {
                 console.log('Buy Tokens button clicked');
@@ -658,7 +649,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
               </span>
             </div>
             <div className="mt-2 text-xs md:text-sm text-gray-600 dark:text-gray-400">
-              {formatCurrency(item.value)}
+              {formatTokensAsUsd(item.value)}
             </div>
           </div>
         ))}
