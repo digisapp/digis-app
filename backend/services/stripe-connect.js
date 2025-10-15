@@ -204,27 +204,39 @@ class StripeConnectService {
     }
   }
 
-  // Process all pending payouts
-  async processPendingPayouts() {
+  // Process all pending payouts (filtered by payout intents)
+  async processPendingPayouts(cycleDate = null) {
+    const { formatCycleDate, nextCycleDate } = require('../utils/cycle-utils');
+
+    // Determine cycle date
+    const targetCycleDate = cycleDate || formatCycleDate(nextCycleDate());
+
     const pendingPayouts = await pool.query(
-      `SELECT 
+      `SELECT
         p.*,
         sa.stripe_account_id,
         u.email,
-        u.display_name
+        u.display_name,
+        pi.id as intent_id
        FROM creator_payouts p
        JOIN creator_stripe_accounts sa ON sa.creator_id = p.creator_id
        JOIN users u ON u.uid = p.creator_id
+       -- ONLY include creators with pending intent for this cycle
+       JOIN creator_payout_intents pi ON pi.user_id = p.creator_id
+         AND pi.cycle_date = $1
+         AND pi.status = 'pending'
        WHERE p.status = 'pending'
          AND sa.payouts_enabled = true
          AND p.net_payout_amount >= 50.00
        ORDER BY p.created_at ASC
-       LIMIT 100`
+       LIMIT 100`,
+      [targetCycleDate]
     );
 
     const results = {
       processed: 0,
       failed: 0,
+      skipped: 0,
       errors: []
     };
 
@@ -235,8 +247,18 @@ class StripeConnectService {
           creatorId: payout.creator_id,
           amount: payout.net_payout_amount,
           stripeAccountId: payout.stripe_account_id,
-          periodEnd: payout.payout_period_end
+          periodEnd: payout.payout_period_end,
+          cycleDate: targetCycleDate
         });
+
+        // Mark intent as consumed after successful payout creation
+        await pool.query(
+          `UPDATE creator_payout_intents
+           SET status = 'consumed', updated_at = NOW()
+           WHERE id = $1`,
+          [payout.intent_id]
+        );
+
         results.processed++;
       } catch (error) {
         console.error(`Failed to process payout ${payout.id}:`, error);
@@ -247,6 +269,23 @@ class StripeConnectService {
         });
       }
     }
+
+    // Log skipped creators (those without pending intents)
+    const skippedCreators = await pool.query(
+      `SELECT COUNT(*) as count
+       FROM creator_payouts p
+       JOIN creator_stripe_accounts sa ON sa.creator_id = p.creator_id
+       LEFT JOIN creator_payout_intents pi ON pi.user_id = p.creator_id
+         AND pi.cycle_date = $1
+         AND pi.status = 'pending'
+       WHERE p.status = 'pending'
+         AND sa.payouts_enabled = true
+         AND p.net_payout_amount >= 50.00
+         AND pi.id IS NULL`,
+      [targetCycleDate]
+    );
+
+    results.skipped = parseInt(skippedCreators.rows[0]?.count || 0);
 
     return results;
   }

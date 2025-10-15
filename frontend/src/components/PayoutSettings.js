@@ -43,12 +43,18 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [walletData, setWalletData] = useState({ tokens: tokenBalance });
 
+  // Payout intent states
+  const [payoutIntent, setPayoutIntent] = useState(null);
+  const [intentLoading, setIntentLoading] = useState(false);
+  const [releasingFunds, setReleasingFunds] = useState(false);
+
   useEffect(() => {
     fetchSettings();
     fetchStripeAccount();
     fetchWithdrawalSettings();
     fetchWalletData();
     fetchPayouts();
+    fetchPayoutIntent();
   }, []);
   
   const fetchWalletData = useCallback(async () => {
@@ -177,6 +183,79 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
       console.error('Error fetching payouts:', error);
     } finally {
       setPayoutsLoading(false);
+    }
+  };
+
+  const fetchPayoutIntent = async () => {
+    try {
+      setIntentLoading(true);
+      const authToken = await getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creator-payouts/intent`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPayoutIntent(data);
+      }
+    } catch (error) {
+      console.error('Error fetching payout intent:', error);
+    } finally {
+      setIntentLoading(false);
+    }
+  };
+
+  const handleReleaseFunds = async () => {
+    try {
+      setReleasingFunds(true);
+      const authToken = await getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creator-payouts/intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPayoutIntent(data);
+        toast.success(data.message || 'Payout request submitted successfully');
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to submit payout request');
+      }
+    } catch (error) {
+      console.error('Error releasing funds:', error);
+      toast.error('Failed to submit payout request');
+    } finally {
+      setReleasingFunds(false);
+    }
+  };
+
+  const handleCancelIntent = async () => {
+    try {
+      setReleasingFunds(true);
+      const authToken = await getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creator-payouts/intent`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPayoutIntent(null);
+        toast.success(data.message || 'Payout request canceled');
+        await fetchPayoutIntent(); // Refresh intent state
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to cancel payout request');
+      }
+    } catch (error) {
+      console.error('Error canceling intent:', error);
+      toast.error('Failed to cancel payout request');
+    } finally {
+      setReleasingFunds(false);
     }
   };
 
@@ -426,6 +505,103 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
                 No payouts yet. Your payout history will appear here once you start receiving payments.
               </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Release Funds Section */}
+      {stripeAccount?.hasAccount && stripeAccount?.account?.payouts_enabled && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <WalletIcon className="w-5 h-5" />
+              Release Funds
+            </h2>
+          </div>
+          <div className="p-6">
+            {intentLoading ? (
+              <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            ) : payoutIntent?.hasIntent && payoutIntent?.currentIntent?.status === 'pending' ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckIcon className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-green-800 dark:text-green-200 mb-1">
+                        Payout Request Submitted
+                      </p>
+                      <p className="text-sm text-green-700 dark:text-green-300">
+                        {payoutIntent?.message || `You will receive a payout on ${payoutIntent?.nextCycleInfo?.description}`}
+                      </p>
+                      {payoutIntent?.nextCycleInfo && (
+                        <div className="mt-3 flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
+                          <ClockIcon className="w-4 h-4" />
+                          <span>
+                            Next payout in <strong>{payoutIntent.nextCycleInfo.daysUntil}</strong> {payoutIntent.nextCycleInfo.daysUntil === 1 ? 'day' : 'days'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={handleCancelIntent}
+                  disabled={releasingFunds}
+                  className="w-full"
+                >
+                  {releasingFunds ? 'Canceling...' : 'Cancel Payout Request'}
+                </Button>
+              </div>
+            ) : payoutIntent?.hasIntent && payoutIntent?.currentIntent?.status === 'consumed' ? (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <InformationCircleIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-blue-800 dark:text-blue-200 mb-1">
+                      Payout Processed
+                    </p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Your payout for this cycle has been processed. Check your payout activity below for details.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <InformationCircleIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div className="text-sm text-blue-800 dark:text-blue-200">
+                      <p className="font-medium mb-2">Opt-in Required for Payouts</p>
+                      <p className="mb-2">
+                        To receive your earnings, you must click <strong>"Release Funds"</strong> before each payout cycle (1st or 15th of the month).
+                      </p>
+                      {payoutIntent?.nextCycleInfo && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <ClockIcon className="w-4 h-4" />
+                          <span>
+                            Next payout: <strong>{payoutIntent.nextCycleInfo.description}</strong> (in {payoutIntent.nextCycleInfo.daysUntil} {payoutIntent.nextCycleInfo.daysUntil === 1 ? 'day' : 'days'})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={handleReleaseFunds}
+                  disabled={releasingFunds}
+                  icon={<BanknotesIcon className="w-5 h-5" />}
+                  className="w-full"
+                >
+                  {releasingFunds ? 'Processing...' : 'Release Funds'}
+                </Button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  If you don't release funds, your tokens will remain in your account
+                </p>
+              </div>
             )}
           </div>
         </div>

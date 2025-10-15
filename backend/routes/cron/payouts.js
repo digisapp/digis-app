@@ -194,7 +194,7 @@ async function processPayoutsInline(runId, cycleDate, periodStart, periodEnd, re
     // Process in background (don't await for HTTP response)
     setImmediate(async () => {
       try {
-        const result = await processPendingPayouts();
+        const result = await processPendingPayouts(cycleDate);
 
         await pool.query(
           `UPDATE payout_runs

@@ -216,6 +216,7 @@ try {
   const tvSubscriptionRoutes = require('../routes/tv-subscription');
   const connectRoutes = require('../routes/connect');
   const creatorPayoutRoutes = require('../routes/creator-payouts');
+  const creatorPayoutIntentRoutes = require('../routes/creator-payouts-intent');
   const stripeRoutes = require('../routes/stripe');
   const stripeWebhookRoutes = require('../routes/stripe-webhooks');
   const recordingRoutes = require('../routes/recording');
@@ -310,6 +311,7 @@ try {
   app.use('/api/live-shopping', rateLimiters.api || ((req, res, next) => next()), require('../routes/live-shopping'));
   app.use('/api/connect', rateLimiters.api || ((req, res, next) => next()), connectRoutes);
   app.use('/api/creator-payouts', rateLimiters.api || ((req, res, next) => next()), creatorPayoutRoutes);
+  app.use('/api/creator-payouts', rateLimiters.api || ((req, res, next) => next()), creatorPayoutIntentRoutes);
   app.use('/api/stripe', rateLimiters.api || ((req, res, next) => next()), stripeRoutes);
   app.use('/api/privacy', rateLimiters.api || ((req, res, next) => next()), privacyRoutes);
   app.use('/api/recording', rateLimiters.streaming || ((req, res, next) => next()), recordingRoutes);
