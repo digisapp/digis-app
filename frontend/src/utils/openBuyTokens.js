@@ -23,16 +23,27 @@ export function useOpenBuyTokens() {
   const { open } = useModal();
 
   return ({ onSuccess }) => {
-    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    try {
+      // Check if modal context is available
+      if (!open || typeof open !== 'function') {
+        throw new Error('Modal context not available. Component may not be fully mounted.');
+      }
 
-    if (isMobile) {
-      open(MODALS.MOBILE_TOKEN_PURCHASE, {
-        onPurchaseSuccess: onSuccess
-      });
-    } else {
-      open(MODALS.TOKEN_PURCHASE, {
-        onSuccess
-      });
+      const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+      if (isMobile) {
+        open(MODALS.MOBILE_TOKEN_PURCHASE, {
+          onPurchaseSuccess: onSuccess
+        });
+      } else {
+        open(MODALS.TOKEN_PURCHASE, {
+          onSuccess
+        });
+      }
+    } catch (error) {
+      console.error('Error in useOpenBuyTokens:', error);
+      // Re-throw to be caught by the caller
+      throw new Error('Failed to open token purchase modal. Please refresh the page and try again.');
     }
   };
 }

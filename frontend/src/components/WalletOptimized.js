@@ -320,16 +320,21 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
               <button
                 key={option.tokens}
                 onClick={() => {
-                  openBuyTokens({
-                    onSuccess: (tokensAdded) => {
-                      if (onTokenUpdate) {
-                        onTokenUpdate(tokensAdded);
+                  try {
+                    openBuyTokens({
+                      onSuccess: (tokensAdded) => {
+                        if (onTokenUpdate) {
+                          onTokenUpdate(tokensAdded);
+                        }
+                        // Refresh wallet data
+                        fetchWalletData();
+                        toast.success(`✅ ${tokensAdded} tokens added to your account!`);
                       }
-                      // Refresh wallet data
-                      fetchWalletData();
-                      toast.success(`✅ ${tokensAdded} tokens added to your account!`);
-                    }
-                  });
+                    });
+                  } catch (error) {
+                    console.error('Error opening buy tokens modal:', error);
+                    toast.error('Failed to open token purchase. Please refresh the page and try again.');
+                  }
                 }}
                 className="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-500 dark:hover:border-purple-400 transition-all group hover:shadow-lg"
               >
@@ -353,16 +358,21 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
             <button
               onClick={() => {
                 console.log('Custom amount Buy Tokens button clicked');
-                openBuyTokens({
-                  onSuccess: (tokensAdded) => {
-                    if (onTokenUpdate) {
-                      onTokenUpdate(tokensAdded);
+                try {
+                  openBuyTokens({
+                    onSuccess: (tokensAdded) => {
+                      if (onTokenUpdate) {
+                        onTokenUpdate(tokensAdded);
+                      }
+                      // Refresh wallet data
+                      fetchWalletData();
+                      toast.success(`✅ ${tokensAdded} tokens added to your account!`);
                     }
-                    // Refresh wallet data
-                    fetchWalletData();
-                    toast.success(`✅ ${tokensAdded} tokens added to your account!`);
-                  }
-                });
+                  });
+                } catch (error) {
+                  console.error('Error opening buy tokens modal:', error);
+                  toast.error('Failed to open token purchase. Please refresh the page and try again.');
+                }
               }}
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
             >
@@ -398,16 +408,21 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
             <button
               onClick={() => {
                 console.log('Buy Tokens button clicked');
-                openBuyTokens({
-                  onSuccess: (tokensAdded) => {
-                    if (onTokenUpdate) {
-                      onTokenUpdate(tokensAdded);
+                try {
+                  openBuyTokens({
+                    onSuccess: (tokensAdded) => {
+                      if (onTokenUpdate) {
+                        onTokenUpdate(tokensAdded);
+                      }
+                      // Refresh wallet data
+                      fetchWalletData();
+                      toast.success(`✅ ${tokensAdded} tokens added to your account!`);
                     }
-                    // Refresh wallet data
-                    fetchWalletData();
-                    toast.success(`✅ ${tokensAdded} tokens added to your account!`);
-                  }
-                });
+                  });
+                } catch (error) {
+                  console.error('Error opening buy tokens modal:', error);
+                  toast.error('Failed to open token purchase. Please refresh the page and try again.');
+                }
               }}
               className="mt-3 bg-white/20 hover:bg-white/30 backdrop-blur px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium"
             >
