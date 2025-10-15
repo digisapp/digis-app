@@ -84,14 +84,6 @@ export const AuthProvider = ({ children }) => {
       return newProfile;
     });
   }, []);
-  // Fast hint from Supabase metadata OR last-known role from localStorage
-  const [roleHint, setRoleHint] = useState(() => {
-    try {
-      return localStorage.getItem('digis:lastKnownRole') || null;
-    } catch {
-      return null;
-    }
-  });
   const [error, setError] = useState('');
 
   // Refs for throttling
@@ -135,31 +127,13 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = profile?.is_admin === true;      // Backend computes this canonically
   const isAuthenticated = !!user;
 
-  // Canonical role string - centralized to avoid recomputation
-  // NEVER downgrade from creator/admin to fan during refresh
+  // Canonical role string - simplified to trust backend exclusively
+  // Anti-downgrade: once creator/admin, stays that way during session
   const role = useMemo(() => {
-    // 1) Canonical when profile is ready (strongest truth)
     if (profile?.is_admin === true || isAdmin) return 'admin';
     if (profile?.is_creator === true || isCreator) return 'creator';
-
-    // 2) CRITICAL: Check lastKnownRole BEFORE defaulting to fan
-    // This prevents creator→fan downgrade if profile.is_creator becomes falsy temporarily
-    if (roleHint && (roleHint === 'creator' || roleHint === 'admin')) {
-      console.log('🛡️ Protected role downgrade - using lastKnownRole:', roleHint);
-      return roleHint;
-    }
-
-    // 3) Only downgrade to fan if we have explicit confirmation (profile exists AND is_creator is false)
-    if (profile?.id && profile?.is_creator === false && profile?.is_admin === false) {
-      return 'fan';
-    }
-
-    // 4) Fast path fallback
-    if (roleHint) return roleHint;
-
-    // 5) Truly unknown - default to fan for logged-in users
     return user ? 'fan' : null;
-  }, [profile?.role, profile?.is_creator, profile?.is_admin, profile?.id, isAdmin, isCreator, roleHint, user]);
+  }, [profile?.is_admin, profile?.is_creator, isAdmin, isCreator, user]);
 
   // Canonical currentUser - single source of truth for UI components
   // Merges Supabase auth (id, email) with DB profile (username, display_name, role, etc.)
@@ -170,31 +144,20 @@ export const AuthProvider = ({ children }) => {
   }, [user, profile]);
 
   /**
-   * Persist last-known role whenever profile is successfully resolved
-   * This prevents creator→fan flip on refresh (BFCache, slow network, etc.)
+   * Persist last-known role for debugging only (NEVER READ THIS FOR UI DECISIONS)
+   * This is a breadcrumb for troubleshooting, not a source of truth
    */
   useEffect(() => {
     if (profile?.id) {
       const lkr = profile.is_admin ? 'admin' : profile.is_creator ? 'creator' : 'fan';
       try {
         localStorage.setItem('digis:lastKnownRole', lkr);
-        console.log('💾 Persisted lastKnownRole:', lkr);
+        console.log('💾 Persisted lastKnownRole (debug only):', lkr);
       } catch (e) {
-        console.warn('Failed to persist lastKnownRole:', e);
+        // Ignore storage errors
       }
     }
   }, [profile?.id, profile?.is_creator, profile?.is_admin]);
-
-  /**
-   * Extract roleHint from Supabase session metadata for fast routing
-   * This allows "/" to redirect immediately without waiting for backend
-   */
-  const extractRoleHint = useCallback((session) => {
-    if (!session?.user) return null;
-    const meta = session.user.user_metadata || session.user.app_metadata || {};
-    const hint = meta.role || (meta.is_creator ? 'creator' : null);
-    return hint;
-  }, []);
 
   /**
    * Circuit breaker: Check if we should attempt sync-user based on failure history
@@ -340,36 +303,67 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /**
-   * Fetch canonical user role from /api/me (SINGLE SOURCE OF TRUTH)
+   * Fetch canonical session from /api/auth/session (SINGLE SOURCE OF TRUTH)
+   * This endpoint returns authoritative role directly from database with no caching
+   * Returns format compatible with safeFetch for circuit breaker logic
    */
-  const fetchCanonicalRole = useCallback(async (session) => {
-    if (!session?.access_token) return null;
+  const fetchCanonicalSession = useCallback(async (session, useTimeout = true) => {
+    if (!session?.access_token) {
+      return { ok: false, error: 'No access token', data: null };
+    }
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/auth/me`,
+      const fetchFn = useTimeout ? fetchWithTimeout : fetch;
+      const response = await fetchFn(
+        `${import.meta.env.VITE_BACKEND_URL}/api/auth/session`,
         {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
+            'Cache-Control': 'no-store'
           },
+          timeout: 6000 // 6 second timeout
         }
       );
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Canonical role fetched from /api/me:', {
-          username: data.username,
-          is_creator: data.is_creator,
-          is_admin: data.is_admin
+
+        if (!data?.ok || !data?.user) {
+          console.error('Invalid session payload:', data);
+          return { ok: false, error: 'Invalid payload', data: null };
+        }
+
+        console.log('✅ Canonical session fetched from /api/auth/session:', {
+          isCreator: data.user.isCreator,
+          isAdmin: data.user.isAdmin,
+          roles: data.user.roles
         });
-        return data;
+
+        // Return in safeFetch-compatible format with normalized user data
+        return {
+          ok: true,
+          data: {
+            user: {
+              id: data.user.supabaseId,
+              supabase_id: data.user.supabaseId,
+              db_id: data.user.dbId,
+              is_creator: data.user.isCreator,
+              is_admin: data.user.isAdmin,
+              roles: data.user.roles || [],
+              // Add minimal fields expected by downstream code
+              username: session.user.email?.split('@')[0] || 'user',
+              email: session.user.email
+            }
+          },
+          status: response.status
+        };
       } else {
-        console.error('Failed to fetch canonical role:', response.status);
-        return null;
+        console.error('Failed to fetch canonical session:', response.status);
+        return { ok: false, error: `HTTP ${response.status}`, status: response.status, data: null };
       }
     } catch (error) {
-      console.error('Error fetching canonical role:', error);
-      return null;
+      console.error('Error fetching canonical session:', error);
+      return { ok: false, error: error.message, data: null };
     }
   }, []);
 
@@ -595,30 +589,10 @@ export const AuthProvider = ({ children }) => {
           email: authStoreState.user.email
         });
 
-        // Fetch full profile
+        // Fetch full profile using canonical session endpoint
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && mounted) {
-          // Set roleHint early for fast routing
-          const hint = extractRoleHint(session);
-          if (hint) setRoleHint(hint);
-
-          const result = await safeFetch(
-            `${import.meta.env.VITE_BACKEND_URL}/api/auth/sync-user`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
-              },
-              credentials: 'include', // Include cookies for cross-origin requests
-              body: JSON.stringify({
-                supabaseId: session.user.id,
-                email: session.user.email,
-                metadata: session.user.user_metadata
-              }),
-              timeout: 6000 // 6 second timeout
-            }
-          );
+          const result = await fetchCanonicalSession(session);
 
           if (result.ok && result.data?.user) {
             const userData = result.data.user;
@@ -640,7 +614,7 @@ export const AuthProvider = ({ children }) => {
             clearTimeout(bootTimeout);
             return;
           } else {
-            console.warn('⚠️ AppBootstrap sync-user failed (non-blocking):', {
+            console.warn('⚠️ AppBootstrap session fetch failed (non-blocking):', {
               status: result.status,
               error: result.error
             });
@@ -666,15 +640,6 @@ export const AuthProvider = ({ children }) => {
           clearTimeout(timeoutId);
           clearTimeout(bootTimeout);
           return; // Exit early for public users
-        }
-
-        // Set roleHint early for fast routing (before backend call)
-        if (session?.user && mounted) {
-          const hint = extractRoleHint(session);
-          if (hint) {
-            console.log('🚀 Fast roleHint from metadata:', hint);
-            setRoleHint(hint);
-          }
         }
 
         // Set cached profile immediately if we have one
@@ -705,30 +670,13 @@ export const AuthProvider = ({ children }) => {
             return;
           }
 
-          // Sync user with backend - fail open with timeout
-          const result = await safeFetch(
-            `${import.meta.env.VITE_BACKEND_URL}/api/auth/sync-user`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
-              },
-              credentials: 'include', // Include cookies for cross-origin requests
-              body: JSON.stringify({
-                supabaseId: session.user.id,
-                email: session.user.email,
-                metadata: session.user.user_metadata
-              }),
-              timeout: 6000 // 6 second timeout
-            }
-          );
+          // Fetch canonical session from backend - fail open with timeout
+          const result = await fetchCanonicalSession(session);
 
           if (result.ok && result.data?.user) {
             const userData = result.data.user;
 
-            console.log('✅ sync-user success:', {
-              username: userData.username,
+            console.log('✅ Canonical session loaded:', {
               is_creator: userData.is_creator,
               is_admin: userData.is_admin
             });
@@ -756,7 +704,7 @@ export const AuthProvider = ({ children }) => {
             // Circuit breaker: Record failure
             recordSyncUserFailure();
 
-            console.warn('⚠️ sync-user failed (non-blocking):', {
+            console.warn('⚠️ Session fetch failed (non-blocking):', {
               status: result.status,
               error: result.error
             });
@@ -777,11 +725,11 @@ export const AuthProvider = ({ children }) => {
               clearTimeout(timeoutId);
               clearTimeout(bootTimeout);
             } else {
-              console.error('❌ No cached profile available and sync-user failed');
+              console.error('❌ No cached profile available and session fetch failed');
               console.warn('⚠️ Keeping existing profile to prevent role downgrade');
 
               // CRITICAL: Don't set profile = null if we already have one (prevents role downgrade)
-              // This handles the case where a late/failed sync-user tries to clobber a good profile
+              // This handles the case where a late/failed session fetch tries to clobber a good profile
               if (!profile) {
                 // Only show error if we truly have no profile at all
                 setError('Unable to load your profile. Please refresh the page or sign in again.');
@@ -797,7 +745,7 @@ export const AuthProvider = ({ children }) => {
               // Auto-retry after 3 seconds if we're in circuit breaker backoff
               setTimeout(async () => {
                 if (shouldAttemptSyncUser() && mounted) {
-                  console.log('🔄 Auto-retrying sync-user after failure...');
+                  console.log('🔄 Auto-retrying session fetch after failure...');
                   window.location.reload(); // Simple reload to retry
                 }
               }, 3000);
@@ -1042,7 +990,6 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     role,           // ⭐ CANONICAL role string ('creator' | 'admin' | 'fan' | null)
     roleResolved,
-    roleHint,       // 🚀 Fast hint from Supabase metadata (before backend sync)
 
     // Actions
     signOut,
@@ -1063,7 +1010,6 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     role,
     roleResolved,
-    roleHint,
     signOut,
     refreshProfile,
     fetchTokenBalance,
