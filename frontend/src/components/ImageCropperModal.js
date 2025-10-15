@@ -3,20 +3,21 @@ import Cropper from 'react-easy-crop';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon, PhotoIcon, CameraIcon } from '@heroicons/react/24/outline';
 
-const ImageCropperModal = ({ 
-  isOpen, 
-  onClose, 
-  imageSrc, 
-  onCropComplete, 
-  aspectRatio = 1, 
+const ImageCropperModal = ({
+  isOpen,
+  onClose,
+  imageSrc,
+  onCropComplete,
+  aspectRatio = 1,
   cropShape = 'rect',
   title = 'Crop Image',
-  showPreview = true 
+  showPreview = true
 }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [rotation, setRotation] = useState(0);
+  const [ready, setReady] = useState(false);
 
   const onCropChange = (crop) => {
     setCrop(crop);
@@ -32,6 +33,14 @@ const ImageCropperModal = ({
 
   const onCropAreaComplete = useCallback((croppedArea, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const onMediaLoaded = useCallback(({ naturalWidth, naturalHeight }) => {
+    // Center and ensure a comfortable starting zoom so mask is visible
+    setCrop({ x: 0, y: 0 });
+    // Conservative initial zoom cap
+    const aspect = naturalWidth / naturalHeight;
+    setZoom((z) => Math.max(1, Math.min(z, 1.2)));
   }, []);
 
   const createImage = (url) =>
@@ -138,6 +147,13 @@ const ImageCropperModal = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
+            onAnimationComplete={() => {
+              setReady(true);
+              // Force react-easy-crop to recompute layout (iOS Safari)
+              window.requestAnimationFrame(() => {
+                window.dispatchEvent(new Event('resize'));
+              });
+            }}
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl z-[10000] overflow-y-auto overflow-x-hidden"
           >
             {/* Header */}
@@ -158,24 +174,32 @@ const ImageCropperModal = ({
             <div className="p-6 space-y-6">
               {/* Cropper Area */}
               <div className="relative h-64 sm:h-80 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden">
-                <Cropper
-                  image={imageSrc}
-                  crop={crop}
-                  zoom={zoom}
-                  rotation={rotation}
-                  aspect={aspectRatio}
-                  cropShape={cropShape}
-                  onCropChange={onCropChange}
-                  onCropComplete={onCropAreaComplete}
-                  onZoomChange={onZoomChange}
-                  onRotationChange={onRotationChange}
-                  showGrid={false}
-                  style={{
-                    containerStyle: {
-                      backgroundColor: '#1f2937'
-                    }
-                  }}
-                />
+                {ready && (
+                  <Cropper
+                    image={imageSrc}
+                    crop={crop}
+                    zoom={zoom}
+                    rotation={rotation}
+                    aspect={aspectRatio}
+                    cropShape={cropShape}
+                    onCropChange={onCropChange}
+                    onCropComplete={onCropAreaComplete}
+                    onZoomChange={onZoomChange}
+                    onRotationChange={onRotationChange}
+                    onMediaLoaded={onMediaLoaded}
+                    showGrid={false}
+                    objectFit="contain"
+                    style={{
+                      containerStyle: {
+                        backgroundColor: '#1f2937',
+                        // Critical for iOS touch/drag inside transformed containers
+                        touchAction: 'none',
+                        // Be explicit in case an ancestor toggles pointer events
+                        pointerEvents: 'auto'
+                      }
+                    }}
+                  />
+                )}
               </div>
 
               {/* Controls */}
