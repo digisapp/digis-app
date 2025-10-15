@@ -139,6 +139,43 @@ function isWithinCutoff(referenceDate = new Date(), cutoffHours = 0) {
   return referenceDate < cutoffTime;
 }
 
+/**
+ * Get effective cycle date accounting for cutoff time
+ * If current time is after cutoff on a cycle day, bumps to next cycle
+ *
+ * @param {Date} referenceDate - Reference date (default: now)
+ * @param {number} cutoffHourUTC - Cutoff hour in UTC (default: 6 = 6am UTC)
+ * @returns {Date} - Effective cycle date
+ */
+function getEffectiveCycleDate(referenceDate = new Date(), cutoffHourUTC = 6) {
+  const year = referenceDate.getUTCFullYear();
+  const month = referenceDate.getUTCMonth();
+  const day = referenceDate.getUTCDate();
+  const hour = referenceDate.getUTCHours();
+
+  // Determine next cycle
+  let targetCycle;
+  if (day <= 1) {
+    targetCycle = new Date(Date.UTC(year, month, 1));
+  } else if (day <= 15) {
+    targetCycle = new Date(Date.UTC(year, month, 15));
+  } else {
+    targetCycle = new Date(Date.UTC(year, month + 1, 1));
+  }
+
+  // Check if we're on a cycle day after cutoff hour
+  const isCycleDay = (day === 1 || day === 15);
+  const afterCutoff = hour >= cutoffHourUTC;
+
+  if (isCycleDay && afterCutoff) {
+    // Bump to next cycle (add 1 day and recalculate)
+    const tomorrow = new Date(referenceDate.getTime() + 86400000);
+    return nextCycleDate(tomorrow);
+  }
+
+  return targetCycle;
+}
+
 module.exports = {
   nextCycleDate,
   currentCycleDate,
@@ -148,4 +185,5 @@ module.exports = {
   cycleDateDescription,
   getPayoutWindow,
   isWithinCutoff,
+  getEffectiveCycleDate,
 };

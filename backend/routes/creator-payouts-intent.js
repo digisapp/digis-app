@@ -9,7 +9,8 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const pool = require('../utils/db');
-const { nextCycleDate, formatCycleDate, getPayoutWindow } = require('../utils/cycle-utils');
+const { nextCycleDate, formatCycleDate, getPayoutWindow, getEffectiveCycleDate } = require('../utils/cycle-utils');
+const { config } = require('../config/payout-config');
 
 /**
  * POST /api/creator-payouts/intent
@@ -23,9 +24,10 @@ router.post('/intent', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id; // From authenticateToken middleware
 
-    // Compute next cycle date
-    const nextCycle = nextCycleDate();
-    const cycleDate = formatCycleDate(nextCycle);
+    // Compute effective cycle date (accounts for cutoff time)
+    // If clicking after cutoff on a run day, targets next cycle
+    const effectiveCycle = getEffectiveCycleDate(new Date(), config.payout.cutoffHourUTC);
+    const cycleDate = formatCycleDate(effectiveCycle);
 
     // Insert or update intent (idempotent via UPSERT)
     const result = await pool.query(

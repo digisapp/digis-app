@@ -529,10 +529,10 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
                     <CheckIcon className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
                     <div className="flex-1">
                       <p className="font-medium text-green-800 dark:text-green-200 mb-1">
-                        Payout Request Submitted
+                        You're Queued for Payout
                       </p>
                       <p className="text-sm text-green-700 dark:text-green-300">
-                        {payoutIntent?.message || `You will receive a payout on ${payoutIntent?.nextCycleInfo?.description}`}
+                        You're queued for the {payoutIntent?.nextCycleInfo?.description || 'next'} payout. Cancel if you change your mind.
                       </p>
                       {payoutIntent?.nextCycleInfo && (
                         <div className="mt-3 flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
@@ -574,9 +574,9 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
                   <div className="flex items-start gap-3">
                     <InformationCircleIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                     <div className="text-sm text-blue-800 dark:text-blue-200">
-                      <p className="font-medium mb-2">Opt-in Required for Payouts</p>
+                      <p className="font-medium mb-2">Release Funds to Get Paid</p>
                       <p className="mb-2">
-                        To receive your earnings, you must click <strong>"Release Funds"</strong> before each payout cycle (1st or 15th of the month).
+                        Click <strong>"Release Funds"</strong> to be paid on {payoutIntent?.nextCycleInfo?.description || 'the next cycle'}. If you don't click, your balance stays in your account.
                       </p>
                       {payoutIntent?.nextCycleInfo && (
                         <div className="mt-3 flex items-center gap-2">
@@ -599,7 +599,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
                   {releasingFunds ? 'Processing...' : 'Release Funds'}
                 </Button>
                 <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                  If you don't release funds, your tokens will remain in your account
+                  Your balance stays in your account until you release it
                 </p>
               </div>
             )}

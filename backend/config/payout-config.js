@@ -35,6 +35,10 @@ const config = {
 
     // Cron schedule (6am UTC on 1st & 15th)
     cronSchedule: process.env.PAYOUT_CRON_SCHEDULE || '0 6 1,15 * *',
+
+    // Cutoff hour in UTC (when cron runs)
+    // Clicks after this hour on run day target next cycle
+    cutoffHourUTC: parseInt(process.env.PAYOUT_CUTOFF_HOUR_UTC || '6', 10),
   },
 
   // Retry Policy
