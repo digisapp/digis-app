@@ -41,7 +41,7 @@ const TOKEN_PACKAGES = [
     id: 'popular',
     tokens: 433,
     price: 39.00,
-    popular: true,
+    popular: false,
     savings: 10,
     perToken: 0.09
   },
@@ -394,12 +394,11 @@ const ImprovedTokenPurchase = ({
       whileTap={{ scale: 0.98 }}
       data-onboarding="token-packages"
     >
-      {/* Popular Badge */}
-      {pkg.popular && (
+      {/* Savings Badge */}
+      {pkg.savings > 0 && (
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-          <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-            <StarIcon className="w-3 h-3" />
-            Most Popular
+          <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+            {pkg.savings}% Savings
           </div>
         </div>
       )}
