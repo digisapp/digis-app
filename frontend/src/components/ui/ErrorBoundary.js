@@ -35,11 +35,14 @@ class ErrorBoundary extends React.Component {
       errorInfo: errorInfo
     });
 
-    // Only log errors in development
-    if (import.meta.env.MODE === 'development') {
-      console.error('Error Boundary caught an error:', error);
-      console.error('Error Info:', errorInfo);
-    }
+    // ALWAYS log errors to help debugging mobile issues
+    console.error('❌ Error Boundary caught an error:', error);
+    console.error('❌ Error Info:', errorInfo);
+    console.error('❌ Component Stack:', errorInfo.componentStack);
+    console.error('❌ Environment:', import.meta.env.MODE);
+    console.error('❌ Current Path:', window.location.pathname);
+    console.error('❌ Viewport:', `${window.innerWidth}x${window.innerHeight}`);
+    console.error('❌ User Agent:', navigator.userAgent);
 
     // Report to Sentry with additional context (if available)
     if (Sentry) {
@@ -106,23 +109,48 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      // In production, always show a simple, clean fallback
+      // In production, show error message with option to see details
       if (import.meta.env.MODE === 'production') {
         return (
           <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center p-6">
-            <div className="text-center">
+            <div className="text-center max-w-md">
               <h1 className="text-4xl font-bold text-white mb-4">
                 We'll be right back!
               </h1>
               <p className="text-xl text-white/90 mb-8">
-                Please refresh the page to continue.
+                Something went wrong. Please try refreshing the page.
               </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-8 py-3 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transition-all"
-              >
-                Refresh Page
-              </button>
+              <div className="space-y-4">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="w-full px-8 py-3 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transition-all"
+                >
+                  Refresh Page
+                </button>
+                <button
+                  onClick={() => {
+                    // Clear auth and redirect to home
+                    localStorage.clear();
+                    window.location.href = '/';
+                  }}
+                  className="w-full px-8 py-3 bg-white/20 text-white font-bold rounded-full hover:bg-white/30 transition-all"
+                >
+                  Clear Data & Restart
+                </button>
+              </div>
+              <details className="mt-6 text-left">
+                <summary className="text-white/70 text-sm cursor-pointer hover:text-white">
+                  Show error details
+                </summary>
+                <div className="mt-2 p-4 bg-black/30 rounded-lg text-xs text-white font-mono text-left overflow-auto max-h-40">
+                  <div className="text-red-300 font-semibold mb-2">
+                    {this.state.error?.toString()}
+                  </div>
+                  <div className="whitespace-pre-wrap text-white/80">
+                    {this.state.errorInfo?.componentStack}
+                  </div>
+                </div>
+              </details>
             </div>
           </div>
         );

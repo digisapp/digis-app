@@ -54,6 +54,8 @@ const ShopManagementPage = lazy(() => import('./components/pages/ShopManagementP
 import { Navigation, NavigationProvider } from './components/navigation';
 import PullToRefresh from './components/ui/PullToRefresh';
 import NextLevelMobileApp from './components/mobile/NextLevelMobileApp';
+import MobileErrorBoundary from './components/mobile/MobileErrorBoundary';
+import MobileLoadingScreen from './components/mobile/MobileLoadingScreen';
 // Lazy load rarely accessed pages and components
 const MobileApp = lazy(() => import('./components/mobile/MobileApp'));
 const TermsOfService = lazy(() => import('./components/pages/TermsOfService'));
@@ -1071,19 +1073,15 @@ const App = () => {
     }
 
     return (
-      <ErrorBoundary>
-        <Suspense fallback={
-          <div className="min-h-screen bg-white flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent" />
-          </div>
-        }>
+      <MobileErrorBoundary>
+        <Suspense fallback={<MobileLoadingScreen message="Loading..." />}>
           <NextLevelMobileApp
             user={user}
             logout={handleSignOut}
             isCreator={isCreator}
           />
         </Suspense>
-      </ErrorBoundary>
+      </MobileErrorBoundary>
     );
   }
 

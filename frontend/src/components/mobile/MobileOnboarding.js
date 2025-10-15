@@ -55,12 +55,12 @@ const MobileOnboarding = ({ onComplete }) => {
   const Icon = currentStepData.icon;
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col">
+    <div className="fixed inset-0 bg-white dark:bg-white z-50 flex flex-col" style={{ backgroundColor: '#ffffff' }}>
       {/* Skip Button */}
-      <div className="absolute top-4 right-4 mobile-safe-top">
+      <div className="absolute top-4 right-4 mobile-safe-top z-10">
         <button
           onClick={skipOnboarding}
-          className="text-gray-500 text-sm font-medium"
+          className="text-gray-500 hover:text-gray-700 text-sm font-medium px-4 py-2"
         >
           Skip
         </button>

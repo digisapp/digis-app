@@ -35,6 +35,7 @@ import MobileCreatorDashboard from './MobileCreatorDashboard';
 import MobileExplore from './MobileExplore';
 import Wallet from '../Wallet';
 import { MobileStreamProvider } from '../../contexts/MobileStreamContext';
+import useIosVhFix from '../../hooks/useIosVhFix';
 // Lazy load heavy components for better performance
 const MobileVideoStream = lazy(() => import('./MobileVideoStream'));
 const GoLiveSetup = lazy(() => import('../GoLiveSetup'));
@@ -91,7 +92,18 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   const [showTokenPurchase, setShowTokenPurchase] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !localStorage.getItem('digis_onboarding_completed');
+    // Environment flag allows instant toggle without redeploy
+    const onboardingEnabled = import.meta.env.VITE_MOBILE_ONBOARDING_ENABLED === 'true';
+
+    if (!onboardingEnabled) {
+      console.log('📱 Mobile onboarding: disabled via env flag');
+      return false;
+    }
+
+    // Check if user has completed onboarding
+    const completed = localStorage.getItem('digis_onboarding_completed');
+    console.log('📱 Mobile onboarding: enabled, completed:', !!completed);
+    return !completed;
   });
 
   // Grace period to prevent role/auth flicker loop
@@ -105,6 +117,9 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   // const fabRotation = useSpring(0);
   // const fabScale = useSpring(1);
   // const pullToRefreshY = useSpring(-100);
+
+  // iOS viewport height fix - prevents 100vh bugs on Safari
+  useIosVhFix();
 
   // Grace period effect - prevent auth/role flicker
   useEffect(() => {
@@ -281,6 +296,20 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   // Render content based on active tab
   const renderContent = () => {
     console.log('🎨 Rendering content for tab:', activeTab, 'isCreator:', isCreator);
+
+    // Safety check: ensure we have a valid user object
+    if (!user || !user.id) {
+      console.error('❌ renderContent called without valid user');
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4" />
+            <p className="text-gray-600">Loading user data...</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'explore':
         return (
@@ -439,12 +468,15 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
 
   if (showOnboarding) {
     return (
-      <MobileOnboarding
-        onComplete={() => {
-          localStorage.setItem('digis_onboarding_completed', 'true');
-          setShowOnboarding(false);
-        }}
-      />
+      <div style={{ position: 'fixed', inset: 0, backgroundColor: '#ffffff', zIndex: 9999 }}>
+        <MobileOnboarding
+          onComplete={() => {
+            console.log('✅ Onboarding completed');
+            localStorage.setItem('digis_onboarding_completed', 'true');
+            setShowOnboarding(false);
+          }}
+        />
+      </div>
     );
   }
 
@@ -462,13 +494,14 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   return (
     <MobileStreamProvider>
     <div
-      className="min-h-screen bg-gray-50"
+      className="min-h-[100dvh] bg-gray-50"
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
+        minHeight: 'calc(var(--vh, 1vh) * 100)',
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch'
       }}
