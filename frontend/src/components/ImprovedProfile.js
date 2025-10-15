@@ -5,10 +5,10 @@ import Avatar from './ui/Avatar';
 import AvatarUpload from './AvatarUpload';
 import avatarService from '../services/avatarService';
 import { generateAvatarBlob } from '../utils/avatarGenerator';
-import { 
-  UserCircleIcon, 
-  CameraIcon, 
-  CheckIcon, 
+import {
+  UserCircleIcon,
+  CameraIcon,
+  CheckIcon,
   ExclamationTriangleIcon,
   CogIcon,
   ShieldCheckIcon,
@@ -17,8 +17,6 @@ import {
   SparklesIcon,
   UserGroupIcon,
   LinkIcon,
-  EyeIcon,
-  HeartIcon,
   PhotoIcon,
   GlobeAltIcon,
   LockClosedIcon,
@@ -671,16 +669,6 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                   {/* Creator Stats */}
                   {isCreator && (
                     <div className="flex flex-wrap gap-4 text-sm mt-3">
-                      <div className="flex items-center gap-1">
-                        <EyeIcon className="w-4 h-4 text-gray-500" />
-                        <span className="font-medium">{stats.totalViews.toLocaleString()}</span>
-                        <span className="text-gray-500">views</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <HeartIcon className="w-4 h-4 text-gray-500" />
-                        <span className="font-medium">{stats.totalLikes.toLocaleString()}</span>
-                        <span className="text-gray-500">likes</span>
-                      </div>
                       <div className="flex items-center gap-1">
                         <UserGroupIcon className="w-4 h-4 text-gray-500" />
                         <span className="font-medium">{stats.totalFollowers}</span>
