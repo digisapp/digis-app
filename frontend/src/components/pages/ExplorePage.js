@@ -18,7 +18,8 @@ import {
   LanguageIcon,
   XMarkIcon,
   AdjustmentsHorizontalIcon,
-  BarsArrowUpIcon
+  BarsArrowUpIcon,
+  UserPlusIcon
 } from '@heroicons/react/24/solid';
 import { StarIcon } from '@heroicons/react/24/outline';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
@@ -75,11 +76,14 @@ const ExplorePage = ({
     return saved ? JSON.parse(saved) : [];
   });
   
-  // Filters - Initialize selectedCategory from URL params
+  // Filters - Initialize selectedCategory and showFollowing from URL params
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(() => {
     const categoryFromUrl = searchParams.get('category');
     return categoryFromUrl || 'all';
+  });
+  const [showFollowing, setShowFollowing] = useState(() => {
+    return searchParams.get('following') === '1';
   });
   const [selectedLanguages, setSelectedLanguages] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
@@ -109,9 +113,11 @@ const ExplorePage = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  // Handle URL parameter changes for category filtering
+  // Handle URL parameter changes for category filtering and following filter
   useEffect(() => {
     const categoryFromUrl = searchParams.get('category');
+    const followingFromUrl = searchParams.get('following') === '1';
+
     if (categoryFromUrl) {
       // Check if the category exists in our categories list
       const categoryExists = categories.some(cat => cat.id === categoryFromUrl);
@@ -126,6 +132,8 @@ const ExplorePage = ({
     } else {
       setSelectedCategory('all');
     }
+
+    setShowFollowing(followingFromUrl);
   }, [searchParams]);
 
   // Categories - matches the categories available in creator profiles
@@ -193,6 +201,11 @@ const ExplorePage = ({
       const currentUserId = props.currentUserId || props.user?.id;
       if (currentUserId) {
         params.append('excludeUserId', currentUserId);
+      }
+
+      // Add following filter if enabled
+      if (showFollowing) {
+        params.append('following', '1');
       }
 
       // Add selected languages
@@ -294,7 +307,7 @@ const ExplorePage = ({
         setIsLoadingMore(false);
       }
     }
-  }, [selectedCategory, selectedLanguages, sortBy, retryCount]);
+  }, [selectedCategory, selectedLanguages, sortBy, showFollowing, retryCount]);
 
 
   // Fetch live creators
@@ -336,7 +349,7 @@ const ExplorePage = ({
     const loadInitialData = async () => {
       // Try initial load silently
       await fetchCreators(1, false, true);
-      
+
       // If no creators loaded, retry once after a delay
       if (creators.length === 0) {
         setTimeout(() => {
@@ -344,14 +357,19 @@ const ExplorePage = ({
         }, 2000);
       }
     };
-    
+
     loadInitialData();
     fetchLiveCreators();
-    
+
     // Refresh live creators every 30 seconds
     const interval = setInterval(fetchLiveCreators, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Refetch when filters change (including following toggle)
+  useEffect(() => {
+    fetchCreators(1, false);
+  }, [selectedCategory, sortBy, showFollowing]);
 
   // Filter and sort creators
   const filterAndSortCreators = useCallback(() => {
@@ -553,6 +571,33 @@ const ExplorePage = ({
               />
               <MagnifyingGlassIcon className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
+
+            {/* Following Toggle Button */}
+            <button
+              onClick={() => {
+                const newValue = !showFollowing;
+                setShowFollowing(newValue);
+                // Update URL params
+                const newParams = new URLSearchParams(searchParams);
+                if (newValue) {
+                  newParams.set('following', '1');
+                } else {
+                  newParams.delete('following');
+                }
+                setSearchParams(newParams, { replace: true });
+              }}
+              className={`h-10 px-3 sm:px-4 flex items-center gap-2 border rounded-lg transition-all font-medium text-xs sm:text-sm whitespace-nowrap ${
+                showFollowing
+                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 shadow-sm'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+              aria-pressed={showFollowing}
+              aria-label={showFollowing ? 'Show all creators' : 'Show only creators you follow'}
+              title={showFollowing ? 'Show all creators' : 'Show only creators you follow'}
+            >
+              <UserPlusIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Following</span>
+            </button>
 
             {/* Filter Buttons */}
             <div className="flex gap-1 sm:gap-2 relative">
@@ -784,27 +829,34 @@ const ExplorePage = ({
           /* No Results */
           <div className="text-center py-12">
             <UserGroupIcon className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No creators found</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              {showFollowing ? "You're not following any creators yet" : "No creators found"}
+            </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6">
-              {searchTerm || selectedCategory !== 'all' || selectedLanguages.length > 0
+              {showFollowing
+                ? "Explore and tap the Follow button on creator cards to see them here"
+                : searchTerm || selectedCategory !== 'all' || selectedLanguages.length > 0
                 ? 'Try adjusting your filters or search terms'
                 : 'No creators have registered yet. Check back later or become a creator yourself!'}
             </p>
-            {(searchTerm || selectedCategory !== 'all' || selectedLanguages.length > 0) && (
+            {(searchTerm || selectedCategory !== 'all' || selectedLanguages.length > 0 || showFollowing) && (
               <button
                 onClick={() => {
                   setSearchTerm('');
                   setSelectedCategory('all');
                   setSelectedLanguages([]);
+                  setShowFollowing(false);
                   // Clear URL parameters
-                  searchParams.delete('category');
-                  setSearchParams(searchParams);
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete('category');
+                  newParams.delete('following');
+                  setSearchParams(newParams);
                   // Refetch creators after clearing filters
                   fetchCreators(1);
                 }}
                 className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
               >
-                Clear all filters
+                {showFollowing ? 'Explore All Creators' : 'Clear all filters'}
               </button>
             )}
           </div>

@@ -830,7 +830,8 @@ router.get('/creators', authenticateToken, async (req, res) => {
     sort = 'popular',
     sortBy,
     sortOrder = 'DESC',
-    excludeUserId  // NEW: Filter out the current user from results
+    excludeUserId,  // NEW: Filter out the current user from results
+    following  // NEW: Filter to show only creators the current user follows
   } = req.query;
 
   // Calculate actual offset from page number
@@ -849,6 +850,7 @@ router.get('/creators', authenticateToken, async (req, res) => {
     sort,
     sortBy,
     sortOrder,
+    following: following === '1' ? 'true' : 'false',
     currentUserId: currentUserId ? '***' : undefined,
     excludeUserId: excludeUserId ? '***' : undefined,
     timestamp: new Date().toISOString()
@@ -859,6 +861,14 @@ router.get('/creators', authenticateToken, async (req, res) => {
     let whereConditions = ['u.is_creator = TRUE'];
     let queryParams = [];
     let paramIndex = 1;
+    let joinClause = '';
+
+    // Following filter: Only show creators the current user follows
+    if (following === '1' && currentUserId) {
+      joinClause = `INNER JOIN followers f ON f.creator_id = u.id AND f.follower_id = $${paramIndex}`;
+      queryParams.push(currentUserId);
+      paramIndex++;
+    }
 
     // IMPORTANT: Exclude the current user from results (prevent self-discovery)
     if (excludeUserId) {
@@ -948,6 +958,7 @@ router.get('/creators', authenticateToken, async (req, res) => {
            AND follower_id = $${paramIndex + 2}
          ) as is_following` : 'false as is_following'}
        FROM public.users u
+       ${joinClause}
        WHERE ${whereClause}
        ORDER BY ${orderByClause}
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -955,10 +966,11 @@ router.get('/creators', authenticateToken, async (req, res) => {
     );
 
     // Get total count with same filters
-    const countParams = queryParams.slice(0, -2); // Remove limit and offset
+    const countParams = queryParams.slice(0, -2); // Remove limit and offset (and currentUserId if exists)
+    const countParamsClean = currentUserId ? countParams.slice(0, -1) : countParams;
     const countResult = await pool.query(
-      `SELECT COUNT(*) as total FROM users u WHERE ${whereClause}`,
-      countParams
+      `SELECT COUNT(*) as total FROM users u ${joinClause} WHERE ${whereClause}`,
+      countParamsClean
     );
 
     const creators = result.rows.map(creator => ({
