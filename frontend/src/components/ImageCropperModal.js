@@ -208,7 +208,7 @@ const ImageCropperModal = ({
             onClick={onClose}
           />
 
-          {/* Modal */}
+          {/* Modal Wrapper - NO transforms to avoid breaking cropper positioning */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -220,8 +220,10 @@ const ImageCropperModal = ({
                 window.dispatchEvent(new Event('resize'));
               });
             }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl z-[10000] overflow-y-auto overflow-x-hidden"
+            className="fixed inset-0 z-[10000] grid place-items-center"
           >
+            <div className="w-[calc(100%-2rem)] max-w-2xl max-h-[90dvh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-y-auto overflow-x-hidden"
+            >
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -245,6 +247,7 @@ const ImageCropperModal = ({
               >
                 {ready && (
                   <Cropper
+                    key={imageSrc}
                     image={imageSrc}
                     crop={crop}
                     zoom={zoom}
@@ -358,6 +361,7 @@ const ImageCropperModal = ({
                   </button>
                 </div>
               </div>
+            </div>
             </div>
           </motion.div>
         </>
