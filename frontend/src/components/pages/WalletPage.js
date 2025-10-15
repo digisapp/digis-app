@@ -1,5 +1,6 @@
 import React from 'react';
-// Import the optimized version
+// WalletOptimized is now the single, unified wallet component
+// Legacy Wallet.js has been retired in favor of WalletOptimized + Stripe Connect flow
 import WalletPageOptimized from './WalletPageOptimized';
 
 // Wrapper component that uses the optimized version

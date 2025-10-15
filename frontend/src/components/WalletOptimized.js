@@ -140,8 +140,20 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
   const [loading, setLoading] = useState(true);
   const [chartsLoaded, setChartsLoaded] = useState(false);
 
+  // Creator payout intent (Release Funds) state
+  const [releaseIntent, setReleaseIntent] = useState(null);
+  const [intentLoading, setIntentLoading] = useState(false);
+
   // Cache for API responses
   const [cache, setCache] = useState({});
+
+  // Common backend + auth helpers
+  const BACKEND = import.meta.env.VITE_BACKEND_URL;
+
+  const getAuthToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || '';
+  };
 
   // Fetch functions with caching
   const fetchWithCache = useCallback(async (key, fetchFn) => {
@@ -234,6 +246,25 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
     }
   }, [isCreator, fetchEarningsData]);
 
+  // Fetch current release intent for the next cycle (if creator)
+  const fetchReleaseIntent = useCallback(async () => {
+    if (!isCreator) return;
+    try {
+      const token = await getAuthToken();
+      const r = await fetch(`${BACKEND}/api/creator-payouts/intent`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const j = await r.json();
+      if (j.ok) setReleaseIntent(j.intent ?? null);
+    } catch (e) {
+      console.warn('fetchReleaseIntent failed', e);
+    }
+  }, [isCreator, BACKEND]);
+
+  useEffect(() => {
+    fetchReleaseIntent();
+  }, [fetchReleaseIntent]);
+
   // Lazy load charts after initial render
   useEffect(() => {
     const timer = setTimeout(() => setChartsLoaded(true), 500);
@@ -247,6 +278,75 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
   const formatTokens = useCallback((tokens) => {
     return tokens.toLocaleString();
   }, []);
+
+  // Click handlers for payout actions
+  const handleReleaseFunds = async () => {
+    try {
+      setIntentLoading(true);
+      const token = await getAuthToken();
+      const r = await fetch(`${BACKEND}/api/creator-payouts/intent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+      });
+      const j = await r.json();
+      if (j.ok) {
+        setReleaseIntent(j.intent);
+        toast.success('You\'re queued for the next payout.');
+      } else {
+        toast.error(j.error || 'Unable to set release intent.');
+      }
+    } catch (e) {
+      toast.error('Unable to set release intent.');
+    } finally {
+      setIntentLoading(false);
+    }
+  };
+
+  const handleCancelRelease = async () => {
+    try {
+      setIntentLoading(true);
+      const token = await getAuthToken();
+      const r = await fetch(`${BACKEND}/api/creator-payouts/intent`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const j = await r.json();
+      if (j.ok) {
+        setReleaseIntent(j.intent || null);
+        toast('Release canceled for upcoming cycle');
+      } else {
+        toast.error(j.error || 'Unable to cancel release.');
+      }
+    } catch (e) {
+      toast.error('Unable to cancel release.');
+    } finally {
+      setIntentLoading(false);
+    }
+  };
+
+  // Stripe account link → manage banking
+  const openStripeAccountLink = async () => {
+    try {
+      const token = await getAuthToken();
+      const r = await fetch(`${BACKEND}/api/stripe/account-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          refresh_url: window.location.href,
+          return_url: window.location.href
+        })
+      });
+      const j = await r.json();
+      if (j.url) {
+        window.location.assign(j.url);
+      } else {
+        throw new Error(j.error || 'No account link returned');
+      }
+    } catch (e) {
+      console.error('openStripeAccountLink error', e);
+      toast.error('Unable to open banking settings. Please try again.');
+    }
+  };
 
   // Memoize chart data
   const chartData = useMemo(() => {
@@ -431,6 +531,54 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
             </button>
           </div>
           <WalletIcon className="w-10 h-10 md:w-12 md:h-12 text-white/20" />
+        </div>
+      </div>
+
+      {/* Creator: Payouts & Banking */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Payouts & Banking</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Control your twice-monthly payouts and update your banking details via Stripe.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {/* Manage Banking (Stripe) */}
+            <button
+              onClick={openStripeAccountLink}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              aria-label="Manage banking and payouts"
+            >
+              Manage Banking &amp; Payouts
+            </button>
+
+            {/* Release Funds intent */}
+            {releaseIntent?.status === 'pending' ? (
+              <button
+                onClick={handleCancelRelease}
+                disabled={intentLoading}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white transition disabled:opacity-60"
+                aria-label="Cancel release funds"
+              >
+                {intentLoading ? 'Processing...' : 'Cancel Release (Queued)'}
+              </button>
+            ) : (
+              <button
+                onClick={handleReleaseFunds}
+                disabled={intentLoading}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 hover:bg-purple-700 text-white transition disabled:opacity-60"
+                aria-label="Release funds for next payout"
+              >
+                {intentLoading ? 'Processing...' : 'Release Funds for Next Payout'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Optional small status */}
+        <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          If you don't click "Release Funds", your earnings remain in your account and won't be paid out this cycle.
         </div>
       </div>
 

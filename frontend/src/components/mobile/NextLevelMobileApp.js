@@ -33,7 +33,7 @@ import MobileMessages from './MobileMessages';
 import MobileOnboarding from './MobileOnboarding';
 import MobileCreatorDashboard from './MobileCreatorDashboard';
 import MobileExplore from './MobileExplore';
-import Wallet from '../Wallet';
+import Wallet from '../WalletOptimized';
 import { MobileStreamProvider } from '../../contexts/MobileStreamContext';
 import useIosVhFix from '../../hooks/useIosVhFix';
 // Lazy load heavy components for better performance
