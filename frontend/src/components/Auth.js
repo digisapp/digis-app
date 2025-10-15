@@ -119,21 +119,10 @@ const Auth = ({ mode: initialMode = 'signin', onModeSwitch, onLogin }) => {
         creator_type: finalUserData.creator_type
       });
       
-      // Store role in localStorage for faster initial load
-      const isCreatorUser = finalUserData.is_creator === true || finalUserData.creator_type !== null;
-      const isAdminUser = finalUserData.is_super_admin === true || finalUserData.role === 'admin';
-      
+      // NO localStorage writes for roles - AuthContext is single source of truth
+      // Only store authentication status for quicker boot detection
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userEmail', user.email);
-      localStorage.setItem('userRole', isAdminUser ? 'admin' : isCreatorUser ? 'creator' : 'fan');
-      localStorage.setItem('userIsCreator', isCreatorUser ? 'true' : 'false');
-      localStorage.setItem('userIsAdmin', isAdminUser ? 'true' : 'false');
-      
-      console.log('🖥️ Desktop localStorage updated:', {
-        userRole: localStorage.getItem('userRole'),
-        userIsCreator: localStorage.getItem('userIsCreator'),
-        userIsAdmin: localStorage.getItem('userIsAdmin')
-      });
 
       // Call the parent's onLogin callback with full user data
       if (onLogin) {

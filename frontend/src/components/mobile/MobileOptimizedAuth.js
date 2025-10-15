@@ -121,21 +121,10 @@ const MobileOptimizedAuth = ({ onLogin, mode = 'signin', onClose }) => {
         creator_type: userData.creator_type
       });
       
-      // Store role in localStorage for faster initial load
-      const isCreatorUser = userData.is_creator === true || userData.creator_type !== null;
-      const isAdminUser = userData.is_super_admin === true || userData.role === 'admin';
-      
-      localStorage.setItem('userRole', isAdminUser ? 'admin' : isCreatorUser ? 'creator' : 'fan');
-      localStorage.setItem('userIsCreator', isCreatorUser ? 'true' : 'false');
-      localStorage.setItem('userIsAdmin', isAdminUser ? 'true' : 'false');
+      // NO localStorage writes for roles - AuthContext is single source of truth
+      // Only store authentication status for quicker boot detection
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userEmail', user.email);
-      
-      console.log('📱 Mobile localStorage updated:', {
-        userRole: localStorage.getItem('userRole'),
-        userIsCreator: localStorage.getItem('userIsCreator'),
-        userIsAdmin: localStorage.getItem('userIsAdmin')
-      });
       
       // Pass the full user data to the parent component
       const fullUserData = {

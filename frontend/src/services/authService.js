@@ -235,16 +235,14 @@ class AuthService {
     }
   }
 
-  // Role inference
+  // Role inference - DEPRECATED: Callers should use useAuth().role instead
   inferUserRole(user, profile) {
     // Check multiple sources for role
     if (profile?.role) return profile.role;
     if (profile?.is_creator) return 'creator';
     if (user?.user_metadata?.role) return user.user_metadata.role;
 
-    // Check localStorage as fallback
-    const storedRole = localStorage.getItem('userRole');
-    if (storedRole) return storedRole;
+    // NO localStorage reads - AuthContext is single source of truth
 
     return 'fan'; // Default role
   }
@@ -269,8 +267,7 @@ class AuthService {
 
       if (profile) {
         localStorage.setItem('userProfile', JSON.stringify(profile));
-        localStorage.setItem('userRole', profile.role || 'fan');
-        localStorage.setItem('userIsCreator', String(this.isCreator(user, profile)));
+        // NO role localStorage writes - AuthContext is single source of truth
         localStorage.setItem('userName', profile.name || profile.username || '');
       }
 
@@ -308,8 +305,7 @@ class AuthService {
       'userProfile',
       'authSession',
       'userId',
-      'userRole',
-      'userIsCreator',
+      // NO role keys - AuthContext handles all role state
       'userName',
       'accessToken'
     ];

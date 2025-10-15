@@ -536,11 +536,11 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
               </div>
             </div>
 
-            {/* Show broadcast button for creators - check both prop and localStorage for resilience */}
-            {(isCreator || localStorage.getItem('userIsCreator') === 'true') ? (
+            {/* Show broadcast button for creators */}
+            {isCreator ? (
               <button
                 onClick={() => {
-                  console.log('Broadcast button clicked, isCreator:', isCreator, 'localStorage:', localStorage.getItem('userIsCreator'));
+                  console.log('Broadcast button clicked, isCreator:', isCreator);
                   setShowBroadcastPage(true);
                   triggerHaptic('medium');
                 }}

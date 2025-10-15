@@ -10,15 +10,17 @@ import { shallow } from 'zustand/shallow';
 // ============================
 
 // Auth Slice - Global user state, token balance
+// IMPORTANT: AuthContext is the single source of truth for roles
+// This store receives role updates from AuthContext via setProfile action
 const createAuthSlice = (set, get) => ({
   // State
   user: null,
-  isCreator: localStorage.getItem('userIsCreator') === 'true' || false,
-  isAdmin: localStorage.getItem('userIsAdmin') === 'true' || false,
+  isCreator: false, // Set by AuthContext via setProfile - NO localStorage reads
+  isAdmin: false, // Set by AuthContext via setProfile - NO localStorage reads
   tokenBalance: 0,
   profile: null,
-  roleVerified: localStorage.getItem('roleVerified') === 'true' || false, // Track if role has been verified to prevent flip-flopping
-  roleLoading: localStorage.getItem('roleVerified') !== 'true', // Only show loading if role hasn't been verified yet
+  roleVerified: false, // Track if role has been verified to prevent flip-flopping
+  roleLoading: true, // Only show loading if role hasn't been verified yet
 
   // Actions
   setUser: (user) => set((state) => {
@@ -73,14 +75,8 @@ const createAuthSlice = (set, get) => ({
       state.roleVerified = true;
       state.roleLoading = false; // Role is now verified, allow rendering
 
-      // Store creator status in localStorage for persistence
-      if (profile) {
-        localStorage.setItem('userIsCreator', isCreatorAccount ? 'true' : 'false');
-        localStorage.setItem('userIsAdmin', (profile?.role === 'admin' || profile?.is_super_admin === true) ? 'true' : 'false');
-        localStorage.setItem('userEmail', profile?.email || '');
-        localStorage.setItem('userCreatorType', profile?.creator_type || '');
-        localStorage.setItem('roleVerified', 'true');
-      }
+      // NO localStorage writes - AuthContext is single source of truth
+      // Role is persisted via Zustand's persist middleware (see partialize config)
 
       console.log('📱 Store state after setProfile - isCreator:', state.isCreator, 'isAdmin:', state.isAdmin, 'roleVerified:', state.roleVerified, 'roleLoading:', state.roleLoading);
     } else {
@@ -104,21 +100,17 @@ const createAuthSlice = (set, get) => ({
     state.tokenBalance = 0;
     state.roleVerified = false;
     state.roleLoading = true; // Reset to loading state on logout
-    // Clear localStorage
-    localStorage.removeItem('userIsCreator');
-    localStorage.removeItem('userIsAdmin');
-    localStorage.removeItem('roleVerified');
+    // NO localStorage clears needed - Zustand persist middleware handles store reset
   }),
 
   // Force update role (use only when role explicitly changes, e.g., upgrading to creator)
+  // IMPORTANT: Should only be called by AuthContext after backend confirms role change
   forceUpdateRole: (isCreator, isAdmin = false) => set((state) => {
     console.log('🔐 Force updating role:', { isCreator, isAdmin });
     state.isCreator = isCreator;
     state.isAdmin = isAdmin;
     state.roleVerified = true;
-    localStorage.setItem('userIsCreator', isCreator ? 'true' : 'false');
-    localStorage.setItem('userIsAdmin', isAdmin ? 'true' : 'false');
-    localStorage.setItem('roleVerified', 'true');
+    // NO localStorage writes - Zustand persist middleware handles persistence
   }),
 });
 

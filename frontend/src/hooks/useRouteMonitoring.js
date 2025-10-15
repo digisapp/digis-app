@@ -16,7 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
  */
 export function useRouteMonitoring() {
   const location = useLocation();
-  const { role, roleHint, roleResolved } = useAuth();
+  const { role, roleResolved } = useAuth();
   const previousPath = useRef(location.pathname);
   const navigationStart = useRef(Date.now());
   const firstNavigationLogged = useRef(false);
@@ -49,7 +49,7 @@ export function useRouteMonitoring() {
       analytics.navigate(previousPath.current, currentPath, duration);
 
       // Production observability: Log first navigation with auth context
-      if (!firstNavigationLogged.current && (role || roleHint)) {
+      if (!firstNavigationLogged.current && roleResolved) {
         firstNavigationLogged.current = true;
 
         addBreadcrumb({
@@ -60,14 +60,13 @@ export function useRouteMonitoring() {
             to: currentPath,
             from: previousPath.current,
             duration_ms: duration,
-            role: role || roleHint || 'unknown',
-            roleResolved,
-            usedRoleHint: !role && !!roleHint
+            role: role || 'unknown',
+            roleResolved
           }
         });
 
         // Set Sentry tags for issue grouping
-        setTag('auth.role', role || roleHint || 'unknown');
+        setTag('auth.role', role || 'unknown');
         setTag('auth.roleResolved', String(roleResolved));
       }
 
@@ -81,7 +80,7 @@ export function useRouteMonitoring() {
             to: currentPath,
             from: previousPath.current,
             duration_ms: duration,
-            role: role || roleHint || 'guest'
+            role: role || 'guest'
           }
         });
       }
@@ -90,7 +89,7 @@ export function useRouteMonitoring() {
       previousPath.current = currentPath;
       navigationStart.current = Date.now();
     }
-  }, [location.pathname, role, roleHint, roleResolved]);
+  }, [location.pathname, role, roleResolved]);
 }
 
 /**

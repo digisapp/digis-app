@@ -215,20 +215,8 @@ const App = () => {
   const isCreator = authIsCreator;
   const isAdmin = authIsAdmin;
 
-  // Sync localStorage when profile changes to ensure consistency
-  useEffect(() => {
-    // Only sync when both user and profile exist to prevent updates after logout
-    if (!user || !profile) return;
-
-    const profileIsCreator = profile.is_creator === true;
-    const currentLocalStorage = localStorage.getItem('userIsCreator');
-
-    // Only update if different to avoid unnecessary writes
-    if (currentLocalStorage !== String(profileIsCreator)) {
-      console.log('🔄 Syncing localStorage: userIsCreator =', profileIsCreator);
-      localStorage.setItem('userIsCreator', String(profileIsCreator));
-    }
-  }, [user, profile?.is_creator, profile]);
+  // NO localStorage writes for roles - AuthContext is single source of truth
+  // Role state is automatically managed by AuthContext
 
   // NOTE: URL ↔ view syncing now handled by useViewRouter adapter hook
 
@@ -245,9 +233,7 @@ const App = () => {
       isAdmin,
       roleResolved,
       profile_is_creator: profile?.is_creator,
-      profile_role: profile?.role,
-      localStorage_isCreator: localStorage.getItem('userIsCreator'),
-      localStorage_role: localStorage.getItem('userRole')
+      profile_role: profile?.role
     });
   }, [isMobile, user, profile, isCreator, isAdmin, roleResolved]);
   
@@ -265,29 +251,13 @@ const App = () => {
 
   // authLoading is now from AuthContext (no local state needed)
   const [channel, setChannel] = useState('');
-  // Initialize current view based on stored role
-  const getInitialView = () => {
-    const storedRole = localStorage.getItem('userRole');
-    const storedIsCreator = localStorage.getItem('userIsCreator') === 'true';
-    if (storedRole === 'admin') return 'admin';
-    if (storedRole === 'creator' || storedIsCreator) return 'dashboard';
-    return 'explore';
-  };
-  
-  // Initialize on mount with proper view - disabled to prevent loops
-  // The view is already set by the URL sync effect above
+
+  // View initialization is handled by AppRoutes based on AuthContext role
+  // NO localStorage reads - AuthContext is single source of truth
+
   const [error, setError] = useState('');
   const [callType, setCallType] = useState('video');
   const [currentCreator, setCurrentCreator] = useState(null);
-  
-  // Initialize role from localStorage for faster initial render
-  useEffect(() => {
-    const cachedRole = localStorage.getItem('userRole');
-    if (cachedRole && !profile) {
-      // Roles are automatically set when setProfile is called
-      // This is handled in the store's setProfile action
-    }
-  }, [profile]);
 
   // Public/Auth state
   const [showAuth, setShowAuth] = useState(false);
@@ -629,10 +599,7 @@ const App = () => {
         // Clear Zustand store
         logout();
 
-        // Clear localStorage to prevent stale data causing re-render loops
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userIsCreator');
-        console.log('🧹 Cleared localStorage auth data');
+        // NO localStorage clears needed - AuthContext handles all cleanup
 
         // Safety net: reset view state to prevent stale view rehydration
         setCurrentView('explore');
@@ -653,9 +620,7 @@ const App = () => {
       clearProfileCache();
       logout();
 
-      // Clear localStorage even on error
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('userIsCreator');
+      // NO localStorage clears needed - AuthContext handles all cleanup
 
       // Safety net: reset view state even on error
       setCurrentView('explore');
@@ -1165,25 +1130,15 @@ const App = () => {
         <main className={isMobile ? '' : 'pt-28 p-6'}>
           {currentView === 'profile' ? (
           isMobile ? (
-            <>
-              {/* Debug info for mobile creator detection */}
-              {console.log('📱 Mobile Profile Props:', {
-                user: user?.email,
-                isCreator,
-                profile_is_creator: profile?.is_creator,
-                profile_role: profile?.role,
-                localStorage_creator: localStorage.getItem('userIsCreator')
-              })}
-              <ImprovedProfile
-                user={{...user, ...profile}} // Merge auth user with profile data
-                isCreator={isCreator}
-                onProfileUpdate={async () => {
-                  console.log('📱 Manual profile refresh triggered');
-                  await fetchUserProfile(user);
-                  toast.success('Profile refreshed!');
-                }}
-              />
-            </>
+            <ImprovedProfile
+              user={{...user, ...profile}} // Merge auth user with profile data
+              isCreator={isCreator}
+              onProfileUpdate={async () => {
+                console.log('📱 Manual profile refresh triggered');
+                await fetchUserProfile(user);
+                toast.success('Profile refreshed!');
+              }}
+            />
           ) : (
             <ImprovedProfile 
               user={user} 

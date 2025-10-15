@@ -73,7 +73,7 @@ const MobileCreatorProfile = lazy(() => import('../components/mobile/MobileCreat
  * location.pathname is the single source of truth
  */
 const AppRoutes = () => {
-  const { currentUser, isCreator, isAdmin, tokenBalance, roleResolved, role, roleHint } = useAuth();
+  const { currentUser, isCreator, isAdmin, tokenBalance, roleResolved, role } = useAuth();
   const { isMobile } = useDevice();
   const { open: openModal, close: closeModal } = useModal();
   const location = useLocation();
@@ -143,11 +143,11 @@ const AppRoutes = () => {
         {/* Public Routes */}
         <Route path="/" element={
           currentUser ? (
-            // Fast routing: Use roleHint for immediate redirect, fallback to roleResolved
-            (roleResolved || roleHint) ? (
-              <Navigate to={defaultPathFor(role || roleHint)} replace />
+            // Wait for role resolution before redirecting
+            roleResolved ? (
+              <Navigate to={defaultPathFor(role)} replace />
             ) : (
-              // Small placeholder while waiting for role resolution (not a spinner)
+              // Neutral loader while waiting for role resolution
               <RouteFallback />
             )
           ) : (
@@ -344,9 +344,9 @@ const AppRoutes = () => {
         {/* Catch-all - Redirect to appropriate home */}
         <Route path="*" element={
           currentUser ? (
-            // Fast routing: Use roleHint for immediate redirect, fallback to roleResolved
-            (roleResolved || roleHint) ? (
-              <Navigate to={defaultPathFor(role || roleHint)} replace />
+            // Wait for role resolution before redirecting
+            roleResolved ? (
+              <Navigate to={defaultPathFor(role)} replace />
             ) : (
               <RouteFallback />
             )

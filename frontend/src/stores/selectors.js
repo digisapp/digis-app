@@ -1,48 +1,35 @@
 // Store selectors for consistent state access
 
-// Creator status selector - single source of truth
+// Creator status selector - AuthContext is single source of truth
+// NO localStorage reads - trust store state only
 export const selectIsCreator = (state) => {
-  // Check store state first
+  // Check store state first (should be set from AuthContext)
   if (state.isCreator) return true;
 
-  // Check profile data
+  // Check profile data (set from /api/auth/session response)
   if (state.profile?.is_creator === true) return true;
   if (state.profile?.role === 'creator') return true;
 
-  // Check user metadata
+  // Check user metadata as last resort (rare case)
   if (state.user?.user_metadata?.is_creator === true) return true;
   if (state.user?.user_metadata?.role === 'creator') return true;
-
-  // Check localStorage as fallback
-  if (typeof localStorage !== 'undefined') {
-    const storedIsCreator = localStorage.getItem('userIsCreator');
-    if (storedIsCreator === 'true') return true;
-
-    const storedRole = localStorage.getItem('userRole');
-    if (storedRole === 'creator') return true;
-  }
 
   return false;
 };
 
-// Admin status selector
+// Admin status selector - AuthContext is single source of truth
+// NO localStorage reads - trust store state only
 export const selectIsAdmin = (state) => {
-  // Check store state
+  // Check store state (should be set from AuthContext)
   if (state.isAdmin) return true;
 
-  // Check profile data
+  // Check profile data (set from /api/auth/session response)
   if (state.profile?.is_admin === true) return true;
   if (state.profile?.role === 'admin') return true;
 
-  // Check user metadata
+  // Check user metadata as last resort (rare case)
   if (state.user?.user_metadata?.is_admin === true) return true;
   if (state.user?.user_metadata?.role === 'admin') return true;
-
-  // Check localStorage as fallback
-  if (typeof localStorage !== 'undefined') {
-    const storedRole = localStorage.getItem('userRole');
-    if (storedRole === 'admin') return true;
-  }
 
   return false;
 };

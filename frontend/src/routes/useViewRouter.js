@@ -19,7 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 export default function useViewRouter() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { roleResolved, roleHint } = useAuth(); // also allow hint for fast boot
+  const { roleResolved } = useAuth();
 
   const currentView = useCurrentView();
   const setCurrentView = (view) => useHybridStore.getState().setCurrentView(view);
@@ -32,8 +32,7 @@ export default function useViewRouter() {
     if (!currentView) return;
 
     // Don't navigate until role resolution is done to avoid battling "/" logic
-    // Allow roleHint for fast boot (matches "/" fast-redirect pattern)
-    if (!roleResolved && !roleHint) return;
+    if (!roleResolved) return;
 
     // Skip adapter redirects while the page is backgrounded (iOS Safari fix)
     if (document.visibilityState === 'hidden') return;
@@ -63,7 +62,7 @@ export default function useViewRouter() {
     // Use replace: true to avoid polluting history (store-driven, not user clicks)
     navigate(expectedPath, { replace: true });
     lastViewRef.current = currentView;
-  }, [currentView, roleResolved, roleHint, navigate, location.pathname]);
+  }, [currentView, roleResolved, navigate, location.pathname]);
 
   // 2) When URL changes (user clicks links / back/forward), update store view
   useEffect(() => {

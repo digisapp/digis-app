@@ -57,7 +57,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
   }, []);
 
   // Use AuthContext as SINGLE SOURCE OF TRUTH
-  const { currentUser, isCreator, isAdmin, role, roleResolved, roleHint } = useAuth();
+  const { currentUser, isCreator, isAdmin, role, roleResolved } = useAuth();
 
   // Debug log for QA (can be removed in production)
   if (process.env.NODE_ENV !== 'production') {
@@ -293,11 +293,10 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
               <motion.div
                 className="flex items-center cursor-pointer group"
                 onClick={() => {
-                  // Navigate based on user role - use roleHint fallback for fast boot
-                  const effectiveRole = role || roleHint;
-                  if (effectiveRole === 'creator') {
+                  // Navigate based on user role - wait for roleResolved
+                  if (role === 'creator') {
                     onNavigate('/dashboard');
-                  } else if (effectiveRole === 'fan') {
+                  } else if (role === 'fan') {
                     onNavigate('/explore');
                   } else {
                     onNavigate('/');
