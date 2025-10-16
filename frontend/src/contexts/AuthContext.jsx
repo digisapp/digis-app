@@ -655,12 +655,18 @@ export const AuthProvider = ({ children }) => {
           if (session?.user) {
             setUser(session.user);
           }
-          // IMPORTANT: DO NOT set roleResolved = true here
-          // Wait for fresh backend data to ensure we have the latest role
-          // This prevents showing fan account briefly when user is actually a creator
-          console.log('📦 Cached profile loaded (waiting for fresh data to resolve role):', {
+
+          // CRITICAL FIX: Set roleResolved immediately if cached profile has creator/admin role
+          // This prevents fan layout flash on login - the cached profile is trustworthy
+          if (cachedProfile.is_creator === true || cachedProfile.is_admin === true) {
+            console.log('✅ Setting roleResolved immediately from cached creator/admin profile');
+            setRoleResolved(true);
+          }
+
+          console.log('📦 Cached profile loaded:', {
             is_creator: cachedProfile.is_creator,
-            is_admin: cachedProfile.is_admin
+            is_admin: cachedProfile.is_admin,
+            roleResolvedFromCache: cachedProfile.is_creator === true || cachedProfile.is_admin === true
           });
         }
 
