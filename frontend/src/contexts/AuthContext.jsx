@@ -1031,7 +1031,9 @@ export const AuthProvider = ({ children }) => {
     fetchTokenBalance,
     updateTokenBalance,
     setUser,
-    setProfile
+    setProfile,
+    setAuthLoading,    // Add missing setter for AuthGate
+    setRoleResolved    // Add missing setter for AuthGate
   }), [
     user,
     profile,
@@ -1048,7 +1050,7 @@ export const AuthProvider = ({ children }) => {
     refreshProfile,
     fetchTokenBalance,
     updateTokenBalance,
-    // NOTE: setUser and setProfile are intentionally omitted
+    // NOTE: setUser, setProfile, setAuthLoading, and setRoleResolved are intentionally omitted
     // They are stable setState functions and don't need to be dependencies
   ]);
 
