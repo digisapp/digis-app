@@ -1,6 +1,9 @@
 const express = require('express');
 const { pool } = require('../utils/db');
-const { authenticateToken, requirePgContext } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
+
+// Helper to use req.pg if available (with JWT context), otherwise fall back to pool
+const db = (req) => req.pg || pool;
 const { supabaseAdmin } = require('../utils/supabase-admin-v2');
 const multer = require('multer');
 const { validateUsername, checkUsernameAvailability } = require('../utils/usernameValidation');
@@ -820,7 +823,7 @@ router.get('/public/creators', async (req, res) => {
 });
 
 // Get creators list with enhanced filtering
-router.get('/creators', authenticateToken, requirePgContext, async (req, res) => {
+router.get('/creators', authenticateToken, async (req, res) => {
   const {
     limit = 20,
     page = 1,
@@ -919,8 +922,8 @@ router.get('/creators', authenticateToken, requirePgContext, async (req, res) =>
 
     const whereClause = whereConditions.join(' AND ');
 
-    // Use req.pg (dedicated client with JWT context) instead of pool
-    const result = await req.pg.query(
+    // Use db(req) helper - uses pool for this public endpoint
+    const result = await db(req).query(
       `SELECT
          u.id::text as id,
          COALESCE(u.supabase_id, u.id) as uid,
@@ -969,7 +972,7 @@ router.get('/creators', authenticateToken, requirePgContext, async (req, res) =>
     // Get total count with same filters
     const countParams = queryParams.slice(0, -2); // Remove limit and offset (and currentUserId if exists)
     const countParamsClean = currentUserId ? countParams.slice(0, -1) : countParams;
-    const countResult = await req.pg.query(
+    const countResult = await db(req).query(
       `SELECT COUNT(*) as total FROM users u ${joinClause} WHERE ${whereClause}`,
       countParamsClean
     );
