@@ -209,10 +209,11 @@ try {
       <ErrorBoundary>
         <BrowserRouter>
           <QueryClientProvider client={queryClient}>
-            <AuthGate>
-              <AppBootstrap>
-                {/* New Context Providers - Order matters! */}
-                <AuthProvider>
+            {/* CRITICAL: AuthProvider must wrap AuthGate since AuthGate uses useAuth() */}
+            <AuthProvider>
+              <AuthGate>
+                <AppBootstrap>
+                  {/* Additional Context Providers - Order matters! */}
                   <DeviceProvider>
                     {/* SocketProvider now handles all socket logic internally */}
                     <SocketProvider>
@@ -221,9 +222,9 @@ try {
                       </ModalProvider>
                     </SocketProvider>
                   </DeviceProvider>
-                </AuthProvider>
-              </AppBootstrap>
-            </AuthGate>
+                </AppBootstrap>
+              </AuthGate>
+            </AuthProvider>
             <Toaster position="top-right" />
           </QueryClientProvider>
         </BrowserRouter>
