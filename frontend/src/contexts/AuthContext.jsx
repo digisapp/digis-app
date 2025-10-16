@@ -578,6 +578,10 @@ export const AuthProvider = ({ children }) => {
       const bootTimeout = setTimeout(() => {
         if (mounted) {
           console.warn(`⚠️ Hard auth timeout reached after ${MAX_BOOT_MS / 1000}s - forcing load complete`);
+          // Graceful degradation: let UI render with best info we have
+          if (!roleResolved) {
+            setRoleResolved(Boolean(profile) || Boolean(user));
+          }
           setAuthLoading(false);
         }
       }, MAX_BOOT_MS);
@@ -675,8 +679,8 @@ export const AuthProvider = ({ children }) => {
           // Circuit breaker: Skip if in backoff period
           if (!shouldAttemptSyncUser()) {
             console.log('⏸️ Using cached profile (circuit breaker active)');
-            // CRITICAL: Mark role as resolved when using cached profile during circuit breaker
-            setRoleResolved(true);
+            // If we have *any* cached profile or user, consider the role resolved for this session
+            setRoleResolved(Boolean(cachedProfile) || Boolean(user));
             setAuthLoading(false);
             clearTimeout(bootTimeout);
             return;
@@ -873,6 +877,7 @@ export const AuthProvider = ({ children }) => {
           is_admin: profile.is_admin
         });
         setRoleResolved(true);
+        setAuthLoading(false);
       }
     }
   }, [user, profile, roleResolved]);
