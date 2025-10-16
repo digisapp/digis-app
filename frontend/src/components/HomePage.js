@@ -265,7 +265,6 @@ const HomePage = ({ onSignIn, onSignUp }) => {
                         loop
                         playsInline
                         preload="metadata"
-                        poster="/poster-intro.jpg"
                         style={{ pointerEvents: 'none' }}
                         aria-label="Digis platform introduction video"
                       >
@@ -289,7 +288,6 @@ const HomePage = ({ onSignIn, onSignUp }) => {
                         loop
                         playsInline
                         preload="metadata"
-                        poster="/poster-celebs.jpg"
                         style={{ pointerEvents: 'none' }}
                         aria-label="Featured creators on Digis"
                       >
@@ -313,7 +311,6 @@ const HomePage = ({ onSignIn, onSignUp }) => {
                         loop
                         playsInline
                         preload="metadata"
-                        poster="/poster-alix.jpg"
                         style={{ pointerEvents: 'none' }}
                         aria-label="Creator showcase video"
                       >

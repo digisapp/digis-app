@@ -83,19 +83,14 @@ const ProfileDropdown = ({
   // Remove this line once creator role is properly set in the database
   const FORCE_SHOW_CREATOR_TOOLS = false; // Set to false to use normal detection
 
-  const isActuallyCreator = FORCE_SHOW_CREATOR_TOOLS || isCreator ||
+  const isActuallyCreator = FORCE_SHOW_CREATOR_TOOLS ||
+    isCreator === true ||
     profile?.is_creator === true ||
     userData?.is_creator === true ||
     user?.is_creator === true ||
     profile?.role === 'creator' ||
     userData?.role === 'creator' ||
     user?.role === 'creator' ||
-    // Check for creator-specific fields that indicate creator status
-    userData?.creator_type !== undefined ||
-    userData?.creator_rate !== undefined ||
-    userData?.stream_rate !== undefined ||
-    userData?.video_price !== undefined ||
-    userData?.voice_price !== undefined ||
     false;
   const isActuallyAdmin = isAdmin || profile?.is_super_admin || profile?.role === 'admin' || userData?.role === 'admin';
 
