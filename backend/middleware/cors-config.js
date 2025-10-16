@@ -6,8 +6,11 @@
  * - Vercel preview deployments (with regex)
  * - Development environments
  *
- * IMPORTANT: Simple wildcard strings like 'https://app-*.vercel.app' do NOT work
- * in CORS middleware. Must use regex or dynamic origin function.
+ * ⚠️ CRITICAL: Wildcard strings like 'https://app-*.vercel.app' DO NOT WORK in CORS!
+ * You MUST use:
+ *   - Regex patterns (e.g., /^https:\/\/app-[a-z0-9-]+\.vercel\.app$/)
+ *   - Dynamic origin function with string matching
+ * Simple wildcards will silently fail and block all requests!
  */
 
 const { logger } = require('../utils/secureLogger');

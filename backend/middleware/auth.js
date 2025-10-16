@@ -10,6 +10,13 @@ initializeSupabaseAdmin();
 const authenticateToken = verifySupabaseToken;
 
 /**
+ * Database helper - use req.pg if available (RLS-aware), otherwise fall back to pool
+ * This allows routes that chained requirePgContext to work under RLS,
+ * while routes without it can still query (but won't have auth.uid() context)
+ */
+const db = (req) => req?.pg || pool;
+
+/**
  * Middleware to require PostgreSQL connection with RLS context
  * Only use on routes that actually query Postgres with RLS policies
  * Must be chained AFTER verifySupabaseToken
@@ -50,7 +57,8 @@ const requireCreator = async (req, res, next) => {
     }
 
     // Query with both supabase_id (new) and email fallback for compatibility
-    const result = await pool.query(
+    // Use db(req) to support both RLS and non-RLS contexts
+    const result = await db(req).query(
       `SELECT is_creator, role FROM users
        WHERE supabase_id = $1
           OR email = (SELECT email FROM auth.users WHERE id = $1::uuid LIMIT 1)`,
@@ -115,7 +123,8 @@ const requireTokens = (minimumTokens) => {
       }
 
       // Query token balance - use token_balances table as single source of truth
-      const result = await pool.query(
+      // Use db(req) to support both RLS and non-RLS contexts
+      const result = await db(req).query(
         `SELECT balance FROM token_balances WHERE user_id = $1`,
         [userId]
       );
@@ -170,7 +179,8 @@ const requireSuperAdmin = async (req, res, next) => {
       });
     }
 
-    const result = await pool.query(
+    // Use db(req) to support both RLS and non-RLS contexts
+    const result = await db(req).query(
       `SELECT is_super_admin, role FROM users
        WHERE supabase_id = $1
           OR email = (SELECT email FROM auth.users WHERE id = $1::uuid LIMIT 1)`,
@@ -208,25 +218,38 @@ const requireSuperAdmin = async (req, res, next) => {
 
 // Optional authentication middleware (for public routes that may have logged-in users)
 const optionalAuth = async (req, res, next) => {
+  // Skip OPTIONS preflights immediately
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
-  
-  if (!authHeader) {
-    // No auth header, continue without user
+
+  // Early bailout if no auth header or invalid format
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     req.user = null;
     return next();
   }
 
-  const token = authHeader.replace('Bearer ', '');
-  
+  const token = authHeader.slice(7); // Remove 'Bearer '
+
   if (!token) {
     req.user = null;
     return next();
   }
 
   try {
+    // Timeout to prevent Supabase outages from holding up public pages
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500); // 2.5s budget
+
     // Verify with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
+    const { data: { user }, error } = await supabase.auth.getUser(token, {
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+
     if (error || !user) {
       req.user = null;
       return next();
@@ -245,10 +268,13 @@ const optionalAuth = async (req, res, next) => {
       email: user.email,
       ...profile
     };
-    
+
     next();
   } catch (error) {
-    console.error('Optional auth error:', error);
+    // Never fail the request for optional auth
+    if (error.name !== 'AbortError') {
+      console.error('Optional auth error:', error);
+    }
     req.user = null;
     next();
   }
