@@ -67,7 +67,8 @@ const ExplorePage = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const observerRef = useRef();
   const loadMoreRef = useRef();
-  
+  const controllerRef = useRef(null);
+
   // State management
   const [creators, setCreators] = useState([]);
   const [filteredCreators, setFilteredCreators] = useState([]);
@@ -182,6 +183,13 @@ const ExplorePage = ({
 
   // Fetch creators from API with pagination, filters, and retry logic
   const fetchCreators = useCallback(async (pageNum = 1, append = false, isRetry = false) => {
+    // Abort previous request to prevent overlapping calls
+    if (controllerRef.current) {
+      controllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
     try {
       if (!isRetry) {
         setIsLoadingMore(append);
@@ -232,6 +240,7 @@ const ExplorePage = ({
         {
           method: 'GET',
           headers,
+          signal: controller.signal,
           retries: 3,
           retryDelay: 1000
         }
@@ -291,23 +300,34 @@ const ExplorePage = ({
         toast.error('Failed to load creators. Please try again.');
       }
     } catch (error) {
+      // Ignore AbortError from cancelled requests
+      if (error.name === 'AbortError') {
+        console.log('Request cancelled:', pageNum);
+        return;
+      }
+
       console.error('Error fetching creators:', error);
-      
+
       // Show empty state instead of mock data
       if (pageNum === 1) {
         setCreators([]);
       }
       setHasMore(false);
-      
-      // Auto-retry logic with exponential backoff
+
+      // Auto-retry logic with exponential backoff + jitter (max 3 retries)
       if (!isRetry && retryCount < 3) {
         const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+        const jitter = Math.floor(Math.random() * 250); // Add jitter to avoid thundering herd
+        const finalDelay = retryDelay + jitter;
+        console.log(`Retry ${retryCount + 1}/3 in ${finalDelay}ms...`);
         setTimeout(() => {
           setRetryCount(prev => prev + 1);
           fetchCreators(pageNum, append, true);
-        }, retryDelay);
+        }, finalDelay);
       } else if (retryCount >= 3) {
-        toast.error('Unable to connect to server. Please check your connection.');
+        console.error('Max retries reached, stopping retry loop');
+        setError('Failed to load creators. Please refresh the page.');
+        toast.error('Unable to load creators. Please refresh the page.');
       }
     } finally {
       if (!isRetry) {
@@ -376,6 +396,9 @@ const ExplorePage = ({
 
   // Refetch when filters change (including following toggle)
   useEffect(() => {
+    // Reset retry count when filters change
+    setRetryCount(0);
+    setError(null);
     fetchCreators(1, false);
   }, [selectedCategory, sortBy, showFollowing]);
 

@@ -860,6 +860,29 @@ router.get('/creators', authenticateToken, async (req, res) => {
   });
 
   try {
+    // Guard: if following=1 but no auth, return empty
+    if (following === '1' && !currentUserId) {
+      logger.info('[creators] following=1 without auth, returning empty');
+      return res.json({
+        creators: [],
+        total: 0,
+        hasMore: false,
+        limit: actualLimit,
+        offset: actualOffset,
+        page: parseInt(page),
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Convert supabase_id → internal id once (reuse for all queries)
+    let viewerDbId = null;
+    if (currentUserId) {
+      const r = await db(req).query('SELECT id FROM users WHERE supabase_id = $1 LIMIT 1', [currentUserId]);
+      viewerDbId = r.rows[0]?.id || null;
+
+      logger.info('[creators] viewerSupabase=' + currentUserId.substring(0, 8) + '..., viewerDbId=' + viewerDbId + ', following=' + following + ', page=' + page + ', limit=' + actualLimit);
+    }
+
     // Build WHERE clause based on filters
     let whereConditions = ['u.is_creator = TRUE'];
     let queryParams = [];
@@ -868,9 +891,22 @@ router.get('/creators', authenticateToken, async (req, res) => {
 
     // Following filter: Only show creators the current user follows
     if (following === '1' && currentUserId) {
+      // followers table uses: follower_id (supabase_id) and creator_id (users.id)
       joinClause = `INNER JOIN followers f ON f.creator_id = u.id AND f.follower_id = $${paramIndex}`;
       queryParams.push(currentUserId);
       paramIndex++;
+    } else if (following === '1' && !currentUserId) {
+      // User not found in DB, return empty result
+      logger.warn('[creators] following=1 but viewerDbId null, returning empty');
+      return res.json({
+        creators: [],
+        total: 0,
+        hasMore: false,
+        limit: actualLimit,
+        offset: actualOffset,
+        page: parseInt(page),
+        timestamp: new Date().toISOString()
+      });
     }
 
     // IMPORTANT: Exclude the current user from results (prevent self-discovery)
@@ -954,7 +990,7 @@ router.get('/creators', authenticateToken, async (req, res) => {
            ELSE false
          END as is_online,
          false as is_streaming,
-         (SELECT COUNT(*) FROM follows f WHERE f.creator_id = u.id) as follower_count,
+         (SELECT COUNT(*) FROM followers f WHERE f.creator_id = u.id) as follower_count,
          ${currentUserId ? `
          EXISTS(
            SELECT 1 FROM followers
@@ -969,13 +1005,20 @@ router.get('/creators', authenticateToken, async (req, res) => {
       currentUserId ? [...queryParams, currentUserId] : queryParams
     );
 
-    // Get total count with same filters
-    const countParams = queryParams.slice(0, -2); // Remove limit and offset (and currentUserId if exists)
-    const countParamsClean = currentUserId ? countParams.slice(0, -1) : countParams;
-    const countResult = await db(req).query(
-      `SELECT COUNT(*) as total FROM users u ${joinClause} WHERE ${whereClause}`,
-      countParamsClean
-    );
+    // Get total count with same filters (wrapped in try/catch to not 500 the page)
+    let total = 0;
+    try {
+      const countParams = queryParams.slice(0, -2); // Remove limit and offset (and currentUserId if exists)
+      const countParamsClean = currentUserId ? countParams.slice(0, -1) : countParams;
+      const countResult = await db(req).query(
+        `SELECT COUNT(*) as total FROM users u ${joinClause} WHERE ${whereClause}`,
+        countParamsClean
+      );
+      total = parseInt(countResult.rows[0]?.total || 0);
+    } catch (countError) {
+      logger.warn('[creators] count query failed (continuing with 0):', countError?.message);
+      total = 0;
+    }
 
     const creators = result.rows.map(creator => ({
       id: creator.id,
@@ -1034,15 +1077,21 @@ router.get('/creators', authenticateToken, async (req, res) => {
 
     res.json({
       creators: creators,
-      total: parseInt(countResult.rows[0].total),
-      hasMore: actualOffset + creators.length < parseInt(countResult.rows[0].total),
+      total: total,
+      hasMore: actualOffset + creators.length < total,
       limit: actualLimit,
       offset: actualOffset,
       page: parseInt(page),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error('❌ Creators GET error:', error);
+    logger.error('[creators] sql-error:', {
+      message: error?.message,
+      code: error?.code,
+      detail: error?.detail,
+      where: error?.where,
+      position: error?.position
+    });
     res.status(500).json({
       error: 'Failed to retrieve creators',
       details: error.message,
@@ -1892,42 +1941,51 @@ router.post('/follow', authenticateToken, async (req, res) => {
     });
   }
 
-  const client = await pool.connect();
-  
   try {
-    await client.query('BEGIN');
-
     // Find creator by username
-    const creatorResult = await client.query(
+    const creatorResult = await db(req).query(
       'SELECT id, supabase_id FROM users WHERE username = $1 AND is_creator = TRUE',
       [creatorUsername]
     );
 
     if (creatorResult.rows.length === 0) {
-      await client.query('ROLLBACK');
       return res.status(404).json({
         error: 'Creator not found',
         timestamp: new Date().toISOString()
       });
     }
 
-    const creatorId = creatorResult.rows[0].id;
+    const creatorDbId = creatorResult.rows[0].id;
     const creatorSupabaseId = creatorResult.rows[0].supabase_id;
 
+    // Get follower database ID
+    const followerResult = await db(req).query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [req.user.supabase_id]
+    );
+
+    if (followerResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const followerDbId = followerResult.rows[0].id;
+
     // Check if already following
-    const existingFollow = await client.query(
-      'SELECT id FROM followers WHERE creator_id = $1 AND follower_id = $2',
-      [creatorId, req.user.supabase_id]
+    const existingFollow = await db(req).query(
+      'SELECT id FROM follows WHERE followed_id = $1 AND follower_id = $2',
+      [creatorDbId, followerDbId]
     );
 
     if (existingFollow.rows.length > 0) {
       // Unfollow
-      await client.query(
-        'DELETE FROM followers WHERE creator_id = $1 AND follower_id = $2',
-        [creatorId, req.user.supabase_id]
+      await db(req).query(
+        'DELETE FROM follows WHERE followed_id = $1 AND follower_id = $2',
+        [creatorDbId, followerDbId]
       );
-      
-      await client.query('COMMIT');
+
       res.json({
         success: true,
         action: 'unfollowed',
@@ -1936,36 +1994,36 @@ router.post('/follow', authenticateToken, async (req, res) => {
       });
     } else {
       // Follow
-      await client.query(
-        'INSERT INTO followers (creator_id, follower_id, created_at) VALUES ($1, $2, NOW())',
-        [creatorId, req.user.supabase_id]
+      await db(req).query(
+        'INSERT INTO follows (followed_id, follower_id, created_at) VALUES ($1, $2, NOW())',
+        [creatorDbId, followerDbId]
       );
       
       // Send notification to creator about new follower
       try {
-        // Get follower info
-        const followerResult = await client.query(
+        // Get follower info (already fetched above)
+        const followerInfoResult = await db(req).query(
           'SELECT username, display_name FROM users WHERE supabase_id = $1',
           [req.user.supabase_id]
         );
-        
-        if (followerResult.rows.length > 0) {
-          const follower = followerResult.rows[0];
+
+        if (followerInfoResult.rows.length > 0) {
+          const follower = followerInfoResult.rows[0];
           const followerName = follower.display_name || follower.username || 'Someone';
-          
+
           // Send follow notification with push support
           await sendFollowNotificationWithPush(
             creatorSupabaseId,
             req.user.supabase_id,
             followerName
           );
-          
+
           // Also send real-time notification via WebSocket
           sendNotification(creatorSupabaseId, {
             type: 'follow',
             title: 'New Follower',
             message: `${followerName} started following you`,
-            data: { 
+            data: {
               followerUsername: follower.username,
               followerDisplayName: follower.display_name,
               followerId: req.user.supabase_id
@@ -1976,8 +2034,7 @@ router.post('/follow', authenticateToken, async (req, res) => {
         // Log but don't fail the follow action if notification fails
         logger.error('Failed to send follow notification:', notifError);
       }
-      
-      await client.query('COMMIT');
+
       res.json({
         success: true,
         action: 'followed',
@@ -1987,31 +2044,27 @@ router.post('/follow', authenticateToken, async (req, res) => {
     }
 
   } catch (error) {
-    await client.query('ROLLBACK');
     logger.error('❌ Follow/unfollow error:', error);
     res.status(500).json({
       error: 'Failed to update follow status',
       details: error.message,
       timestamp: new Date().toISOString()
     });
-  } finally {
-    client.release();
   }
 });
 
 // Get creator's followers
 router.get('/creator/:username/followers', async (req, res) => {
   const { username } = req.params;
-  
+
   try {
-    const result = await pool.query(
-      `SELECT u.username, u.profile_pic_url, f.created_at,
-              CASE WHEN uos.is_online = true THEN true ELSE false END as is_online,
-              uos.last_seen
-       FROM followers f
-       JOIN users creator ON f.creator_id = creator.id
-       JOIN users u ON f.follower_id = u.supabase_id
-       LEFT JOIN user_online_status uos ON u.supabase_id = uos.user_id
+    const result = await db(req).query(
+      `SELECT u.id, u.username, u.display_name, u.profile_pic_url, f.created_at,
+              CASE WHEN u.last_active > NOW() - INTERVAL '5 minutes' THEN true ELSE false END as is_online,
+              u.last_active as last_seen
+       FROM follows f
+       JOIN users creator ON f.followed_id = creator.id
+       JOIN users u ON f.follower_id = u.id
        WHERE creator.username = $1
        ORDER BY f.created_at DESC`,
       [username]
@@ -2089,10 +2142,10 @@ router.get('/public/creator/:identifier', async (req, res) => {
 
     const creator = result.rows[0];
 
-    // Get follower count using the creator's supabase_id
-    const followerCount = await pool.query(
-      'SELECT COUNT(*) as count FROM followers WHERE creator_id = $1',
-      [creator.supabase_id]
+    // Get follower count using the creator's database id
+    const followerCount = await db(req).query(
+      'SELECT COUNT(*) as count FROM follows WHERE followed_id = $1',
+      [creator.id]
     );
 
     res.json({
@@ -5050,10 +5103,19 @@ router.get('/following', authenticateToken, async (req, res) => {
   const { limit = 50, offset = 0 } = req.query;
 
   try {
-    const result = await db.query(
-      `SELECT 
+    // Get the database ID for the current user
+    const userIdResult = await db(req).query('SELECT id FROM users WHERE supabase_id = $1 LIMIT 1', [userId]);
+    if (userIdResult.rows.length === 0) {
+      return res.json({ following: [], count: 0 });
+    }
+    const userDbId = userIdResult.rows[0].id;
+
+    const result = await db(req).query(
+      `SELECT
         u.id,
+        u.supabase_id,
         u.username,
+        u.display_name,
         u.profile_pic_url,
         u.bio,
         u.is_creator,
@@ -5061,24 +5123,24 @@ router.get('/following', authenticateToken, async (req, res) => {
         u.voice_price,
         u.stream_price,
         f.created_at as followed_at,
-        CASE 
-          WHEN u.last_seen > NOW() - INTERVAL '5 minutes' THEN true 
-          ELSE false 
+        CASE
+          WHEN u.last_active > NOW() - INTERVAL '5 minutes' THEN true
+          ELSE false
         END as is_online
       FROM follows f
       JOIN users u ON f.followed_id = u.id
       WHERE f.follower_id = $1
       ORDER BY f.created_at DESC
       LIMIT $2 OFFSET $3`,
-      [userId, limit, offset]
+      [userDbId, limit, offset]
     );
 
     // Get follower counts for privacy
     const followedIds = result.rows.map(u => u.id);
     const followerCounts = {};
-    
+
     if (followedIds.length > 0) {
-      const countResult = await db.query(
+      const countResult = await db(req).query(
         `SELECT followed_id, COUNT(*) as count
          FROM follows
          WHERE followed_id = ANY($1)
@@ -5346,14 +5408,21 @@ router.get('/:username/stats', authenticateToken, async (req, res) => {
     
     if (statsQuery.rows.length === 0) {
       // Fallback to calculating stats directly
-      const fallbackStats = await pool.query(
+      // First get user db id from supabase_id
+      const userQuery = await db(req).query('SELECT id FROM users WHERE supabase_id = $1', [userId]);
+      if (userQuery.rows.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const userDbId = userQuery.rows[0].id;
+
+      const fallbackStats = await db(req).query(
         `SELECT
-          (SELECT COUNT(*) FROM follows WHERE creator_id = $1) as followers,
+          (SELECT COUNT(*) FROM follows WHERE followed_id = $1) as followers,
           (SELECT COUNT(*) FROM content WHERE creator_id = $1) as posts,
           (SELECT COALESCE(SUM(likes), 0) FROM content WHERE creator_id = $1) as likes,
           (SELECT COALESCE(SUM(views), 0) FROM content WHERE creator_id = $1) as totalViews,
-          (SELECT created_at FROM users WHERE supabase_id = $1) as joinedDate`,
-        [userId]
+          (SELECT created_at FROM users WHERE id = $1) as joinedDate`,
+        [userDbId]
       );
       
       return res.json(fallbackStats.rows[0]);
@@ -5377,8 +5446,8 @@ router.get('/profile/:username', authenticateToken, async (req, res) => {
          (SELECT COUNT(*) FROM card_trades WHERE from_user_id = u.supabase_id AND status = 'completed') as cards_traded,
          (SELECT COUNT(*) FROM gift_transactions WHERE sender_id = u.supabase_id) as gifts_sent,
          (SELECT COALESCE(SUM(value), 0) FROM cards WHERE user_id = u.supabase_id) as total_value,
-         (SELECT COUNT(*) FROM followers WHERE creator_id = u.supabase_id) as followers_count,
-         (SELECT COUNT(*) FROM followers WHERE follower_id = u.supabase_id) as following_count,
+         (SELECT COUNT(*) FROM follows WHERE followed_id = u.id) as followers_count,
+         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) as following_count,
          (SELECT json_agg(json_build_object(
            'id', c.id,
            'creator_name', c.creator_name,
