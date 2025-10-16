@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/', // Ensure all assets use absolute paths
   plugins: [
     react(),
     // Bundle analyzer - only run when needed
