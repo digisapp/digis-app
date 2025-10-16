@@ -42,7 +42,7 @@ import { getDesktopMenuItems } from '../../config/navSchema';
 import NotificationDropdown from '../NotificationDropdown';
 import ProfileDropdown from '../ProfileDropdown';
 import WalletQuickView from '../WalletQuickView';
-import TokenPurchase from '../TokenPurchase';
+import ImprovedTokenPurchase from '../ImprovedTokenPurchase';
 import useHybridStore from '../../stores/useHybridStore';
 import useAuthStore from '../../stores/useAuthStore';
 import useStore from '../../stores/useStore';
@@ -531,7 +531,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
 
       {/* Token Purchase Modal */}
       {showTokenPurchase && (
-        <TokenPurchase
+        <ImprovedTokenPurchase
           user={currentUser}
           isModal={true}
           onClose={() => setShowTokenPurchase(false)}

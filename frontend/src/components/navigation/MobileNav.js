@@ -21,7 +21,7 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { getMobileBottomItems, getMobileCenterAction } from '../../config/navSchema';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import WalletQuickView from '../WalletQuickView';
-import TokenPurchase from '../TokenPurchase';
+import ImprovedTokenPurchase from '../ImprovedTokenPurchase';
 import useAuthStore from '../../stores/useAuthStore';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -752,7 +752,7 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
 
       {/* Token Purchase Modal */}
       {showTokenPurchase && (
-        <TokenPurchase
+        <ImprovedTokenPurchase
           user={currentUser}
           isModal={true}
           onClose={() => setShowTokenPurchase(false)}

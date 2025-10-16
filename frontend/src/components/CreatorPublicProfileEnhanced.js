@@ -43,7 +43,7 @@ import { addBreadcrumb } from '../lib/sentry.client';
 import { useAuthGatedAction } from '../utils/withAuthGate';
 import { trackInteractionBlocked, trackInteractionAllowed } from '../utils/authMonitoring';
 import Auth from './Auth';
-import TokenPurchase from './TokenPurchase';
+import ImprovedTokenPurchase from './ImprovedTokenPurchase';
 import CreatorOffers from './CreatorOffers';
 import CreatorShopSection from './CreatorShopSection';
 import ProfileBanner from './ProfileBanner';
@@ -1987,12 +1987,13 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
               exit={{ scale: 0.9, opacity: 0 }}
               className="max-w-md w-full"
             >
-              <TokenPurchase
+              <ImprovedTokenPurchase
                 user={user}
                 onSuccess={() => {
                   setShowTokenPurchase(false);
                 }}
                 onClose={() => setShowTokenPurchase(false)}
+                isModal={true}
               />
             </motion.div>
           </motion.div>
