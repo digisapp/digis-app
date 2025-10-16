@@ -1,140 +1,103 @@
-# ✅ Digis Deployment Checklist
+# Image Cropping Feature - Deployment Checklist
 
-**Use this checklist to deploy each phase safely**
+## ✅ Pre-Deployment Verification
 
-## 🔴 **Phase 1: Critical Performance & Security** (Deploy Today)
+### 1. Environment Variables (Backend)
 
-### Pre-Deployment
-- [ ] Database backup completed
-- [ ] Run migration: `psql $DATABASE_URL -f backend/migrations/fix-active-sessions-performance.sql`
-- [ ] Install deps: `npm install helmet cors express-rate-limit`
+Check that these are set in your production environment (Vercel/Railway/etc.):
 
-### Deploy
 ```bash
-git add .
-git commit -m "Phase 1: Performance + Security"
-git push origin main && vercel --prod
+# Required
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJhbG...  # ⚠️ SERVICE key, NOT anon key!
+
+# Optional
+PUBLIC_ASSET_BASE=https://your-cdn-domain.com  # If using CDN
 ```
 
-### Verify
-- [ ] Health check: `curl https://your-api.vercel.app/healthz`
-- [ ] Sessions query: <100ms (was 79s)
-- [ ] Login works end-to-end
-
-### Rollback (if needed)
+**Verify locally:**
 ```bash
-vercel rollback
+cd backend
+node -e "console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? '✅' : '❌'); console.log('SERVICE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅' : '❌')"
 ```
 
 ---
 
-## 🟡 **Phase 2: Real-time Migration** (Tomorrow)
+## 🗄️ Database & Storage Setup
 
-### Pre-Deploy
-- [ ] Ably/Pusher account created
-- [ ] Environment vars: `ABLY_API_KEY`, `QSTASH_TOKEN`
+### 2.1 Run Database Migration
 
-### Deploy
 ```bash
-npm install ably @upstash/qstash
-git push origin main && vercel --prod
+cd backend
+npm run migrate
 ```
 
-### Verify
-- [ ] Real-time updates work
-- [ ] Background jobs execute
-- [ ] No WebSocket errors
+**Or manually in Supabase SQL Editor:**
+Copy/paste: `backend/migrations/2025_10_15_avatar_card_columns.sql`
+
+**Verify:**
+```sql
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'users'
+  AND column_name IN ('avatar_url', 'card_image_url', 'avatar_updated_at', 'card_image_updated_at');
+```
+
+Should show 4 rows.
+
+### 2.2 Supabase Storage Setup
+
+1. Go to: `https://supabase.com/dashboard/project/YOUR_PROJECT/sql/new`
+2. Copy entire contents of: `backend/migrations/SUPABASE_STORAGE_SETUP.sql`
+3. Execute SQL
+4. **Verify buckets created:**
+   - Go to Storage → Buckets
+   - Should see: `avatars` (public) and `cards` (public)
 
 ---
 
-## 🟢 **Phase 3: Monitoring** (Day 3)
+## 🚀 Quick Start (3 Commands)
 
-### Pre-Deploy
-- [ ] Sentry account + DSN
-- [ ] Environment var: `SENTRY_DSN`
-
-### Deploy
 ```bash
-npm install @sentry/node
-git push origin main && vercel --prod
-```
+# 1. Run DB migration
+cd backend && npm run migrate
 
-### Verify
-- [ ] Errors appear in Sentry
-- [ ] Circuit breaker works
-- [ ] Uptime >99.9%
+# 2. Install frontend deps
+cd ../frontend && npm install react-avatar-editor react-image-crop
+
+# 3. Then run SUPABASE_STORAGE_SETUP.sql in Supabase Dashboard
+```
 
 ---
 
-## 📱 **iOS Hydration Fix Deployment**
-
-### What Was Fixed
-- React error #310 (Suspense hydration mismatch) on iOS Safari during login
-- Replaced `suppressHydrationWarning` band-aid with proper `HydrationGate` component
-- Added ESLint rules to catch unsafe SSR patterns
-- Implemented build-based PWA cache versioning
-
-### Pre-Deployment Steps
-
-1. **Update Service Worker Build Number**
-   ```bash
-   # Edit frontend/public/sw.js
-   # Increment BUILD_NUMBER: '20251015-002'
-   ```
-
-2. **Run Linter**
-   ```bash
-   cd frontend && npm run lint
-   ```
-
-3. **Test on iOS Safari (Required!)**
-   - [ ] Clear Safari cache (Settings → Safari → Clear History)
-   - [ ] Hard refresh homepage (logged out)
-   - [ ] Login in portrait mode
-   - [ ] Login in landscape mode
-   - [ ] Check console for React error #310 (should be none)
-   - [ ] Verify no "We'll be right back!" screen
-
-### Deployment
+## 🧪 Smoke Test
 
 ```bash
-cd frontend
-npm run build
-git add -A
-git commit -m "deploy: iOS hydration fix"
-git push origin main
-# Deploy via your platform (Vercel/Netlify)
+# Start backend
+cd backend && npm run dev
+
+# In another terminal, test upload endpoint
+curl -i http://localhost:3005/api/uploads/avatar
+# Expected: 401 (auth required) - proves route is registered
+
+# Test with auth (get token from browser localStorage)
+curl -i -X POST http://localhost:3005/api/uploads/avatar \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@test-image.jpg"
+# Expected: 200 with {"success": true, "url": "..."}
 ```
 
-### Post-Deploy Verification
+---
 
-1. **On Real iPhone (not simulator)**
-   - [ ] Clear Safari cache completely
-   - [ ] Visit app (logged out)
-   - [ ] Login as Creator → See Dashboard
-   - [ ] Login as Fan → See Explore
-   - [ ] No React error #310 in console
-   - [ ] No flicker on first paint
+## ✅ Success Criteria
 
-2. **Regression Testing**
-   - [ ] Desktop login works
-   - [ ] Android login works
-   - [ ] Creator profile editing works
+- [ ] Avatar upload works (file → crop → save → see in UI)
+- [ ] Card upload works
+- [ ] Files in Supabase Storage `avatars` and `cards` buckets
+- [ ] `users.avatar_url` and `users.card_image_url` populated
+- [ ] No console errors
+- [ ] Mobile uploads work (iPhone + Android)
 
-### Troubleshooting
+---
 
-**Still seeing React error #310?**
-1. Increment BUILD_NUMBER in sw.js
-2. Run ESLint to find unsafe patterns
-3. Check `frontend/SSR_SAFETY_GUIDE.md` for solutions
-
-**Service worker not updating?**
-1. Increment BUILD_NUMBER
-2. Clear browser cache
-3. Hard refresh (Cmd+Shift+R)
-
-### Resources
-- HydrationGate: `frontend/src/components/HydrationGate.jsx`
-- SSR Guide: `frontend/SSR_SAFETY_GUIDE.md`
-- ESLint: `frontend/.eslintrc.json`
-
+**Full details:** See `CROP_SETUP_COMPLETE.md`

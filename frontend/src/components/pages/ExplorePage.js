@@ -580,7 +580,7 @@ const ExplorePage = ({
               <MagnifyingGlassIcon className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
 
-            {/* Following Toggle Button */}
+            {/* Following Toggle Button - Icon Only */}
             <button
               onClick={() => {
                 const newValue = !showFollowing;
@@ -594,7 +594,7 @@ const ExplorePage = ({
                 }
                 setSearchParams(newParams, { replace: true });
               }}
-              className={`h-10 px-3 sm:px-4 flex items-center gap-2 border rounded-lg transition-all font-medium text-xs sm:text-sm whitespace-nowrap ${
+              className={`h-10 w-10 flex items-center justify-center border rounded-lg transition-all ${
                 showFollowing
                   ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 shadow-sm'
                   : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -603,8 +603,7 @@ const ExplorePage = ({
               aria-label={showFollowing ? 'Show all creators' : 'Show only creators you follow'}
               title={showFollowing ? 'Show all creators' : 'Show only creators you follow'}
             >
-              <UserPlusIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden md:inline">Following</span>
+              <UserPlusIcon className="w-5 h-5" />
             </button>
 
             {/* Filter Buttons */}

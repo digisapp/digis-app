@@ -252,6 +252,7 @@ try {
   const emergencyRoutes = require('../routes/emergency-reset');
   const fansRoutes = require('../routes/fans');
   const callsRoutes = require('../routes/calls');
+  const uploadsRoutes = require('../routes/uploads');
 
   // Apply metrics middleware
   const metricsCollector = require('../utils/metrics-collector');
@@ -343,6 +344,7 @@ try {
   app.use('/api/digitals', rateLimiters.upload || ((req, res, next) => next()), digitalsRoutes);
   app.use('/api/metrics', rateLimiters.analytics || ((req, res, next) => next()), monitoringRoutes);
   app.use('/api/storage', rateLimiters.upload || ((req, res, next) => next()), storageRoutes);
+  app.use('/api/uploads', rateLimiters.upload || ((req, res, next) => next()), uploadsRoutes);
   app.use('/api/fans', rateLimiters.api || ((req, res, next) => next()), fansRoutes);
   app.use('/api/calls', rateLimiters.api || ((req, res, next) => next()), callsRoutes);
   app.use('/api', metaRoutes); // Deployment metadata endpoint (no auth required)

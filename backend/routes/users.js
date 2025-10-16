@@ -1032,9 +1032,6 @@ router.get('/creators', authenticateToken, async (req, res) => {
 
     logger.info('✅ Creators retrieved successfully:', creators.length);
 
-    // Commit the transaction
-    await req.pg.query('COMMIT');
-
     res.json({
       creators: creators,
       total: parseInt(countResult.rows[0].total),
@@ -1045,15 +1042,6 @@ router.get('/creators', authenticateToken, async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    // Rollback transaction on error
-    if (req.pg) {
-      try {
-        await req.pg.query('ROLLBACK');
-      } catch (rollbackError) {
-        logger.error('❌ Rollback failed:', rollbackError);
-      }
-    }
-
     logger.error('❌ Creators GET error:', error);
     res.status(500).json({
       error: 'Failed to retrieve creators',
