@@ -123,6 +123,7 @@ const corsOptions = {
     'X-Requested-With',
     'X-Request-ID',
     'X-API-Version',
+    'Cache-Control',
   ],
   exposedHeaders: [
     'X-RateLimit-Limit',
