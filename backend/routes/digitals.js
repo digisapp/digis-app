@@ -7,6 +7,9 @@ const { initializeSupabaseAdmin } = require('../utils/supabase-admin-v2');
 const supabaseAdmin = initializeSupabaseAdmin();
 const { pool } = require('../utils/db');
 
+// Helper to use req.pg if available (with JWT context), otherwise fall back to pool
+const db = (req) => req.pg || pool;
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -108,7 +111,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     const userId = req.user.supabase_id;
 
     // Use database query instead of Supabase to avoid permission issues
-    const digitalsResult = await pool.query(`
+    const digitalsResult = await db(req).query(`
       SELECT * FROM digitals 
       WHERE creator_id = $1 
       ORDER BY created_at DESC
@@ -117,7 +120,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     const digitals = digitalsResult.rows;
 
     // Get categories using database query
-    const categoriesResult = await pool.query(`
+    const categoriesResult = await db(req).query(`
       SELECT * FROM digital_categories 
       WHERE creator_id = $1 
       ORDER BY created_at DESC
@@ -127,7 +130,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     // Get analytics summary using database query
     let analytics = [];
     if (digitals.length > 0) {
-      const analyticsResult = await pool.query(`
+      const analyticsResult = await db(req).query(`
         SELECT digital_id, viewer_type 
         FROM digital_views 
         WHERE digital_id = ANY($1)

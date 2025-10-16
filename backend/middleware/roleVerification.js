@@ -1,5 +1,8 @@
-const pool = require('../utils/db');
+const { pool } = require('../utils/db');
 const { supabaseAdmin } = require('../utils/supabase-admin-v2');
+
+// Helper to use req.pg if available (with JWT context), otherwise fall back to pool
+const db = (req) => req?.pg || pool;
 
 /**
  * Role Verification Middleware
@@ -23,7 +26,7 @@ try {
 /**
  * Get user role from database with caching (Redis-first for serverless)
  */
-async function getUserRole(supabaseId) {
+async function getUserRole(supabaseId, req = null) {
   // Try Redis first if available (for serverless persistence)
   if (redis && redis.get) {
     try {
@@ -45,19 +48,19 @@ async function getUserRole(supabaseId) {
   try {
     // Query database for user role
     const query = `
-      SELECT 
+      SELECT
         supabase_id as id,
         email,
         is_creator,
         is_super_admin as is_admin,
         role,
         username
-      FROM users 
+      FROM users
       WHERE supabase_id = $1
       LIMIT 1
     `;
-    
-    const result = await pool.query(query, [supabaseId]);
+
+    const result = await db(req).query(query, [supabaseId]);
     
     if (result.rows.length === 0) {
       return null;
@@ -142,7 +145,7 @@ async function verifyRole(req, res, next) {
     }
 
     // Get user role from database using supabase_id
-    const userRole = await getUserRole(userId);
+    const userRole = await getUserRole(userId, req);
     
     if (!userRole) {
       return res.status(403).json({
@@ -251,7 +254,7 @@ async function getVerifiedRole(req, res) {
     
     // Force fresh fetch from database (no cache)
     roleCache.delete(userId);
-    const userRole = await getUserRole(userId);
+    const userRole = await getUserRole(userId, req);
     
     if (!userRole) {
       return res.status(404).json({
