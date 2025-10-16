@@ -1,0 +1,357 @@
+/**
+ * Mobile Polish & Accessibility CSS
+ * - iOS safe areas
+ * - Reduced motion support
+ * - Touch optimization
+ * - Keyboard-safe inputs
+ */
+
+/* ============================================
+   iOS Safe Area Insets
+   ============================================ */
+
+:root {
+  /* Safe area fallbacks for older browsers */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+
+  /* Combined safe padding */
+  --safe-padding-top: max(20px, env(safe-area-inset-top));
+  --safe-padding-bottom: max(20px, env(safe-area-inset-bottom));
+  --safe-padding-left: max(16px, env(safe-area-inset-left));
+  --safe-padding-right: max(16px, env(safe-area-inset-right));
+
+  /* Minimum tap target size (WCAG 2.1 AAA) */
+  --min-tap-target: 44px;
+}
+
+/* Apply safe areas to mobile page wrapper */
+.mobile-safe-area {
+  padding-top: var(--safe-padding-top);
+  padding-bottom: var(--safe-padding-bottom);
+  padding-left: var(--safe-padding-left);
+  padding-right: var(--safe-padding-right);
+}
+
+/* Bottom navigation with safe area */
+.mobile-nav-next,
+.mobile-bottom-nav {
+  padding-bottom: max(
+    var(--safe-area-inset-bottom),
+    env(safe-area-inset-bottom, 0px)
+  );
+}
+
+/* Full-screen modals on iOS */
+.mobile-modal-fullscreen,
+.mobile-video-container {
+  top: var(--safe-area-inset-top);
+  bottom: var(--safe-area-inset-bottom);
+  left: var(--safe-area-inset-left);
+  right: var(--safe-area-inset-right);
+}
+
+/* Fixed headers on iOS */
+.mobile-header-fixed {
+  top: var(--safe-area-inset-top);
+  padding-top: max(12px, var(--safe-area-inset-top));
+}
+
+/* ============================================
+   Touch Optimization
+   ============================================ */
+
+/* Prevent iOS text size adjustment */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Smooth scrolling on iOS */
+.mobile-scroll-container,
+.mobile-page,
+.mobile-modal-content {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Faster tap response (removes 300ms delay) */
+button,
+a,
+.mobile-touchable,
+.mobile-button-next,
+.mobile-nav-item {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure minimum tap target size */
+button,
+a,
+.mobile-touchable,
+input[type="checkbox"],
+input[type="radio"] {
+  min-width: var(--min-tap-target);
+  min-height: var(--min-tap-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Remove iOS input shadow/glow */
+input,
+textarea,
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border-radius: 0;
+}
+
+/* Prevent zoom on input focus (iOS) */
+input,
+textarea,
+select {
+  font-size: 16px; /* iOS won't zoom if >= 16px */
+}
+
+/* Better keyboard handling */
+.mobile-input-next,
+.mobile-textarea {
+  /* Ensure input is visible when keyboard appears */
+  scroll-margin-bottom: 150px;
+}
+
+/* ============================================
+   Reduced Motion Support (WCAG 2.1)
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable Framer Motion animations */
+  .motion-safe\:animate-spin {
+    animation: none;
+  }
+}
+
+/* ============================================
+   Accessibility - Screen Reader Only
+   ============================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Allow focus for keyboard navigation */
+.sr-only-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ============================================
+   Focus Indicators (WCAG 2.1 AA)
+   ============================================ */
+
+/* High-contrast focus ring */
+*:focus-visible {
+  outline: 2px solid #7c3aed; /* purple-600 */
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Button focus states */
+button:focus-visible,
+a:focus-visible,
+.mobile-touchable:focus-visible {
+  outline: 3px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+/* Remove focus outline for mouse users (keep for keyboard) */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================
+   Dark Mode Support
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #111827;
+    --bg-secondary: #1f2937;
+    --bg-tertiary: #374151;
+    --fg-primary: #f9fafb;
+    --fg-secondary: #e5e7eb;
+    --fg-tertiary: #d1d5db;
+  }
+}
+
+/* ============================================
+   Improved Tap Feedback
+   ============================================ */
+
+/* Active state for all interactive elements */
+.mobile-touchable:active,
+button:active,
+a:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-touchable:active,
+  button:active,
+  a:active {
+    transform: none;
+    opacity: 0.8;
+  }
+}
+
+/* ============================================
+   iOS Rubber Band Prevention
+   ============================================ */
+
+/* Prevent overscroll bounce on modals */
+.mobile-modal-no-bounce,
+.mobile-overlay-fixed {
+  position: fixed;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+/* Body lock when modal is open */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================================
+   Loading States
+   ============================================ */
+
+/* Skeleton loading with animation */
+.mobile-skeleton {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 0%,
+    #e5e7eb 50%,
+    #f3f4f6 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-skeleton {
+    animation: none;
+    background: #e5e7eb;
+  }
+}
+
+/* ============================================
+   Offline Indicator
+   ============================================ */
+
+.mobile-offline-banner {
+  position: fixed;
+  top: var(--safe-area-inset-top);
+  left: 0;
+  right: 0;
+  background: #ef4444; /* red-500 */
+  color: white;
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 9999;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease-out;
+}
+
+.mobile-offline-banner.visible {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-offline-banner {
+    transition: none;
+  }
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+/* Prevent text selection on UI elements */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Enable text selection in content areas */
+.selectable {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Hide scrollbar (cross-browser) */
+.mobile-scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.mobile-scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
+}
+
+/* Sticky footer/header */
+.mobile-sticky-top {
+  position: sticky;
+  top: var(--safe-area-inset-top);
+  z-index: 10;
+}
+
+.mobile-sticky-bottom {
+  position: sticky;
+  bottom: var(--safe-area-inset-bottom);
+  z-index: 10;
+}

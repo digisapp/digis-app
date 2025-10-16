@@ -135,7 +135,7 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
   // Swipe to delete/archive conversation
   const handleSwipeAction = useCallback((conversation, action) => {
     triggerHaptic('medium');
-    
+
     if (action === 'delete') {
       setConversations(prev => prev.filter(c => c.id !== conversation.id));
       toast.success('Conversation deleted');
@@ -143,15 +143,50 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
       setConversations(prev => prev.filter(c => c.id !== conversation.id));
       toast.success('Conversation archived');
     } else if (action === 'star') {
-      setConversations(prev => prev.map(c => 
+      setConversations(prev => prev.map(c =>
         c.id === conversation.id ? { ...c, starred: !c.starred } : c
       ));
       toast.success(conversation.starred ? 'Removed from favorites' : 'Added to favorites');
     }
-    
+
     setSwipedConversation(null);
   }, [triggerHaptic]);
-  
+
+  // Handle sending audio message - MOVED BEFORE startAudioRecording to fix hook ordering
+  const handleSendAudioMessage = useCallback(async (audioBlob) => {
+    if (!selectedConversation) return;
+
+    setSendingMessage(true);
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice-message.webm');
+      formData.append('conversationId', selectedConversation.id);
+
+      const token = await getAuthToken();
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/messages/audio`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(prev => [...prev, data.message]);
+        toast.success('Voice message sent');
+      }
+    } catch (error) {
+      console.error('Error sending audio message:', error);
+      toast.error('Failed to send voice message');
+    } finally {
+      setSendingMessage(false);
+    }
+  }, [selectedConversation]);
+
   // Start audio recording
   const startAudioRecording = useCallback(async () => {
     try {
@@ -247,41 +282,6 @@ const MobileMessages = ({ user, isCreator, onStartVideoCall, onStartVoiceCall, o
       setConversationsLoading(false);
     }
   }, [user]);
-
-  // Handle sending audio message
-  const handleSendAudioMessage = useCallback(async (audioBlob) => {
-    if (!selectedConversation) return;
-
-    setSendingMessage(true);
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'voice-message.webm');
-      formData.append('conversationId', selectedConversation.id);
-
-      const token = await getAuthToken();
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/messages/audio`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(prev => [...prev, data.message]);
-        toast.success('Voice message sent');
-      }
-    } catch (error) {
-      console.error('Error sending audio message:', error);
-      toast.error('Failed to send voice message');
-    } finally {
-      setSendingMessage(false);
-    }
-  }, [selectedConversation]);
 
   // Cleanup audio recording on unmount
   useEffect(() => {
