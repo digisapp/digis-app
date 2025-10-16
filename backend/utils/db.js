@@ -119,31 +119,28 @@ console.log('🔗 Database connection config:', {
 // Create a new pool instance with optimized settings
 // Serverless-optimized configuration (Vercel/AWS Lambda)
 const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+// CRITICAL FIX: Optimized for Supabase connection modes
+// - Direct Connection (port 5432): Up to 60 concurrent connections, better for serverless
+// - Transaction Pooler (port 6543): Max 15 connections, faster but limited
+const isUsingPooler = connectionConfig.port === 6543;
+
 const poolConfig = {
   ...connectionConfig,
-  // Serverless: use smaller pool to prevent connection exhaustion
-  // Traditional: scale up for concurrent requests
-  max: isServerless ? 10 : (process.env.NODE_ENV === 'production' ? 20 : 10),
-  idleTimeoutMillis: isServerless ? 10000 : 30000, // Faster cleanup on serverless
-  connectionTimeoutMillis: 5000, // Tighter timeout for faster failure detection
-  keepAlive: true,
+  // Connection pool sizing based on connection mode
+  max: isUsingPooler
+    ? (isServerless ? 1 : 2)  // Pooler: very limited connections
+    : (isServerless ? 3 : 5),  // Direct: can handle more, but still conservative
+  min: 0, // Start with no connections
+  idleTimeoutMillis: isServerless ? 1000 : 10000, // Aggressive cleanup (1s serverless, 10s local)
+  connectionTimeoutMillis: 10000, // 10s timeout for connection acquisition
+  keepAlive: !isUsingPooler, // Enable keepalive for direct connections only
   keepAliveInitialDelayMillis: 0,
-  maxUses: 7500, // Recycle connections after 7500 uses
+  maxUses: 1000, // Recycle connections after 1000 uses
   statement_timeout: 30000, // 30 seconds
   query_timeout: 30000, // 30 seconds
   application_name: 'digis-backend',
-  // Serverless optimizations
-  ...(isServerless && {
-    allowExitOnIdle: true, // Allow pool to close when idle (important for serverless)
-  }),
-  // Traditional server optimizations
-  ...(!isServerless && process.env.NODE_ENV === 'production' && {
-    allowExitOnIdle: false,
-    ssl: {
-      rejectUnauthorized: false,
-      keepAlive: true
-    }
-  })
+  allowExitOnIdle: true, // ALWAYS allow cleanup when idle
 };
 
 const pool = new Pool(poolConfig);
