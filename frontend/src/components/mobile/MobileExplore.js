@@ -5,6 +5,7 @@ import { getDefaultAvatarUrl } from '../../utils/avatarHelpers';
 import { isSelf } from '../../utils/creatorFilters';
 import MobileCreatorCard from './MobileCreatorCard';
 import { apiClient } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   MagnifyingGlassIcon,
   AdjustmentsHorizontalIcon,
@@ -29,6 +30,10 @@ import {
 import { UserGroupIcon as UserGroupIconSolid, PhotoIcon as PhotoIconSolid } from '@heroicons/react/24/solid';
 
 const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
+  // Auth state - gate data fetches behind auth resolution to prevent API hammering during bootstrap
+  const { authLoading, roleResolved } = useAuth();
+  const authReady = !authLoading && roleResolved;
+
   // Pull to refresh states
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -45,6 +50,7 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [showCategories, setShowCategories] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all'); // 'all', 'trending', 'new', 'popular'
+  const [error, setError] = useState(null);
   
   const [filters, setFilters] = useState({
     priceRange: 'all',
@@ -108,6 +114,7 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
 
       setLoadingMore(append);
       setLoading(!append);
+      setError(null);
 
       // IMPORTANT: Pass excludeUserId to prevent self-discovery at API level
       const params = {
@@ -168,6 +175,10 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error('Error fetching creators:', error);
+        // Set user-facing error message
+        if (mountedRef.current) {
+          setError('Failed to load creators. Please try again.');
+        }
       }
       // Clear the abort controller reference on error
       if (creatorsAbortRef.current === controller) {
@@ -181,18 +192,26 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
     }
   }, [selectedCategory]);
 
-  // Load creators on mount and when category changes with cleanup
+  // Load creators on mount and when category changes with cleanup - GATED behind auth resolution
   useEffect(() => {
+    // Don't fetch until auth is ready - prevents API hammering during bootstrap
+    if (!authReady) {
+      console.log('⏳ MobileExplore: Waiting for auth to resolve before fetching creators');
+      return;
+    }
+
+    console.log('✅ MobileExplore: Auth ready, fetching creators');
+
     mountedRef.current = true;
     fetchCreators(1, false);
-    
+
     return () => {
       mountedRef.current = false;
       if (creatorsAbortRef.current) {
         creatorsAbortRef.current.abort();
       }
     };
-  }, [selectedCategory, fetchCreators]);
+  }, [selectedCategory, fetchCreators, authReady]); // Only fetch when auth is ready
 
   // Filter creators based on search and filters
   const filteredCreators = creators.filter(creator => {
@@ -444,7 +463,29 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
 
       {/* Creators Grid/List */}
       <div className="px-4 mt-6">
-        {loading ? (
+        {error ? (
+          /* Error State */
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+              <XMarkIcon className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Unable to load creators
+            </h3>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto px-4">
+              {error}
+            </p>
+            <button
+              onClick={() => {
+                setError(null);
+                fetchCreators(1, false);
+              }}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>

@@ -30,6 +30,7 @@ import MobileCreatorCard from '../mobile/MobileCreatorCard';
 import CreatorCard from '../CreatorCard';
 import { addBreadcrumb } from '../../lib/sentry.client';
 import { getAuthToken } from '../../utils/supabase-auth';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Helper to slugify display names as a last-resort fallback
 const slugify = (s = '') =>
@@ -53,21 +54,25 @@ const deriveHandle = (c) => {
   return (candidate || '').toLowerCase();
 };
 
-const ExplorePage = ({ 
-  onCreatorSelect, 
-  onStartVideoCall, 
-  onStartVoiceCall, 
-  onScheduleSession, 
-  onTipCreator, 
-  onSendMessage, 
+const ExplorePage = ({
+  onCreatorSelect,
+  onStartVideoCall,
+  onStartVoiceCall,
+  onScheduleSession,
+  onTipCreator,
+  onSendMessage,
   onMakeOffer,
-  ...props 
+  ...props
 }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const observerRef = useRef();
   const loadMoreRef = useRef();
   const controllerRef = useRef(null);
+
+  // Auth state - gate data fetches behind auth resolution to prevent API hammering during bootstrap
+  const { authLoading, roleResolved } = useAuth();
+  const authReady = !authLoading && roleResolved;
 
   // State management
   const [creators, setCreators] = useState([]);
@@ -297,7 +302,14 @@ const ExplorePage = ({
           setCreators([]);
         }
         setHasMore(false);
-        toast.error('Failed to load creators. Please try again.');
+
+        // User-facing error on 500
+        if (response.status >= 500) {
+          setError(`Server error (${response.status}). Please try again later.`);
+          toast.error('Server error. Please try again later.');
+        } else {
+          toast.error('Failed to load creators. Please try again.');
+        }
       }
     } catch (error) {
       // Ignore AbortError from cancelled requests
@@ -371,8 +383,16 @@ const ExplorePage = ({
     }
   }, []);
 
-  // Initial load with retry mechanism
+  // Initial load with retry mechanism - GATED behind auth resolution
   useEffect(() => {
+    // Don't fetch until auth is ready - prevents API hammering during bootstrap
+    if (!authReady) {
+      console.log('⏳ ExplorePage: Waiting for auth to resolve before fetching creators');
+      return;
+    }
+
+    console.log('✅ ExplorePage: Auth ready, fetching creators');
+
     // Add a small delay to allow backend to be ready
     const loadInitialData = async () => {
       // Try initial load silently
@@ -392,7 +412,7 @@ const ExplorePage = ({
     // Refresh live creators every 30 seconds
     const interval = setInterval(fetchLiveCreators, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [authReady]); // Only fetch when auth is ready
 
   // Refetch when filters change (including following toggle)
   useEffect(() => {
@@ -848,7 +868,30 @@ const ExplorePage = ({
 
       {/* Main Content */}
       <div id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {loading && filteredCreators.length === 0 ? (
+        {error ? (
+          /* Error State */
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 mb-4">
+              <XMarkIcon className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Unable to load creators
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              {error}
+            </p>
+            <button
+              onClick={() => {
+                setError(null);
+                setRetryCount(0);
+                fetchCreators(1, false);
+              }}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : loading && filteredCreators.length === 0 ? (
           /* Loading Skeleton */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MobileTokenPurchase from './mobile/MobileTokenPurchase';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useOpenBuyTokens } from '../utils/openBuyTokens';
+import { useAuth } from '../contexts/AuthContext';
 import {
   TOKEN_PAYOUT_USD_PER_TOKEN,
   TOKEN_USD_FORMAT,
@@ -173,6 +174,10 @@ const EarningsCardSkeleton = () => (
 
 // Main component
 const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onTokenPurchase, isCreator, isAdmin, setCurrentView }) => {
+  // Auth state - gate data fetches behind auth resolution to prevent API hammering during bootstrap
+  const { authLoading, roleResolved } = useAuth();
+  const authReady = !authLoading && roleResolved;
+
   const isMobile = useMediaQuery('(max-width: 768px)');
   const openBuyTokens = useOpenBuyTokens();
   const [showMobileTokenPurchase, setShowMobileTokenPurchase] = useState(false);
@@ -281,7 +286,14 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
     }
   }, [isCreator, dateRange, fetchWithCache]);
 
+  // GATED behind auth resolution - prevent API hammering during bootstrap
   useEffect(() => {
+    if (!authReady) {
+      console.log('⏳ WalletOptimized: Waiting for auth to resolve before fetching wallet data');
+      return;
+    }
+
+    console.log('✅ WalletOptimized: Auth ready, fetching wallet data');
     fetchWalletData();
 
     // Log telemetry: wallet viewed
@@ -289,13 +301,16 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
       role: isCreator ? 'creator' : 'fan',
       device: isMobile ? 'mobile' : 'desktop'
     });
-  }, [fetchWalletData, isCreator, isMobile]);
+  }, [fetchWalletData, isCreator, isMobile, authReady]); // Only fetch when auth is ready
 
   useEffect(() => {
+    if (!authReady) {
+      return;
+    }
     if (isCreator) {
       fetchEarningsData();
     }
-  }, [isCreator, fetchEarningsData]);
+  }, [isCreator, fetchEarningsData, authReady]); // Only fetch when auth is ready
 
   // Fetch current release intent for the next cycle (if creator)
   const fetchReleaseIntent = useCallback(async () => {
@@ -313,8 +328,11 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
   }, [isCreator, BACKEND]);
 
   useEffect(() => {
+    if (!authReady) {
+      return;
+    }
     fetchReleaseIntent();
-  }, [fetchReleaseIntent]);
+  }, [fetchReleaseIntent, authReady]); // Only fetch when auth is ready
 
   // Lazy load charts after initial render
   useEffect(() => {

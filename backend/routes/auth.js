@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getVerifiedRole, getUserRole, clearRoleCache } = require('../middleware/roleVerification');
 const { sendCreatorWelcomeEmail, sendFanWelcomeEmail } = require('../services/emailService');
 const { sessions, users: usersCache, TTL } = require('../utils/redis');
+const noStore = require('../middleware/noStore');
 
 // Helper to use req.pg if available (with JWT context), otherwise fall back to pool
 const db = (req) => req.pg || pool;
@@ -1344,7 +1345,7 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
  *       401:
  *         description: Not authenticated
  */
-router.get('/me', verifySupabaseToken, async (req, res) => {
+router.get('/me', noStore, verifySupabaseToken, async (req, res) => {
   try {
     const userId = req.user?.id || req.userId;
 
