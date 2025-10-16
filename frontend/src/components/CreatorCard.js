@@ -50,6 +50,7 @@ const CreatorCard = ({
   isDashboard,
   onOpenPricingModal,
   onCardClick,
+  onSelect,
   viewMode = 'card', // 'card', 'compact', or 'grid'
   isLazyLoaded = false,
   enableVideo = true,
@@ -229,24 +230,44 @@ const CreatorCard = ({
   const { isLive, isOnline } = getStatusBadges(creator);
   const categoryGradient = getCategoryGradient(creator.category || creator.creator_type);
 
-  // Profile path for navigation - fallback to ID if no username
+  // Profile path for navigation - robust handle with multiple fallbacks
   // Use encodeURIComponent for safety with special chars (dots, non-ASCII, etc.)
-  const handle = (creator.username || creator.slug || creator.id || '').toString().toLowerCase();
-  const profilePath = handle ? `/creator/${encodeURIComponent(handle)}` : null;
+  const rawHandle =
+    creator?.username ??
+    creator?.slug ??
+    creator?.handle ??
+    creator?.id ??
+    creator?.supabase_id ??
+    '';
+
+  const safeHandle = String(rawHandle).trim().toLowerCase();
+  const profilePath = safeHandle ? `/${encodeURIComponent(safeHandle)}` : null;
+
+  // Debug: Log when profilePath is missing to catch bad data
+  if (!profilePath) {
+    console.error('[CreatorCard] No profile path for creator', {
+      username: creator?.username,
+      slug: creator?.slug,
+      handle: creator?.handle,
+      id: creator?.id,
+      supabase_id: creator?.supabase_id,
+      displayName: creator?.displayName
+    });
+  }
 
   // Prefetch profile on hover for snappier navigation
   const prefetchProfile = useCallback(() => {
-    if (!handle) return;
+    if (!safeHandle) return;
 
     // Fire-and-forget prefetch (snappier subsequent navigation)
     const BASE_URL = import.meta.env.VITE_BACKEND_URL || '';
-    fetch(`${BASE_URL}/api/public/creators/${encodeURIComponent(handle)}`, {
+    fetch(`${BASE_URL}/api/public/creators/${encodeURIComponent(safeHandle)}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     }).catch(() => {
       // Silently fail - this is just a performance optimization
     });
-  }, [handle]);
+  }, [safeHandle]);
 
   // Dev warning + observability for missing username/slug
   useEffect(() => {
@@ -350,24 +371,57 @@ const CreatorCard = ({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       onClick={(e) => {
-        // Only trigger card click if not clicking on a button or interactive element
         const target = e.target;
-        const isButton = target.closest('button');
-        const isInteractive = target.closest('a, input, textarea, select');
+        const isButton = !!target.closest('button,[role="button"]');
+        const isFormEl = !!target.closest('input,textarea,select');
+        const isAnchor = !!target.closest('a[href]');
+        const isInteractive = isButton || isFormEl || isAnchor;
 
         console.log('CreatorCard clicked:', {
           hasOnCardClick: !!onCardClick,
-          isButton: !!isButton,
-          isInteractive: !!isInteractive,
+          hasOnSelect: !!onSelect,
+          isButton,
+          isFormEl,
+          isAnchor,
+          isInteractive,
           creator: creator.username,
-          target: e.target.tagName
+          target: e.target.tagName,
+          profilePath,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey
         });
 
-        // Don't prevent default - let the Link handle navigation
-        // Only stop propagation for buttons
-        if (isButton) {
-          e.stopPropagation();
+        // Allow new tab/window behaviors (Cmd/Ctrl/Shift-click, middle-click)
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+          console.log('Allowing new tab/window behavior');
+          return;
         }
+
+        // Buttons and interactive elements handle their own clicks
+        if (isInteractive) {
+          console.log('Interactive element clicked, skipping card navigation');
+          return;
+        }
+
+        // If a parent wants to handle card selection, let it override Link navigation
+        if (typeof onCardClick === 'function') {
+          console.log('Using onCardClick callback');
+          e.preventDefault();
+          e.stopPropagation();
+          onCardClick(creator);
+          return;
+        }
+
+        if (typeof onSelect === 'function') {
+          console.log('Using onSelect callback');
+          e.preventDefault();
+          e.stopPropagation();
+          onSelect(creator);
+          return;
+        }
+
+        // Otherwise, let the Link element handle navigation (default behavior)
+        console.log('Allowing Link to handle navigation');
       }}
       className={`
         relative cursor-pointer overflow-hidden rounded-2xl bg-white
@@ -384,13 +438,19 @@ const CreatorCard = ({
           onMouseEnter={prefetchProfile}
           onFocus={prefetchProfile}
           onClick={(e) => {
+            console.log('🔗 Link clicked! Navigating to:', profilePath);
+
+            // If a parent decided to handle navigation via onCardClick/onSelect,
+            // the outer handler already called preventDefault. If we get here, let Link navigate.
+
             // Guard against double navigation on rapid clicks
             if (navigatingRef.current) {
+              console.warn('🚫 Double-click guard triggered, preventing navigation');
               e.preventDefault();
               return;
             }
             navigatingRef.current = true;
-            setTimeout(() => { navigatingRef.current = false; }, 1000);
+            setTimeout(() => { navigatingRef.current = false; }, 600);
 
             // Analytics: Track card click
             addBreadcrumb('creator_card_click', {
@@ -399,7 +459,7 @@ const CreatorCard = ({
               category: 'navigation'
             });
 
-            console.log('🔗 Navigating to profile:', profilePath);
+            console.log('✅ Allowing navigation to profile:', profilePath);
             // Let React Router Link handle the navigation
           }}
           aria-label={`View ${creator.displayName || creator.username}'s profile`}
@@ -470,7 +530,7 @@ const CreatorCard = ({
           aria-pressed={isFollowing}
           aria-label={isFollowing ? 'Unfollow creator' : 'Follow creator'}
           className="absolute right-3 top-3 p-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                   hover:scale-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 z-20"
+                   hover:scale-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 z-20 pointer-events-auto"
         >
           {isFollowing ? (
             <UserPlusIconSolid className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
@@ -525,7 +585,7 @@ const CreatorCard = ({
               title="Video Call"
               className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
-                       disabled:opacity-50 disabled:cursor-not-allowed
+                       disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             >
               <VideoCameraIcon className="w-5 h-5 text-white mx-auto" />
@@ -543,7 +603,7 @@ const CreatorCard = ({
               title="Message"
               className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
-                       disabled:opacity-50 disabled:cursor-not-allowed
+                       disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             >
               <ChatBubbleLeftRightIcon className="w-5 h-5 text-white mx-auto" />
@@ -561,7 +621,7 @@ const CreatorCard = ({
               title="Send Gift"
               className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
-                       disabled:opacity-50 disabled:cursor-not-allowed
+                       disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             >
               <GiftIcon className="w-5 h-5 text-white mx-auto" />
@@ -667,7 +727,7 @@ const CreatorCard = ({
           aria-pressed={isFollowing}
           aria-label={isFollowing ? 'Unfollow creator' : 'Follow creator'}
           className="absolute right-3 top-3 p-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                   hover:scale-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 z-20"
+                   hover:scale-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 z-20 pointer-events-auto"
         >
           {isFollowing ? (
             <UserPlusIconSolid className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
@@ -722,7 +782,7 @@ const CreatorCard = ({
               title="Video Call"
               className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
-                       disabled:opacity-50 disabled:cursor-not-allowed
+                       disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             >
               <VideoCameraIcon className="w-5 h-5 text-white mx-auto" />
@@ -740,7 +800,7 @@ const CreatorCard = ({
               title="Message"
               className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
-                       disabled:opacity-50 disabled:cursor-not-allowed
+                       disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             >
               <ChatBubbleLeftRightIcon className="w-5 h-5 text-white mx-auto" />
@@ -758,7 +818,7 @@ const CreatorCard = ({
               title="Send Gift"
               className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
-                       disabled:opacity-50 disabled:cursor-not-allowed
+                       disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             >
               <GiftIcon className="w-5 h-5 text-white mx-auto" />

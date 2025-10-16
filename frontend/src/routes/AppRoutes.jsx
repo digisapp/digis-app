@@ -60,6 +60,8 @@ const MobileSchedule = lazy(() => import('../components/mobile/MobileSchedule'))
 const MobileContent = lazy(() => import('../components/mobile/MobileContent'));
 const MobileSettingsPage = lazy(() => import('../components/mobile/pages/MobileSettingsPage'));
 const MobileCreatorProfile = lazy(() => import('../components/mobile/MobileCreatorProfile'));
+const VanityRoute = lazy(() => import('./VanityRoute'));
+const LegacyCreatorRedirect = lazy(() => import('./LegacyCreatorRedirect'));
 
 /**
  * AppRoutes - Single source of truth for routing
@@ -158,8 +160,10 @@ const AppRoutes = () => {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
 
+        {/* Legacy redirect: /creator/:username -> /:username */}
+        <Route path="/creator/:username" element={<LegacyCreatorRedirect />} />
+
         {/* Creator Public Profiles - Public pages pass currentUser for soft auth */}
-        <Route path="/creator/:username" element={<CreatorPublicProfileEnhanced user={currentUser} />} />
         <Route path="/:username/shop" element={<PublicCreatorShop user={currentUser} />} />
         <Route path="/:username/digitals" element={<DigitalsPage user={currentUser} />} />
 
@@ -329,14 +333,16 @@ const AppRoutes = () => {
 
         <Route path="/supabase-test" element={<SupabaseTestPage user={currentUser} />} />
 
-        {/* Direct Username Routes (must be last before catch-all) */}
-        <Route path="/:username" element={
-          isMobile ? (
-            <MobileCreatorProfile user={currentUser} />
-          ) : (
-            <CreatorPublicProfileEnhanced user={currentUser} />
-          )
-        } />
+        {/* Vanity Username Routes (must be last before catch-all) */}
+        <Route path="/:username" element={<VanityRoute />}>
+          <Route index element={
+            isMobile ? (
+              <MobileCreatorProfile user={currentUser} />
+            ) : (
+              <CreatorPublicProfileEnhanced user={currentUser} />
+            )
+          } />
+        </Route>
 
         {/* 404 Not Found */}
         <Route path="/404" element={<NotFound />} />

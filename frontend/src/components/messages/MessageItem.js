@@ -38,7 +38,7 @@ const MessageItem = ({
     if (sender) {
       // Navigate to appropriate profile page
       if (sender.is_creator || message.sender_is_creator) {
-        navigate(`/creator/${sender.username || sender.id || message.sender_id}`);
+        navigate(`/${sender.username || sender.id || message.sender_id}`);
       } else {
         navigate(`/profile/${sender.username || sender.id || message.sender_id}`);
       }

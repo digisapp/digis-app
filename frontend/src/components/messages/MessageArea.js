@@ -110,7 +110,7 @@ const MessageArea = ({
     
     // Navigate to appropriate profile page
     if (isCreator) {
-      navigate(`/creator/${username || userId}`);
+      navigate(`/${username || userId}`);
     } else {
       navigate(`/profile/${username || userId}`);
     }

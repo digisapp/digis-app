@@ -828,22 +828,35 @@ const HybridCreatorDashboard = memo(({
   
   // Debounced navigation helper to prevent double-clicks
   const handleNavigateToPage = useCallback((path) => {
-    if (isNavigating) return;
+    if (isNavigating) {
+      console.warn('[Nav] Navigation already in progress, ignoring:', path);
+      return;
+    }
+
     setIsNavigating(true);
 
     // Normalize path to always have leading slash
     const normalizedPath = path?.startsWith('/') ? path : `/${path}`;
 
-    console.log(`[Nav] ${normalizedPath} { hasOnNavigate: ${!!onNavigate} }`);
+    console.log(`[Nav] Navigating to: ${normalizedPath} { hasOnNavigate: ${!!onNavigate} }`);
 
-    if (onNavigate) {
-      onNavigate(normalizedPath);
-    } else {
-      navigate(normalizedPath);
+    try {
+      if (onNavigate) {
+        console.log('[Nav] Using onNavigate callback');
+        onNavigate(normalizedPath);
+      } else {
+        console.log('[Nav] Using react-router navigate');
+        navigate(normalizedPath);
+      }
+    } catch (error) {
+      console.error('[Nav] Navigation error:', error);
     }
 
     // Reset after 800ms
-    setTimeout(() => setIsNavigating(false), 800);
+    setTimeout(() => {
+      console.log('[Nav] Resetting navigation lock');
+      setIsNavigating(false);
+    }, 800);
   }, [isNavigating, onNavigate, navigate]);
 
   const formatTime = (date) => {
@@ -906,6 +919,7 @@ const HybridCreatorDashboard = memo(({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  console.log('[CALLS] Manage button clicked');
                   handleNavigateToPage('/call-requests');
                 }}
                 disabled={isNavigating}
@@ -1088,6 +1102,7 @@ const HybridCreatorDashboard = memo(({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  console.log('[SCHEDULE] Manage button clicked');
                   handleNavigateToPage('/schedule');
                 }}
                 disabled={isNavigating}

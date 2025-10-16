@@ -38,6 +38,8 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import '../../styles/mobile-scrollbar-hide.css';
+import ImageCropModal from '../media/ImageCropModal';
+import { uploadAvatar } from '../../services/imageUploadService';
 
 // Helper function for default avatar
 const getDefaultAvatarUrl = (name, size = 100) => {
@@ -173,6 +175,12 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
   const profileInputRef = useRef(null);
   const bannerInputRef = useRef(null);
 
+  // Crop modal state
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState(null);
+  const [cropType, setCropType] = useState('avatar');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
   // Store initial state for change detection
   const initialRef = useRef(null);
 
@@ -270,8 +278,56 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
     setSocialLinks(prev => ({ ...prev, [platform]: normalized }));
   };
 
-  // Handle image upload with memory optimization
-  const handleImageUpload = async (e, type) => {
+  // Handle avatar file selection - opens new crop modal
+  const handleAvatarFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Basic validation
+    if (!/^image\/(png|jpe?g|webp|gif)$/i.test(file.type)) {
+      toast.error('Please choose a PNG, JPG or WEBP image.');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('Image is larger than 8MB.');
+      e.target.value = '';
+      return;
+    }
+
+    // Open the new crop modal
+    const url = URL.createObjectURL(file);
+    setCropType('avatar');
+    setCropSrc(url);
+    setCropOpen(true);
+    // Allow re-selecting same file later
+    e.target.value = '';
+  };
+
+  // Handle cropped avatar -> upload -> update UI
+  const handleAvatarCropped = async (croppedFile) => {
+    setUploadingAvatar(true);
+    try {
+      // Upload to backend
+      const url = await uploadAvatar(croppedFile);
+
+      // Update local state so the new avatar shows immediately
+      setProfileImage(url);
+
+      toast.success('Profile photo updated');
+    } catch (err) {
+      console.error(err);
+      toast.error('Upload failed. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+      setCropOpen(false);
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      setCropSrc(null);
+    }
+  };
+
+  // Handle banner image upload (keep old logic for banner)
+  const handleBannerImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -283,9 +339,9 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
     }
 
     // Validate file size
-    const maxSize = type === 'banner' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error(`Image is too large. Max size is ${type === 'banner' ? '10MB' : '5MB'}.`);
+      toast.error('Image is too large. Max size is 10MB.');
       return;
     }
 
@@ -295,8 +351,8 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
     // Validate dimensions
     const img = new Image();
     img.onload = () => {
-      const minW = type === 'banner' ? 1200 : 200;
-      const minH = type === 'banner' ? 360 : 200;
+      const minW = 1200;
+      const minH = 360;
 
       if (img.width < minW || img.height < minH) {
         toast.error(`Image too small. Minimum ${minW}×${minH} required.`);
@@ -305,19 +361,12 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
       }
 
       // Revoke old URL if exists
-      if (type === 'profile' && profileImage?.startsWith('blob:')) {
-        URL.revokeObjectURL(profileImage);
-      }
-      if (type === 'banner' && bannerImage?.startsWith('blob:')) {
+      if (bannerImage?.startsWith('blob:')) {
         URL.revokeObjectURL(bannerImage);
       }
 
       // Set the new image
-      if (type === 'profile') {
-        setProfileImage(url);
-      } else {
-        setBannerImage(url);
-      }
+      setBannerImage(url);
     };
 
     img.onerror = () => {
@@ -606,7 +655,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                         ref={bannerInputRef}
                         type="file"
                         accept="image/*"
-                        onChange={(e) => handleImageUpload(e, 'banner')}
+                        onChange={handleBannerImageUpload}
                         className="hidden"
                         aria-label="Banner image upload"
                       />
@@ -631,16 +680,21 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                       <>
                         <button
                           onClick={() => profileInputRef.current?.click()}
-                          className="absolute bottom-0 right-0 p-2 bg-purple-600 rounded-full hover:bg-purple-700 transition-colors shadow-lg"
+                          disabled={uploadingAvatar}
+                          className="absolute bottom-0 right-0 p-2 bg-purple-600 rounded-full hover:bg-purple-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                           aria-label="Change profile picture"
                         >
-                          <CameraIcon className="w-4 h-4 text-white" />
+                          {uploadingAvatar ? (
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <CameraIcon className="w-4 h-4 text-white" />
+                          )}
                         </button>
                         <input
                           ref={profileInputRef}
                           type="file"
-                          accept="image/*"
-                          onChange={(e) => handleImageUpload(e, 'profile')}
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={handleAvatarFileSelect}
                           className="hidden"
                           aria-label="Profile image upload"
                         />
@@ -1765,6 +1819,19 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Image Crop Modal */}
+      <ImageCropModal
+        isOpen={cropOpen}
+        cropType="avatar"
+        file={cropSrc}
+        onClose={() => {
+          setCropOpen(false);
+          if (cropSrc) URL.revokeObjectURL(cropSrc);
+          setCropSrc(null);
+        }}
+        onSave={handleAvatarCropped}
+      />
     </div>
   );
 };

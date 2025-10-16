@@ -33,7 +33,7 @@ const ConversationItem = ({
     if (participant) {
       // Navigate to appropriate profile page
       if (participant.is_creator || participant.isCreator) {
-        navigate(`/creator/${participant.username || participant.id}`);
+        navigate(`/${participant.username || participant.id}`);
       } else {
         navigate(`/profile/${participant.username || participant.id}`);
       }

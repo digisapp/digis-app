@@ -253,6 +253,8 @@ try {
   const fansRoutes = require('../routes/fans');
   const callsRoutes = require('../routes/calls');
   const uploadsRoutes = require('../routes/uploads');
+  const publicCreatorsRoutes = require('../routes/public-creators');
+  const usernamesRoutes = require('../routes/usernames');
 
   // Apply metrics middleware
   const metricsCollector = require('../utils/metrics-collector');
@@ -347,6 +349,8 @@ try {
   app.use('/api/uploads', rateLimiters.upload || ((req, res, next) => next()), uploadsRoutes);
   app.use('/api/fans', rateLimiters.api || ((req, res, next) => next()), fansRoutes);
   app.use('/api/calls', rateLimiters.api || ((req, res, next) => next()), callsRoutes);
+  app.use('/api', rateLimiters.public || ((req, res, next) => next()), publicCreatorsRoutes); // Public creator profiles
+  app.use('/api', rateLimiters.api || ((req, res, next) => next()), usernamesRoutes); // Username management
   app.use('/api', metaRoutes); // Deployment metadata endpoint (no auth required)
   app.use('/api', emergencyRoutes); // Emergency reset endpoints (NO AUTH, NO RATE LIMITING)
 
@@ -371,6 +375,12 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'Digis API Documentation'
 }));
+
+// Legacy redirect: /creator/:username -> /:username (SEO-friendly 301)
+app.get('/creator/:username', (req, res) => {
+  const safe = String(req.params.username || '').trim().toLowerCase();
+  return res.redirect(301, `/${encodeURIComponent(safe)}`);
+});
 
 // Health check endpoints
 app.get('/', (req, res) => {
