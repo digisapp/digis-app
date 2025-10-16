@@ -606,7 +606,8 @@ export const AuthProvider = ({ children }) => {
               // Ignore storage errors
             }
 
-            setProfile(userData);
+            // Mark canonical profile with __isCanonical to distinguish from cache
+            setProfile({ ...userData, __isCanonical: true });
             saveProfileCache(userData, session);
             if (userData.token_balance !== undefined) {
               setTokenBalance(userData.token_balance);
@@ -694,7 +695,8 @@ export const AuthProvider = ({ children }) => {
             recordSyncUserSuccess();
 
             setUser(session.user);
-            setProfile(userData);
+            // Mark canonical profile with __isCanonical to distinguish from cache
+            setProfile({ ...userData, __isCanonical: true });
             saveProfileCache(userData, session);
 
             if (userData.token_balance !== undefined) {
@@ -844,19 +846,29 @@ export const AuthProvider = ({ children }) => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-stop loading when user/profile are set manually (for manual login flows)
+  // CRITICAL: Only stop loading after roleResolved is true to prevent showing wrong layout
   useEffect(() => {
-    if (user && profile) {
-      console.log('✅ AuthContext: User and profile set, stopping loading');
+    if (roleResolved && (user || profile)) {
+      console.log('✅ AuthContext: Role resolved, stopping loading');
       setAuthLoading(false);
     }
-  }, [user, profile]);
+  }, [user, profile, roleResolved]);
 
-  // CRITICAL: Defer roleResolved until BOTH user AND profile exist
+  // CRITICAL: Defer roleResolved until we have canonical truth or privileged cache
   // This prevents mobile layout from rendering with wrong role (fan→creator flip)
   useEffect(() => {
-    if (user && profile && !roleResolved) {
-      console.log('✅ AuthContext: Both user and profile exist - marking role as resolved');
-      setRoleResolved(true);
+    if (!roleResolved && user && profile) {
+      const isPrivileged = profile.is_creator === true || profile.is_admin === true;
+      const isCanonical = profile.__isCanonical === true;
+
+      if (isPrivileged || isCanonical) {
+        console.log('✅ AuthContext: Setting roleResolved from', {
+          source: isCanonical ? 'canonical' : 'privileged cache',
+          is_creator: profile.is_creator,
+          is_admin: profile.is_admin
+        });
+        setRoleResolved(true);
+      }
     }
   }, [user, profile, roleResolved]);
 
