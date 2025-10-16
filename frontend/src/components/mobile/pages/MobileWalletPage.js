@@ -147,7 +147,20 @@ const MobileWalletPage = memo(({ user, navigateTo }) => {
     });
   }, []);
 
-  // Loading state with skeleton
+  // ✅ CRITICAL: Define ALL hooks/memoized values BEFORE any conditional returns
+  // This ensures consistent hook order on every render (fixes React error #310)
+  const motionProps = prefersReducedMotion ? {} : {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 }
+  };
+
+  const itemMotionProps = useCallback((index) => prefersReducedMotion ? {} : {
+    initial: { opacity: 0, x: -20 },
+    animate: { opacity: 1, x: 0 },
+    transition: { delay: Math.min(index * 0.03, 0.3) }
+  }, [prefersReducedMotion]);
+
+  // Loading state with skeleton (NOW after all hooks)
   if (loading && !balance && transactions.length === 0) {
     return (
       <div className="mobile-wallet-page">
@@ -194,16 +207,7 @@ const MobileWalletPage = memo(({ user, navigateTo }) => {
     );
   }
 
-  const motionProps = prefersReducedMotion ? {} : {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 }
-  };
-
-  const itemMotionProps = (index) => prefersReducedMotion ? {} : {
-    initial: { opacity: 0, x: -20 },
-    animate: { opacity: 1, x: 0 },
-    transition: { delay: Math.min(index * 0.03, 0.3) }
-  };
+  // motionProps and itemMotionProps already defined above (before early returns)
 
   return (
     <div className="mobile-wallet-page">
