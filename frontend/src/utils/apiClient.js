@@ -3,11 +3,16 @@ import logger from './logger';
 import { LOGOUT_DEST } from '../constants/auth';
 import { addSentryBreadcrumb } from './sentry';
 import { analytics } from '../lib/analytics';
+import { noteRequestFailure, resetFailureCount } from './sw-rescue';
 
 // API configuration
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second base delay
+
+// Circuit breaker configuration
+let backoffUntil = 0;
+const CIRCUIT_BREAKER_WINDOW = 10000; // 10 seconds
 
 // Get API base URL from environment
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL ||
@@ -140,6 +145,17 @@ class ApiClient {
       cache = 'default'
     } = options;
 
+    // Circuit breaker: reject if in backoff period
+    if (Date.now() < backoffUntil) {
+      const error = new ApiError(
+        'Circuit breaker open - too many failed requests',
+        0,
+        null,
+        false
+      );
+      throw error;
+    }
+
     // Create abort controller for timeout
     const controller = signal ? null : new AbortController();
     const requestSignal = signal || controller?.signal;
@@ -233,6 +249,9 @@ class ApiClient {
           responseData = await interceptor(responseData) || responseData;
         }
 
+        // Success - reset failure counter
+        resetFailureCount();
+
         return responseData;
       } catch (error) {
         // Clear timeout
@@ -240,17 +259,28 @@ class ApiClient {
 
         // Handle abort errors
         if (error.name === 'AbortError') {
+          // Timeout - trigger circuit breaker and note failure
+          backoffUntil = Date.now() + CIRCUIT_BREAKER_WINDOW;
+          noteRequestFailure();
           throw new ApiError('Request timeout', 0, null, true);
         }
 
         // Handle network errors
         if (!error.status) {
+          // Network failure - trigger circuit breaker and note failure
+          backoffUntil = Date.now() + CIRCUIT_BREAKER_WINDOW;
+          noteRequestFailure();
           throw new ApiError(
             error.message || 'Network error',
             0,
             null,
             true
           );
+        }
+
+        // Note retriable errors
+        if (isRetryable(error)) {
+          noteRequestFailure();
         }
 
         throw error;
