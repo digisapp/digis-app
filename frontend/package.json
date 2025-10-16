@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "build:analyze": "ANALYZE=true vite build",
     "build:optimize": "vite build --config vite.config.optimized.js",
+    "build:ci": "npm run type-check && npm run lint && npm run build",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",

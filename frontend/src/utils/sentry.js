@@ -259,14 +259,21 @@ export const captureMessage = (message, level = 'info', context = {}) => {
 /**
  * Start a performance transaction
  * Note: Sentry v8+ uses startSpan instead of startTransaction
+ * Wrapped in try-catch to prevent any Sentry API issues from breaking the app
  */
 export const startTransaction = (name, op = 'navigation') => {
-  // For Sentry v8+, use startSpan which is the new API
-  if (Sentry.startSpan) {
-    return Sentry.startSpan({ name, op }, (span) => span);
+  try {
+    // For Sentry v8+, use startSpan which is the new API
+    if (Sentry.startSpan) {
+      return Sentry.startSpan({ name, op }, (span) => span);
+    }
+  } catch (error) {
+    // Silently fail - performance tracking is non-critical
+    if (import.meta.env.MODE === 'development') {
+      console.warn('Sentry startSpan failed:', error);
+    }
   }
-  // Fallback for older versions (though this shouldn't be needed)
-  console.warn('Sentry startSpan not available, performance tracking disabled');
+  // Return no-op stub so callers don't break
   return { finish: () => {}, setStatus: () => {} };
 };
 

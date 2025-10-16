@@ -20,6 +20,50 @@ if (import.meta.env.PROD) {
   initWebVitals();
 }
 
+// Runtime error detection for React error #310 (invalid element type)
+// This catches module import/export errors that can break mobile
+window.addEventListener('error', (event) => {
+  const errorMessage = String(event?.message || '');
+
+  // Detect React error #310 specifically
+  if (errorMessage.includes('Minified React error #310') ||
+      errorMessage.includes('Element type is invalid')) {
+
+    console.error('🚨 Critical React error detected:', errorMessage);
+
+    // Report to Sentry if available
+    if (window.Sentry) {
+      window.Sentry.captureException(new Error('React Error #310 detected'), {
+        level: 'fatal',
+        tags: {
+          error_type: 'react_310',
+          platform: navigator.userAgent.includes('Mobile') ? 'mobile' : 'desktop'
+        },
+        extra: {
+          stack: event?.error?.stack,
+          componentStack: event?.error?.componentStack
+        }
+      });
+    }
+
+    // Optional: Show user-friendly error with reload option
+    // Only in production to avoid interfering with dev error overlay
+    if (import.meta.env.PROD && !sessionStorage.getItem('error310Shown')) {
+      sessionStorage.setItem('error310Shown', 'true');
+
+      const shouldReload = confirm(
+        'An error occurred loading the app. Would you like to reload the page?\n\n' +
+        'This usually fixes the issue. If the problem persists, try clearing your browser cache.'
+      );
+
+      if (shouldReload) {
+        // Hard reload to clear any cached modules
+        window.location.reload(true);
+      }
+    }
+  }
+});
+
 // ONE-TIME CLEANUP: Purge legacy role hints from localStorage
 // These keys are no longer used - AuthContext is the single source of truth
 try {

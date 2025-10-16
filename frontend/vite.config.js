@@ -133,7 +133,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false, // Disable sourcemaps in production to hide code structure
+    // Enable sourcemaps in production for better error tracking in Sentry
+    // Hidden sourcemaps won't be served to users but will be uploaded to Sentry
+    sourcemap: 'hidden',
     minify: 'terser', // Use terser for better minification
     terserOptions: {
       compress: {
