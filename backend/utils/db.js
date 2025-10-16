@@ -5,6 +5,37 @@ if (!process.env.DATABASE_URL && !process.env.DB_USER) {
   require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 }
 
+// Sanitize DATABASE_URL to remove literal \n, quotes, whitespace and ensure SSL
+function cleanDbUrl(raw) {
+  if (!raw) return raw;
+  let val = String(raw)
+    .replace(/^"+|"+$/g, '')      // remove wrapping quotes if any
+    .replace(/\\n/g, '')          // remove literal backslash-n characters
+    .trim();
+
+  // Ensure sslmode=require
+  try {
+    const u = new URL(val);
+    if (!u.searchParams.get('sslmode')) {
+      u.searchParams.set('sslmode', 'require');
+    }
+
+    // Guard against pooler/port mismatches
+    const isPoolerHost = u.hostname.includes('pooler.supabase.com');
+    if (isPoolerHost && u.port === '5432') {
+      console.warn('[DB] Pooler host on 5432 detected. Consider switching host to db.<ref>.supabase.co');
+    }
+    if (!isPoolerHost && (!u.port || u.port === '6543')) {
+      u.port = '5432';
+    }
+
+    val = u.toString();
+  } catch (e) {
+    console.error('[DB] Invalid DATABASE_URL format after cleaning:', e?.message);
+  }
+  return val;
+}
+
 // Retry helper function for handling transient errors
 const retry = async (fn, maxRetries = 3, delay = 1000) => {
   for (let i = 0; i < maxRetries; i++) {
@@ -12,20 +43,37 @@ const retry = async (fn, maxRetries = 3, delay = 1000) => {
       return await fn();
     } catch (error) {
       if (i === maxRetries - 1) throw error;
-      
+
       // Only retry on transient errors
       const retriableErrors = ['ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH'];
-      const isRetriable = retriableErrors.includes(error.code) || 
+      const isRetriable = retriableErrors.includes(error.code) ||
                          error.message.includes('timeout') ||
                          error.message.includes('Connection terminated');
-      
+
       if (!isRetriable) throw error;
-      
+
       console.warn(`⚠️ Retry ${i + 1}/${maxRetries} after error: ${error.code || error.message}`);
       await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i))); // Exponential backoff
     }
   }
 };
+
+// Clean DATABASE_URL BEFORE any other processing
+if (process.env.DATABASE_URL) {
+  const RAW_DATABASE_URL = process.env.DATABASE_URL;
+  const CLEAN_DATABASE_URL = cleanDbUrl(RAW_DATABASE_URL);
+  process.env.DATABASE_URL = CLEAN_DATABASE_URL;
+
+  // Optional: log safe diagnostics
+  try {
+    const u = new URL(CLEAN_DATABASE_URL);
+    const safe = CLEAN_DATABASE_URL.replace(/\/\/([^:]+):[^@]+@/, '//$1:***@');
+    console.log('[DB] Using', safe);
+    console.log('[DB] host:', u.hostname, 'port:', u.port, 'sslmode:', u.searchParams.get('sslmode'));
+  } catch (e) {
+    console.error('[DB] Could not parse cleaned URL for logging:', e?.message);
+  }
+}
 
 // Debug: Log environment variables
 console.log('🔍 Environment check:', {

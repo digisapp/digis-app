@@ -1429,6 +1429,42 @@ router.get('/debug-db', async (req, res) => {
   }
 });
 
+// Debug endpoint - show DATABASE_URL connection info (no secrets)
+router.get('/debug-db-info', async (req, res) => {
+  try {
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) {
+      return res.json({
+        success: false,
+        error: 'DATABASE_URL not set'
+      });
+    }
+
+    const u = new URL(dbUrl);
+    const isPoolerHost = u.hostname.includes('pooler.supabase.com');
+
+    res.json({
+      success: true,
+      connection: {
+        host: u.hostname,
+        port: u.port,
+        database: u.pathname.slice(1),
+        sslmode: u.searchParams.get('sslmode'),
+        poolerHost: isPoolerHost,
+        connectionMode: isPoolerHost && u.port === '6543' ? 'pooler:transaction' :
+                       isPoolerHost && u.port === '5432' ? 'pooler:session' :
+                       'direct'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to parse DATABASE_URL',
+      message: error.message
+    });
+  }
+});
+
 // Export router and middleware for backward compatibility
 module.exports = router;
 module.exports.verifySupabaseToken = authenticateToken; // Alias for migration
