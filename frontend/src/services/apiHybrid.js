@@ -186,7 +186,7 @@ export const api = {
     getFollowers: (userId) => apiClient.get(`/api/users/${userId}/followers`),
     getFollowing: (userId) => apiClient.get(`/api/users/${userId}/following`),
     getCreators: (params) => apiClient.get('/api/users/creators', { params }),
-    getCreatorByUsername: (username) => apiClient.get(`/api/users/creator/${username}`),
+    getCreatorByUsername: (username) => apiClient.get(`/api/public/creators/${username}`),
     updateAvailability: (data) => apiClient.put('/api/users/availability', data),
   },
 

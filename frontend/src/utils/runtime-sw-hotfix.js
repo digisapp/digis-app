@@ -9,7 +9,7 @@
  * - Bump SW_VERSION to force re-run for all users
  */
 
-const SW_VERSION = '2025-10-14a'; // Bump this to force re-run
+const SW_VERSION = '2025-10-16-fix-api-intercept'; // Bump this to force re-run
 const STORAGE_KEY = '__sw_fix';
 
 export function initServiceWorkerHotfix() {

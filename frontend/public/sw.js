@@ -9,7 +9,7 @@ if (self.location.port === '3001') {
 
 // Build-based cache versioning ensures clean deployments
 // Increment BUILD_NUMBER on each deploy to force cache refresh
-const BUILD_NUMBER = '20251015-001'; // Format: YYYYMMDD-XXX
+const BUILD_NUMBER = '20251016-001'; // Format: YYYYMMDD-XXX
 const CACHE_NAME = `digis-v${BUILD_NUMBER}`;
 const OFFLINE_URL = '/offline.html';
 
@@ -109,25 +109,28 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // In development, only handle specific requests to avoid interference
-  const isDevelopment = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-  
-  if (isDevelopment) {
-    // In development, only handle API and static assets, not navigation
-    if (url.pathname.startsWith('/api/')) {
-      event.respondWith(handleApiRequest(request));
-    } else if (isStaticAsset(url.pathname)) {
-      event.respondWith(handleStaticAsset(request));
-    }
-    // Let navigation requests pass through in development
+  // CRITICAL FIX: DO NOT intercept API calls
+  // Let the browser handle API requests directly to prevent retry storms
+  // when the backend is down or slow
+  if (url.pathname.startsWith('/api/')) {
+    // Don't intercept - let browser handle it
     return;
   }
-  
-  // In production, handle all requests
-  if (url.pathname.startsWith('/api/')) {
-    // API requests - Network First with Cache Fallback
-    event.respondWith(handleApiRequest(request));
-  } else if (isStaticAsset(url.pathname)) {
+
+  // In development, only handle specific requests to avoid interference
+  const isDevelopment = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+
+  if (isDevelopment) {
+    // In development, only handle static assets, not navigation or API
+    if (isStaticAsset(url.pathname)) {
+      event.respondWith(handleStaticAsset(request));
+    }
+    // Let navigation and API requests pass through in development
+    return;
+  }
+
+  // In production, handle only static assets and navigation
+  if (isStaticAsset(url.pathname)) {
     // Static assets - Cache First
     event.respondWith(handleStaticAsset(request));
   } else {

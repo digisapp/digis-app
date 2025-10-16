@@ -379,7 +379,7 @@ const HybridCreatorDashboard = memo(({
       
       // Fetch creator profile
       const profileResponse = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/creator/${user?.username || user?.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/public/creators/${user?.username || user?.id}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }

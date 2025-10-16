@@ -41,10 +41,10 @@ export const initSentry = () => {
         // Mask all text and inputs for privacy
         maskAllText: true,
         maskAllInputs: true,
-        // Only sample 10% of sessions
-        sessionSampleRate: 0.1,
-        // Sample 100% of sessions with errors
-        errorSampleRate: 1.0,
+        // Reduce sampling to prevent resource exhaustion during backend issues
+        sessionSampleRate: 0.0,
+        // Only sample 5% of sessions with errors (reduced from 100%)
+        errorSampleRate: 0.05,
       }),
       // React-specific error boundary integration
       Sentry.reactRouterV6BrowserTracingIntegration({
@@ -54,8 +54,8 @@ export const initSentry = () => {
       }),
     ],
     
-    // Performance Monitoring
-    tracesSampleRate: import.meta.env.MODE === 'production' ? 0.1 : 1.0,
+    // Performance Monitoring - reduced to prevent resource exhaustion
+    tracesSampleRate: import.meta.env.MODE === 'production' ? 0.05 : 0.1,
     
     // Release tracking
     release: import.meta.env.VITE_APP_VERSION || '1.0.0',
@@ -92,7 +92,13 @@ export const initSentry = () => {
     beforeSend(event, hint) {
       // Filter out known non-errors
       const error = hint.originalException;
-      
+      const msg = String(error?.message || event?.message || '');
+
+      // Drop NetworkError spam from service worker
+      if (msg.includes('no-response') || msg.includes('ERR_FAILED')) {
+        return null;
+      }
+
       // Ignore network errors that are expected
       if (error?.message?.includes('Network request failed') && navigator.onLine === false) {
         return null;
