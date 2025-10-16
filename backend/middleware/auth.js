@@ -1,22 +1,25 @@
 // Supabase-only authentication middleware with v2 features
-const { verifySupabaseToken, initializeSupabaseAdmin, observability, supabase } = require('../utils/supabase-admin-v2');
+const { verifySupabaseToken: verifySupabaseTokenOriginal, initializeSupabaseAdmin, observability, supabase } = require('../utils/supabase-admin-v2');
 const { pool } = require('../utils/db');
 const { withPgAndJwt } = require('./pg-with-jwt');
 
 // Initialize Supabase Admin with enhanced features
 initializeSupabaseAdmin();
 
-// Export the Supabase token verification with PostgreSQL RLS context
-// This wraps verifySupabaseToken with the JWT middleware
-const authenticateToken = async (req, res, next) => {
+// Wrap the original verifySupabaseToken with PostgreSQL RLS context
+// This ensures BOTH authenticateToken and verifySupabaseToken get JWT middleware
+const verifySupabaseToken = async (req, res, next) => {
   // First verify the Supabase token (sets req.user)
-  await verifySupabaseToken(req, res, (err) => {
+  await verifySupabaseTokenOriginal(req, res, (err) => {
     if (err) return next(err);
 
     // Then set up PostgreSQL JWT context
     withPgAndJwt(req, res, next);
   });
 };
+
+// Alias for backward compatibility
+const authenticateToken = verifySupabaseToken;
 
 // Helper to get user ID consistently
 const getUserId = (req) => {
