@@ -96,7 +96,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
 
   const navItems = getDesktopMenuItems(role);
   const mainNavItems = navItems.filter(item => {
-    // Main navigation items
+    // Main navigation items - wallet is NOT included here (it's a button on the right)
     const allowedItems = role === 'creator'
       ? ['dashboard', 'explore', 'messages']
       : ['home', 'explore', 'messages', 'tv', 'classes'];
@@ -424,13 +424,18 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
 
             {/* Right Section - Actions & Profile */}
             <div className="flex items-center space-x-4">
-              {/* Wallet Button - Icon and token count only */}
+              {/* Wallet Button - Opens full page for creators, dropdown for fans */}
               <motion.button
                 onClick={() => {
-                  console.log("[Nav] Wallet → /wallet");
-                  onNavigate('/wallet');
+                  if (role === 'creator') {
+                    console.log("[Nav] Wallet → /wallet (creator)");
+                    onNavigate('/wallet');
+                  } else {
+                    console.log("[Nav] Wallet → opening dropdown (fan)");
+                    setShowWalletModal(true);
+                  }
                 }}
-                onMouseEnter={() => handleRoutePreload('/wallet')}
+                onMouseEnter={() => role === 'creator' && handleRoutePreload('/wallet')}
                 className="relative group"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
