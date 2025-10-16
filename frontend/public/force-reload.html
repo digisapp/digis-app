@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Force Reload - Digis</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 1rem;
+      max-width: 500px;
+    }
+    button {
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    #status {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 Clear Cache & Reload</h1>
+    <p>Click the button below to clear all caches and force reload Digis with the latest version.</p>
+    <button onclick="forceClearAndReload()">Clear Cache & Reload</button>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    async function forceClearAndReload() {
+      const status = document.getElementById('status');
+      
+      try {
+        status.textContent = '⏳ Unregistering service workers...';
+        
+        // Unregister ALL service workers
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let registration of registrations) {
+            await registration.unregister();
+            console.log('Unregistered:', registration);
+          }
+          status.textContent = `✅ Unregistered ${registrations.length} service worker(s)`;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        status.textContent = '⏳ Clearing all caches...';
+        
+        // Clear all caches
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(
+            cacheNames.map(cacheName => {
+              console.log('Deleting cache:', cacheName);
+              return caches.delete(cacheName);
+            })
+          );
+          status.textContent = `✅ Cleared ${cacheNames.length} cache(s)`;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        status.textContent = '⏳ Clearing storage...';
+        
+        // Clear localStorage and sessionStorage
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (e) {
+          console.warn('Storage clear warning:', e);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        status.textContent = '✅ All caches cleared! Reloading in 2 seconds...';
+        
+        // Hard reload after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/';
+          window.location.reload(true);
+        }, 2000);
+        
+      } catch (error) {
+        status.textContent = '❌ Error: ' + error.message;
+        console.error('Clear cache error:', error);
+      }
+    }
+  </script>
+</body>
+</html>
