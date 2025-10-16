@@ -53,6 +53,20 @@ export default defineConfig({
         // CRITICAL: Never cache API routes (especially auth endpoints)
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          // CRITICAL: Navigation requests (index.html) must use NetworkFirst
+          // This prevents stale HTML from serving old JS chunk references
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages-cache',
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 // 1 hour (short-lived)
+              }
+            }
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',

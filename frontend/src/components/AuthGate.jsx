@@ -22,8 +22,8 @@ export default function AuthGate({ children, fallback = null }) {
       if (!cancelled) {
         console.warn('🔐 AuthGate: Hit 8s timeout, forcing fail-open render');
         setErrored(true);
-        setRoleResolved(true);     // Let routes render public/fan UI
-        setAuthLoading(false);
+        setRoleResolved?.(true);     // Let routes render public/fan UI (defensive)
+        setAuthLoading?.(false);     // Defensive guard
         setReady(true);
       }
     }, 8000);
@@ -31,7 +31,7 @@ export default function AuthGate({ children, fallback = null }) {
     const bootstrapAuth = async () => {
       try {
         console.log('🔐 AuthGate: Bootstrapping auth before render...');
-        setAuthLoading(true);
+        setAuthLoading?.(true);  // Defensive guard
 
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -72,18 +72,18 @@ export default function AuthGate({ children, fallback = null }) {
         }
 
         if (!cancelled) {
-          setUser(session?.user || null);
-          if (profile) setProfile(profile);
-          setRoleResolved(true);    // Always resolve - even if profile is fan or missing
-          setAuthLoading(false);
+          setUser?.(session?.user || null);    // Defensive guard
+          if (profile) setProfile?.(profile);  // Defensive guard
+          setRoleResolved?.(true);             // Always resolve - even if profile is fan or missing
+          setAuthLoading?.(false);             // Defensive guard
           setReady(true);
         }
       } catch (error) {
         console.error('🔐 AuthGate: Error bootstrapping auth:', error);
         // Fail-open: still let app render. Public routes keep working.
         if (!cancelled) {
-          setRoleResolved(true);
-          setAuthLoading(false);
+          setRoleResolved?.(true);   // Defensive guard
+          setAuthLoading?.(false);   // Defensive guard
           setReady(true);
         }
       } finally {
