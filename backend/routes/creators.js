@@ -924,29 +924,41 @@ router.get('/stats', authenticateToken, async (req, res) => {
 
     const creatorDbId = userResult.rows[0].id;
 
-    // Get followers count (excluding self)
-    // Note: follower_id uses supabase_id, creator_id uses database id
-    const followersResult = await pool.query(
-      'SELECT COUNT(*) as count FROM followers WHERE creator_id = $1 AND follower_id != $2',
-      [creatorDbId, supabaseId]
-    );
+    // Get followers count (excluding self) - handle if table doesn't exist
+    let followersCount = 0;
+    try {
+      const followersResult = await pool.query(
+        'SELECT COUNT(*) as count FROM followers WHERE creator_id = $1 AND follower_id != $2',
+        [creatorDbId, supabaseId]
+      );
+      followersCount = parseInt(followersResult.rows[0]?.count) || 0;
+    } catch (error) {
+      if (error.code !== '42P01') throw error; // Re-throw if not "table doesn't exist" error
+      logger.warn('Followers table does not exist');
+    }
 
-    // Get active subscribers count (excluding self)
-    // Note: user_id uses supabase_id, creator_id uses database id
-    const subscribersResult = await pool.query(
-      `SELECT COUNT(*) as count
-       FROM subscriptions
-       WHERE creator_id = $1
-         AND user_id != $2
-         AND status = 'active'
-         AND (expires_at IS NULL OR expires_at > NOW())`,
-      [creatorDbId, supabaseId]
-    );
+    // Get active subscribers count (excluding self) - handle if table doesn't exist
+    let subscribersCount = 0;
+    try {
+      const subscribersResult = await pool.query(
+        `SELECT COUNT(*) as count
+         FROM subscriptions
+         WHERE creator_id = $1
+           AND user_id != $2
+           AND status = 'active'
+           AND (expires_at IS NULL OR expires_at > NOW())`,
+        [creatorDbId, supabaseId]
+      );
+      subscribersCount = parseInt(subscribersResult.rows[0]?.count) || 0;
+    } catch (error) {
+      if (error.code !== '42P01') throw error; // Re-throw if not "table doesn't exist" error
+      logger.warn('Subscriptions table does not exist');
+    }
 
     res.json({
       success: true,
-      followersCount: parseInt(followersResult.rows[0].count) || 0,
-      subscribersCount: parseInt(subscribersResult.rows[0].count) || 0
+      followersCount,
+      subscribersCount
     });
 
   } catch (error) {

@@ -328,16 +328,27 @@ router.get('/items/manage', authenticateToken, async (req, res) => {
   try {
     const creatorId = req.user.supabase_id || req.user.uid;
     const { includeInactive } = req.query;
-    
-    const query = includeInactive === 'true'
-      ? 'SELECT * FROM shop_items WHERE creator_id = $1 ORDER BY created_at DESC'
-      : 'SELECT * FROM shop_items WHERE creator_id = $1 AND is_active = true ORDER BY created_at DESC';
-    
-    const result = await pool.query(query, [creatorId]);
-    
+
+    // Check if shop_items table exists - handle gracefully if it doesn't
+    let items = [];
+    try {
+      const query = includeInactive === 'true'
+        ? 'SELECT * FROM shop_items WHERE creator_id = $1 ORDER BY created_at DESC'
+        : 'SELECT * FROM shop_items WHERE creator_id = $1 AND is_active = true ORDER BY created_at DESC';
+
+      const result = await pool.query(query, [creatorId]);
+      items = result.rows;
+    } catch (dbError) {
+      // If table doesn't exist (error code 42P01), return empty array
+      if (dbError.code !== '42P01') {
+        throw dbError; // Re-throw if it's not a "table doesn't exist" error
+      }
+      console.warn('Shop_items table does not exist');
+    }
+
     res.json({
       success: true,
-      items: result.rows
+      items: items
     });
   } catch (error) {
     console.error('Error fetching shop items:', error);
