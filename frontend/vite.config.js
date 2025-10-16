@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
+// import { VitePWA } from 'vite-plugin-pwa'; // ❌ Removed: PWA not needed for real-time video/chat app
 import { visualizer } from 'rollup-plugin-visualizer';
 import path from 'path';
 import { fileURLToPath, URL } from 'url';
@@ -20,79 +20,10 @@ export default defineConfig({
       gzipSize: true,
       brotliSize: true,
     }),
-    VitePWA({
-      registerType: 'autoUpdate',
-      cleanupOutdatedCaches: true, // Ensure old caches are cleaned up
-      includeAssets: ['favicon.ico', 'digis-logo-black.png', 'digis-logo-white.png'],
-      manifest: {
-        name: 'Digis Creator Platform',
-        short_name: 'Digis',
-        description: 'Connect with creators through video calls, live streaming, and more',
-        theme_color: '#6B46C1',
-        background_color: '#ffffff',
-        display: 'standalone',
-        icons: [
-          {
-            src: 'digis-logo-black.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'digis-logo-black.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      },
-      workbox: {
-        clientsClaim: true, // Take control of all pages immediately
-        skipWaiting: true, // Activate new service worker immediately
-        cleanupOutdatedCaches: true, // Clean up old caches
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
-        // CRITICAL: Never cache API routes (especially auth endpoints)
-        navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [
-          // CRITICAL: Navigation requests (index.html) must use NetworkFirst
-          // This prevents stale HTML from serving old JS chunk references
-          {
-            urlPattern: ({ request }) => request.mode === 'navigate',
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'pages-cache',
-              networkTimeoutSeconds: 3,
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 // 1 hour (short-lived)
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          // CRITICAL: Explicitly exclude all API routes from caching
-          // This prevents stale auth responses during backend outages
-          {
-            urlPattern: /^.*\/api\/.*/i,
-            handler: 'NetworkOnly',
-            // Note: NetworkOnly doesn't support networkTimeoutSeconds
-            // If network fails, it will fail immediately (no cache fallback)
-          }
-        ]
-      }
-    })
-  ],
+    // ❌ PWA REMOVED: Not suitable for real-time video/chat apps
+    // Real-time features require constant network, so offline caching is counterproductive
+    // Service worker was causing stale JS bundles to be served after deployments
+  ].filter(Boolean),
   esbuild: {
     loader: 'jsx',
     include: /src\/.*\.(js|jsx)$/,
