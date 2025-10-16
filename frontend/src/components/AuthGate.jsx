@@ -10,11 +10,12 @@ export default function AuthGate({ children, fallback = null }) {
 
   useEffect(() => {
     let isMounted = true;
+    let settled = false;
 
     const bootstrapAuth = async () => {
       try {
         console.log('🔐 AuthGate: Bootstrapping auth before render...');
-        // Force a session bootstrap before rendering the app
+        // 1) One-shot fetch
         const { data: { session } } = await supabase.auth.getSession();
 
         console.log('🔐 AuthGate: Session loaded', {
@@ -22,22 +23,44 @@ export default function AuthGate({ children, fallback = null }) {
           userEmail: session?.user?.email
         });
 
-        if (isMounted) {
+        if (!settled && isMounted) {
+          settled = true;
           setReady(true);
         }
       } catch (error) {
         console.error('🔐 AuthGate: Error bootstrapping auth:', error);
         // Still set ready to true so app doesn't hang
-        if (isMounted) {
+        if (!settled && isMounted) {
+          settled = true;
           setReady(true);
         }
       }
     };
 
+    // 2) Also listen for very fast session changes
+    const sub = supabase.auth.onAuthStateChange(() => {
+      if (!settled && isMounted) {
+        console.log('🔐 AuthGate: Session state changed, unblocking render');
+        settled = true;
+        setReady(true);
+      }
+    });
+
+    // 3) Safety cap (don't spin forever)
+    const hardCap = setTimeout(() => {
+      if (!settled && isMounted) {
+        console.warn('🔐 AuthGate: Hit 1.5s cap, forcing render');
+        settled = true;
+        setReady(true);
+      }
+    }, 1500);
+
     bootstrapAuth();
 
     return () => {
       isMounted = false;
+      clearTimeout(hardCap);
+      sub?.data?.subscription?.unsubscribe?.();
     };
   }, []);
 

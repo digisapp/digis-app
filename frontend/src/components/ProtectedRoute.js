@@ -90,8 +90,9 @@ const ProtectedRoute = ({
     );
   }
 
-  // Not authenticated? Show splash for ~300-500ms then redirect
-  if (!user) {
+  // Redirect only when auth is fully settled AND user is still null
+  // This prevents redirects during the brief window where user is null but about to hydrate
+  if (!user && roleResolved && !authLoading) {
     if (!showUnauthSplash) {
       // Show splash briefly to smooth UX
       setTimeout(() => setShowUnauthSplash(true), 400);
