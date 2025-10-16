@@ -20,7 +20,7 @@ import LiveChat from './LiveChat';
 import LiveChatEnhanced from './LiveChatEnhanced';
 import VirtualGifts from './VirtualGifts';
 import StreamingGiftDisplay from './StreamingGiftDisplay';
-import InteractivePolls from './InteractivePolls';
+// import InteractivePolls from './InteractivePolls'; // Removed - file deleted
 import CreatorSubscriptions from './CreatorSubscriptions';
 import EnhancedStreamingOverlay from './EnhancedStreamingOverlay';
 import CoHostManager from './CoHostManager';
@@ -864,13 +864,16 @@ const StreamingLayout = ({
               exit={animations ? { opacity: 0, x: -20 } : {}}
               className="h-full"
             >
-              <InteractivePolls
+              <Card className="h-full p-4">
+                <p className="text-gray-500">Polls feature temporarily unavailable</p>
+              </Card>
+              {/* <InteractivePolls
                 user={user}
                 channel={channel}
                 isCreator={isCreator}
                 isHost={isHost}
                 className="h-full"
-              />
+              /> */}
             </motion.div>
           )}
 

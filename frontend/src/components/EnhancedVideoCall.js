@@ -25,7 +25,7 @@ import {
 
 // Import our interactive components
 import InstantMessagingChat from './InstantMessagingChat';
-import InteractiveLivePolls from './InteractiveLivePolls';
+// import InteractiveLivePolls from './InteractiveLivePolls'; // Removed - file deleted
 import LiveStreamQA from './LiveStreamQA';
 import LiveReactionsSystem from './LiveReactionsSystem';
 
@@ -665,12 +665,15 @@ const EnhancedVideoCall = ({
                 )}
                 
                 {showPolls && (
-                  <InteractiveLivePolls
+                  <div className="p-4 text-gray-500">
+                    Polls feature temporarily unavailable
+                  </div>
+                  /* <InteractiveLivePolls
                     websocket={websocket}
                     channelId={channel}
                     isCreator={isCreator}
                     user={user}
-                  />
+                  /> */
                 )}
                 
                 {showQA && (
