@@ -124,12 +124,20 @@ const corsOptions = {
     'X-Request-ID',
     'X-API-Version',
     'Cache-Control',
+    'Pragma',
+    'If-Modified-Since',
+    'Range',
+    'apikey',              // Supabase client
+    'x-client-info',       // Supabase client
+    'Prefer',              // Supabase client
   ],
   exposedHeaders: [
     'X-RateLimit-Limit',
     'X-RateLimit-Remaining',
     'X-RateLimit-Reset',
     'X-Request-ID',
+    'Content-Range',
+    'Range',
   ],
   optionsSuccessStatus: 200, // Some legacy browsers choke on 204
   maxAge: 86400, // 24 hours - how long to cache preflight requests

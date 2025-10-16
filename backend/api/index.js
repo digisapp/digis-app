@@ -67,6 +67,13 @@ console.log('✅ PostgreSQL RLS middleware loaded');
 const app = express();
 console.log('Express app created');
 
+// ✅ CORS FIRST - Must be before body parsers and routes
+const { corsOptions } = require('../middleware/cors-config');
+app.use(cors(corsOptions));
+// Handle preflight for all routes
+app.options('*', cors(corsOptions));
+console.log('✅ CORS configured');
+
 // Apply comprehensive security middleware
 console.log('Applying security middleware...');
 applySecurity(app);
@@ -140,9 +147,11 @@ app.use((req, res, next) => {
 
 // Note: Rate limiting is applied via buildLimiters() below when routes are registered
 
-// Use the centralized CORS configuration
-const { corsOptions } = require('../middleware/cors-config');
-app.use(cors(corsOptions));
+// Add Vary header for proper CORS caching
+app.use((_req, res, next) => {
+  res.setHeader('Vary', 'Origin');
+  next();
+});
 
 // Body parsing middleware with size limits
 app.use(express.json({ limit: '10mb' }));
@@ -512,6 +521,14 @@ app.get('/debug/database-url', (req, res) => {
     port: dbUrl.match(/:(\d+)\//)?.[1] || 'Unknown',
     timestamp: new Date().toISOString()
   });
+});
+
+// Fallback OPTIONS handler (if route-specific one didn't catch it)
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
 });
 
 // 404 handler for unmatched routes
