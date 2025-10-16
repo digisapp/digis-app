@@ -106,6 +106,24 @@ if (connectionConfig.database && typeof connectionConfig.database !== 'string') 
   connectionConfig.database = String(connectionConfig.database);
 }
 
+// Detect connection mode (pooler vs direct)
+const host = connectionConfig.host;
+const port = connectionConfig.port || 5432;
+const isPoolerHost = /pooler\.supabase\.com$/i.test(host);
+const mode =
+  isPoolerHost && port === 6543 ? 'pooler:transaction' :
+  isPoolerHost && port === 5432 ? 'pooler:session' :
+  'direct';
+
+console.log('[DB] host=%s port=%s mode=%s', host, port, mode);
+
+// Warn if using pooler when direct is recommended
+if (isPoolerHost) {
+  console.warn('⚠️ WARNING: Using pooler host instead of direct connection.');
+  console.warn('⚠️ For serverless (Vercel), use: db.<project-ref>.supabase.co:5432');
+  console.warn('⚠️ This may cause "max client connections" errors under load.');
+}
+
 // Mask sensitive data for security
 console.log('🔗 Database connection config:', {
   user: connectionConfig.user ? `${connectionConfig.user.substring(0, 3)}***` : 'MISSING',
@@ -113,7 +131,8 @@ console.log('🔗 Database connection config:', {
   port: connectionConfig.port,
   database: connectionConfig.database,
   ssl: !!connectionConfig.ssl,
-  passwordLength: connectionConfig.password ? connectionConfig.password.length : 0
+  passwordLength: connectionConfig.password ? connectionConfig.password.length : 0,
+  connectionMode: mode
 });
 
 // Create a new pool instance with optimized settings
@@ -121,20 +140,25 @@ console.log('🔗 Database connection config:', {
 const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
 
 // CRITICAL FIX: Optimized for Supabase connection modes
-// - Direct Connection (port 5432): Up to 60 concurrent connections, better for serverless
-// - Transaction Pooler (port 6543): Max 15 connections, faster but limited
-const isUsingPooler = connectionConfig.port === 6543;
+// - Direct Connection (db.<ref>.supabase.co:5432): Up to 60 concurrent connections, best for serverless
+// - Session Pooler (pooler.supabase.com:5432): PgBouncer session mode, limited connections
+// - Transaction Pooler (pooler.supabase.com:6543): Max 15 connections, fastest per-query
+const isUsingTransactionPooler = isPoolerHost && port === 6543;
+const isUsingSessionPooler = isPoolerHost && port === 5432;
+const isDirectConnection = !isPoolerHost;
 
 const poolConfig = {
   ...connectionConfig,
   // Connection pool sizing based on connection mode
-  max: isUsingPooler
-    ? (isServerless ? 1 : 2)  // Pooler: very limited connections
-    : (isServerless ? 3 : 5),  // Direct: can handle more, but still conservative
+  max: isUsingTransactionPooler
+    ? (isServerless ? 1 : 2)          // Transaction pooler: very limited
+    : isUsingSessionPooler
+    ? (isServerless ? 2 : 3)          // Session pooler: limited
+    : (isServerless ? 2 : 5),         // Direct: optimal for serverless (2-3)
   min: 0, // Start with no connections
-  idleTimeoutMillis: isServerless ? 1000 : 10000, // Aggressive cleanup (1s serverless, 10s local)
+  idleTimeoutMillis: isServerless ? 1000 : 3000, // Aggressive cleanup for serverless
   connectionTimeoutMillis: 10000, // 10s timeout for connection acquisition
-  keepAlive: !isUsingPooler, // Enable keepalive for direct connections only
+  keepAlive: isDirectConnection,     // Enable keepalive for direct connections only
   keepAliveInitialDelayMillis: 0,
   maxUses: 1000, // Recycle connections after 1000 uses
   statement_timeout: 30000, // 30 seconds
@@ -148,7 +172,9 @@ const pool = new Pool(poolConfig);
 console.log(`📊 Database pool configured for ${isServerless ? 'SERVERLESS' : 'TRADITIONAL'} environment:`, {
   max: poolConfig.max,
   idleTimeout: poolConfig.idleTimeoutMillis,
-  allowExitOnIdle: poolConfig.allowExitOnIdle
+  allowExitOnIdle: poolConfig.allowExitOnIdle,
+  connectionMode: mode,
+  keepAlive: poolConfig.keepAlive
 });
 
 // Monitor pool health in production
