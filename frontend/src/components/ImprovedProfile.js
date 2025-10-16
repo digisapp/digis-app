@@ -32,7 +32,8 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 import CreatorSubscriptionSimple from './CreatorSubscriptionSimple';
-import ImageCropperModal from './ImageCropperModal';
+import ImageCropModal from './media/ImageCropModal';
+import { uploadAvatar } from '../services/imageUploadService';
 import toast from 'react-hot-toast';
 
 // Upload profile image to backend
@@ -352,17 +353,13 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
     reader.readAsDataURL(file);
   };
   
-  const handleCroppedImage = async (croppedImage) => {
+  const handleCroppedImage = async (croppedFile) => {
     setSaving(true);
     setError('');
 
     try {
-      // Convert blob URL to file
-      const imageResponse = await fetch(croppedImage.url);
-      const blob = await imageResponse.blob();
-      const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' });
-
-      const downloadURL = await uploadProfileImage(file, user.id);
+      // New API returns File directly, no need to convert
+      const downloadURL = await uploadAvatar(croppedFile);
 
       // Update local UI first
       if (cropperMode === 'profile') {
@@ -1335,21 +1332,18 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         </div>
       )}
       
-      {/* Image Cropper Modal */}
-      <ImageCropperModal
+      {/* Image Crop Modal - New react-avatar-editor version */}
+      <ImageCropModal
         isOpen={showImageCropper}
+        cropType={cropperMode === 'profile' ? 'avatar' : 'card'}
+        file={tempImageSrc}
         onClose={() => {
           setShowImageCropper(false);
           setTempImageSrc(null);
         }}
-        imageSrc={tempImageSrc}
-        onCropComplete={handleCroppedImage}
-        aspectRatio={cropAspectRatio}
-        cropShape={cropperMode === 'profile' ? 'round' : 'rect'}
-        title={
-          cropperMode === 'profile' ? 'Crop Profile Picture' :
-          'Crop Banner Image'
-        }
+        onSave={handleCroppedImage}
+        aspectRatio={cropperMode === 'banner' ? '3:1' : '2:3'}
+        allowRatioChange={false}
       />
     </div>
   );

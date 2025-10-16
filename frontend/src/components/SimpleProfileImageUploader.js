@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import ImageCropperModal from './ImageCropperModal';
+import ImageCropModal from './media/ImageCropModal';
 import { supabase } from '../utils/supabase-auth.js';
 import toast from 'react-hot-toast';
 import {
@@ -382,14 +382,12 @@ const SimpleProfileImageUploader = ({
       
       {/* Image Cropper Modal for Avatar */}
       {showCropper && originalImageUrl && (
-        <ImageCropperModal
+        <ImageCropModal
           isOpen={true}
+          cropType="avatar"
+          file={originalImageUrl}
           onClose={() => setShowCropper(false)}
-          imageSrc={originalImageUrl}
-          onCropComplete={handleAvatarCropped}
-          aspectRatio={1}
-          cropShape="round"
-          title="Crop Your Face for Avatar"
+          onSave={handleAvatarCropped}
         />
       )}
       

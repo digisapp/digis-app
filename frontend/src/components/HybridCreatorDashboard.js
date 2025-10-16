@@ -86,7 +86,7 @@ import DualBadgeDisplay from './DualBadgeDisplay';
 import EnhancedScheduleCalendar from './EnhancedScheduleCalendar';
 import EnhancedContentGallery from './EnhancedContentGallery';
 import PricingRatesModal from './PricingRatesModal';
-import ImageCropperModal from './ImageCropperModal';
+import ImageCropModal from './media/ImageCropModal';
 import TokenTipping from './TokenTipping';
 import DigitalsUploadModal from './DigitalsUploadModal';
 import NotificationCenter from './NotificationCenter';
@@ -1865,15 +1865,17 @@ const HybridCreatorDashboard = memo(({
 
       {/* Image Cropper Modal */}
       {showImageCropper && tempImageSrc && (
-        <ImageCropperModal
+        <ImageCropModal
           isOpen={showImageCropper}
+          cropType="card"
+          file={tempImageSrc}
           onClose={() => {
             setShowImageCropper(false);
             setTempImageSrc(null);
           }}
-          imageSrc={tempImageSrc}
-          onCropComplete={handleCroppedImage}
-          aspectRatio={4/5}
+          onSave={handleCroppedImage}
+          aspectRatio="4:5"
+          allowRatioChange={false}
         />
       )}
 

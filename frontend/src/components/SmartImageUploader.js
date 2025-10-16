@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import ImageCropperModal from './ImageCropperModal';
+import ImageCropModal from './media/ImageCropModal';
 import { supabase } from '../utils/supabase-auth.js';
 import toast from 'react-hot-toast';
 import {
@@ -388,15 +388,14 @@ const SmartImageUploader = ({
       
       {/* Image Cropper Modal */}
       {currentCropType && imagePreview && (
-        <ImageCropperModal
+        <ImageCropModal
           isOpen={true}
+          cropType={currentCropType}
+          file={imagePreview}
           onClose={handleSkipCrop}
-          imageSrc={imagePreview}
-          onCropComplete={handleCropComplete}
-          aspectRatio={cropConfigs[currentCropIndex].aspectRatio}
-          cropShape={currentCropType === 'avatar' ? 'round' : 'rect'}
-          title={cropConfigs[currentCropIndex].title}
-          showPreview={true}
+          onSave={handleCropComplete}
+          aspectRatio={currentCropType === 'card' ? '3:4' : undefined}
+          allowRatioChange={false}
         />
       )}
       
