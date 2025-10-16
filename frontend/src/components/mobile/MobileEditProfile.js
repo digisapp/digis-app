@@ -89,6 +89,8 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
   const [username, setUsername] = useState(user?.username || '');
   const [displayName, setDisplayName] = useState(user?.display_name || user?.name || '');
   const [bio, setBio] = useState(user?.bio || '');
+  const [aboutMe, setAboutMe] = useState(user?.about_me || '');
+  const [location, setLocation] = useState(user?.location || '');
   const [profileImage, setProfileImage] = useState(user?.profile_pic_url || user?.avatar_url || '');
   const [bannerImage, setBannerImage] = useState(user?.banner_url || '');
 
@@ -190,6 +192,8 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
         username: user?.username || '',
         displayName: user?.display_name || user?.full_name || user?.name || '',
         bio: user?.bio || '',
+        aboutMe: user?.about_me || '',
+        location: user?.location || '',
         profileImage: user?.profile_pic_url || user?.avatar_url || '',
         bannerImage: user?.banner_url || '',
         state: user?.state || '',
@@ -218,6 +222,8 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
       username !== initialRef.current.username ||
       displayName !== initialRef.current.displayName ||
       bio !== initialRef.current.bio ||
+      aboutMe !== initialRef.current.aboutMe ||
+      location !== initialRef.current.location ||
       profileImage !== initialRef.current.profileImage ||
       bannerImage !== initialRef.current.bannerImage ||
       state !== initialRef.current.state ||
@@ -234,7 +240,7 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
       voiceMemoPrice !== initialRef.current.prices.voiceMemo;
 
     setHasChanges(changed);
-  }, [username, displayName, bio, profileImage, bannerImage, state, country, interests, socialLinks,
+  }, [username, displayName, bio, aboutMe, location, profileImage, bannerImage, state, country, interests, socialLinks,
       streamPrice, videoPrice, voicePrice, messagePrice, textMessagePrice, imageMessagePrice,
       videoMessagePrice, voiceMemoPrice]);
 
@@ -401,6 +407,11 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
       newErrors.bio = 'Bio must be less than 500 characters';
     }
 
+    // Validate about me
+    if (aboutMe.length > 1000) {
+      newErrors.aboutMe = 'About Me must be less than 1000 characters';
+    }
+
     // Validate password if changing
     if (showChangePassword && (currentPassword || newPassword || confirmPassword)) {
       if (!currentPassword) {
@@ -450,6 +461,8 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
         username: username.trim().toLowerCase(),
         display_name: displayName.trim(),
         bio: bio.trim(),
+        about_me: aboutMe.trim(),
+        location: location.trim(),
         profile_pic_url: profileImage,
         banner_url: bannerImage,
         social_links: socialLinks,
@@ -510,6 +523,8 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
         username: payload.username,
         displayName: payload.display_name,
         bio: payload.bio,
+        aboutMe: payload.about_me,
+        location: payload.location,
         profileImage: payload.profile_pic_url,
         bannerImage: payload.banner_url,
         state: payload.creatorSettings?.state || '',
@@ -792,6 +807,55 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                     )}
                     <p className="text-xs text-gray-500 ml-auto">{bio.length}/500</p>
                   </div>
+                </div>
+
+                {/* About Me - Extended Bio for Fan Profiles */}
+                <div>
+                  <label htmlFor="aboutMe" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    About Me
+                  </label>
+                  <textarea
+                    id="aboutMe"
+                    value={aboutMe}
+                    onChange={(e) => setAboutMe(e.target.value)}
+                    rows={4}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors dark:bg-gray-800 ${
+                      errors.aboutMe
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-300 dark:border-gray-600 focus:ring-purple-500'
+                    }`}
+                    placeholder="Share more about yourself, your interests, and what you love about this platform..."
+                    inputMode="text"
+                    aria-invalid={!!errors.aboutMe}
+                    aria-describedby={errors.aboutMe ? 'aboutMe-error' : undefined}
+                  />
+                  <div className="flex justify-between mt-1">
+                    {errors.aboutMe && (
+                      <p id="aboutMe-error" className="text-xs text-red-500">{errors.aboutMe}</p>
+                    )}
+                    <p className="text-xs text-gray-500 ml-auto">{aboutMe.length}/1000</p>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">This extended bio appears on your fan profile</p>
+                </div>
+
+                {/* Location - For all users */}
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Location
+                  </label>
+                  <div className="relative">
+                    <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      id="location"
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-800"
+                      placeholder="e.g., Los Angeles, CA"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">Your general location (city, state/region)</p>
                 </div>
 
                 {/* Categories for creators */}

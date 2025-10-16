@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
 
 // Helper to use req.pg if available (with JWT context), otherwise fall back to pool
 const db = (req) => req.pg || pool;
@@ -14,6 +15,25 @@ const { sendFollowNotificationWithPush } = require('./notifications');
 const { uploadImage: uploadToSupabase } = require('../utils/supabase-storage');
 const { users: usersCache, creators: creatorsCache, TTL } = require('../utils/redis');
 const router = express.Router();
+
+// Sanitization helper - strips HTML tags and trims whitespace
+const sanitizeText = (text) => {
+  if (!text) return text;
+  // Remove HTML tags, excessive whitespace, and trim
+  return text
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/\s+/g, ' ')     // Collapse multiple spaces
+    .trim();
+};
+
+// Rate limiter for fan profile endpoint (prevent scraping)
+const fanProfileLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: 30, // Limit each IP to 30 requests per minute
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Configure multer for file uploads
 // Use memory storage for serverless compatibility (uploads go to Supabase storage)
@@ -270,20 +290,22 @@ router.post('/update-creator-status', authenticateToken, async (req, res) => {
 
 // Create/update profile
 router.put('/profile', authenticateToken, validate(profileUpdateSchema), async (req, res) => {
-  const { 
-    bio, 
+  const {
+    bio,
+    about_me: aboutMe,
+    location,
     display_name: displayName,
     profile_pic_url: profilePic,
     banner_url: bannerUrl,
-    stream_price: streamPrice, 
-    video_price: videoPrice, 
-    voice_price: voicePrice, 
-    message_price: messagePrice, 
+    stream_price: streamPrice,
+    video_price: videoPrice,
+    voice_price: voicePrice,
+    message_price: messagePrice,
     text_message_price: textMessagePrice,
     image_message_price: imageMessagePrice,
     video_message_price: videoMessagePrice,
     voice_memo_price: voiceMemoPrice,
-    username, 
+    username,
     creator_type: creatorType,
     interests,
     show_token_balance: showTokenBalance,
@@ -322,6 +344,20 @@ router.put('/profile', authenticateToken, validate(profileUpdateSchema), async (
   if (bio && bio.length > 1000) {
     return res.status(400).json({
       error: 'Bio must be less than 1000 characters',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  if (aboutMe && aboutMe.length > 1000) {
+    return res.status(400).json({
+      error: 'About Me must be less than 1000 characters',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  if (location && location.length > 200) {
+    return res.status(400).json({
+      error: 'Location must be less than 200 characters',
       timestamp: new Date().toISOString()
     });
   }
@@ -387,39 +423,39 @@ router.put('/profile', authenticateToken, validate(profileUpdateSchema), async (
     let result;
     if (existingUser.rows.length > 0) {
       result = await client.query(
-        `UPDATE users 
-         SET is_creator = $2, bio = $3, display_name = $4, profile_pic_url = $5, banner_url = $6, stream_price = $7, video_price = $8, voice_price = $9, message_price = $10, 
+        `UPDATE users
+         SET is_creator = $2, bio = $3, display_name = $4, profile_pic_url = $5, banner_url = $6, stream_price = $7, video_price = $8, voice_price = $9, message_price = $10,
              text_message_price = $11, image_message_price = $12, video_message_price = $13, voice_memo_price = $14,
-             username = $15, creator_type = $16, interests = $17, show_token_balance = $18, gallery_photos = $19, stream_audience_control = $20, 
+             username = $15, creator_type = $16, interests = $17, show_token_balance = $18, gallery_photos = $19, stream_audience_control = $20,
              state = $21, country = $22, notification_preferences = $23, privacy_settings = $24, language = $25, timezone = $26,
              availability_schedule = $27, auto_response_message = $28, analytics_visibility = $29, watermark_enabled = $30,
-             what_i_offer = $31, availability = $32,
+             what_i_offer = $31, availability = $32, about_me = $33, location = $34,
              updated_at = NOW()
          WHERE supabase_id = $1
          RETURNING *`,
-        [uid, isCreator, bio, displayName, profilePic, bannerUrl, streamPrice || 5.00, videoPrice || 8.00, voicePrice || 6.00, messagePrice || 2.00, 
+        [uid, isCreator, bio, displayName, profilePic, bannerUrl, streamPrice || 5.00, videoPrice || 8.00, voicePrice || 6.00, messagePrice || 2.00,
          textMessagePrice || 1.00, imageMessagePrice || 3.00, videoMessagePrice || 5.00, voiceMemoPrice || 2.00,
          username, creatorType, interests || [], showTokenBalance || false, JSON.stringify(galleryPhotos || []), streamAudienceControl || 'public',
          state, country, JSON.stringify(notificationPrefs || {}), JSON.stringify(privacySettings || {}), language || 'en', timezone || 'America/New_York',
          JSON.stringify(availabilitySchedule || {}), autoResponseMessage, analyticsVisibility || 'public', watermarkEnabled || false,
-         req.body.whatIOffer || null, req.body.availability || null]
+         req.body.whatIOffer || null, req.body.availability || null, aboutMe || null, location || null]
       );
       logger.info('✅ Profile updated successfully');
     } else {
       result = await client.query(
-        `INSERT INTO users (supabase_id, is_creator, bio, display_name, profile_pic_url, banner_url, stream_price, video_price, voice_price, message_price, 
+        `INSERT INTO users (supabase_id, is_creator, bio, display_name, profile_pic_url, banner_url, stream_price, video_price, voice_price, message_price,
                            text_message_price, image_message_price, video_message_price, voice_memo_price,
                            username, creator_type, interests, show_token_balance, gallery_photos, stream_audience_control, state, country,
                            notification_preferences, privacy_settings, language, timezone, availability_schedule,
-                           auto_response_message, analytics_visibility, watermark_enabled, what_i_offer, availability, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, NOW(), NOW()) 
+                           auto_response_message, analytics_visibility, watermark_enabled, what_i_offer, availability, about_me, location, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, NOW(), NOW())
          RETURNING *`,
-        [uid, isCreator, bio, displayName, profilePic, bannerUrl, streamPrice || 5.00, videoPrice || 8.00, voicePrice || 6.00, messagePrice || 2.00, 
+        [uid, isCreator, bio, displayName, profilePic, bannerUrl, streamPrice || 5.00, videoPrice || 8.00, voicePrice || 6.00, messagePrice || 2.00,
          textMessagePrice || 1.00, imageMessagePrice || 3.00, videoMessagePrice || 5.00, voiceMemoPrice || 2.00,
          username, creatorType, interests || [], showTokenBalance || false, JSON.stringify(galleryPhotos || []), streamAudienceControl || 'public',
          state, country, JSON.stringify(notificationPrefs || {}), JSON.stringify(privacySettings || {}), language || 'en', timezone || 'America/New_York',
          JSON.stringify(availabilitySchedule || {}), autoResponseMessage, analyticsVisibility || 'public', watermarkEnabled || false,
-         req.body.whatIOffer || null, req.body.availability || null]
+         req.body.whatIOffer || null, req.body.availability || null, aboutMe || null, location || null]
       );
       logger.info('✅ Profile created successfully');
 
@@ -5489,6 +5525,145 @@ router.get('/profile/:username', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+// Get fan public profile by username (with rate limiting)
+router.get('/fan-profile/:username', fanProfileLimiter, async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    logger.info('Fetching fan profile for username:', username);
+
+    // Get fan profile with privacy check
+    const profileQuery = `
+      SELECT
+        u.id,
+        u.supabase_id,
+        u.username,
+        u.display_name,
+        u.bio,
+        u.profile_pic_url,
+        u.created_at,
+        u.is_online,
+        u.profile_visibility,
+        u.location,
+        u.interests,
+        u.about_me,
+        u.fan_rank,
+        u.badges,
+        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) as following_count,
+        (SELECT COUNT(*) FROM follows WHERE followed_id = u.id) as followers_count
+      FROM users u
+      WHERE u.username = $1 AND u.is_creator = false
+    `;
+
+    const profile = await pool.query(profileQuery, [username]);
+
+    if (profile.rows.length === 0) {
+      return res.status(404).json({ error: 'Fan profile not found' });
+    }
+
+    const profileData = profile.rows[0];
+
+    // Check privacy settings
+    if (profileData.profile_visibility === 'private') {
+      // Only show to authenticated users who follow this fan
+      const currentUserId = req.user?.supabase_id;
+      if (!currentUserId) {
+        return res.status(403).json({ error: 'This profile is private' });
+      }
+
+      // Check if current user follows this fan
+      const followCheck = await pool.query(
+        'SELECT 1 FROM follows WHERE follower_id = $1 AND followed_id = $2',
+        [currentUserId, profileData.supabase_id]
+      );
+
+      if (followCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'This profile is private' });
+      }
+    }
+
+    // Get fan stats using correct tables (gift_transactions and tip_transactions)
+    const statsQuery = `
+      SELECT
+        COALESCE((
+          SELECT SUM(gt.tokens_spent)
+          FROM gift_transactions gt
+          WHERE gt.sender_id = $1
+        ), 0) + COALESCE((
+          SELECT SUM(tt.amount)
+          FROM tip_transactions tt
+          WHERE tt.sender_id = $1
+        ), 0) as tips_given,
+        (SELECT COUNT(*) FROM stream_chat WHERE user_id = $1) as comments_posted,
+        (SELECT u2.username
+         FROM (
+           SELECT recipient_id, SUM(amount) as total_tips
+           FROM tip_transactions
+           WHERE sender_id = $1
+           GROUP BY recipient_id
+           UNION ALL
+           SELECT recipient_id, SUM(tokens_spent) as total_tips
+           FROM gift_transactions
+           WHERE sender_id = $1
+           GROUP BY recipient_id
+         ) combined
+         JOIN users u2 ON u2.supabase_id = combined.recipient_id
+         GROUP BY u2.username
+         ORDER BY SUM(combined.total_tips) DESC
+         LIMIT 1) as top_creator_supported
+    `;
+
+    const stats = await pool.query(statsQuery, [profileData.supabase_id]);
+    const statsData = stats.rows[0] || {
+      tips_given: 0,
+      comments_posted: 0,
+      top_creator_supported: null
+    };
+
+    // Check if current user is following this fan
+    let isFollowing = false;
+    if (req.user?.supabase_id) {
+      const followQuery = await pool.query(
+        'SELECT 1 FROM follows WHERE follower_id = $1 AND followed_id = $2',
+        [req.user.supabase_id, profileData.supabase_id]
+      );
+      isFollowing = followQuery.rows.length > 0;
+    }
+
+    // Sanitize text fields before sending to client
+    res.json({
+      profile: {
+        id: profileData.id,
+        username: sanitizeText(profileData.username),
+        display_name: sanitizeText(profileData.display_name),
+        bio: sanitizeText(profileData.bio),
+        about_me: sanitizeText(profileData.about_me),
+        profile_pic_url: profileData.profile_pic_url,
+        created_at: profileData.created_at,
+        is_online: profileData.is_online,
+        profile_visibility: profileData.profile_visibility,
+        location: sanitizeText(profileData.location),
+        interests: (profileData.interests || []).map(i => sanitizeText(i)),
+        fan_rank: sanitizeText(profileData.fan_rank),
+        badges: profileData.badges || [],
+        followers_count: parseInt(profileData.followers_count || 0),
+        following_count: parseInt(profileData.following_count || 0)
+      },
+      stats: {
+        tipsGiven: parseInt(statsData.tips_given || 0),
+        commentsPosted: parseInt(statsData.comments_posted || 0),
+        topCreatorSupported: sanitizeText(statsData.top_creator_supported),
+        memberSince: profileData.created_at
+      },
+      isFollowing
+    });
+
+  } catch (error) {
+    logger.error('Error fetching fan profile:', error);
+    res.status(500).json({ error: 'Failed to fetch fan profile' });
   }
 });
 

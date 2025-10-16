@@ -104,6 +104,7 @@ const AnalyticsDashboard = lazy(() => import('./components/AnalyticsDashboard'))
 const SchedulePage = lazy(() => import('./components/pages/SchedulePage'));
 const FollowersSubscribersPage = lazy(() => import('./components/pages/FollowersSubscribersPage'));
 const SupabaseTestPage = lazy(() => import('./components/SupabaseTestPage'));
+const FanProfilePage = lazy(() => import('./components/pages/FanProfilePage'));
 
 // Keep utility imports eager
 import recentlyViewedService from './utils/recentlyViewedService';
@@ -964,6 +965,11 @@ const App = () => {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/creator/:username" element={<CreatorPublicProfileEnhanced />} />
+        <Route path="/u/:username" element={
+          <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>
+            <FanProfilePage />
+          </Suspense>
+        } />
         <Route path="/:username/shop" element={<PublicCreatorShop />} />
         <Route path="/:username/digitals" element={<DigitalsPage />} />
         {/* Direct username route - must be last before catch-all */}
