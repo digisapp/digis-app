@@ -158,13 +158,10 @@ export default defineConfig({
           'agora-vendor': ['agora-rtc-sdk-ng', 'agora-rtm-sdk', 'agora-rtc-react'],
           'ui-vendor': ['framer-motion', '@headlessui/react', 'react-hot-toast'],
         },
-        // Generate smaller chunks with better naming
-        chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
-          return `assets/js/${facadeModuleId}-[hash].js`;
-        },
-        entryFileNames: 'assets/js/[name]-[hash].js',
-        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
+        // Use Vite defaults for predictable paths
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
       },
     },
     // Additional optimizations
