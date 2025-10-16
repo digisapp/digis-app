@@ -433,7 +433,7 @@ apiClient.addErrorInterceptor(async (error) => {
 });
 
 // Export both instance and class
-export { ApiClient, ApiError };
+export { ApiClient, ApiError, apiClient };
 export default apiClient;
 
 // Export convenience functions for direct use
