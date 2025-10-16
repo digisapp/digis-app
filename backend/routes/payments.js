@@ -541,26 +541,217 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   switch (event.type) {
     case 'payment_intent.succeeded': {
       const paymentIntent = event.data.object;
-      console.log('✅ Payment succeeded:', paymentIntent.id);
-      
-      // Update payment status in database
-      pool.query(
-        'UPDATE payments SET status = $1 WHERE stripe_payment_intent_id = $2',
-        ['completed', paymentIntent.id]
-      ).catch(err => console.error('Database update error:', err));
-      
+      const userId = paymentIntent.metadata?.userId;
+      const paymentIntentId = paymentIntent.id;
+
+      console.log('✅ Payment succeeded (webhook):', paymentIntentId, 'user:', userId);
+
+      if (!userId || !paymentIntentId) {
+        console.warn('⚠️ Webhook missing metadata - payment_intent.succeeded');
+        break;
+      }
+
+      try {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+
+          // Find matching transaction
+          const txResult = await client.query(
+            `SELECT user_id, tokens, bonus_tokens, status
+             FROM token_transactions
+             WHERE stripe_payment_intent_id = $1
+             LIMIT 1`,
+            [paymentIntentId]
+          );
+
+          if (txResult.rows.length === 0) {
+            console.warn(`⚠️ No transaction found for payment_intent ${paymentIntentId}`);
+            await client.query('ROLLBACK');
+            break;
+          }
+
+          const tx = txResult.rows[0];
+          if (tx.status === 'completed') {
+            console.log(`⏭️ Payment already credited: ${paymentIntentId}`);
+            await client.query('ROLLBACK');
+            break;
+          }
+
+          const totalTokens = parseInt(tx.tokens, 10);
+
+          // Credit tokens
+          await client.query(
+            `INSERT INTO token_balances (user_id, balance, total_purchased, updated_at)
+             VALUES ($1, $2, $2, NOW())
+             ON CONFLICT (user_id)
+             DO UPDATE SET
+               balance = token_balances.balance + EXCLUDED.balance,
+               total_purchased = token_balances.total_purchased + EXCLUDED.total_purchased,
+               updated_at = NOW()`,
+            [tx.user_id, totalTokens]
+          );
+
+          // Mark transaction as completed
+          await client.query(
+            `UPDATE token_transactions
+             SET status = 'completed', updated_at = NOW()
+             WHERE stripe_payment_intent_id = $1`,
+            [paymentIntentId]
+          );
+
+          // Update payment status in database
+          await client.query(
+            `UPDATE payments SET status = $1 WHERE stripe_payment_intent_id = $2`,
+            ['completed', paymentIntentId]
+          );
+
+          await client.query('COMMIT');
+          console.log(`✅ Tokens credited via webhook: ${totalTokens} to ${tx.user_id}`);
+        } catch (err) {
+          await client.query('ROLLBACK');
+          console.error('❌ Webhook token credit failed:', err);
+        } finally {
+          client.release();
+        }
+      } catch (poolErr) {
+        console.error('❌ Pool connection error:', poolErr);
+      }
       break;
     }
+
+    case 'charge.refunded':
+    case 'payment_intent.refunded': {
+      const obj = event.data.object;
+      const paymentIntentId = obj.payment_intent || obj.id;
+
+      console.log('🔄 Refund webhook received:', paymentIntentId);
+
+      if (!paymentIntentId) {
+        console.warn('⚠️ Missing payment_intent ID in refund webhook');
+        break;
+      }
+
+      try {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+
+          // Find original purchase transaction
+          const txResult = await client.query(
+            `SELECT user_id, tokens, bonus_tokens, status, type
+             FROM token_transactions
+             WHERE stripe_payment_intent_id = $1 AND type = 'purchase'
+             LIMIT 1`,
+            [paymentIntentId]
+          );
+
+          if (txResult.rows.length === 0) {
+            console.warn(`⚠️ No purchase found for refund: ${paymentIntentId}`);
+            await client.query('ROLLBACK');
+            break;
+          }
+
+          const original = txResult.rows[0];
+          const tokensToRefund = parseInt(original.tokens, 10);
+
+          // Check if already refunded
+          const refundCheck = await client.query(
+            `SELECT 1 FROM token_transactions
+             WHERE stripe_payment_intent_id = $1 AND type = 'refund'
+             LIMIT 1`,
+            [paymentIntentId]
+          );
+          if (refundCheck.rowCount > 0) {
+            console.log(`⏭️ Refund already processed: ${paymentIntentId}`);
+            await client.query('ROLLBACK');
+            break;
+          }
+
+          // Lock user's balance row
+          const lock = await client.query(
+            `SELECT balance FROM token_balances WHERE user_id = $1 FOR UPDATE`,
+            [original.user_id]
+          );
+          const currentBalance = parseInt(lock.rows[0]?.balance || 0, 10);
+
+          if (currentBalance >= tokensToRefund) {
+            // Full refund - sufficient balance
+            await client.query(
+              `UPDATE token_balances
+               SET balance = balance - $1, total_purchased = total_purchased - $1, updated_at = NOW()
+               WHERE user_id = $2`,
+              [tokensToRefund, original.user_id]
+            );
+
+            await client.query(
+              `INSERT INTO token_transactions
+                (user_id, type, tokens, amount_usd, status, stripe_payment_intent_id, created_at)
+               VALUES ($1, 'refund', $2, $3, 'completed', $4, NOW())`,
+              [original.user_id, -tokensToRefund, tokensToRefund * 0.05, paymentIntentId]
+            );
+
+            console.log(`✅ Full refund: ${tokensToRefund} tokens deducted from ${original.user_id}`);
+          } else {
+            // Partial balance - create debt
+            const shortage = tokensToRefund - currentBalance;
+
+            // Zero out balance
+            await client.query(
+              `UPDATE token_balances
+               SET balance = 0, total_purchased = GREATEST(0, total_purchased - $1), updated_at = NOW()
+               WHERE user_id = $2`,
+              [currentBalance, original.user_id]
+            );
+
+            // Set account to debt status
+            await client.query(
+              `UPDATE users
+               SET account_status = 'debt', debt_amount = debt_amount + $1, updated_at = NOW()
+               WHERE supabase_id = $2`,
+              [shortage, original.user_id]
+            );
+
+            await client.query(
+              `INSERT INTO token_transactions
+                (user_id, type, tokens, amount_usd, status, stripe_payment_intent_id, metadata, created_at)
+               VALUES ($1, 'refund', $2, $3, 'completed', $4, $5, NOW())`,
+              [original.user_id, -currentBalance, currentBalance * 0.05, paymentIntentId,
+               JSON.stringify({ shortage: shortage, note: 'Account in debt' })]
+            );
+
+            console.log(`⚠️ Partial refund: ${currentBalance} tokens deducted, ${shortage} token debt created for ${original.user_id}`);
+          }
+
+          // Update payment status
+          await client.query(
+            `UPDATE payments SET status = 'refunded' WHERE stripe_payment_intent_id = $1`,
+            [paymentIntentId]
+          );
+
+          await client.query('COMMIT');
+        } catch (err) {
+          await client.query('ROLLBACK');
+          console.error('❌ Refund processing failed:', err);
+        } finally {
+          client.release();
+        }
+      } catch (poolErr) {
+        console.error('❌ Pool connection error:', poolErr);
+      }
+      break;
+    }
+
     case 'payment_intent.payment_failed': {
       const failedPayment = event.data.object;
       console.log('❌ Payment failed:', failedPayment.id);
-      
+
       // Update payment status in database
       pool.query(
         'UPDATE payments SET status = $1 WHERE stripe_payment_intent_id = $2',
         ['failed', failedPayment.id]
       ).catch(err => console.error('Database update error:', err));
-      
+
       break;
     }
     default:

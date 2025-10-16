@@ -20,17 +20,17 @@ const pool = new Pool({
 
 async function runMigration() {
   try {
-    console.log('🚀 Starting sessions performance migration...\n');
+    console.log('🚀 Starting token system hardening migration...\n');
 
     // Read the migration file
-    const migrationPath = path.join(__dirname, 'migrations', 'add-sessions-performance-indexes.sql');
+    const migrationPath = path.join(__dirname, 'migrations', '142_token_system_hardening.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
 
-    // Split by semicolons but keep them (for executing each statement)
-    const statements = migrationSQL
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+    // For this migration, we'll execute it as a single transaction
+    // since it's wrapped in BEGIN/COMMIT
+    console.log('Executing migration as a single transaction...\n');
+
+    const statements = [migrationSQL]; // Execute the entire file at once
 
     console.log(`Found ${statements.length} SQL statements to execute\n`);
 
@@ -81,53 +81,67 @@ async function runMigration() {
     console.log(`  - Total: ${successCount + skipCount}\n`);
 
     // Run verification query
-    console.log('🔍 Verifying indexes...\n');
+    console.log('🔍 Verifying schema changes...\n');
 
-    const indexCheck = await pool.query(`
-      SELECT
-        indexname,
-        indexdef
-      FROM pg_indexes
-      WHERE tablename = 'sessions'
-        AND indexname LIKE 'idx_sessions%'
-      ORDER BY indexname
+    // Check token_balances columns
+    const balanceColumns = await pool.query(`
+      SELECT column_name, data_type
+      FROM information_schema.columns
+      WHERE table_name = 'token_balances'
+      ORDER BY ordinal_position
     `);
 
-    console.log(`Found ${indexCheck.rows.length} performance indexes on sessions table:`);
-    indexCheck.rows.forEach(index => {
-      console.log(`  ✓ ${index.indexname}`);
+    console.log('📊 token_balances columns:');
+    balanceColumns.rows.forEach(row => {
+      const marker = row.data_type === 'bigint' ? '✓' : ' ';
+      console.log(`  ${marker} ${row.column_name}: ${row.data_type}`);
     });
     console.log('');
 
-    // Test query performance
-    console.log('⚡ Testing query performance...\n');
+    // Check token_transactions new columns
+    const transColumns = await pool.query(`
+      SELECT column_name, data_type
+      FROM information_schema.columns
+      WHERE table_name = 'token_transactions'
+      AND column_name IN ('stripe_payment_intent_id', 'client_idempotency_key', 'related_user_id', 'tokens', 'bonus_tokens')
+      ORDER BY ordinal_position
+    `);
 
-    const testQueries = [
-      {
-        name: 'Active sessions (old slow query)',
-        sql: "SELECT COUNT(*) as count FROM sessions WHERE status = 'active'"
-      },
-      {
-        name: 'Active sessions (new fast query)',
-        sql: "SELECT EXISTS(SELECT 1 FROM sessions WHERE status = 'active' LIMIT 1) as has_active"
-      },
-      {
-        name: 'Sessions in last 24h',
-        sql: "SELECT COUNT(*) FROM sessions WHERE created_at > NOW() - INTERVAL '24 hours'"
-      }
-    ];
-
-    for (const test of testQueries) {
-      const startTime = Date.now();
-      await pool.query(test.sql);
-      const duration = Date.now() - startTime;
-
-      const status = duration < 100 ? '🚀 FAST' : duration < 1000 ? '⚠️  OK' : '🐌 SLOW';
-      console.log(`  ${status} ${test.name}: ${duration}ms`);
-    }
+    console.log('📊 token_transactions new columns:');
+    transColumns.rows.forEach(row => {
+      console.log(`  ✓ ${row.column_name}: ${row.data_type}`);
+    });
     console.log('');
 
-    console.log('✅ All done! The slow query issue should be resolved.\n');
+    // Check constraints
+    const constraints = await pool.query(`
+      SELECT conname, contype
+      FROM pg_constraint
+      WHERE conname IN ('uniq_purchase_by_intent', 'chk_balance_non_negative')
+    `);
+
+    console.log('🔒 Constraints created:');
+    constraints.rows.forEach(row => {
+      const type = row.contype === 'u' ? 'UNIQUE' : row.contype === 'c' ? 'CHECK' : row.contype;
+      console.log(`  ✓ ${row.conname} (${type})`);
+    });
+    console.log('');
+
+    // Check users table columns
+    const userColumns = await pool.query(`
+      SELECT column_name, data_type
+      FROM information_schema.columns
+      WHERE table_name = 'users'
+      AND column_name IN ('account_status', 'debt_amount')
+    `);
+
+    console.log('📊 users table new columns:');
+    userColumns.rows.forEach(row => {
+      console.log(`  ✓ ${row.column_name}: ${row.data_type}`);
+    });
+    console.log('');
+
+    console.log('✅ All done! Token system is now hardened.\n');
 
     await pool.end();
     process.exit(0);

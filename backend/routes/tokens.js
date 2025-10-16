@@ -350,9 +350,9 @@ router.post('/quick-purchase', authenticateToken, async (req, res) => {
   }
 });
 
-// Purchase tokens
+// Purchase tokens - HARDENED VERSION
 router.post('/purchase', authenticateToken, purchaseLimiter, async (req, res) => {
-  const { tokenAmount, paymentMethodId } = req.body;
+  const { tokenAmount, paymentMethodId, clientIdempotencyKey } = req.body;
 
   if (!tokenAmount || !paymentMethodId) {
     return res.status(400).json({
@@ -361,7 +361,16 @@ router.post('/purchase', authenticateToken, purchaseLimiter, async (req, res) =>
     });
   }
 
-  if (!TOKEN_PRICES[tokenAmount]) {
+  // Validate as integer
+  const amountTokens = parseInt(tokenAmount, 10);
+  if (!Number.isInteger(amountTokens) || amountTokens <= 0) {
+    return res.status(400).json({
+      error: 'Invalid token amount - must be positive integer',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  if (!TOKEN_PRICES[amountTokens]) {
     return res.status(400).json({
       error: 'Invalid token amount',
       validAmounts: Object.keys(TOKEN_PRICES),
@@ -374,11 +383,10 @@ router.post('/purchase', authenticateToken, purchaseLimiter, async (req, res) =>
     client = await pool.connect();
     await client.query('BEGIN');
 
-    // Use retry for database query
-    const userResult = await retry(() => client.query(
+    const userResult = await client.query(
       'SELECT id FROM users WHERE supabase_id = $1',
       [req.user.supabase_id]
-    ));
+    );
 
     if (userResult.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -388,53 +396,63 @@ router.post('/purchase', authenticateToken, purchaseLimiter, async (req, res) =>
       });
     }
 
-    const amountUsd = TOKEN_PRICES[tokenAmount];
-    const bonusTokens = tokenAmount >= 5000 ? Math.floor(tokenAmount * 0.05) : 0;
-    const totalTokens = tokenAmount + bonusTokens;
+    const amountUsd = TOKEN_PRICES[amountTokens];
+    const bonusTokens = amountTokens >= 5000 ? Math.floor(amountTokens * 0.05) : 0;
+    const totalTokens = amountTokens + bonusTokens;
 
-    // Use retry for Stripe API call with idempotency key
-    const paymentIntent = await retry(() => stripe.paymentIntents.create({
+    // Generate stable idempotency key
+    const idemKey = clientIdempotencyKey || crypto.randomBytes(16).toString('hex');
+
+    // Create Stripe Payment Intent
+    const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amountUsd * 100),
       currency: 'usd',
       payment_method: paymentMethodId,
       confirmation_method: 'manual',
       confirm: true,
       return_url: process.env.FRONTEND_URL || 'http://localhost:3000',
-      description: `Purchase of ${tokenAmount} tokens${bonusTokens ? ` + ${bonusTokens} bonus` : ''}`,
+      description: `Purchase of ${amountTokens} tokens${bonusTokens ? ` + ${bonusTokens} bonus` : ''}`,
       metadata: {
         userId: req.user.supabase_id,
-        tokenAmount,
-        bonusTokens
-      },
-      idempotencyKey: crypto.randomBytes(16).toString('hex') // Add idempotency key
-    }));
+        tokenAmount: String(amountTokens),
+        bonusTokens: String(bonusTokens),
+        clientIdempotencyKey: idemKey
+      }
+    });
 
     let status = paymentIntent.status === 'succeeded' ? 'completed' :
                  paymentIntent.status === 'requires_action' ? 'requires_action' :
                  paymentIntent.status === 'requires_payment_method' ? 'failed' : 'pending';
 
+    // Insert transaction idempotently (ON CONFLICT DO NOTHING)
     const transactionResult = await client.query(
-      `INSERT INTO token_transactions (user_id, type, tokens, amount_usd, bonus_tokens, stripe_payment_intent_id, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-       RETURNING *`,
-      [req.user.supabase_id, 'purchase', tokenAmount, amountUsd, bonusTokens, paymentIntent.id, status]
+      `INSERT INTO token_transactions (
+        user_id, type, tokens, amount_usd, bonus_tokens,
+        stripe_payment_intent_id, client_idempotency_key, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      ON CONFLICT (stripe_payment_intent_id) DO NOTHING
+      RETURNING *`,
+      [req.user.supabase_id, 'purchase', totalTokens, amountUsd, bonusTokens,
+       paymentIntent.id, idemKey, status]
     );
 
-    if (status === 'completed') {
-      await client.query(
-        `INSERT INTO token_balances (user_id, balance, updated_at)
-         VALUES ($1, $2, NOW())
-         ON CONFLICT (user_id)
-         DO UPDATE SET balance = token_balances.balance + $2, updated_at = NOW()`,
-        [req.user.supabase_id, totalTokens]
-      );
-
-      await client.query(
-        `UPDATE users SET last_purchase_amount = $1, updated_at = NOW()
-         WHERE supabase_id = $2`,
-        [tokenAmount, req.user.supabase_id]
-      );
+    // If no rows returned, this purchase was already processed
+    if (transactionResult.rows.length === 0) {
+      await client.query('COMMIT');
+      logger.info(`⏭️ Duplicate purchase blocked: ${paymentIntent.id}`);
+      return res.json({
+        success: true,
+        message: 'Purchase already processed',
+        paymentIntent: {
+          id: paymentIntent.id,
+          status: paymentIntent.status,
+          client_secret: paymentIntent.client_secret
+        }
+      });
     }
+
+    // NOTE: We do NOT credit tokens here - webhook will be the source of truth
+    // This prevents double-crediting on retries or 3DS flows
 
     await client.query('COMMIT');
 
@@ -461,373 +479,188 @@ router.post('/purchase', authenticateToken, purchaseLimiter, async (req, res) =>
   }
 });
 
-// Send tip
+// TIP TOKENS (race-proof) - HARDENED VERSION
 router.post('/tip', authenticateToken, async (req, res) => {
-  const { creatorId, tokenAmount, channel } = req.body;
-
-  if (!creatorId || !tokenAmount || !channel) {
-    return res.status(400).json({
-      error: 'Missing required fields: creatorId, tokenAmount, channel',
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  if (!Number.isInteger(tokenAmount) || tokenAmount < 1) {
-    return res.status(400).json({
-      error: 'Token amount must be a positive integer',
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  let client;
+  const client = await pool.connect();
   try {
-    client = await pool.connect();
-    await client.query('BEGIN');
+    const { creatorId, amountTokens, clientIdempotencyKey } = req.body;
 
-    const userResult = await client.query(
-      `SELECT id, auto_refill_enabled, auto_refill_package, last_purchase_amount 
-       FROM users WHERE supabase_id = $1`,
-      [req.user.supabase_id]
-    );
-
-    const creatorResult = await client.query(
-      `SELECT id FROM users WHERE supabase_id = $1 AND is_creator = TRUE`,
-      [creatorId]
-    );
-
-    if (userResult.rows.length === 0 || creatorResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        error: 'User or creator not found',
-        timestamp: new Date().toISOString()
-      });
+    const tip = parseInt(amountTokens, 10);
+    if (!creatorId || !Number.isInteger(tip) || tip <= 0) {
+      return res.status(400).json({ error: 'Invalid payload' });
     }
+    const fanId = req.user.supabase_id;
 
-    const balanceResult = await client.query(
-      `SELECT balance FROM token_balances WHERE user_id = $1`,
-      [req.user.supabase_id]
-    );
-
-    let balance = balanceResult.rows.length > 0 ? balanceResult.rows[0].balance : 0;
-
-    if (balance < tokenAmount) {
-      const autoRefillEnabled = userResult.rows[0].auto_refill_enabled;
-      const autoRefillPackage = userResult.rows[0].auto_refill_package || userResult.rows[0].last_purchase_amount;
-
-      if (autoRefillEnabled && autoRefillPackage && TOKEN_PRICES[autoRefillPackage]) {
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(TOKEN_PRICES[autoRefillPackage] * 100),
-          currency: 'usd',
-          payment_method_types: ['card'],
-          description: `Auto-refill of ${autoRefillPackage} tokens`,
-          metadata: {
-            userId: req.user.supabase_id,
-            tokenAmount: autoRefillPackage,
-            isAutoRefill: true
-          }
-        });
-
-        if (paymentIntent.status === 'succeeded') {
-          const bonusTokens = autoRefillPackage >= 5000 ? Math.floor(autoRefillPackage * 0.05) : 0;
-          await client.query(
-            `INSERT INTO token_balances (user_id, balance, updated_at)
-             VALUES ($1, $2, NOW())
-             ON CONFLICT (user_id)
-             DO UPDATE SET balance = token_balances.balance + $2, updated_at = NOW()`,
-            [req.user.supabase_id, autoRefillPackage + bonusTokens]
-          );
-
-          await client.query(
-            `INSERT INTO token_transactions (user_id, type, tokens, amount_usd, bonus_tokens, stripe_payment_intent_id, status, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-            [req.user.supabase_id, 'purchase', autoRefillPackage, TOKEN_PRICES[autoRefillPackage], bonusTokens, paymentIntent.id, 'completed']
-          );
-
-          balance += autoRefillPackage + bonusTokens;
-        } else {
-          await client.query('ROLLBACK');
-          return res.status(402).json({
-            error: 'Auto-refill payment failed',
-            currentBalance: balance,
-            requiredTokens: tokenAmount,
-            timestamp: new Date().toISOString()
-          });
-        }
-      } else {
-        await client.query('ROLLBACK');
-        return res.status(402).json({
-          error: 'Insufficient token balance',
-          currentBalance: balance,
-          requiredTokens: tokenAmount,
-          timestamp: new Date().toISOString()
-        });
+    // Optional application-level idempotency (e.g., one-click double submit)
+    const idemKey = clientIdempotencyKey || null;
+    if (idemKey) {
+      // If a previous tip with same key exists, short-circuit
+      const dupe = await pool.query(
+        `SELECT 1 FROM token_transactions
+         WHERE user_id = $1 AND type = 'tip' AND client_idempotency_key = $2
+         LIMIT 1`,
+        [fanId, idemKey]
+      );
+      if (dupe.rowCount > 0) {
+        return res.json({ success: true, message: 'Duplicate tip ignored (idempotent)' });
       }
     }
 
-    // Update sender's balance
-    const senderBalanceResult = await client.query(
-      `UPDATE token_balances 
-       SET balance = balance - $1, updated_at = NOW()
-       WHERE user_id = $2
-       RETURNING balance`,
-      [tokenAmount, req.user.supabase_id]
-    );
+    await client.query('BEGIN');
 
-    // Update recipient's balance
-    const recipientBalanceResult = await client.query(
-      `INSERT INTO token_balances (user_id, balance, updated_at)
-       VALUES ($1, $2, NOW())
+    // 1) Lock fan balance row
+    const lock = await client.query(
+      `SELECT balance FROM token_balances WHERE user_id = $1 FOR UPDATE`,
+      [fanId]
+    );
+    const current = parseInt(lock.rows[0]?.balance || 0, 10);
+
+    if (current < tip) {
+      await client.query('ROLLBACK');
+      return res.status(402).json({ error: 'Insufficient token balance', balance: current });
+    }
+
+    // 2) Deduct conditionally (prevents race double-spend)
+    const deduct = await client.query(
+      `UPDATE token_balances
+       SET balance = balance - $1, total_spent = total_spent + $1, updated_at = NOW()
+       WHERE user_id = $2 AND balance >= $1
+       RETURNING balance`,
+      [tip, fanId]
+    );
+    if (deduct.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(500).json({ error: 'Balance update failed' });
+    }
+
+    // 3) Credit creator
+    await client.query(
+      `INSERT INTO token_balances (user_id, balance, total_earned, updated_at)
+       VALUES ($1, $2, $2, NOW())
        ON CONFLICT (user_id)
-       DO UPDATE SET balance = token_balances.balance + $2, updated_at = NOW()
-       RETURNING balance`,
-      [creatorId, tokenAmount]
-    );
-    
-    // Emit real-time balance updates
-    const senderNewBalance = senderBalanceResult.rows[0].balance;
-    const recipientNewBalance = recipientBalanceResult.rows[0].balance;
-    updateUserBalance(req.user.supabase_id, senderNewBalance);
-    updateUserBalance(creatorId, recipientNewBalance);
-
-    const usdValue = tokenAmount * TOKEN_VALUE;
-
-    await client.query(
-      `INSERT INTO token_transactions (user_id, type, tokens, amount_usd, status, created_at, channel)
-       VALUES ($1, 'tip', $2, $3, 'completed', NOW(), $4)`,
-      [req.user.supabase_id, -tokenAmount, usdValue, channel]
+       DO UPDATE SET
+         balance = token_balances.balance + EXCLUDED.balance,
+         total_earned = token_balances.total_earned + EXCLUDED.total_earned,
+         updated_at = NOW()`,
+      [creatorId, tip]
     );
 
-    await client.query(
-      `INSERT INTO token_transactions (user_id, type, tokens, amount_usd, status, created_at, channel)
-       VALUES ($1, 'tip', $2, $3, 'completed', NOW(), $4)`,
-      [creatorId, tokenAmount, usdValue, channel]
-    );
+    // 4) Dual ledger rows (fan debit, creator credit)
+    const baseTx = `
+      INSERT INTO token_transactions
+        (user_id, type, tokens, amount_usd, status, related_user_id, client_idempotency_key, created_at)
+      VALUES
+        ($1, 'tip', $2, $3, 'completed', $4, $5, NOW())
+    `;
+    // USD estimate for analytics only (do not rely on for accounting)
+    const usd = tip * TOKEN_VALUE;
 
-    await client.query(
-      `UPDATE users SET total_earnings = total_earnings + $1, updated_at = NOW()
-       WHERE supabase_id = $2`,
-      [usdValue, creatorId]
-    );
-
-    // Record earnings for payout system
-    await client.query(
-      `INSERT INTO creator_earnings (creator_id, earning_type, source_id, tokens_earned, usd_value, description, fan_id)
-       VALUES ($1, 'tip', $2, $3, $4, $5, $6)`,
-      [creatorId, `tip_${Date.now()}`, tokenAmount, usdValue, `Tip received in ${channel}`, req.user.supabase_id]
-    );
+    await client.query(baseTx, [fanId, -tip, usd, creatorId, idemKey]);
+    await client.query(baseTx, [creatorId, tip, usd, fanId, idemKey]);
 
     await client.query('COMMIT');
 
-    const message = {
-      type: 'cmd',
-      action: 'tip_notification',
-      data: {
-        senderId: req.user.supabase_id,
-        creatorId,
-        tokenAmount,
-        usdValue,
-        channel,
-        timestamp: new Date().toISOString()
-      }
-    };
+    // Notify both parties
+    updateUserBalance(fanId);
+    updateUserBalance(creatorId);
 
-    res.json({
-      success: true,
-      tokensDeducted: tokenAmount,
-      usdValue,
-      creatorId,
-      channel,
-      message,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    if (client) await client.query('ROLLBACK');
-    logger.error('❌ Tip processing error:', error);
-    res.status(500).json({
-      error: 'Failed to process tip',
-      details: error.message,
-      timestamp: new Date().toISOString()
-    });
+    return res.json({ success: true });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    logger.error('Tip failed:', e);
+    return res.status(500).json({ error: 'Tip failed', details: e.message });
   } finally {
-    if (client) client.release();
+    client.release();
   }
 });
 
-// Process call deductions
+// DEDUCT FOR CALL (race-proof) - HARDENED VERSION
 router.post('/calls/deduct', authenticateToken, async (req, res) => {
-  const { sessionId, tokenAmount } = req.body;
-
-  if (!sessionId || !tokenAmount) {
-    return res.status(400).json({
-      error: 'Missing required fields: sessionId, tokenAmount',
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  if (!Number.isInteger(tokenAmount) || tokenAmount < 1) {
-    return res.status(400).json({
-      error: 'Token amount must be a positive integer',
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  let client;
+  const client = await pool.connect();
   try {
-    client = await pool.connect();
-    await client.query('BEGIN');
+    const { counterpartyId, amountTokens, sessionId, clientIdempotencyKey } = req.body;
 
-    const sessionResult = await client.query(
-      `SELECT creator_id, fan_id FROM sessions WHERE id = $1 AND fan_id = (SELECT id FROM users WHERE supabase_id = $2)`,
-      [sessionId, req.user.supabase_id]
-    );
-
-    if (sessionResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        error: 'Session not found or unauthorized',
-        timestamp: new Date().toISOString()
-      });
+    const amt = parseInt(amountTokens, 10);
+    if (!counterpartyId || !sessionId || !Number.isInteger(amt) || amt <= 0) {
+      return res.status(400).json({ error: 'Invalid payload' });
     }
+    const payerId = req.user.supabase_id;
 
-    const creatorResult = await client.query(
-      `SELECT supabase_id FROM users WHERE supabase_id = $1`,
-      [sessionResult.rows[0].creator_id]
-    );
-
-    const balanceResult = await client.query(
-      `SELECT balance FROM token_balances WHERE user_id = $1`,
-      [req.user.supabase_id]
-    );
-
-    let balance = balanceResult.rows.length > 0 ? balanceResult.rows[0].balance : 0;
-
-    if (balance < tokenAmount) {
-      const userResult = await client.query(
-        `SELECT auto_refill_enabled, auto_refill_package, last_purchase_amount 
-         FROM users WHERE supabase_id = $1`,
-        [req.user.supabase_id]
+    // Optional idempotency for UX retries
+    const idemKey = clientIdempotencyKey || null;
+    if (idemKey) {
+      const dupe = await pool.query(
+        `SELECT 1 FROM token_transactions
+         WHERE user_id = $1 AND type = 'call' AND client_idempotency_key = $2
+         LIMIT 1`,
+        [payerId, idemKey]
       );
-
-      const autoRefillEnabled = userResult.rows[0].auto_refill_enabled;
-      const autoRefillPackage = userResult.rows[0].auto_refill_package || userResult.rows[0].last_purchase_amount;
-
-      if (autoRefillEnabled && autoRefillPackage && TOKEN_PRICES[autoRefillPackage]) {
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(TOKEN_PRICES[autoRefillPackage] * 100),
-          currency: 'usd',
-          payment_method_types: ['card'],
-          description: `Auto-refill of ${autoRefillPackage} tokens`,
-          metadata: {
-            userId: req.user.supabase_id,
-            tokenAmount: autoRefillPackage,
-            isAutoRefill: true
-          }
-        });
-
-        if (paymentIntent.status === 'succeeded') {
-          const bonusTokens = autoRefillPackage >= 5000 ? Math.floor(autoRefillPackage * 0.05) : 0;
-          await client.query(
-            `INSERT INTO token_balances (user_id, balance, updated_at)
-             VALUES ($1, $2, NOW())
-             ON CONFLICT (user_id)
-             DO UPDATE SET balance = token_balances.balance + $2, updated_at = NOW()`,
-            [req.user.supabase_id, autoRefillPackage + bonusTokens]
-          );
-
-          await client.query(
-            `INSERT INTO token_transactions (user_id, type, tokens, amount_usd, bonus_tokens, stripe_payment_intent_id, status, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-            [req.user.supabase_id, 'purchase', autoRefillPackage, TOKEN_PRICES[autoRefillPackage], bonusTokens, paymentIntent.id, 'completed']
-          );
-
-          balance += autoRefillPackage + bonusTokens;
-        } else {
-          await client.query('ROLLBACK');
-          return res.status(402).json({
-            error: 'Auto-refill payment failed',
-            currentBalance: balance,
-            requiredTokens: tokenAmount,
-            timestamp: new Date().toISOString()
-          });
-        }
-      } else {
-        await client.query('ROLLBACK');
-        return res.status(402).json({
-          error: 'Insufficient token balance',
-          currentBalance: balance,
-          requiredTokens: tokenAmount,
-          timestamp: new Date().toISOString()
-        });
+      if (dupe.rowCount > 0) {
+        return res.json({ success: true, message: 'Duplicate call charge ignored (idempotent)' });
       }
     }
 
-    await client.query(
-      `UPDATE token_balances 
-       SET balance = balance - $1, updated_at = NOW()
-       WHERE user_id = $2`,
-      [tokenAmount, req.user.supabase_id]
-    );
+    await client.query('BEGIN');
 
+    // 1) Lock payer balance row
+    const lock = await client.query(
+      `SELECT balance FROM token_balances WHERE user_id = $1 FOR UPDATE`,
+      [payerId]
+    );
+    const current = parseInt(lock.rows[0]?.balance || 0, 10);
+    if (current < amt) {
+      await client.query('ROLLBACK');
+      return res.status(402).json({ error: 'Insufficient token balance', balance: current });
+    }
+
+    // 2) Deduct
+    const deduct = await client.query(
+      `UPDATE token_balances
+       SET balance = balance - $1, total_spent = total_spent + $1, updated_at = NOW()
+       WHERE user_id = $2 AND balance >= $1
+       RETURNING balance`,
+      [amt, payerId]
+    );
+    if (deduct.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(500).json({ error: 'Balance update failed' });
+    }
+
+    // 3) Credit counterparty (creator or host)
     await client.query(
-      `INSERT INTO token_balances (user_id, balance, updated_at)
-       VALUES ($1, $2, NOW())
+      `INSERT INTO token_balances (user_id, balance, total_earned, updated_at)
+       VALUES ($1, $2, $2, NOW())
        ON CONFLICT (user_id)
-       DO UPDATE SET balance = token_balances.balance + $2, updated_at = NOW()`,
-      [creatorResult.rows[0].supabase_id, tokenAmount]
+       DO UPDATE SET
+         balance = token_balances.balance + EXCLUDED.balance,
+         total_earned = token_balances.total_earned + EXCLUDED.total_earned,
+         updated_at = NOW()`,
+      [counterpartyId, amt]
     );
 
-    const usdValue = tokenAmount * TOKEN_VALUE;
-
-    await client.query(
-      `INSERT INTO token_transactions (user_id, type, tokens, amount_usd, status, created_at)
-       VALUES ($1, 'call', $2, $3, 'completed', NOW())`,
-      [req.user.supabase_id, -tokenAmount, usdValue]
-    );
-
-    await client.query(
-      `INSERT INTO token_transactions (user_id, type, tokens, amount_usd, status, created_at)
-       VALUES ($1, 'call', $2, $3, 'completed', NOW())`,
-      [creatorResult.rows[0].supabase_id, tokenAmount, usdValue]
-    );
-
-    await client.query(
-      `UPDATE users SET total_earnings = total_earnings + $1, updated_at = NOW()
-       WHERE supabase_id = $2`,
-      [usdValue, creatorResult.rows[0].supabase_id]
-    );
+    // 4) Dual ledger rows with session linkage
+    const baseTx = `
+      INSERT INTO token_transactions
+        (user_id, type, tokens, amount_usd, status, related_user_id, client_idempotency_key, session_id, created_at)
+      VALUES
+        ($1, 'call', $2, $3, 'completed', $4, $5, $6, NOW())
+    `;
+    const usd = amt * TOKEN_VALUE;
+    await client.query(baseTx, [payerId, -amt, usd, counterpartyId, idemKey, sessionId]);
+    await client.query(baseTx, [counterpartyId,  amt, usd, payerId, idemKey, sessionId]);
 
     await client.query('COMMIT');
 
-    const message = {
-      type: 'cmd',
-      action: 'balance_update',
-      data: {
-        userId: req.user.supabase_id,
-        balance: balance - tokenAmount,
-        tokensDeducted: tokenAmount,
-        sessionId,
-        timestamp: new Date().toISOString()
-      }
-    };
+    updateUserBalance(payerId);
+    updateUserBalance(counterpartyId);
 
-    res.json({
-      success: true,
-      tokensDeducted: tokenAmount,
-      usdValue,
-      sessionId,
-      message,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    if (client) await client.query('ROLLBACK');
-    logger.error('❌ Call deduction error:', error);
-    res.status(error.status || 500).json({
-      error: error.status === 402 ? 'Insufficient token balance' : 'Failed to process call deduction',
-      details: error.message,
-      timestamp: new Date().toISOString()
-    });
+    return res.json({ success: true });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    logger.error('Call deduct failed:', e);
+    return res.status(500).json({ error: 'Call deduct failed', details: e.message });
   } finally {
-    if (client) client.release();
+    client.release();
   }
 });
 
