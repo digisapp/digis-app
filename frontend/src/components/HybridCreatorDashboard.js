@@ -113,7 +113,7 @@ const HybridCreatorDashboard = memo(({
   }, []);
 
   const navigate = useNavigate();
-  const [isNavigating, setIsNavigating] = useState(false);
+  const isNavigatingRef = useRef(false);
   // Initialize profile data from user prop (from Zustand store) without fallback defaults
   // This prevents showing "Creator Name" / "creator" before API data loads
   const [profileData, setProfileData] = useState({
@@ -828,12 +828,12 @@ const HybridCreatorDashboard = memo(({
   
   // Debounced navigation helper to prevent double-clicks
   const handleNavigateToPage = useCallback((path) => {
-    if (isNavigating) {
+    if (isNavigatingRef.current) {
       console.warn('[Nav] Navigation already in progress, ignoring:', path);
       return;
     }
 
-    setIsNavigating(true);
+    isNavigatingRef.current = true;
 
     // Normalize path to always have leading slash
     const normalizedPath = path?.startsWith('/') ? path : `/${path}`;
@@ -852,12 +852,12 @@ const HybridCreatorDashboard = memo(({
       console.error('[Nav] Navigation error:', error);
     }
 
-    // Reset after 800ms
+    // Reset after 300ms (reduced from 800ms)
     setTimeout(() => {
       console.log('[Nav] Resetting navigation lock');
-      setIsNavigating(false);
-    }, 800);
-  }, [isNavigating, onNavigate, navigate]);
+      isNavigatingRef.current = false;
+    }, 300);
+  }, [onNavigate, navigate]);
 
   const formatTime = (date) => {
     if (!date) return '';
@@ -922,10 +922,8 @@ const HybridCreatorDashboard = memo(({
                   console.log('[CALLS] Manage button clicked');
                   handleNavigateToPage('/call-requests');
                 }}
-                disabled={isNavigating}
-                className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer"
                 aria-label="Manage call requests"
-                aria-disabled={isNavigating}
                 data-testid="manage-calls"
               >
                 Manage
@@ -1105,10 +1103,8 @@ const HybridCreatorDashboard = memo(({
                   console.log('[SCHEDULE] Manage button clicked');
                   handleNavigateToPage('/schedule');
                 }}
-                disabled={isNavigating}
-                className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer"
                 aria-label="Manage schedule"
-                aria-disabled={isNavigating}
                 data-testid="manage-schedule"
               >
                 Manage

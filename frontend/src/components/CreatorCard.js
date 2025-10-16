@@ -374,54 +374,22 @@ const CreatorCard = ({
         const target = e.target;
         const isButton = !!target.closest('button,[role="button"]');
         const isFormEl = !!target.closest('input,textarea,select');
-        const isAnchor = !!target.closest('a[href]');
-        const isInteractive = isButton || isFormEl || isAnchor;
+        const isInteractive = isButton || isFormEl;
 
-        console.log('CreatorCard clicked:', {
-          hasOnCardClick: !!onCardClick,
-          hasOnSelect: !!onSelect,
-          isButton,
-          isFormEl,
-          isAnchor,
-          isInteractive,
-          creator: creator.username,
-          target: e.target.tagName,
-          profilePath,
-          metaKey: e.metaKey,
-          ctrlKey: e.ctrlKey
-        });
+        // Buttons and form elements handle their own clicks
+        if (isInteractive) {
+          return;
+        }
 
         // Allow new tab/window behaviors (Cmd/Ctrl/Shift-click, middle-click)
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
-          console.log('Allowing new tab/window behavior');
           return;
         }
 
-        // Buttons and interactive elements handle their own clicks
-        if (isInteractive) {
-          console.log('Interactive element clicked, skipping card navigation');
-          return;
+        // Navigate to profile page
+        if (profilePath) {
+          navigate(profilePath);
         }
-
-        // If a parent wants to handle card selection, let it override Link navigation
-        if (typeof onCardClick === 'function') {
-          console.log('Using onCardClick callback');
-          e.preventDefault();
-          e.stopPropagation();
-          onCardClick(creator);
-          return;
-        }
-
-        if (typeof onSelect === 'function') {
-          console.log('Using onSelect callback');
-          e.preventDefault();
-          e.stopPropagation();
-          onSelect(creator);
-          return;
-        }
-
-        // Otherwise, let the Link element handle navigation (default behavior)
-        console.log('Allowing Link to handle navigation');
       }}
       className={`
         relative cursor-pointer overflow-hidden rounded-2xl bg-white
@@ -430,38 +398,11 @@ const CreatorCard = ({
         focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2
       `}
     >
-      {/* Main Image Container - Wrapped in Link for reliable navigation */}
+      {/* Main Image Container */}
       {profilePath ? (
-        <Link
-          to={profilePath}
-          className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient} focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2`}
+        <div
+          className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient}`}
           onMouseEnter={prefetchProfile}
-          onFocus={prefetchProfile}
-          onClick={(e) => {
-            console.log('🔗 Link clicked! Navigating to:', profilePath);
-
-            // If a parent decided to handle navigation via onCardClick/onSelect,
-            // the outer handler already called preventDefault. If we get here, let Link navigate.
-
-            // Guard against double navigation on rapid clicks
-            if (navigatingRef.current) {
-              console.warn('🚫 Double-click guard triggered, preventing navigation');
-              e.preventDefault();
-              return;
-            }
-            navigatingRef.current = true;
-            setTimeout(() => { navigatingRef.current = false; }, 600);
-
-            // Analytics: Track card click
-            addBreadcrumb('creator_card_click', {
-              handle: creator.username,
-              origin: 'explore',
-              category: 'navigation'
-            });
-
-            console.log('✅ Allowing navigation to profile:', profilePath);
-            // Let React Router Link handle the navigation
-          }}
           aria-label={`View ${creator.displayName || creator.username}'s profile`}
           title={`View @${creator.username}'s profile`}
         >
@@ -656,7 +597,7 @@ const CreatorCard = ({
             )}
           </div>
         )}
-      </Link>
+      </div>
       ) : (
         <div
           className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient} opacity-60 cursor-not-allowed`}

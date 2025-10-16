@@ -393,20 +393,8 @@ const ExplorePage = ({
 
     console.log('✅ ExplorePage: Auth ready, fetching creators');
 
-    // Add a small delay to allow backend to be ready
-    const loadInitialData = async () => {
-      // Try initial load silently
-      await fetchCreators(1, false, true);
-
-      // If no creators loaded, retry once after a delay
-      if (creators.length === 0) {
-        setTimeout(() => {
-          fetchCreators(1, false, true);
-        }, 2000);
-      }
-    };
-
-    loadInitialData();
+    // Immediately start loading creators (no delay)
+    fetchCreators(1, false, false);
     fetchLiveCreators();
 
     // Refresh live creators every 30 seconds
