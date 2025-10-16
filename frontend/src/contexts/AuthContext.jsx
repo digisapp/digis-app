@@ -675,6 +675,8 @@ export const AuthProvider = ({ children }) => {
           // Circuit breaker: Skip if in backoff period
           if (!shouldAttemptSyncUser()) {
             console.log('⏸️ Using cached profile (circuit breaker active)');
+            // CRITICAL: Mark role as resolved when using cached profile during circuit breaker
+            setRoleResolved(true);
             setAuthLoading(false);
             clearTimeout(bootTimeout);
             return;
@@ -861,7 +863,10 @@ export const AuthProvider = ({ children }) => {
       const isPrivileged = profile.is_creator === true || profile.is_admin === true;
       const isCanonical = profile.__isCanonical === true;
 
-      if (isPrivileged || isCanonical) {
+      // Resolve if:
+      // 1. Profile is from backend (__isCanonical = true), OR
+      // 2. Cached profile is creator/admin (trustworthy fast path)
+      if (isCanonical || isPrivileged) {
         console.log('✅ AuthContext: Setting roleResolved from', {
           source: isCanonical ? 'canonical' : 'privileged cache',
           is_creator: profile.is_creator,
