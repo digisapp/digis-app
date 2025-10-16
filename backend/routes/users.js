@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../utils/db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requirePgContext } = require('../middleware/auth');
 const { supabaseAdmin } = require('../utils/supabase-admin-v2');
 const multer = require('multer');
 const { validateUsername, checkUsernameAvailability } = require('../utils/usernameValidation');
@@ -820,7 +820,7 @@ router.get('/public/creators', async (req, res) => {
 });
 
 // Get creators list with enhanced filtering
-router.get('/creators', authenticateToken, async (req, res) => {
+router.get('/creators', authenticateToken, requirePgContext, async (req, res) => {
   const {
     limit = 20,
     page = 1,

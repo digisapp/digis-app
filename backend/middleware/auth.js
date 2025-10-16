@@ -1,12 +1,29 @@
 // Supabase-only authentication middleware with v2 features
 const { verifySupabaseToken, initializeSupabaseAdmin, observability, supabase } = require('../utils/supabase-admin-v2');
 const { pool } = require('../utils/db');
+const { withPgAndJwt } = require('./pg-with-jwt');
 
 // Initialize Supabase Admin with enhanced features
 initializeSupabaseAdmin();
 
 // Alias for backward compatibility
 const authenticateToken = verifySupabaseToken;
+
+/**
+ * Middleware to require PostgreSQL connection with RLS context
+ * Only use on routes that actually query Postgres with RLS policies
+ * Must be chained AFTER verifySupabaseToken
+ */
+const requirePgContext = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      code: 'AUTH_REQUIRED',
+      message: 'Authentication required'
+    });
+  }
+  return withPgAndJwt(req, res, next);
+};
 
 // Helper to get user ID consistently
 const getUserId = (req) => {
@@ -240,6 +257,7 @@ const optionalAuth = async (req, res, next) => {
 module.exports = {
   authenticateToken,
   verifySupabaseToken,
+  requirePgContext,
   requireCreator,
   requireTokens,
   requireSuperAdmin,

@@ -26,83 +26,47 @@ async function withPgAndJwt(req, res, next) {
   let client;
 
   try {
-    // Acquire a dedicated client from the pool for this request
+    // Lazily acquire only for routes that need it
     client = await pool.connect();
-    req.pg = client;
-
-    // Release client when response finishes or closes
-    const releaseClient = () => {
-      if (client && !client._ended) {
-        client.release();
-      }
-    };
-
-    res.on('finish', releaseClient);
-    res.on('close', releaseClient);
-
-    // Start a transaction for this request
-    await client.query('BEGIN');
 
     // Get the authenticated user's Supabase ID
     const supabaseId = req.user?.supabase_id || req.user?.uid || req.user?.sub;
 
-    if (supabaseId) {
-      // Set JWT claims in the PostgreSQL session
-      // This makes auth.uid() work in RLS policies
-      const claims = JSON.stringify({
-        sub: supabaseId,
-        role: 'authenticated'
-      });
-
-      await client.query(
-        "SELECT set_config('request.jwt.claims', $1, true)",
-        [claims]
-      );
-
-      if (logger.debug) {
-        logger.debug('PostgreSQL JWT context set', {
-          supabaseId,
-          requestId: req.id || req.requestId,
-          path: req.path
-        });
-      }
-    } else {
-      // No authenticated user - backend service connection
-      // Set empty claims - the connection will bypass RLS for service operations
-      // This is expected for backend service role operations
-      await client.query(
-        "SELECT set_config('request.jwt.claims', '{}', true)",
-        ['{}']
-      );
-
-      if (logger.debug) {
-        logger.debug('PostgreSQL JWT context set (service/anonymous)', {
-          requestId: req.id || req.requestId,
-          path: req.path
-        });
-      }
-    }
-
-    next();
-  } catch (error) {
-    logger.error('Failed to set PostgreSQL JWT context', {
-      error: error.message,
-      stack: error.stack,
-      requestId: req.id,
-      path: req.path
+    // Set JWT claims in the PostgreSQL session for RLS
+    const claims = JSON.stringify({
+      sub: supabaseId || null,
+      role: supabaseId ? 'authenticated' : 'anon'
     });
 
-    // Release client on error
-    if (client && !client._ended) {
-      try {
-        await client.query('ROLLBACK');
-      } catch (rollbackError) {
-        logger.error('Rollback failed', { error: rollbackError.message });
-      }
-      client.release();
-    }
+    await client.query(
+      "SELECT set_config('request.jwt.claims', $1, true)",
+      [claims]
+    );
 
-    next(error);
+    // Attach to req
+    req.pg = client;
+
+    // Ensure release - single cleanup handler
+    const releaseOnce = () => {
+      if (client) {
+        try {
+          client.release();
+          client = null; // Prevent double-release
+        } catch (_) {}
+      }
+    };
+
+    res.on('finish', releaseOnce);
+    res.on('close', releaseOnce);
+
+    next();
+  } catch (err) {
+    if (client) {
+      try {
+        client.release();
+      } catch (_) {}
+    }
+    next(err);
   }
 }
 
