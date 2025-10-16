@@ -12,7 +12,7 @@ const getEnvVar = (viteName, reactName, defaultValue = '') => {
 
 // API Configuration
 const API_CONFIG = {
-  BASE_URL: getEnvVar('VITE_BACKEND_URL', 'REACT_APP_BACKEND_URL', 'http://localhost:5000'),
+  BASE_URL: getEnvVar('VITE_BACKEND_URL', 'REACT_APP_BACKEND_URL', 'https://backend-nathans-projects-43dfdae0.vercel.app'),
   TIMEOUT: 30000,
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000,
@@ -44,7 +44,7 @@ const STRIPE_CONFIG = {
 
 // WebSocket Configuration
 const WEBSOCKET_CONFIG = {
-  URL: getEnvVar('VITE_WS_URL', 'REACT_APP_WS_URL', 'ws://localhost:5000'),
+  URL: getEnvVar('VITE_WS_URL', 'REACT_APP_WS_URL', 'wss://backend-nathans-projects-43dfdae0.vercel.app'),
   RECONNECT_DELAY: 1000,
   MAX_RECONNECT_ATTEMPTS: 10,
   PING_INTERVAL: 30000,

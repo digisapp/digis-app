@@ -19,7 +19,7 @@ export const ENV = {
   },
   
   // Backend Configuration
-  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001',
+  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || 'https://backend-nathans-projects-43dfdae0.vercel.app',
   
   // Stripe Configuration
   STRIPE_PUBLISHABLE_KEY: validateRequiredEnvVar('VITE_STRIPE_PUBLISHABLE_KEY', 'Stripe Publishable Key'),
