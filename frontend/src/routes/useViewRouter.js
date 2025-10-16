@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useHybridStore, { useCurrentView } from '../stores/useHybridStore';
-import { VIEW_TO_PATH, PATH_TO_VIEW } from './routeConfig';
+import { VIEW_TO_PATH, pathToViewSafe } from './routeConfig';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -15,6 +15,8 @@ import { useAuth } from '../contexts/AuthContext';
  * 1. When store view changes → push URL (only after auth is resolved)
  * 2. When URL changes → update store view
  * 3. Prevents loops with lastViewRef and redirectedOnceRef tracking
+ * 4. Preserves query params and hash during navigation
+ * 5. Handles background tab wakes for proper sync
  */
 export default function useViewRouter() {
   const navigate = useNavigate();
@@ -39,17 +41,36 @@ export default function useViewRouter() {
 
     const expectedPath = VIEW_TO_PATH[currentView];
 
-    // Skip navigation if:
-    // 1. No expected path exists
-    // 2. Already at the expected path (prevents loops)
-    // 3. Currently at root path (prevents interference with login redirects)
-    if (!expectedPath) return;
+    // Guard against unknown views
+    if (!expectedPath) {
+      console.warn('[useViewRouter] Unknown view:', currentView);
+      lastViewRef.current = currentView;
+      return;
+    }
 
     const isAtRoot = location.pathname === '/';
     const isAtExpectedPath = location.pathname === expectedPath;
 
-    // Don't navigate if already at the target or if we're at root during login flow
-    if (isAtExpectedPath || isAtRoot) {
+    // Allow redirect from root once auth is resolved
+    if (isAtRoot && roleResolved && expectedPath !== '/') {
+      console.log('📍 Redirecting from root to:', currentView, '→', expectedPath);
+      // Preserve query params and hash
+      const url = new URL(window.location.href);
+      navigate(`${expectedPath}${url.search}${url.hash}`, { replace: true });
+      lastViewRef.current = currentView;
+      redirectedOnceRef.current = true;
+      return;
+    }
+
+    // Already at the expected path - reset redirect flag
+    if (isAtExpectedPath) {
+      redirectedOnceRef.current = false;
+      lastViewRef.current = currentView;
+      return;
+    }
+
+    // Don't navigate if at root during login flow
+    if (isAtRoot) {
       lastViewRef.current = currentView;
       return;
     }
@@ -59,15 +80,17 @@ export default function useViewRouter() {
 
     console.log('📍 Store view changed to:', currentView, '→ navigating to:', expectedPath);
     redirectedOnceRef.current = true;
-    // Use replace: true to avoid polluting history (store-driven, not user clicks)
-    navigate(expectedPath, { replace: true });
+
+    // Preserve query params and hash when translating a view
+    const url = new URL(window.location.href);
+    navigate(`${expectedPath}${url.search}${url.hash}`, { replace: true });
     lastViewRef.current = currentView;
   }, [currentView, roleResolved, navigate, location.pathname]);
 
   // 2) When URL changes (user clicks links / back/forward), update store view
   useEffect(() => {
     const path = location.pathname;
-    const view = PATH_TO_VIEW[path];
+    const view = pathToViewSafe(path); // Use safe lookup with prefix fallback
 
     if (view && view !== lastViewRef.current) {
       console.log('📍 URL changed to:', path, '→ updating store view to:', view);
@@ -75,4 +98,22 @@ export default function useViewRouter() {
       lastViewRef.current = view;
     }
   }, [location.pathname]);
+
+  // 3) Handle background tab wakes - sync URL on visibility change
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!roleResolved || !currentView) return;
+
+      const expectedPath = VIEW_TO_PATH[currentView];
+      if (expectedPath && location.pathname !== expectedPath) {
+        console.log('📍 Tab woke up - syncing URL to:', currentView, '→', expectedPath);
+        const url = new URL(window.location.href);
+        navigate(`${expectedPath}${url.search}${url.hash}`, { replace: true });
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [currentView, roleResolved, navigate, location.pathname]);
 }
