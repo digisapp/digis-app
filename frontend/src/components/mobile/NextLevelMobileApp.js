@@ -39,7 +39,7 @@ import useIosVhFix from '../../hooks/useIosVhFix';
 // Lazy load heavy components for better performance
 const MobileVideoStream = lazy(() => import('./MobileVideoStream'));
 const GoLiveSetup = lazy(() => import('../GoLiveSetup'));
-const TokenPurchase = lazy(() => import('../TokenPurchase'));
+const ImprovedTokenPurchase = lazy(() => import('../ImprovedTokenPurchase'));
 const LiveChat = lazy(() => import('../LiveChat'));
 const TVPage = lazy(() => import('../pages/TVPage'));
 

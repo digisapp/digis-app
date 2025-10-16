@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import TokenPurchase from '../TokenPurchase';
+import ImprovedTokenPurchase from '../ImprovedTokenPurchase';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const TokenPurchasePage = ({ user, onTokenUpdate, ...props }) => {
@@ -35,8 +35,8 @@ const TokenPurchasePage = ({ user, onTokenUpdate, ...props }) => {
 
       {/* Purchase Component */}
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <TokenPurchase
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <ImprovedTokenPurchase
             user={user}
             onSuccess={handleSuccess}
             onClose={handleClose}
