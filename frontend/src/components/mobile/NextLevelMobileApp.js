@@ -261,9 +261,10 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   // Handle content navigation (for creators)
   const handleShowContent = () => {
     hapticFeedback('medium');
-    // Navigate to content tab if it exists, otherwise show analytics
-    setActiveTab('wallet'); // For now, redirect to wallet/earnings
-    console.log('Content studio not yet implemented - redirecting to wallet');
+    // TODO: Implement content studio/analytics page
+    // For now, show a message that this feature is coming soon
+    alert('Content studio coming soon! You can manage your content from the desktop version.');
+    console.log('Content studio not yet implemented');
   };
 
   // Handle video call (for fans)
@@ -322,8 +323,8 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
   const navItems = useMemo(() => isCreator ? [
     { id: 'dashboard', label: 'Dashboard', icon: HomeIcon, iconSolid: HomeIconSolid },
     { id: 'messages', label: 'Messages', icon: ChatBubbleLeftRightIcon, iconSolid: ChatBubbleLeftRightIconSolid },
-    { id: 'wallet', label: 'Earnings', icon: WalletIcon, iconSolid: WalletIconSolid },
-    { id: 'discover', label: 'Discover', icon: MagnifyingGlassIcon, iconSolid: MagnifyingGlassIcon },
+    { id: 'wallet', label: 'Wallet', icon: WalletIcon, iconSolid: WalletIconSolid },
+    { id: 'discover', label: 'Explore', icon: MagnifyingGlassIcon, iconSolid: MagnifyingGlassIcon },
     { id: 'profile', label: 'Profile', icon: UserCircleIcon, iconSolid: UserCircleIconSolid }
   ] : [
     { id: 'explore', label: 'Explore', icon: MagnifyingGlassIcon, iconSolid: MagnifyingGlassIcon },
@@ -452,18 +453,7 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
         return (
           <MobileRouteBoundary routeName="Wallet">
             <div className="mobile-safe-area">
-              <Wallet user={user} />
-              {!user?.creator_profile && (
-                <div className="px-4 mt-6">
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    className="mobile-button-next"
-                    onClick={() => hapticFeedback('medium')}
-                  >
-                    Buy More Tokens
-                  </motion.button>
-                </div>
-              )}
+              <Wallet user={user} onBuyTokens={handleTokenPurchase} />
             </div>
           </MobileRouteBoundary>
         );
