@@ -46,7 +46,7 @@ router.post('/poll', authenticateToken, async (req, res) => {
 // TODO: Replace with Ably publish
 //     io.to(`stream:${channel}`).emit('poll-created', {
       poll
-    });
+    // });
     
     // Set timer to close poll
     setTimeout(async () => {
@@ -133,10 +133,10 @@ router.post('/poll/:pollId/vote', authenticateToken, async (req, res) => {
 //     const io = getIO();
 // TODO: Replace with Ably publish
 //     io.to(`stream:${poll.channel}`).emit('poll-update', {
-      pollId,
-      votes,
+      // pollId,
+      // votes,
       totalVotes
-    });
+    // });
     
     res.json({ success: true, votes, totalVotes });
   } catch (error) {
@@ -223,20 +223,20 @@ router.post('/gift', authenticateToken, async (req, res) => {
 //     const io = getIO();
 // TODO: Replace with Ably publish
 //     io.to(`stream:${channel}`).emit('gift-received', {
-      sender: senderResult.rows[0].display_name,
-      giftType,
-      quantity,
-      totalValue: totalCost
-    });
+      // sender: senderResult.rows[0].display_name,
+      // giftType,
+      // quantity,
+      // totalValue: totalCost
+    // });
     
     // Notify creator
 // TODO: Replace with Ably publish
 //     io.to(`user:${creatorId}`).emit('gift-notification', {
-      sender: senderResult.rows[0].display_name,
-      giftType,
-      quantity,
-      earnings: creatorAmount
-    });
+      // sender: senderResult.rows[0].display_name,
+      // giftType,
+      // quantity,
+      // earnings: creatorAmount
+    // });
     
     res.json({ 
       success: true,
@@ -317,19 +317,19 @@ router.post('/tip', authenticateToken, async (req, res) => {
 //     const io = getIO();
 // TODO: Replace with Ably publish
 //     io.to(`stream:${channel}`).emit('tip-received', {
-      sender: senderResult.rows[0].display_name,
-      amount,
+      // sender: senderResult.rows[0].display_name,
+      // amount,
       message
-    });
+    // });
     
     // Notify creator
 // TODO: Replace with Ably publish
 //     io.to(`user:${creatorId}`).emit('tip-notification', {
-      sender: senderResult.rows[0].display_name,
-      amount,
-      message,
-      earnings: creatorAmount
-    });
+      // sender: senderResult.rows[0].display_name,
+      // amount,
+      // message,
+      // earnings: creatorAmount
+    // });
     
     res.json({ 
       success: true,

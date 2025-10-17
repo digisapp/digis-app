@@ -133,18 +133,18 @@ router.post('/subscribe', authenticateToken, async (req, res) => {
 //     const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //     io.to(`user:${subscriberId}`).emit('subscription_success', {
-      tierId,
-      tierName: tier.name,
-      badges: badges[0],
-      perks: membership.combined_perks
-    });
+      // tierId,
+      // tierName: tier.name,
+      // badges: badges[0],
+      // perks: membership.combined_perks
+    // });
     
 // TODO: Replace with Ably publish
 //     io.to(`user:${tier.creator_id}`).emit('new_subscriber', {
-      subscriberId,
-      tierName: tier.name,
-      loyaltyLevel: badges[0]?.loyalty?.level
-    });
+      // subscriberId,
+      // tierName: tier.name,
+      // loyaltyLevel: badges[0]?.loyalty?.level
+    // });
     
     res.json({
       success: true,
@@ -366,10 +366,10 @@ async function deliverSubscriptionPerks(userId, creatorId, tier) {
 //   const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //   io.to(`user:${userId}`).emit('perks_delivered', {
-    type: 'subscription',
-    perks,
-    message: `Your ${tier.name} perks are now active!`
-  });
+    // type: 'subscription',
+    // perks,
+    // message: `Your ${tier.name} perks are now active!`
+  // });
 }
 
 module.exports = router;

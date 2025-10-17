@@ -194,19 +194,19 @@ router.post('/moderate', authenticateToken, async (req, res) => {
 //     const io = getIO();
 // TODO: Replace with Ably publish
 //     io.to(`stream:${channel}`).emit('user-moderated', {
-      userId: targetUserId,
-      username: userResult.rows[0]?.display_name,
-      action,
+      // userId: targetUserId,
+      // username: userResult.rows[0]?.display_name,
+      // action,
       duration
-    });
+    // });
     
     // Notify the moderated user
 // TODO: Replace with Ably publish
 //     io.to(`user:${targetUserId}`).emit('moderation-action', {
-      channel,
-      action,
+      // channel,
+      // action,
       duration
-    });
+    // });
     
     res.json({ success: true });
   } catch (error) {
@@ -253,7 +253,7 @@ router.delete('/message/:messageId', authenticateToken, async (req, res) => {
 // TODO: Replace with Ably publish
 //     io.to(`stream:${message.channel}`).emit('message-deleted', {
       messageId
-    });
+    // });
     
     res.json({ success: true });
   } catch (error) {

@@ -66,13 +66,13 @@ router.post('/announce', authenticateToken, async (req, res) => {
 //     const io = getIO();
 // TODO: Replace with Ably publish
 //     io.to(`stream:${streamId}`).emit('ticketed_show_announced', {
-      showId: show.rows[0].id,
-      title: show.rows[0].title,
-      tokenPrice: show.rows[0].token_price,
-      earlyBirdPrice: show.rows[0].early_bird_price,
-      startTime: show.rows[0].start_time,
-      maxTickets: show.rows[0].max_tickets
-    });
+      // showId: show.rows[0].id,
+      // title: show.rows[0].title,
+      // tokenPrice: show.rows[0].token_price,
+      // earlyBirdPrice: show.rows[0].early_bird_price,
+      // startTime: show.rows[0].start_time,
+      // maxTickets: show.rows[0].max_tickets
+    // });
     
     logger.info('Ticketed show announced', { 
       showId: show.rows[0].id, 
@@ -204,17 +204,17 @@ router.post('/buy-ticket', authenticateToken, async (req, res) => {
     // Notify viewer
 // TODO: Replace with Ably publish
 //     io.to(`user:${viewerId}`).emit('ticket_purchased', {
-      showId,
-      ticket: ticket.rows[0]
-    });
+      // showId,
+      // ticket: ticket.rows[0]
+    // });
     
     // Notify creator
 // TODO: Replace with Ably publish
 //     io.to(`user:${show.creator_id}`).emit('ticket_sold', {
-      viewerId,
-      showId,
-      price: ticketPrice
-    });
+      // viewerId,
+      // showId,
+      // price: ticketPrice
+    // });
     
     // If show already started, allow immediate access
     if (show.status === 'started') {
@@ -301,9 +301,9 @@ router.post('/start', authenticateToken, async (req, res) => {
     // Notify all viewers in stream
 // TODO: Replace with Ably publish
 //     io.to(`stream:${show.stream_id}`).emit('private_mode_started', {
-      showId,
-      streamId: show.stream_id
-    });
+      // showId,
+      // streamId: show.stream_id
+    // });
     
     // Notify ticket holders to enable video
     for (const ticket of tickets.rows) {
@@ -376,7 +376,7 @@ router.post('/end', authenticateToken, async (req, res) => {
 // TODO: Replace with Ably publish
 //     io.to(`stream:${result.rows[0].stream_id}`).emit('private_show_ended', {
       showId
-    });
+    // });
     
     logger.info('Private show ended', { showId, creatorId });
     

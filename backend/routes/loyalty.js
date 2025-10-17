@@ -209,10 +209,10 @@ router.post('/perks/deliver', authenticateToken, async (req, res) => {
 //     const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //     io.to(`user:${userId}`).emit('perk_delivered', {
-      type: perkType,
-      data: deliveryData,
+      // type: perkType,
+      // data: deliveryData,
       creatorId
-    });
+    // });
     
     res.json({
       success: true,

@@ -373,10 +373,10 @@ router.post('/streams/:streamId/save-recording', authenticateToken, async (req, 
 //     const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //     io.to(`user:${creatorId}`).emit('recording_saved', {
-      recordingId: savedRecording.id,
-      title: savedRecording.title,
-      fileUrl: savedRecording.file_url
-    });
+      // recordingId: savedRecording.id,
+      // title: savedRecording.title,
+      // fileUrl: savedRecording.file_url
+    // });
     
     res.json({ 
       success: true,
@@ -462,9 +462,9 @@ router.post('/recordings/:recordingId/purchase', authenticateToken, async (req, 
 //     const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //     io.to(`user:${userId}`).emit('recording_purchased', {
-      recordingId,
-      fileUrl: recording.file_url
-    });
+      // recordingId,
+      // fileUrl: recording.file_url
+    // });
     
     res.json({ 
       success: true,

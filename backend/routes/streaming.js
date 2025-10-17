@@ -2027,12 +2027,12 @@ router.post('/co-host-request', authenticateToken, async (req, res) => {
 //     const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //     io.to(`user:${stream.creator_id}`).emit('co_host_request', {
-      requestId: requestResult.rows[0].id,
-      requesterId,
-      requesterName: requester.username,
-      requesterAvatar: requester.profile_pic_url,
+      // requestId: requestResult.rows[0].id,
+      // requesterId,
+      // requesterName: requester.username,
+      // requesterAvatar: requester.profile_pic_url,
       streamId
-    });
+    // });
     
     res.json({
       success: true,
@@ -2126,17 +2126,17 @@ router.post('/co-host-accept', authenticateToken, async (req, res) => {
     // Notify requester
 // TODO: Replace with Ably publish
 //     io.to(`user:${request.requester_id}`).emit('co_host_accepted', {
-      streamId: request.stream_id,
-      message: 'Your co-host request has been accepted!'
-    });
+      // streamId: request.stream_id,
+      // message: 'Your co-host request has been accepted!'
+    // });
     
     // Broadcast to all stream viewers
 // TODO: Replace with Ably publish
 //     io.to(`stream:${request.stream_id}`).emit('co_host_joined', {
-      coHostId: request.requester_id,
-      coHostName: coHost.username,
-      coHostAvatar: coHost.profile_pic_url
-    });
+      // coHostId: request.requester_id,
+      // coHostName: coHost.username,
+      // coHostAvatar: coHost.profile_pic_url
+    // });
     
     res.json({
       success: true,
@@ -2195,8 +2195,8 @@ router.post('/co-host-reject', authenticateToken, async (req, res) => {
 //     const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //     io.to(`user:${request.requester_id}`).emit('co_host_rejected', {
-      streamId: request.stream_id
-    });
+      // streamId: request.stream_id
+    // });
     
     res.json({
       success: true,
@@ -2247,15 +2247,15 @@ router.post('/co-host-remove', authenticateToken, async (req, res) => {
     // Notify removed co-host
 // TODO: Replace with Ably publish
 //     io.to(`user:${coHostId}`).emit('co_host_removed', {
-      streamId,
-      message: 'You have been removed as a co-host'
-    });
+      // streamId,
+      // message: 'You have been removed as a co-host'
+    // });
     
     // Broadcast to stream viewers
 // TODO: Replace with Ably publish
 //     io.to(`stream:${streamId}`).emit('co_host_left', {
       coHostId
-    });
+    // });
     
     res.json({
       success: true,
@@ -2489,14 +2489,14 @@ router.post('/private-call-request', authenticateToken, async (req, res) => {
 //     const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //     io.to(`user:${stream.creator_id}`).emit('private_call_request', {
-      requestId: requestResult.rows[0].id,
-      fanId,
-      fanName: fan.username,
-      fanAvatar: fan.profile_pic_url,
-      pricePerMinute,
-      minimumMinutes,
+      // requestId: requestResult.rows[0].id,
+      // fanId,
+      // fanName: fan.username,
+      // fanAvatar: fan.profile_pic_url,
+      // pricePerMinute,
+      // minimumMinutes,
       streamId
-    });
+    // });
     
     res.json({
       success: true,
@@ -2639,19 +2639,19 @@ router.post('/private-call-accept', authenticateToken, async (req, res) => {
     // Notify fan
 // TODO: Replace with Ably publish
 //     io.to(`user:${request.fan_id}`).emit('private_call_accepted', {
-      sessionId,
-      channel: channelName,
-      token: fanToken,
-      creatorId,
-      pricePerMinute: request.price_per_minute
-    });
+      // sessionId,
+      // channel: channelName,
+      // token: fanToken,
+      // creatorId,
+      // pricePerMinute: request.price_per_minute
+    // });
     
     // Notify all stream viewers that stream is ending
 // TODO: Replace with Ably publish
 //     io.to(`stream:${request.stream_id}`).emit('stream_ending', {
-      reason: 'private_call',
-      message: 'Stream ending for private call'
-    });
+      // reason: 'private_call',
+      // message: 'Stream ending for private call'
+    // });
     
     res.json({
       success: true,
@@ -2708,8 +2708,8 @@ router.post('/private-call-reject', authenticateToken, async (req, res) => {
 //     const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //     io.to(`user:${request.fan_id}`).emit('private_call_rejected', {
-      streamId: request.stream_id
-    });
+      // streamId: request.stream_id
+    // });
     
     res.json({
       success: true,
