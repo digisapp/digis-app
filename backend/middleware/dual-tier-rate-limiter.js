@@ -24,7 +24,7 @@
  * ```
  */
 
-const { redis } = require('../utils/redis');
+const { safeIncr } = require('../utils/redis-circuit-breaker');
 
 /**
  * Generate a windowed bucket key
@@ -39,27 +39,23 @@ function bucketKey(name, id, windowSec) {
 
 /**
  * Consume a token from a bucket
- * Returns { used, remaining, ok }
+ * Returns { used, remaining, ok, resetEpoch }
+ * Uses circuit breaker for Redis operations
  */
 async function consumeToken(tokenKey, limit, windowSec) {
-  try {
-    // Atomic increment
-    const used = await redis.incr(tokenKey);
+  // Atomic increment with circuit breaker protection
+  // Returns 0 if circuit is open (fail-open pattern)
+  const used = await safeIncr(tokenKey, windowSec + 5); // +5 sec buffer for TTL
 
-    // Set TTL on first hit (cleanup old buckets automatically)
-    if (used === 1) {
-      await redis.expire(tokenKey, windowSec + 5); // +5 sec buffer
-    }
+  const remaining = Math.max(0, limit - used);
+  const ok = used <= limit;
 
-    const remaining = Math.max(0, limit - used);
-    const ok = used <= limit;
+  // Calculate reset time (end of current window)
+  const now = Math.floor(Date.now() / 1000);
+  const currentWindow = Math.floor(now / windowSec);
+  const resetEpoch = (currentWindow + 1) * windowSec;
 
-    return { used, remaining, ok };
-  } catch (error) {
-    console.error('[dualTierRateLimit] Redis error:', error.message);
-    // Fail-open: allow request on Redis failure
-    return { used: 0, remaining: limit, ok: true };
-  }
+  return { used, remaining, ok, resetEpoch };
 }
 
 /**
@@ -97,37 +93,56 @@ function dualTierRateLimit(options = {}) {
       const sustainedKey = bucketKey(baseKey, 'sustained', sustained.windowSec);
       const s = await consumeToken(sustainedKey, sustained.limit, sustained.windowSec);
 
-      // Expose headers so clients can adapt
+      // Expose headers so clients can adapt (RFC 6585 + custom extensions)
+      res.setHeader('X-RateLimit-Limit', burst.limit); // Primary limit (most restrictive)
+      res.setHeader('X-RateLimit-Remaining', Math.min(b.remaining, s.remaining)); // Most restrictive remaining
+      res.setHeader('X-RateLimit-Reset', Math.min(b.resetEpoch, s.resetEpoch)); // Earliest reset
+
+      // Burst-specific headers
       res.setHeader('X-RateLimit-Burst-Limit', burst.limit);
       res.setHeader('X-RateLimit-Burst-Remaining', b.remaining);
+      res.setHeader('X-RateLimit-Burst-Reset', b.resetEpoch);
+
+      // Sustained-specific headers
       res.setHeader('X-RateLimit-Sustained-Limit', sustained.limit);
       res.setHeader('X-RateLimit-Sustained-Remaining', s.remaining);
+      res.setHeader('X-RateLimit-Sustained-Reset', s.resetEpoch);
 
       // If either bucket is exhausted, reject
       if (!b.ok) {
         console.warn(`[dualTierRateLimit] Burst limit exceeded: ${name} ${id} (${b.used}/${burst.limit})`);
+
+        // Set Retry-After header (RFC 6585)
+        res.setHeader('Retry-After', burst.windowSec);
+
         return res.status(429).json({
           success: false,
           error: 'RATE_LIMITED',
           message: `Burst limit exceeded. Please slow down.`,
           retryAfter: burst.windowSec,
+          retryAfterEpoch: b.resetEpoch,
           limits: {
-            burst: { used: b.used, limit: burst.limit, window: `${burst.windowSec}s` },
-            sustained: { used: s.used, limit: sustained.limit, window: `${sustained.windowSec}s` }
+            burst: { used: b.used, limit: burst.limit, window: `${burst.windowSec}s`, resetEpoch: b.resetEpoch },
+            sustained: { used: s.used, limit: sustained.limit, window: `${sustained.windowSec}s`, resetEpoch: s.resetEpoch }
           }
         });
       }
 
       if (!s.ok) {
         console.warn(`[dualTierRateLimit] Sustained limit exceeded: ${name} ${id} (${s.used}/${sustained.limit})`);
+
+        // Set Retry-After header (RFC 6585)
+        res.setHeader('Retry-After', sustained.windowSec);
+
         return res.status(429).json({
           success: false,
           error: 'RATE_LIMITED',
           message: `Sustained rate limit exceeded. Please try again in ${sustained.windowSec} seconds.`,
           retryAfter: sustained.windowSec,
+          retryAfterEpoch: s.resetEpoch,
           limits: {
-            burst: { used: b.used, limit: burst.limit, window: `${burst.windowSec}s` },
-            sustained: { used: s.used, limit: sustained.limit, window: `${sustained.windowSec}s` }
+            burst: { used: b.used, limit: burst.limit, window: `${burst.windowSec}s`, resetEpoch: b.resetEpoch },
+            sustained: { used: s.used, limit: sustained.limit, window: `${sustained.windowSec}s`, resetEpoch: s.resetEpoch }
           }
         });
       }

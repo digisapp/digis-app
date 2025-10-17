@@ -1,4 +1,4 @@
-const redis = require('../utils/redis');
+const { safeGet, safeSet, safeSetNX, safeDel } = require('../utils/redis-circuit-breaker');
 const crypto = require('crypto');
 const { logger } = require('../utils/secureLogger');
 
@@ -33,29 +33,34 @@ const generateIdempotencyKey = (req) => {
 };
 
 /**
- * Store response for idempotency
+ * Store response for idempotency (with circuit breaker)
  */
 const storeIdempotentResponse = async (key, response, ttl = 86400) => {
-  try {
-    await redis.setex(key, ttl, JSON.stringify({
-      statusCode: response.statusCode,
-      body: response.body,
-      timestamp: Date.now()
-    }));
-  } catch (error) {
-    logger.error('Failed to store idempotent response', { error: error.message, key });
+  const data = JSON.stringify({
+    statusCode: response.statusCode,
+    body: response.body,
+    timestamp: Date.now(),
+    expiresAt: Date.now() + (ttl * 1000)
+  });
+
+  const success = await safeSet(key, data, ttl);
+  if (!success) {
+    logger.error('Failed to store idempotent response', { key });
   }
+  return success;
 };
 
 /**
- * Retrieve stored idempotent response
+ * Retrieve stored idempotent response (with circuit breaker)
  */
 const getIdempotentResponse = async (key) => {
+  const data = await safeGet(key, null);
+  if (!data) return null;
+
   try {
-    const data = await redis.get(key);
-    return data ? JSON.parse(data) : null;
+    return JSON.parse(data);
   } catch (error) {
-    logger.error('Failed to retrieve idempotent response', { error: error.message, key });
+    logger.error('Failed to parse idempotent response', { error: error.message, key });
     return null;
   }
 };
@@ -105,21 +110,28 @@ const idempotency = (options = {}) => {
       const existingResponse = await getIdempotentResponse(idempotencyKey);
 
       if (existingResponse) {
-        logger.info('Idempotent request detected', {
+        const ageMs = Date.now() - existingResponse.timestamp;
+        const ageSec = Math.floor(ageMs / 1000);
+
+        logger.info('Idempotent request detected (replay)', {
           key: idempotencyKey,
           path: req.path,
-          userId: req.user?.supabase_id
+          userId: req.user?.supabase_id,
+          age: `${ageSec}s`,
+          originalTimestamp: new Date(existingResponse.timestamp).toISOString()
         });
 
-        // Return cached response
+        // Return cached response with replay headers
         res.setHeader('X-Idempotency-Key', idempotencyKey);
         res.setHeader('X-Idempotency-Replay', 'true');
+        res.setHeader('X-Idempotency-Original-Timestamp', existingResponse.timestamp);
+        res.setHeader('X-Idempotency-Age', ageSec); // Age in seconds
         return res.status(existingResponse.statusCode).json(existingResponse.body);
       }
 
-      // Try to acquire lock (SET NX with short TTL)
+      // Try to acquire lock (SET NX with short TTL) - using circuit breaker
       const lockKey = `${idempotencyKey}:lock`;
-      const lockAcquired = await redis.set(lockKey, '1', 'NX', 'EX', 10); // 10 second lock
+      const lockAcquired = await safeSetNX(lockKey, '1', 10); // 10 second lock
 
       if (!lockAcquired) {
         return res.status(409).json({
@@ -145,8 +157,8 @@ const idempotency = (options = {}) => {
           });
         }
 
-        // Clean up lock
-        redis.del(lockKey).catch(err => {
+        // Clean up lock (using circuit breaker)
+        safeDel(lockKey).catch(err => {
           logger.error('Failed to delete lock', { error: err.message, key: lockKey });
         });
 
