@@ -250,22 +250,28 @@ const MobileCreatorDashboard = ({
   const fetchCreatorStats = useCallback(async () => {
     try {
       console.log('📊 Starting to fetch creator stats...');
-      // For now, use default values until we have the proper endpoints
-      // TODO: Update when backend routes are properly configured
-      
-      setStats({
-        todayEarnings: 0,
-        weekEarnings: 0,
-        monthEarnings: 0,
-        totalFans: 0,
-        activeFans: 0,
-        pendingMessages: 0,
-        scheduledCalls: 0,
-        upcomingStreams: 0,
-        subscribers: 0,
-        followers: 0
-      });
-      console.log('✅ Stats updated successfully');
+
+      // Fetch real follower/subscriber count from API
+      const response = await api.get('/api/creators/stats');
+
+      if (response.data && response.data.success) {
+        setStats({
+          todayEarnings: 0,
+          weekEarnings: 0,
+          monthEarnings: 0,
+          totalFans: 0,
+          activeFans: 0,
+          pendingMessages: 0,
+          scheduledCalls: 0,
+          upcomingStreams: 0,
+          subscribers: response.data.subscribersCount || 0,
+          followers: response.data.followersCount || 0
+        });
+        console.log('✅ Stats updated successfully with follower count:', response.data.followersCount);
+      } else {
+        // Fallback to default stats
+        setStats(DEFAULT_STATS);
+      }
     } catch (error) {
       console.error('❌ Error fetching creator stats:', error);
       // Set default values to prevent empty dashboard

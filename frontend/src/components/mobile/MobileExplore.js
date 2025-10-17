@@ -516,22 +516,31 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
                   if ('vibrate' in navigator) {
                     navigator.vibrate(10);
                   }
+                  // Open video call modal/page
                   onCreatorSelect?.(c);
-                  onNavigate('videoCall');
+                  if (onNavigate) {
+                    onNavigate('videoCall');
+                  }
                 }}
                 onMessage={(c) => {
                   if ('vibrate' in navigator) {
                     navigator.vibrate(10);
                   }
+                  // Open messages modal/page
                   onCreatorSelect?.(c);
-                  onNavigate('messages');
+                  if (onNavigate) {
+                    onNavigate('messages');
+                  }
                 }}
                 onTip={(c) => {
                   if ('vibrate' in navigator) {
                     navigator.vibrate(10);
                   }
-                  console.log('Tip:', c);
-                  // TODO: Navigate to tip modal or handle tipping
+                  // Open tip modal/page
+                  onCreatorSelect?.(c);
+                  if (onNavigate) {
+                    onNavigate('tip');
+                  }
                 }}
                 onSaveCreator={(c, isSaved) => console.log('Save:', c, isSaved)}
                 showPricing={false}
