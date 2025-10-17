@@ -197,20 +197,20 @@ const isDirectConnection = !isPoolerHost;
 
 const poolConfig = {
   ...connectionConfig,
-  // Connection pool sizing based on connection mode - ULTRA CONSERVATIVE for pooler
+  // Connection pool sizing based on connection mode
   max: isUsingTransactionPooler
     ? 1          // Transaction pooler: very limited
     : isUsingSessionPooler
-    ? 1          // Session pooler: ONLY 1 connection per serverless function
+    ? 1          // Session pooler: limited connections
     : (isServerless ? 2 : 5),         // Direct: optimal for serverless (2-3)
   min: 0, // Start with no connections
-  idleTimeoutMillis: isServerless ? 500 : 3000, // Very aggressive cleanup for serverless
-  connectionTimeoutMillis: 30000, // 30s timeout for pooler (was 10s)
-  keepAlive: false,     // Disable keepalive for pooler
-  keepAliveInitialDelayMillis: 0,
-  maxUses: 100, // Recycle connections more frequently (was 1000)
-  statement_timeout: 45000, // 45 seconds (increased for pooler)
-  query_timeout: 45000, // 45 seconds (increased for pooler)
+  idleTimeoutMillis: isServerless ? 500 : 3000, // Aggressive cleanup for serverless
+  connectionTimeoutMillis: isDirectConnection ? 10000 : 30000, // 10s for direct, 30s for pooler
+  keepAlive: isDirectConnection,     // Enable for direct, disable for pooler
+  keepAliveInitialDelayMillis: isDirectConnection ? 10000 : 0,
+  maxUses: isDirectConnection ? 1000 : 100, // More reuse for direct connection
+  statement_timeout: isDirectConnection ? 30000 : 45000, // 30s direct, 45s pooler
+  query_timeout: isDirectConnection ? 30000 : 45000, // 30s direct, 45s pooler
   application_name: 'digis-backend',
   allowExitOnIdle: true, // ALWAYS allow cleanup when idle
 };
@@ -242,12 +242,15 @@ if (process.env.NODE_ENV === 'production') {
   }, 60000); // Check every minute
 }
 
-// Connection event handlers - Set per-connection timeouts for PgBouncer compatibility
+// Connection event handlers - Set per-connection timeouts
 pool.on('connect', (client) => {
   console.log('✅ Connected to Supabase PostgreSQL database');
 
-  // Set per-connection timeouts (works better behind PgBouncer/pooler)
-  client.query("SET statement_timeout = '45s'; SET lock_timeout = '8s';").catch(err => {
+  // Set per-connection timeouts (optimized based on connection type)
+  const stmtTimeout = isDirectConnection ? '30s' : '45s';
+  const lockTimeout = '8s';
+
+  client.query(`SET statement_timeout = '${stmtTimeout}'; SET lock_timeout = '${lockTimeout}';`).catch(err => {
     console.warn('⚠️ Failed to set connection timeouts:', err.message);
   });
 });
