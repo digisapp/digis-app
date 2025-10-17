@@ -38,7 +38,8 @@ const MobileVideoStream = ({
   const [showEffects, setShowEffects] = useState(false);
   const [reactions, setReactions] = useState([]);
   const [error, setError] = useState(null);
-  
+  const [billingState, setBillingState] = useState('active'); // ✅ MOVED: Must be with other useState hooks
+
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const startTimeRef = useRef(Date.now());
@@ -120,9 +121,7 @@ const MobileVideoStream = ({
     }
   }, [isPrivate, channel, creator.id]);
 
-  // Billing state management
-  const [billingState, setBillingState] = useState('active');
-  
+  // Billing state management (state declared above with other useState hooks)
   const handleBillingStateChange = useCallback((state) => {
     setBillingState(state);
     console.log(`💰 Billing state changed to: ${state}`);
