@@ -53,11 +53,9 @@ const ShopPage = lazy(() => import('./components/pages/ShopPage'));
 const ShopManagementPage = lazy(() => import('./components/pages/ShopManagementPage'));
 import { Navigation, NavigationProvider } from './components/navigation';
 import PullToRefresh from './components/ui/PullToRefresh';
-import NextLevelMobileApp from './components/mobile/NextLevelMobileApp';
-import MobileErrorBoundary from './components/mobile/MobileErrorBoundary';
-import MobileLoadingScreen from './components/mobile/MobileLoadingScreen';
+// REMOVED: NextLevelMobileApp, MobileErrorBoundary, MobileLoadingScreen - now using unified navigation system
 // Lazy load rarely accessed pages and components
-const MobileApp = lazy(() => import('./components/mobile/MobileApp'));
+// REMOVED: const MobileApp = lazy(() => import('./components/mobile/MobileApp')); - using newer navigation system
 const TermsOfService = lazy(() => import('./components/pages/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('./components/pages/PrivacyPolicy'));
 const EnhancedNotificationBell = lazy(() => import('./components/EnhancedNotificationBell'));
@@ -72,23 +70,10 @@ import HydrationGate from './components/HydrationGate';
 
 // Mobile components - lazy load for better initial bundle size
 import { MobileUIProvider } from './components/mobile/MobileUIProvider';
-const FloatingActionButton = lazy(() => import('./components/mobile/FloatingActionButton'));
-const MobileBottomSheet = lazy(() => import('./components/mobile/MobileBottomSheet'));
-const MobileMessages = lazy(() => import('./components/mobile/MobileMessages'));
-const MobileCreatorDashboard = lazy(() => import('./components/mobile/MobileCreatorDashboard'));
-const MobileFanDashboard = lazy(() => import('./components/mobile/MobileFanDashboard'));
-const MobileContent = lazy(() => import('./components/mobile/MobileContent'));
-const MobileWallet = lazy(() => import('./components/mobile/pages/MobileWalletPage'));
-const MobileTokenPurchase = lazy(() => import('./components/mobile/MobileTokenPurchase'));
-const MobileCalls = lazy(() => import('./components/mobile/MobileCalls'));
-const MobileAnalytics = lazy(() => import('./components/mobile/MobileAnalytics'));
-const MobileSchedule = lazy(() => import('./components/mobile/MobileSchedule'));
-const MobileSettings = lazy(() => import('./components/mobile/MobileSettings'));
-const MobileEditProfile = lazy(() => import('./components/mobile/MobileEditProfile'));
-const MobileSettingsPage = lazy(() => import('./components/mobile/pages/MobileSettingsPage'));
-const MobileExplore = lazy(() => import('./components/mobile/MobileExplore'));
+// REMOVED: Old mobile component imports - now loaded via AppRoutes
+// FloatingActionButton, MobileBottomSheet removed - not used in new navigation
+// Mobile page components (MobileMessages, MobileCreatorDashboard, etc.) are now imported in AppRoutes.jsx
 const MobileCreatorProfile = lazy(() => import('./components/mobile/MobileCreatorProfile'));
-const SimpleMobileApp = lazy(() => import('./components/mobile/SimpleMobileApp'));
 const MobileLandingPage = lazy(() => import('./components/mobile/MobileLandingPage'));
 // Lazy load additional features and pages
 const RecentlyViewedCreators = lazy(() => import('./components/RecentlyViewedCreators'));
@@ -1020,45 +1005,10 @@ const App = () => {
   console.log('👤 Showing authenticated layout for user:', user?.email, 'isCreator:', isCreator);
   console.log('📍 Route guard - isRoutedPage:', isRoutedPage, 'pathname:', location.pathname);
 
-  // Mobile users get unified NextLevelMobileApp interface
-  // CRITICAL: Always render for mobile users, don't check isRoutedPage
-  if (isMobile && user) {
-    console.log('📱 Rendering NextLevelMobileApp for authenticated mobile user');
-    console.log('📱 Mobile render state:', {
-      user: user?.email,
-      isCreator,
-      roleResolved,
-      authLoading,
-      pathname: location.pathname
-    });
+  // REMOVED: Old NextLevelMobileApp - now using unified NavigationProvider/AppRoutes for both mobile and desktop
+  // Mobile and desktop now share the same navigation system with MobileNav/DesktopNav2025
 
-    // GUARD: Wait for both authLoading and roleResolved before rendering
-    // This prevents fan→creator layout flip on login
-    if (authLoading || !roleResolved) {
-      return (
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Authenticating…</p>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <MobileErrorBoundary>
-        <Suspense fallback={<MobileLoadingScreen message="Loading..." />}>
-          <NextLevelMobileApp
-            user={user}
-            logout={handleSignOut}
-            isCreator={isCreator}
-          />
-        </Suspense>
-      </MobileErrorBoundary>
-    );
-  }
-
-  // Desktop layout continues below
+  // Unified layout for both mobile and desktop continues below
   return (
     <ErrorBoundary>
       <Suspense fallback={<Skeleton className="h-screen" />}>
