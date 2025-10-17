@@ -688,7 +688,7 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
                   exit={{ scale: 0.9, opacity: 0 }}
                   className="w-full max-w-md"
                 >
-                  <TokenPurchase
+                  <ImprovedTokenPurchase
                     user={user}
                     onClose={() => setShowTokenPurchase(false)}
                     onSuccess={() => {
