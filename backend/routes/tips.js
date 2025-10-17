@@ -186,11 +186,16 @@ router.post('/send', authenticateToken, async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Broadcast socket event for live overlay (Pro Monetization)
+    // Broadcast tip event via Ably for live overlay (Pro Monetization)
     try {
-      const io = req.app.get('io');
-      if (io && context.channel) {
-        io.to(context.channel).emit(`tip:new:${context.channel}`, {
+      const Ably = require('ably');
+      const ablyApiKey = process.env.ABLY_API_KEY;
+
+      if (ablyApiKey && context.channel) {
+        const ablyClient = new Ably.Rest(ablyApiKey);
+        const channel = ablyClient.channels.get(`stream:${context.channel}`);
+
+        await channel.publish('tip:new', {
           tipId,
           amountTokens: amount,
           fromUsername: tipperInfo.username,
@@ -200,10 +205,12 @@ router.post('/send', authenticateToken, async (req, res) => {
           timestamp: new Date().toISOString(),
           ...context
         });
+
+        console.log(`Tip broadcasted via Ably to stream:${context.channel}`);
       }
-    } catch (socketError) {
-      console.error('Socket broadcast error:', socketError);
-      // Don't fail the request if socket fails
+    } catch (ablyError) {
+      console.error('Ably broadcast error:', ablyError);
+      // Don't fail the request if Ably fails
     }
 
     res.json({

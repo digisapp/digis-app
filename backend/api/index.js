@@ -703,21 +703,10 @@ const HOST = process.env.HOST || '0.0.0.0';
 const http = require('http');
 const server = http.createServer(app);
 
-// Initialize Socket.io for non-serverless environments (Pro Monetization real-time features)
-const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
-if (!isServerless) {
-  try {
-    const { initializeSocket } = require('../utils/socket');
-    const io = initializeSocket(server);
-    app.set('io', io);
-    console.log('✅ Socket.io initialized for real-time tip broadcasting');
-  } catch (socketError) {
-    console.warn('⚠️ Failed to initialize Socket.io:', socketError.message);
-    console.log('Tip broadcasting will not be available without Socket.io or Ably');
-  }
-} else {
-  console.log('🚀 Serverless environment - Socket.io skipped, use Ably for real-time features');
-}
+// Real-time features use Ably for serverless compatibility
+// Ably authentication endpoint: /api/ably-auth
+// Frontend subscribes to channels like stream:{channelId} for tip events
+console.log('✅ Real-time features powered by Ably (serverless-compatible)');
 
 // Initialize Stream Activity Monitor
 try {

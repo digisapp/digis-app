@@ -1,43 +1,86 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Coins } from 'lucide-react';
+import * as Ably from 'ably';
 
-const LiveTipsOverlay = ({ socket, channel }) => {
+const LiveTipsOverlay = ({ channel }) => {
   const [tips, setTips] = useState([]);
   const [displayedTips, setDisplayedTips] = useState([]);
   const tipQueueRef = useRef([]);
   const processingRef = useRef(false);
+  const ablyClientRef = useRef(null);
+  const ablyChannelRef = useRef(null);
 
   useEffect(() => {
-    if (!socket || !channel) return;
+    if (!channel) return;
 
-    const handleNewTip = (tipData) => {
-      console.log('New tip received:', tipData);
+    const initializeAbly = async () => {
+      try {
+        // Get Ably auth token from backend
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/ably-auth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
 
-      const tip = {
-        id: tipData.tipId || Date.now(),
-        username: tipData.fromUsername || 'Anonymous',
-        amount: tipData.amountTokens || 0,
-        message: tipData.message || null,
-        timestamp: Date.now()
-      };
+        if (!response.ok) {
+          console.error('Failed to get Ably token');
+          return;
+        }
 
-      // Add to queue
-      tipQueueRef.current.push(tip);
+        const tokenRequest = await response.json();
 
-      // Process queue if not already processing
-      if (!processingRef.current) {
-        processNextTip();
+        // Initialize Ably client with token request
+        ablyClientRef.current = new Ably.Realtime({
+          authCallback: async (tokenParams, callback) => {
+            callback(null, tokenRequest);
+          }
+        });
+
+        // Subscribe to stream channel for tip events
+        ablyChannelRef.current = ablyClientRef.current.channels.get(`stream:${channel}`);
+
+        ablyChannelRef.current.subscribe('tip:new', (message) => {
+          console.log('New tip received via Ably:', message.data);
+
+          const tipData = message.data;
+          const tip = {
+            id: tipData.tipId || Date.now(),
+            username: tipData.fromUsername || 'Anonymous',
+            amount: tipData.amountTokens || 0,
+            message: tipData.message || null,
+            timestamp: Date.now()
+          };
+
+          // Add to queue
+          tipQueueRef.current.push(tip);
+
+          // Process queue if not already processing
+          if (!processingRef.current) {
+            processNextTip();
+          }
+        });
+
+        console.log(`Subscribed to Ably channel: stream:${channel}`);
+      } catch (error) {
+        console.error('Ably initialization error:', error);
       }
     };
 
-    // Listen for new tips on this channel
-    socket.on(`tip:new:${channel}`, handleNewTip);
+    initializeAbly();
 
     return () => {
-      socket.off(`tip:new:${channel}`, handleNewTip);
+      // Cleanup Ably subscription
+      if (ablyChannelRef.current) {
+        ablyChannelRef.current.unsubscribe();
+      }
+      if (ablyClientRef.current) {
+        ablyClientRef.current.close();
+      }
     };
-  }, [socket, channel]);
+  }, [channel]);
 
   const processNextTip = () => {
     if (tipQueueRef.current.length === 0) {

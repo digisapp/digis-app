@@ -33,7 +33,6 @@ const MobileVideoStream = ({
   onEnd,
   sessionType = 'call_2way', // 'broadcast_public', 'broadcast_private', 'call_2way'
   isPrivate = false,
-  socket = null, // Socket.io instance for real-time features
   streamId = null // Stream ID for context (optional)
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -322,9 +321,9 @@ const MobileVideoStream = ({
         whileDrag={{ scale: 0.9 }}
       />
 
-      {/* Live Tips Overlay - Shows real-time tip animations */}
-      {socket && channel && (
-        <LiveTipsOverlay socket={socket} channel={channel} />
+      {/* Live Tips Overlay - powered by Ably */}
+      {channel && (
+        <LiveTipsOverlay channel={channel} />
       )}
 
       {/* Top Bar */}
