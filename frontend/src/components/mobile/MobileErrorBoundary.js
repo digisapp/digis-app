@@ -18,9 +18,30 @@ class MobileErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error to monitoring service
-    console.error('Mobile Error Boundary caught:', error, errorInfo);
-    
+    // ✅ ENHANCED: Log with detailed React #310 detection
+    const isHookError = error.message?.includes('310') || error.message?.includes('hook');
+
+    console.error('🚨 [MobileErrorBoundary] React Error Caught:', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo?.componentStack,
+      timestamp: new Date().toISOString(),
+      isHookError,
+      errorNumber: error.message?.match(/#(\d+)/)?.[1]
+    });
+
+    // If it's React error #310, log specific guidance
+    if (isHookError) {
+      console.error('❌ React Hook Error #310 detected!');
+      console.error('Component stack:', errorInfo?.componentStack);
+      console.error('This means hooks are called in different order between renders.');
+      console.error('Check for:');
+      console.error('  1. Early returns BEFORE hook declarations');
+      console.error('  2. Conditional hook calls (if statements around useX)');
+      console.error('  3. Hooks declared after conditional logic');
+    }
+
     // Send to error tracking service (e.g., Sentry)
     if (window.Sentry) {
       window.Sentry.captureException(error, {
@@ -30,7 +51,8 @@ class MobileErrorBoundary extends Component {
           }
         },
         tags: {
-          component: 'MobileErrorBoundary'
+          component: 'MobileErrorBoundary',
+          isHookError: isHookError ? 'true' : 'false'
         }
       });
     }
