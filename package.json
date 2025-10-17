@@ -3,10 +3,11 @@
   "version": "2.0.0",
   "description": "Digis Creator Economy Platform - Full Stack Application",
   "private": true,
-  "packageManager": "pnpm@9.6.0",
   "scripts": {
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && (npm ci || npm install)",
+    "build:frontend": "cd frontend && (npm ci || npm install) && npm run build",
     "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "clean": "pnpm -r clean && rm -rf node_modules",
