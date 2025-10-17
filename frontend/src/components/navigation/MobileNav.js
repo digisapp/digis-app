@@ -341,8 +341,10 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
             ref={menuRef}
             className="fixed z-[102] w-72"
             style={{
-              bottom: 'calc(72px + env(safe-area-inset-bottom) + 8px)',
+              bottom: 'calc(72px + env(safe-area-inset-bottom, 0px) + 8px)',
               right: '1rem',
+              left: 'auto',
+              top: 'auto',
               padding: 0
             }}
             as={motion.div}
