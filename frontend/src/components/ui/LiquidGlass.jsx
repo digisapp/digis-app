@@ -23,22 +23,22 @@ const LiquidGlass = ({
   const [scrollY, setScrollY] = useState(0);
   const containerRef = useRef(null);
 
-  // Intensity presets
+  // Intensity presets - Enhanced for futuristic translucent look
   const intensityConfig = {
     light: {
-      blur: 12,
-      saturation: 120,
-      opacity: 0.6,
+      blur: 20,
+      saturation: 150,
+      opacity: 0.35, // Much more translucent
     },
     medium: {
-      blur: 20,
-      saturation: 180,
-      opacity: 0.7,
+      blur: 40,
+      saturation: 200,
+      opacity: 0.45, // Increased transparency
     },
     strong: {
-      blur: 30,
-      saturation: 200,
-      opacity: 0.8,
+      blur: 60,
+      saturation: 220,
+      opacity: 0.55, // Still quite translucent
     },
   };
 
@@ -57,8 +57,8 @@ const LiquidGlass = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [enableRefraction]);
 
-  // Calculate subtle hue rotation based on scroll (max ±2deg for subtlety)
-  const hueRotation = enableRefraction ? Math.sin(scrollY / 500) * 2 : 0;
+  // Calculate hue rotation based on scroll (±8deg for visible futuristic refraction)
+  const hueRotation = enableRefraction ? Math.sin(scrollY / 300) * 8 : 0;
 
   return (
     <motion.div
@@ -69,15 +69,16 @@ const LiquidGlass = ({
         backdropFilter: `blur(${config.blur}px) saturate(${config.saturation}%)`,
         WebkitBackdropFilter: `blur(${config.blur}px) saturate(${config.saturation}%)`, // Safari
         backgroundColor: `rgba(255, 255, 255, ${config.opacity})`,
-        border: '1px solid rgba(255, 255, 255, 0.3)',
+        border: '1px solid rgba(255, 255, 255, 0.4)',
+        borderImage: 'linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(236, 72, 153, 0.4)) 1',
         boxShadow: enableGlow
-          ? '0 8px 32px 0 rgba(31, 38, 135, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.4)'
-          : '0 4px 16px 0 rgba(31, 38, 135, 0.1)',
+          ? '0 12px 48px 0 rgba(168, 85, 247, 0.25), inset 0 2px 4px 0 rgba(255, 255, 255, 0.5)'
+          : '0 8px 32px 0 rgba(168, 85, 247, 0.2)',
         ...style,
       }}
       {...props}
     >
-      {/* Subtle shimmer overlay */}
+      {/* Futuristic shimmer overlay with enhanced visibility */}
       {enableRefraction && (
         <div
           className="liquid-glass-shimmer"
@@ -87,7 +88,7 @@ const LiquidGlass = ({
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.1) 100%)',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(147, 51, 234, 0.15) 30%, rgba(236, 72, 153, 0.15) 70%, rgba(255, 255, 255, 0.25) 100%)',
             filter: `hue-rotate(${hueRotation}deg)`,
             pointerEvents: 'none',
             transition: 'filter 0.3s ease-out',
@@ -104,15 +105,15 @@ const LiquidGlass = ({
       <style jsx>{`
         @keyframes shimmer {
           0%, 100% {
-            opacity: 0.3;
+            opacity: 0.4;
           }
           50% {
-            opacity: 0.6;
+            opacity: 0.9;
           }
         }
 
         .liquid-glass-shimmer {
-          animation: shimmer 3s ease-in-out infinite;
+          animation: shimmer 2.5s ease-in-out infinite;
         }
 
         /* Fallback for browsers without backdrop-filter support */
@@ -174,7 +175,7 @@ export const LiquidGlassNav = ({ children, position = 'bottom', className = '', 
   return (
     <LiquidGlass
       className={`liquid-glass-nav ${className}`}
-      intensity="medium"
+      intensity="strong" // Use strong intensity for more pronounced effect
       enableRefraction={true}
       style={positionStyles[position]}
       {...props}
