@@ -1,8 +1,9 @@
 {
   "version": 2,
   "framework": null,
-  "buildCommand": "npm install --prefix frontend && npm run build --prefix frontend",
-  "installCommand": "npm install --prefix backend",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "installCommand": "cd backend && npm install",
+  "outputDirectory": "frontend/dist",
   "functions": {
     "backend/api/index.js": {
       "maxDuration": 30
