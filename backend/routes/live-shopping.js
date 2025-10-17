@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { pool } = require('../utils/db');
 const { validationResult } = require('express-validator');
+const { publishToChannel } = require('../utils/ably-adapter');
 
 // Get products for a stream
 router.get('/streams/:streamId/products', async (req, res) => {
@@ -94,14 +95,17 @@ router.post('/streams/:streamId/products', authenticateToken, async (req, res) =
     // Emit socket event for real-time update
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${streamId}`).emit('product:added', {
-        // streamId,
-        // product: {
-          // ...productCheck.rows[0],
-          // ...result.rows[0]
-        // }
-      // });
+try {
+  await publishToChannel(`stream:${streamId}`, 'product:added', {
+    streamId,
+    product: {
+    ...productCheck.rows[0],
+    ...result.rows[0]
+    }
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish product:added to Ably:', ablyError.message);
+}
     }
     
     res.json({
@@ -138,11 +142,14 @@ router.delete('/streams/:streamId/products/:productId', authenticateToken, async
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${streamId}`).emit('product:removed', {
-        // streamId,
-        // productId
-      // });
+try {
+  await publishToChannel(`stream:${streamId}`, 'product:removed', {
+    streamId,
+    productId
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish product:removed to Ably:', ablyError.message);
+}
     }
     
     res.json({ success: true });
@@ -195,12 +202,15 @@ router.put('/streams/:streamId/products/:productId/feature', authenticateToken, 
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${streamId}`).emit('product:featured', {
-        // streamId,
-        // productId,
-        // featured
-      // });
+try {
+  await publishToChannel(`stream:${streamId}`, 'product:featured', {
+    streamId,
+    productId,
+    featured
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish product:featured to Ably:', ablyError.message);
+}
     }
     
     // Log showcase event
@@ -277,17 +287,20 @@ router.post('/flash-sales', authenticateToken, async (req, res) => {
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${streamId}`).emit('flash:sale:started', {
-        // streamId,
-        // productId,
-        // productName,
-        // originalPrice,
-        // salePrice,
-        // discountPercentage,
-        // endsAt,
-        // maxQuantity
-      // });
+try {
+  await publishToChannel(`stream:${streamId}`, 'flash:sale:started', {
+    streamId,
+    productId,
+    productName,
+    originalPrice,
+    salePrice,
+    discountPercentage,
+    endsAt,
+    maxQuantity
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish flash:sale:started to Ably:', ablyError.message);
+}
     }
     
     res.json({
@@ -453,23 +466,29 @@ router.post('/live-purchases', authenticateToken, async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       // Notify everyone in the stream
-// TODO: Replace with Ably publish
-//       io.to(`stream:${streamId}`).emit('product:purchased', {
-        // streamId,
-        // productId,
-        // productName: product.name,
-        // buyer: buyerInfo.rows[0].display_name || buyerInfo.rows[0].username,
-        // quantity,
-        // price: totalPrice,
-        // purchaseType
-      // });
+try {
+  await publishToChannel(`stream:${streamId}`, 'product:purchased', {
+    streamId,
+    productId,
+    productName: product.name,
+    buyer: buyerInfo.rows[0].display_name || buyerInfo.rows[0].username,
+    quantity,
+    price: totalPrice,
+    purchaseType
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish product:purchased to Ably:', ablyError.message);
+}
       
       // Update product stock for everyone
-// TODO: Replace with Ably publish
-//       io.to(`stream:${streamId}`).emit('product:stock:updated', {
-        // productId,
-        // newStock: product.stock_quantity ? product.stock_quantity - quantity : null
-      // });
+try {
+  await publishToChannel(`stream:${streamId}`, 'product:stock:updated', {
+    productId,
+    newStock: product.stock_quantity ? product.stock_quantity - quantity : null
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish product:stock:updated to Ably:', ablyError.message);
+}
     }
     
     res.json({
@@ -549,10 +568,13 @@ router.post('/shopping-interactions', authenticateToken, async (req, res) => {
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${streamId}`).emit('shopping:interaction:created', {
-        // interaction: result.rows[0]
-      // });
+try {
+  await publishToChannel(`stream:${streamId}`, 'shopping:interaction:created', {
+    interaction: result.rows[0]
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish shopping:interaction:created to Ably:', ablyError.message);
+}
     }
     
     res.json({
@@ -603,11 +625,14 @@ router.post('/shopping-interactions/:interactionId/respond', authenticateToken, 
     // Emit socket event with updated counts
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${interaction.stream_id}`).emit('shopping:interaction:updated', {
-        // interactionId,
-        // responses: responseCounts.rows
-      // });
+try {
+  await publishToChannel(`stream:${interaction.stream_id}`, 'shopping:interaction:updated', {
+    interactionId,
+    responses: responseCounts.rows
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish shopping:interaction:updated to Ably:', ablyError.message);
+}
     }
     
     res.json({

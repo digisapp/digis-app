@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
+const { publishToChannel } = require('../utils/ably-adapter');
 // Socket.io removed - using Ably
 // const { getIO } = require('../utils/socket');
 
@@ -47,10 +48,13 @@ router.post('/message', authenticateToken, async (req, res) => {
       mentions: mentions
     };
     
-// TODO: Replace with Ably publish
-//     io.to(`stream:${channel}`).emit('chat-message', messageData);
-    
-    // Send notifications to mentioned users
+try {
+  await publishToChannel(`stream:${channel}`, 'chat-message', {
+    Send notifications to mentioned users
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish chat-message to Ably:', ablyError.message);
+}
     if (mentions && mentions.length > 0) {
       // Get mentioned users' IDs
       const mentionedUsersResult = await db.query(
@@ -60,13 +64,16 @@ router.post('/message', authenticateToken, async (req, res) => {
       
       // Send individual notifications to mentioned users
       for (const mentionedUser of mentionedUsersResult.rows) {
-// TODO: Replace with Ably publish
-//         io.to(`user:${mentionedUser.supabase_id}`).emit('mention-notification', {
-          // channelId: channel,
-          // message: message,
-          // mentionedBy: user.display_name,
-          // timestamp: savedMessage.created_at
-        // });
+try {
+  await publishToChannel(`user:${mentionedUser.supabase_id}`, 'mention-notification', {
+    channelId: channel,
+    message: message,
+    mentionedBy: user.display_name,
+    timestamp: savedMessage.created_at
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish mention-notification to Ably:', ablyError.message);
+}
         
         // Store notification in database
         await db.query(
@@ -128,12 +135,13 @@ router.post('/pin', authenticateToken, async (req, res) => {
         [messageId]
       );
       
-// TODO: Replace with Ably publish
-//       const io = getIO();
-// TODO: Replace with Ably publish
-//       io.to(`stream:${channel}`).emit('message-pinned', {
-        // message: pinnedResult.rows[0]
-      // });
+try {
+  await publishToChannel(`stream:${channel}`, 'message-pinned', {
+    message: pinnedResult.rows[0]
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish message-pinned to Ably:', ablyError.message);
+}
     } else {
       // Unpin message
       await db.query(
@@ -141,12 +149,13 @@ router.post('/pin', authenticateToken, async (req, res) => {
         [messageId]
       );
       
-// TODO: Replace with Ably publish
-//       const io = getIO();
-// TODO: Replace with Ably publish
-//       io.to(`stream:${channel}`).emit('message-unpinned', {
-        // messageId
-      // });
+try {
+  await publishToChannel(`stream:${channel}`, 'message-unpinned', {
+    messageId
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish message-unpinned to Ably:', ablyError.message);
+}
     }
     
     res.json({ success: true });
@@ -190,23 +199,27 @@ router.post('/moderate', authenticateToken, async (req, res) => {
       [targetUserId]
     );
     
-// TODO: Replace with Ably publish
-//     const io = getIO();
-// TODO: Replace with Ably publish
-//     io.to(`stream:${channel}`).emit('user-moderated', {
-      // userId: targetUserId,
-      // username: userResult.rows[0]?.display_name,
-      // action,
-      // duration
-    // });
+try {
+  await publishToChannel(`stream:${channel}`, 'user-moderated', {
+    userId: targetUserId,
+    username: userResult.rows[0]?.display_name,
+    action,
+    duration
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish user-moderated to Ably:', ablyError.message);
+}
     
     // Notify the moderated user
-// TODO: Replace with Ably publish
-//     io.to(`user:${targetUserId}`).emit('moderation-action', {
-      // channel,
-      // action,
-      // duration
-    // });
+try {
+  await publishToChannel(`user:${targetUserId}`, 'moderation-action', {
+    channel,
+    action,
+    duration
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish moderation-action to Ably:', ablyError.message);
+}
     
     res.json({ success: true });
   } catch (error) {
@@ -248,12 +261,13 @@ router.delete('/message/:messageId', authenticateToken, async (req, res) => {
       [messageId]
     );
     
-// TODO: Replace with Ably publish
-//     const io = getIO();
-// TODO: Replace with Ably publish
-//     io.to(`stream:${message.channel}`).emit('message-deleted', {
-      // messageId
-    // });
+try {
+  await publishToChannel(`stream:${message.channel}`, 'message-deleted', {
+    messageId
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish message-deleted to Ably:', ablyError.message);
+}
     
     res.json({ success: true });
   } catch (error) {

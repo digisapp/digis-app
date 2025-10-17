@@ -5,6 +5,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const { pool } = require('../utils/db');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
+const { publishToChannel } = require('../utils/ably-adapter');
 // Socket.io removed - using Ably
 // const { getIO } = require('../utils/socket');
 const upload = multer({ 
@@ -850,17 +851,20 @@ router.post('/checkout/tokens', authenticateToken, [
 // TODO: Replace with Ably publish
 //     const io = getIO();
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`creator_${item.creator_id}`).emit('shop_new_order', {
-        // orderId: orderResult.rows[0].id,
-        // itemName: item.name,
-        // quantity: quantity,
-        // amount: totalCost,
-        // currency: 'Tokens',
-        // buyerName: buyer.username || buyer.display_name || 'User',
-        // buyerEmail: buyer.email,
-        // timestamp: new Date()
-      // });
+try {
+  await publishToChannel(`creator_${item.creator_id}`, 'shop_new_order', {
+    orderId: orderResult.rows[0].id,
+    itemName: item.name,
+    quantity: quantity,
+    amount: totalCost,
+    currency: 'Tokens',
+    buyerName: buyer.username || buyer.display_name || 'User',
+    buyerEmail: buyer.email,
+    timestamp: new Date()
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish shop_new_order to Ably:', ablyError.message);
+}
     }
     
     res.json({
@@ -986,19 +990,22 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
           
           if (orderDetails.rows[0]) {
             const order = orderDetails.rows[0];
-// TODO: Replace with Ably publish
-//             io.to(`creator_${creator_id}`).emit('shop_new_order', {
-              // orderId: order.id,
-              // itemName: order.item_name,
-              // quantity: order.quantity,
-              // amount: order.amount_usd || order.amount_tokens,
-              // netAmount: order.creator_net_tokens || order.amount_tokens, // Net after platform fee
-              // platformFee: order.platform_fee_tokens || 0,
-              // currency: order.payment_method === 'usd' ? 'USD' : 'Tokens',
-              // buyerName: order.buyer_name || order.buyer_username || 'Guest',
-              // buyerEmail: order.buyer_email,
-              // timestamp: new Date()
-            // });
+try {
+  await publishToChannel(`creator_${creator_id}`, 'shop_new_order', {
+    orderId: order.id,
+    itemName: order.item_name,
+    quantity: order.quantity,
+    amount: order.amount_usd || order.amount_tokens,
+    netAmount: order.creator_net_tokens || order.amount_tokens, // Net after platform fee
+    platformFee: order.platform_fee_tokens || 0,
+    currency: order.payment_method === 'usd' ? 'USD' : 'Tokens',
+    buyerName: order.buyer_name || order.buyer_username || 'Guest',
+    buyerEmail: order.buyer_email,
+    timestamp: new Date()
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish shop_new_order to Ably:', ablyError.message);
+}
           }
         }
         

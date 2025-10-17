@@ -3,6 +3,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
+const { publishToChannel } = require('../utils/ably-adapter');
 
 // Database connection
 const pool = new Pool({
@@ -63,18 +64,21 @@ router.post('/stream/:streamId', authenticateToken, async (req, res) => {
     // Broadcast goal update to stream viewers
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream_${streamId}`).emit('goalUpdated', {
-        // goal: {
-          // id: goal.id,
-          // goalAmount: parseFloat(goal.goal_amount),
-          // currentAmount,
-          // description: goal.description,
-          // category: goal.category,
-          // progressPercentage: Math.min((currentAmount / parseFloat(goal.goal_amount)) * 100, 100),
-          // isReached: currentAmount >= parseFloat(goal.goal_amount)
-        // }
-      // });
+try {
+  await publishToChannel(`stream_${streamId}`, 'goalUpdated', {
+    goal: {
+    id: goal.id,
+    goalAmount: parseFloat(goal.goal_amount),
+    currentAmount,
+    description: goal.description,
+    category: goal.category,
+    progressPercentage: Math.min((currentAmount / parseFloat(goal.goal_amount)) * 100, 100),
+    isReached: currentAmount >= parseFloat(goal.goal_amount)
+    }
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish goalUpdated to Ably:', ablyError.message);
+}
     }
 
     res.json({
@@ -200,16 +204,19 @@ router.post('/stream/:streamId/progress', authenticateToken, async (req, res) =>
     // Broadcast progress update to stream viewers
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream_${streamId}`).emit('goalProgress', {
-        // tipAmount,
-        // tipperUsername,
-        // currentAmount,
-        // goalAmount: parseFloat(goal.goal_amount),
-        // progressPercentage: Math.min((currentAmount / parseFloat(goal.goal_amount)) * 100, 100),
-        // isReached: wasGoalReached,
-        // justReached: wasGoalReached && (currentAmount - tipAmount) < parseFloat(goal.goal_amount)
-      // });
+try {
+  await publishToChannel(`stream_${streamId}`, 'goalProgress', {
+    tipAmount,
+    tipperUsername,
+    currentAmount,
+    goalAmount: parseFloat(goal.goal_amount),
+    progressPercentage: Math.min((currentAmount / parseFloat(goal.goal_amount)) * 100, 100),
+    isReached: wasGoalReached,
+    justReached: wasGoalReached && (currentAmount - tipAmount) < parseFloat(goal.goal_amount)
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish goalProgress to Ably:', ablyError.message);
+}
     }
 
     // If goal just reached, award achievement
@@ -344,8 +351,12 @@ router.delete('/stream/:streamId', authenticateToken, async (req, res) => {
     // Broadcast goal removal to stream viewers
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream_${streamId}`).emit('goalRemoved');
+try {
+  await publishToChannel(`stream_${streamId}`, 'goalRemoved', {
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish goalRemoved to Ably:', ablyError.message);
+}
     }
 
     res.json({

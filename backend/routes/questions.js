@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
+const { publishToChannel } = require('../utils/ably-adapter');
 const router = express.Router();
 
 // Middleware
@@ -112,8 +113,12 @@ router.post('/submit', async (req, res) => {
     // Emit to stream
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${channelId}`).emit('question_submitted', newQuestion);
+try {
+  await publishToChannel(`stream:${channelId}`, 'question_submitted', {
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish question_submitted to Ably:', ablyError.message);
+}
     }
 
     res.json({ success: true, question: newQuestion });
@@ -192,13 +197,16 @@ router.post('/vote', async (req, res) => {
     // Emit update
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${channelId}`).emit('question_vote_updated', {
-        // questionId,
-        // votes,
-        // upvotes: votesQuery.rows[0].upvotes,
-        // downvotes: votesQuery.rows[0].downvotes
-      // });
+try {
+  await publishToChannel(`stream:${channelId}`, 'question_vote_updated', {
+    questionId,
+    votes,
+    upvotes: votesQuery.rows[0].upvotes,
+    downvotes: votesQuery.rows[0].downvotes
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish question_vote_updated to Ably:', ablyError.message);
+}
     }
 
     res.json({ success: true, votes });
@@ -236,11 +244,14 @@ router.post('/answer', async (req, res) => {
     // Emit update
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${question.rows[0].channel_id}`).emit('question_answered', {
-        // questionId,
-        // answeredAt: new Date()
-      // });
+try {
+  await publishToChannel(`stream:${question.rows[0].channel_id}`, 'question_answered', {
+    questionId,
+    answeredAt: new Date()
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish question_answered to Ably:', ablyError.message);
+}
     }
 
     res.json({ success: true });
@@ -283,11 +294,14 @@ router.post('/prioritize', async (req, res) => {
     // Emit update
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${question.rows[0].channel_id}`).emit('question_prioritized', {
-        // questionId,
-        // priority
-      // });
+try {
+  await publishToChannel(`stream:${question.rows[0].channel_id}`, 'question_prioritized', {
+    questionId,
+    priority
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish question_prioritized to Ably:', ablyError.message);
+}
     }
 
     res.json({ success: true, priority });
@@ -325,10 +339,13 @@ router.delete('/:questionId', async (req, res) => {
     // Emit removal
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${question.rows[0].channel_id}`).emit('question_removed', {
-        // questionId
-      // });
+try {
+  await publishToChannel(`stream:${question.rows[0].channel_id}`, 'question_removed', {
+    questionId
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish question_removed to Ably:', ablyError.message);
+}
     }
 
     res.json({ success: true });

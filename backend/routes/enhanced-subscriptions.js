@@ -5,6 +5,7 @@ const { pool } = require('../utils/db');
 const loyaltyService = require('../utils/loyalty-service');
 const { logger } = require('../utils/logger');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { publishToChannel } = require('../utils/ably-adapter');
 
 // Subscribe to a tier with dual badge system
 router.post('/subscribe', authenticateToken, async (req, res) => {
@@ -131,20 +132,26 @@ router.post('/subscribe', authenticateToken, async (req, res) => {
     // Send notifications
 // Socket.io removed - using Ably
 //     const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//     io.to(`user:${subscriberId}`).emit('subscription_success', {
-      // tierId,
-      // tierName: tier.name,
-      // badges: badges[0],
-      // perks: membership.combined_perks
-    // });
+try {
+  await publishToChannel(`user:${subscriberId}`, 'subscription_success', {
+    tierId,
+    tierName: tier.name,
+    badges: badges[0],
+    perks: membership.combined_perks
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish subscription_success to Ably:', ablyError.message);
+}
     
-// TODO: Replace with Ably publish
-//     io.to(`user:${tier.creator_id}`).emit('new_subscriber', {
-      // subscriberId,
-      // tierName: tier.name,
-      // loyaltyLevel: badges[0]?.loyalty?.level
-    // });
+try {
+  await publishToChannel(`user:${tier.creator_id}`, 'new_subscriber', {
+    subscriberId,
+    tierName: tier.name,
+    loyaltyLevel: badges[0]?.loyalty?.level
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish new_subscriber to Ably:', ablyError.message);
+}
     
     res.json({
       success: true,
@@ -364,12 +371,15 @@ async function deliverSubscriptionPerks(userId, creatorId, tier) {
   // Send notification
 // Socket.io removed - using Ably
 //   const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//   io.to(`user:${userId}`).emit('perks_delivered', {
-    // type: 'subscription',
-    // perks,
-    // message: `Your ${tier.name} perks are now active!`
-  // });
+try {
+  await publishToChannel(`user:${userId}`, 'perks_delivered', {
+    type: 'subscription',
+    perks,
+    message: `Your ${tier.name} perks are now active!`
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish perks_delivered to Ably:', ablyError.message);
+}
 }
 
 module.exports = router;

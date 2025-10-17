@@ -4,6 +4,7 @@ const { authenticateToken } = require('../middleware/auth');
 const loyaltyService = require('../utils/loyalty-service');
 const { pool } = require('../utils/db');
 const logger = require('../utils/logger');
+const { publishToChannel } = require('../utils/ably-adapter');
 
 // Get user's combined badges (loyalty + subscription)
 router.get('/badges/:userId', authenticateToken, async (req, res) => {
@@ -207,12 +208,15 @@ router.post('/perks/deliver', authenticateToken, async (req, res) => {
     // Notify the user
 // Socket.io removed - using Ably
 //     const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//     io.to(`user:${userId}`).emit('perk_delivered', {
-      // type: perkType,
-      // data: deliveryData,
-      // creatorId
-    // });
+try {
+  await publishToChannel(`user:${userId}`, 'perk_delivered', {
+    type: perkType,
+    data: deliveryData,
+    creatorId
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish perk_delivered to Ably:', ablyError.message);
+}
     
     res.json({
       success: true,

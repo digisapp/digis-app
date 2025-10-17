@@ -4,6 +4,7 @@ const { pool } = require('../utils/db');
 const { authenticateToken, optionalAuth } = require('../middleware/auth');
 const streamActivityMonitor = require('../utils/stream-activity-monitor');
 const { logger: sharedLogger } = require('../utils/secureLogger');
+const { publishToChannel } = require('../utils/ably-adapter');
 
 // Use shared logger instead of creating a new one (serverless-friendly)
 const logger = sharedLogger;
@@ -2021,19 +2022,20 @@ router.post('/co-host-request', authenticateToken, async (req, res) => {
     );
     
     await client.query('COMMIT');
-    
+
     // Emit socket event to creator
-// Socket.io removed - using Ably
-//     const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//     io.to(`user:${stream.creator_id}`).emit('co_host_request', {
-      // requestId: requestResult.rows[0].id,
-      // requesterId,
-      // requesterName: requester.username,
-      // requesterAvatar: requester.profile_pic_url,
-      // streamId
-    // });
-    
+    try {
+      await publishToChannel(`user:${stream.creator_id}`, 'co_host_request', {
+        requestId: requestResult.rows[0].id,
+        requesterId,
+        requesterName: requester.username,
+        requesterAvatar: requester.profile_pic_url,
+        streamId
+      });
+    } catch (ablyError) {
+      logger.error('Failed to publish co_host_request to Ably:', ablyError.message);
+    }
+
     res.json({
       success: true,
       message: 'Co-host request sent successfully',
@@ -2124,19 +2126,25 @@ router.post('/co-host-accept', authenticateToken, async (req, res) => {
 //     const io = require('../utils/socket').getIO();
     
     // Notify requester
-// TODO: Replace with Ably publish
-//     io.to(`user:${request.requester_id}`).emit('co_host_accepted', {
-      // streamId: request.stream_id,
-      // message: 'Your co-host request has been accepted!'
-    // });
+try {
+  await publishToChannel(`user:${request.requester_id}`, 'co_host_accepted', {
+    streamId: request.stream_id,
+    message: 'Your co-host request has been accepted!'
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish co_host_accepted to Ably:', ablyError.message);
+}
     
     // Broadcast to all stream viewers
-// TODO: Replace with Ably publish
-//     io.to(`stream:${request.stream_id}`).emit('co_host_joined', {
-      // coHostId: request.requester_id,
-      // coHostName: coHost.username,
-      // coHostAvatar: coHost.profile_pic_url
-    // });
+try {
+  await publishToChannel(`stream:${request.stream_id}`, 'co_host_joined', {
+    coHostId: request.requester_id,
+    coHostName: coHost.username,
+    coHostAvatar: coHost.profile_pic_url
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish co_host_joined to Ably:', ablyError.message);
+}
     
     res.json({
       success: true,
@@ -2193,10 +2201,13 @@ router.post('/co-host-reject', authenticateToken, async (req, res) => {
     // Emit socket event
 // Socket.io removed - using Ably
 //     const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//     io.to(`user:${request.requester_id}`).emit('co_host_rejected', {
-      // streamId: request.stream_id
-    // });
+try {
+  await publishToChannel(`user:${request.requester_id}`, 'co_host_rejected', {
+    streamId: request.stream_id
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish co_host_rejected to Ably:', ablyError.message);
+}
     
     res.json({
       success: true,
@@ -2245,17 +2256,23 @@ router.post('/co-host-remove', authenticateToken, async (req, res) => {
 //     const io = require('../utils/socket').getIO();
     
     // Notify removed co-host
-// TODO: Replace with Ably publish
-//     io.to(`user:${coHostId}`).emit('co_host_removed', {
-      // streamId,
-      // message: 'You have been removed as a co-host'
-    // });
+try {
+  await publishToChannel(`user:${coHostId}`, 'co_host_removed', {
+    streamId,
+    message: 'You have been removed as a co-host'
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish co_host_removed to Ably:', ablyError.message);
+}
     
     // Broadcast to stream viewers
-// TODO: Replace with Ably publish
-//     io.to(`stream:${streamId}`).emit('co_host_left', {
-      // coHostId
-    // });
+try {
+  await publishToChannel(`stream:${streamId}`, 'co_host_left', {
+    coHostId
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish co_host_left to Ably:', ablyError.message);
+}
     
     res.json({
       success: true,
@@ -2487,16 +2504,19 @@ router.post('/private-call-request', authenticateToken, async (req, res) => {
     // Emit socket event to creator
 // Socket.io removed - using Ably
 //     const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//     io.to(`user:${stream.creator_id}`).emit('private_call_request', {
-      // requestId: requestResult.rows[0].id,
-      // fanId,
-      // fanName: fan.username,
-      // fanAvatar: fan.profile_pic_url,
-      // pricePerMinute,
-      // minimumMinutes,
-      // streamId
-    // });
+try {
+  await publishToChannel(`user:${stream.creator_id}`, 'private_call_request', {
+    requestId: requestResult.rows[0].id,
+    fanId,
+    fanName: fan.username,
+    fanAvatar: fan.profile_pic_url,
+    pricePerMinute,
+    minimumMinutes,
+    streamId
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish private_call_request to Ably:', ablyError.message);
+}
     
     res.json({
       success: true,
@@ -2637,21 +2657,27 @@ router.post('/private-call-accept', authenticateToken, async (req, res) => {
 //     const io = require('../utils/socket').getIO();
     
     // Notify fan
-// TODO: Replace with Ably publish
-//     io.to(`user:${request.fan_id}`).emit('private_call_accepted', {
-      // sessionId,
-      // channel: channelName,
-      // token: fanToken,
-      // creatorId,
-      // pricePerMinute: request.price_per_minute
-    // });
+try {
+  await publishToChannel(`user:${request.fan_id}`, 'private_call_accepted', {
+    sessionId,
+    channel: channelName,
+    token: fanToken,
+    creatorId,
+    pricePerMinute: request.price_per_minute
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish private_call_accepted to Ably:', ablyError.message);
+}
     
     // Notify all stream viewers that stream is ending
-// TODO: Replace with Ably publish
-//     io.to(`stream:${request.stream_id}`).emit('stream_ending', {
-      // reason: 'private_call',
-      // message: 'Stream ending for private call'
-    // });
+try {
+  await publishToChannel(`stream:${request.stream_id}`, 'stream_ending', {
+    reason: 'private_call',
+    message: 'Stream ending for private call'
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish stream_ending to Ably:', ablyError.message);
+}
     
     res.json({
       success: true,
@@ -2706,10 +2732,13 @@ router.post('/private-call-reject', authenticateToken, async (req, res) => {
     // Emit socket event
 // Socket.io removed - using Ably
 //     const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//     io.to(`user:${request.fan_id}`).emit('private_call_rejected', {
-      // streamId: request.stream_id
-    // });
+try {
+  await publishToChannel(`user:${request.fan_id}`, 'private_call_rejected', {
+    streamId: request.stream_id
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish private_call_rejected to Ably:', ablyError.message);
+}
     
     res.json({
       success: true,
@@ -2874,11 +2903,14 @@ router.post('/private-call-end', authenticateToken, async (req, res) => {
       reason
     };
     
-// TODO: Replace with Ably publish
-//     io.to(`user:${session.creator_id}`).emit('private_call_ended', endData);
-// TODO: Replace with Ably publish
-//     io.to(`user:${session.fan_id}`).emit('private_call_ended', endData);
-    
+try {
+  await publishToChannel(`user:${session.creator_id}`, 'private_call_ended', {
+    TODO: Replace with Ably publish
+    io.to(`user:${session.fan_id}`).emit('private_call_ended', endData);
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish private_call_ended to Ably:', ablyError.message);
+}
     res.json({
       success: true,
       message: 'Private call ended',

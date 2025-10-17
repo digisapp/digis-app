@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
+const { publishToChannel } = require('../utils/ably-adapter');
 const router = express.Router();
 
 // Middleware
@@ -57,11 +58,14 @@ router.post('/create', async (req, res) => {
     // Emit to stream viewers via WebSocket
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${channelId}`).emit('poll_created', {
-        // poll,
-        // channelId
-      // });
+try {
+  await publishToChannel(`stream:${channelId}`, 'poll_created', {
+    poll,
+    channelId
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish poll_created to Ably:', ablyError.message);
+}
     }
 
     res.json({ success: true, poll });
@@ -152,12 +156,15 @@ router.post('/vote', async (req, res) => {
     // Emit update to stream viewers
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${poll.rows[0].channel_id}`).emit('poll_updated', {
-        // pollId,
-        // results,
-        // totalVotes
-      // });
+try {
+  await publishToChannel(`stream:${poll.rows[0].channel_id}`, 'poll_updated', {
+    pollId,
+    results,
+    totalVotes
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish poll_updated to Ably:', ablyError.message);
+}
     }
 
     res.json({ success: true, results, totalVotes });
@@ -212,12 +219,15 @@ router.post('/end', async (req, res) => {
     // Emit close event
     const io = req.app.get('io');
     if (io) {
-// TODO: Replace with Ably publish
-//       io.to(`stream:${poll.rows[0].channel_id}`).emit('poll_closed', {
-        // pollId,
-        // finalResults,
-        // totalVotes
-      // });
+try {
+  await publishToChannel(`stream:${poll.rows[0].channel_id}`, 'poll_closed', {
+    pollId,
+    finalResults,
+    totalVotes
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish poll_closed to Ably:', ablyError.message);
+}
     }
 
     res.json({ success: true, finalResults, totalVotes });

@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../utils/db');
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
+const { publishToChannel } = require('../utils/ably-adapter');
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -287,13 +288,16 @@ router.post('/streams/:streamId/stop-recording', authenticateToken, async (req, 
         // Emit socket event to notify creator
 // Socket.io removed - using Ably
 //         const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//         io.to(`user:${creatorId}`).emit('recording_auto_saved', {
-          // recordingId: savedRecording.id,
-          // title: savedRecording.title,
-          // fileUrl: savedRecording.file_url,
-          // tokenPrice: savedRecording.token_price
-        // });
+try {
+  await publishToChannel(`user:${creatorId}`, 'recording_auto_saved', {
+    recordingId: savedRecording.id,
+    title: savedRecording.title,
+    fileUrl: savedRecording.file_url,
+    tokenPrice: savedRecording.token_price
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish recording_auto_saved to Ably:', ablyError.message);
+}
         
         res.json({ 
           success: true,
@@ -371,12 +375,15 @@ router.post('/streams/:streamId/save-recording', authenticateToken, async (req, 
     // Emit socket event to notify creator
 // Socket.io removed - using Ably
 //     const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//     io.to(`user:${creatorId}`).emit('recording_saved', {
-      // recordingId: savedRecording.id,
-      // title: savedRecording.title,
-      // fileUrl: savedRecording.file_url
-    // });
+try {
+  await publishToChannel(`user:${creatorId}`, 'recording_saved', {
+    recordingId: savedRecording.id,
+    title: savedRecording.title,
+    fileUrl: savedRecording.file_url
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish recording_saved to Ably:', ablyError.message);
+}
     
     res.json({ 
       success: true,
@@ -460,11 +467,14 @@ router.post('/recordings/:recordingId/purchase', authenticateToken, async (req, 
     // Emit socket events
 // Socket.io removed - using Ably
 //     const io = require('../utils/socket').getIO();
-// TODO: Replace with Ably publish
-//     io.to(`user:${userId}`).emit('recording_purchased', {
-      // recordingId,
-      // fileUrl: recording.file_url
-    // });
+try {
+  await publishToChannel(`user:${userId}`, 'recording_purchased', {
+    recordingId,
+    fileUrl: recording.file_url
+  });
+} catch (ablyError) {
+  logger.error('Failed to publish recording_purchased to Ably:', ablyError.message);
+}
     
     res.json({ 
       success: true,
