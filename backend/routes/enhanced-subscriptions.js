@@ -129,15 +129,18 @@ router.post('/subscribe', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
     
     // Send notifications
-    const io = require('../utils/socket').getIO();
-    io.to(`user:${subscriberId}`).emit('subscription_success', {
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
+// TODO: Replace with Ably publish
+//     io.to(`user:${subscriberId}`).emit('subscription_success', {
       tierId,
       tierName: tier.name,
       badges: badges[0],
       perks: membership.combined_perks
     });
     
-    io.to(`user:${tier.creator_id}`).emit('new_subscriber', {
+// TODO: Replace with Ably publish
+//     io.to(`user:${tier.creator_id}`).emit('new_subscriber', {
       subscriberId,
       tierName: tier.name,
       loyaltyLevel: badges[0]?.loyalty?.level
@@ -359,8 +362,10 @@ async function deliverSubscriptionPerks(userId, creatorId, tier) {
   }
   
   // Send notification
-  const io = require('../utils/socket').getIO();
-  io.to(`user:${userId}`).emit('perks_delivered', {
+// Socket.io removed - using Ably
+//   const io = require('../utils/socket').getIO();
+// TODO: Replace with Ably publish
+//   io.to(`user:${userId}`).emit('perks_delivered', {
     type: 'subscription',
     perks,
     message: `Your ${tier.name} perks are now active!`

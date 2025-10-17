@@ -57,7 +57,8 @@ router.post('/create', async (req, res) => {
     // Emit to stream viewers via WebSocket
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${channelId}`).emit('poll_created', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${channelId}`).emit('poll_created', {
         poll,
         channelId
       });
@@ -151,7 +152,8 @@ router.post('/vote', async (req, res) => {
     // Emit update to stream viewers
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${poll.rows[0].channel_id}`).emit('poll_updated', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${poll.rows[0].channel_id}`).emit('poll_updated', {
         pollId,
         results,
         totalVotes
@@ -210,7 +212,8 @@ router.post('/end', async (req, res) => {
     // Emit close event
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${poll.rows[0].channel_id}`).emit('poll_closed', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${poll.rows[0].channel_id}`).emit('poll_closed', {
         pollId,
         finalResults,
         totalVotes

@@ -94,7 +94,8 @@ router.post('/streams/:streamId/products', authenticateToken, async (req, res) =
     // Emit socket event for real-time update
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${streamId}`).emit('product:added', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${streamId}`).emit('product:added', {
         streamId,
         product: {
           ...productCheck.rows[0],
@@ -137,7 +138,8 @@ router.delete('/streams/:streamId/products/:productId', authenticateToken, async
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${streamId}`).emit('product:removed', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${streamId}`).emit('product:removed', {
         streamId,
         productId
       });
@@ -193,7 +195,8 @@ router.put('/streams/:streamId/products/:productId/feature', authenticateToken, 
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${streamId}`).emit('product:featured', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${streamId}`).emit('product:featured', {
         streamId,
         productId,
         featured
@@ -274,7 +277,8 @@ router.post('/flash-sales', authenticateToken, async (req, res) => {
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${streamId}`).emit('flash:sale:started', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${streamId}`).emit('flash:sale:started', {
         streamId,
         productId,
         productName,
@@ -449,7 +453,8 @@ router.post('/live-purchases', authenticateToken, async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       // Notify everyone in the stream
-      io.to(`stream:${streamId}`).emit('product:purchased', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${streamId}`).emit('product:purchased', {
         streamId,
         productId,
         productName: product.name,
@@ -460,7 +465,8 @@ router.post('/live-purchases', authenticateToken, async (req, res) => {
       });
       
       // Update product stock for everyone
-      io.to(`stream:${streamId}`).emit('product:stock:updated', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${streamId}`).emit('product:stock:updated', {
         productId,
         newStock: product.stock_quantity ? product.stock_quantity - quantity : null
       });
@@ -543,7 +549,8 @@ router.post('/shopping-interactions', authenticateToken, async (req, res) => {
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${streamId}`).emit('shopping:interaction:created', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${streamId}`).emit('shopping:interaction:created', {
         interaction: result.rows[0]
       });
     }
@@ -596,7 +603,8 @@ router.post('/shopping-interactions/:interactionId/respond', authenticateToken, 
     // Emit socket event with updated counts
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${interaction.stream_id}`).emit('shopping:interaction:updated', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${interaction.stream_id}`).emit('shopping:interaction:updated', {
         interactionId,
         responses: responseCounts.rows
       });

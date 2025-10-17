@@ -63,7 +63,8 @@ router.post('/stream/:streamId', authenticateToken, async (req, res) => {
     // Broadcast goal update to stream viewers
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream_${streamId}`).emit('goalUpdated', {
+// TODO: Replace with Ably publish
+//       io.to(`stream_${streamId}`).emit('goalUpdated', {
         goal: {
           id: goal.id,
           goalAmount: parseFloat(goal.goal_amount),
@@ -199,7 +200,8 @@ router.post('/stream/:streamId/progress', authenticateToken, async (req, res) =>
     // Broadcast progress update to stream viewers
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream_${streamId}`).emit('goalProgress', {
+// TODO: Replace with Ably publish
+//       io.to(`stream_${streamId}`).emit('goalProgress', {
         tipAmount,
         tipperUsername,
         currentAmount,
@@ -342,7 +344,8 @@ router.delete('/stream/:streamId', authenticateToken, async (req, res) => {
     // Broadcast goal removal to stream viewers
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream_${streamId}`).emit('goalRemoved');
+// TODO: Replace with Ably publish
+//       io.to(`stream_${streamId}`).emit('goalRemoved');
     }
 
     res.json({

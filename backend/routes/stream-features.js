@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
-const { getIO } = require('../utils/socket');
+// Socket.io removed - using Ably
+// const { getIO } = require('../utils/socket');
 
 // Create poll
 router.post('/poll', authenticateToken, async (req, res) => {
@@ -40,8 +41,10 @@ router.post('/poll', authenticateToken, async (req, res) => {
     poll.totalVotes = 0;
     
     // Emit poll to stream
-    const io = getIO();
-    io.to(`stream:${channel}`).emit('poll-created', {
+// TODO: Replace with Ably publish
+//     const io = getIO();
+// TODO: Replace with Ably publish
+//     io.to(`stream:${channel}`).emit('poll-created', {
       poll
     });
     
@@ -52,7 +55,8 @@ router.post('/poll', authenticateToken, async (req, res) => {
         [poll.id]
       );
       
-      io.to(`stream:${channel}`).emit('poll-ended', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${channel}`).emit('poll-ended', {
         pollId: poll.id
       });
     }, duration * 1000);
@@ -125,8 +129,10 @@ router.post('/poll/:pollId/vote', authenticateToken, async (req, res) => {
     });
     
     // Emit vote update
-    const io = getIO();
-    io.to(`stream:${poll.channel}`).emit('poll-update', {
+// TODO: Replace with Ably publish
+//     const io = getIO();
+// TODO: Replace with Ably publish
+//     io.to(`stream:${poll.channel}`).emit('poll-update', {
       pollId,
       votes,
       totalVotes
@@ -213,8 +219,10 @@ router.post('/gift', authenticateToken, async (req, res) => {
     );
     
     // Emit gift animation
-    const io = getIO();
-    io.to(`stream:${channel}`).emit('gift-received', {
+// TODO: Replace with Ably publish
+//     const io = getIO();
+// TODO: Replace with Ably publish
+//     io.to(`stream:${channel}`).emit('gift-received', {
       sender: senderResult.rows[0].display_name,
       giftType,
       quantity,
@@ -222,7 +230,8 @@ router.post('/gift', authenticateToken, async (req, res) => {
     });
     
     // Notify creator
-    io.to(`user:${creatorId}`).emit('gift-notification', {
+// TODO: Replace with Ably publish
+//     io.to(`user:${creatorId}`).emit('gift-notification', {
       sender: senderResult.rows[0].display_name,
       giftType,
       quantity,
@@ -304,15 +313,18 @@ router.post('/tip', authenticateToken, async (req, res) => {
     );
     
     // Emit tip notification
-    const io = getIO();
-    io.to(`stream:${channel}`).emit('tip-received', {
+// TODO: Replace with Ably publish
+//     const io = getIO();
+// TODO: Replace with Ably publish
+//     io.to(`stream:${channel}`).emit('tip-received', {
       sender: senderResult.rows[0].display_name,
       amount,
       message
     });
     
     // Notify creator
-    io.to(`user:${creatorId}`).emit('tip-notification', {
+// TODO: Replace with Ably publish
+//     io.to(`user:${creatorId}`).emit('tip-notification', {
       sender: senderResult.rows[0].display_name,
       amount,
       message,

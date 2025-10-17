@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
-const { getIO } = require('../utils/socket');
+// Socket.io removed - using Ably
+// const { getIO } = require('../utils/socket');
 
 // Send chat message
 router.post('/message', authenticateToken, async (req, res) => {
@@ -33,7 +34,8 @@ router.post('/message', authenticateToken, async (req, res) => {
     const savedMessage = messageResult.rows[0];
     
     // Emit to all users in the channel
-    const io = getIO();
+// TODO: Replace with Ably publish
+//     const io = getIO();
     const messageData = {
       id: savedMessage.id,
       user: user.display_name,
@@ -45,7 +47,8 @@ router.post('/message', authenticateToken, async (req, res) => {
       mentions: mentions
     };
     
-    io.to(`stream:${channel}`).emit('chat-message', messageData);
+// TODO: Replace with Ably publish
+//     io.to(`stream:${channel}`).emit('chat-message', messageData);
     
     // Send notifications to mentioned users
     if (mentions && mentions.length > 0) {
@@ -57,7 +60,8 @@ router.post('/message', authenticateToken, async (req, res) => {
       
       // Send individual notifications to mentioned users
       for (const mentionedUser of mentionedUsersResult.rows) {
-        io.to(`user:${mentionedUser.supabase_id}`).emit('mention-notification', {
+// TODO: Replace with Ably publish
+//         io.to(`user:${mentionedUser.supabase_id}`).emit('mention-notification', {
           channelId: channel,
           message: message,
           mentionedBy: user.display_name,
@@ -124,8 +128,10 @@ router.post('/pin', authenticateToken, async (req, res) => {
         [messageId]
       );
       
-      const io = getIO();
-      io.to(`stream:${channel}`).emit('message-pinned', {
+// TODO: Replace with Ably publish
+//       const io = getIO();
+// TODO: Replace with Ably publish
+//       io.to(`stream:${channel}`).emit('message-pinned', {
         message: pinnedResult.rows[0]
       });
     } else {
@@ -135,8 +141,10 @@ router.post('/pin', authenticateToken, async (req, res) => {
         [messageId]
       );
       
-      const io = getIO();
-      io.to(`stream:${channel}`).emit('message-unpinned', {
+// TODO: Replace with Ably publish
+//       const io = getIO();
+// TODO: Replace with Ably publish
+//       io.to(`stream:${channel}`).emit('message-unpinned', {
         messageId
       });
     }
@@ -182,8 +190,10 @@ router.post('/moderate', authenticateToken, async (req, res) => {
       [targetUserId]
     );
     
-    const io = getIO();
-    io.to(`stream:${channel}`).emit('user-moderated', {
+// TODO: Replace with Ably publish
+//     const io = getIO();
+// TODO: Replace with Ably publish
+//     io.to(`stream:${channel}`).emit('user-moderated', {
       userId: targetUserId,
       username: userResult.rows[0]?.display_name,
       action,
@@ -191,7 +201,8 @@ router.post('/moderate', authenticateToken, async (req, res) => {
     });
     
     // Notify the moderated user
-    io.to(`user:${targetUserId}`).emit('moderation-action', {
+// TODO: Replace with Ably publish
+//     io.to(`user:${targetUserId}`).emit('moderation-action', {
       channel,
       action,
       duration
@@ -237,8 +248,10 @@ router.delete('/message/:messageId', authenticateToken, async (req, res) => {
       [messageId]
     );
     
-    const io = getIO();
-    io.to(`stream:${message.channel}`).emit('message-deleted', {
+// TODO: Replace with Ably publish
+//     const io = getIO();
+// TODO: Replace with Ably publish
+//     io.to(`stream:${message.channel}`).emit('message-deleted', {
       messageId
     });
     

@@ -3,7 +3,9 @@ const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
-const { updateUserBalance } = require('../utils/socket');
+// Socket.io removed - using Ably via publish helper
+// Socket.io removed - using Ably
+// // const { updateUserBalance } = require('../utils/socket');
 const { logger } = require('../utils/secureLogger');
 const { observability, analyticsClient } = require('../utils/supabase-admin-v2');
 const { GIFT_CATALOG, getGiftById } = require('../utils/giftCatalog');
@@ -279,7 +281,8 @@ router.post('/quick-purchase', authenticateToken, async (req, res) => {
       
       // Emit real-time balance update
       const newBalance = balanceResult.rows[0].balance;
-      updateUserBalance(req.user.supabase_id, newBalance);
+// TODO: Replace with Ably publish
+//       updateUserBalance(req.user.supabase_id, newBalance);
       
       // Track successful purchase
       span.addEvent('purchase_completed', { 
@@ -561,8 +564,10 @@ router.post('/tip', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
 
     // Notify both parties
-    updateUserBalance(fanId);
-    updateUserBalance(creatorId);
+// TODO: Replace with Ably publish
+//     updateUserBalance(fanId);
+// TODO: Replace with Ably publish
+//     updateUserBalance(creatorId);
 
     return res.json({ success: true });
   } catch (e) {
@@ -651,8 +656,10 @@ router.post('/calls/deduct', authenticateToken, async (req, res) => {
 
     await client.query('COMMIT');
 
-    updateUserBalance(payerId);
-    updateUserBalance(counterpartyId);
+// TODO: Replace with Ably publish
+//     updateUserBalance(payerId);
+// TODO: Replace with Ably publish
+//     updateUserBalance(counterpartyId);
 
     return res.json({ success: true });
   } catch (e) {

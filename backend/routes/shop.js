@@ -5,7 +5,8 @@ const { body, param, query, validationResult } = require('express-validator');
 const { pool } = require('../utils/db');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
-const { getIO } = require('../utils/socket');
+// Socket.io removed - using Ably
+// const { getIO } = require('../utils/socket');
 const upload = multer({ 
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
@@ -846,9 +847,11 @@ router.post('/checkout/tokens', authenticateToken, [
     await client.query('COMMIT');
     
     // Send real-time notification to creator for token payment
-    const io = getIO();
+// TODO: Replace with Ably publish
+//     const io = getIO();
     if (io) {
-      io.to(`creator_${item.creator_id}`).emit('shop_new_order', {
+// TODO: Replace with Ably publish
+//       io.to(`creator_${item.creator_id}`).emit('shop_new_order', {
         orderId: orderResult.rows[0].id,
         itemName: item.name,
         quantity: quantity,
@@ -967,7 +970,8 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
         await client.query('COMMIT');
         
         // Send real-time notification to creator
-        const io = getIO();
+// TODO: Replace with Ably publish
+//         const io = getIO();
         if (io) {
           // Get order details for notification
           const orderDetails = await pool.query(
@@ -982,7 +986,8 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
           
           if (orderDetails.rows[0]) {
             const order = orderDetails.rows[0];
-            io.to(`creator_${creator_id}`).emit('shop_new_order', {
+// TODO: Replace with Ably publish
+//             io.to(`creator_${creator_id}`).emit('shop_new_order', {
               orderId: order.id,
               itemName: order.item_name,
               quantity: order.quantity,

@@ -285,8 +285,10 @@ router.post('/streams/:streamId/stop-recording', authenticateToken, async (req, 
         const savedRecording = saveResult.rows[0];
         
         // Emit socket event to notify creator
-        const io = require('../utils/socket').getIO();
-        io.to(`user:${creatorId}`).emit('recording_auto_saved', {
+// Socket.io removed - using Ably
+//         const io = require('../utils/socket').getIO();
+// TODO: Replace with Ably publish
+//         io.to(`user:${creatorId}`).emit('recording_auto_saved', {
           recordingId: savedRecording.id,
           title: savedRecording.title,
           fileUrl: savedRecording.file_url,
@@ -367,8 +369,10 @@ router.post('/streams/:streamId/save-recording', authenticateToken, async (req, 
     const savedRecording = saveResult.rows[0];
     
     // Emit socket event to notify creator
-    const io = require('../utils/socket').getIO();
-    io.to(`user:${creatorId}`).emit('recording_saved', {
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
+// TODO: Replace with Ably publish
+//     io.to(`user:${creatorId}`).emit('recording_saved', {
       recordingId: savedRecording.id,
       title: savedRecording.title,
       fileUrl: savedRecording.file_url
@@ -454,8 +458,10 @@ router.post('/recordings/:recordingId/purchase', authenticateToken, async (req, 
     await client.query('COMMIT');
     
     // Emit socket events
-    const io = require('../utils/socket').getIO();
-    io.to(`user:${userId}`).emit('recording_purchased', {
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
+// TODO: Replace with Ably publish
+//     io.to(`user:${userId}`).emit('recording_purchased', {
       recordingId,
       fileUrl: recording.file_url
     });

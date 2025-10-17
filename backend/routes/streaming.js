@@ -2023,8 +2023,10 @@ router.post('/co-host-request', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
     
     // Emit socket event to creator
-    const io = require('../utils/socket').getIO();
-    io.to(`user:${stream.creator_id}`).emit('co_host_request', {
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
+// TODO: Replace with Ably publish
+//     io.to(`user:${stream.creator_id}`).emit('co_host_request', {
       requestId: requestResult.rows[0].id,
       requesterId,
       requesterName: requester.username,
@@ -2118,16 +2120,19 @@ router.post('/co-host-accept', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
     
     // Emit socket events
-    const io = require('../utils/socket').getIO();
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
     
     // Notify requester
-    io.to(`user:${request.requester_id}`).emit('co_host_accepted', {
+// TODO: Replace with Ably publish
+//     io.to(`user:${request.requester_id}`).emit('co_host_accepted', {
       streamId: request.stream_id,
       message: 'Your co-host request has been accepted!'
     });
     
     // Broadcast to all stream viewers
-    io.to(`stream:${request.stream_id}`).emit('co_host_joined', {
+// TODO: Replace with Ably publish
+//     io.to(`stream:${request.stream_id}`).emit('co_host_joined', {
       coHostId: request.requester_id,
       coHostName: coHost.username,
       coHostAvatar: coHost.profile_pic_url
@@ -2186,8 +2191,10 @@ router.post('/co-host-reject', authenticateToken, async (req, res) => {
     );
     
     // Emit socket event
-    const io = require('../utils/socket').getIO();
-    io.to(`user:${request.requester_id}`).emit('co_host_rejected', {
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
+// TODO: Replace with Ably publish
+//     io.to(`user:${request.requester_id}`).emit('co_host_rejected', {
       streamId: request.stream_id
     });
     
@@ -2234,16 +2241,19 @@ router.post('/co-host-remove', authenticateToken, async (req, res) => {
     );
     
     // Emit socket events
-    const io = require('../utils/socket').getIO();
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
     
     // Notify removed co-host
-    io.to(`user:${coHostId}`).emit('co_host_removed', {
+// TODO: Replace with Ably publish
+//     io.to(`user:${coHostId}`).emit('co_host_removed', {
       streamId,
       message: 'You have been removed as a co-host'
     });
     
     // Broadcast to stream viewers
-    io.to(`stream:${streamId}`).emit('co_host_left', {
+// TODO: Replace with Ably publish
+//     io.to(`stream:${streamId}`).emit('co_host_left', {
       coHostId
     });
     
@@ -2475,8 +2485,10 @@ router.post('/private-call-request', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
     
     // Emit socket event to creator
-    const io = require('../utils/socket').getIO();
-    io.to(`user:${stream.creator_id}`).emit('private_call_request', {
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
+// TODO: Replace with Ably publish
+//     io.to(`user:${stream.creator_id}`).emit('private_call_request', {
       requestId: requestResult.rows[0].id,
       fanId,
       fanName: fan.username,
@@ -2621,10 +2633,12 @@ router.post('/private-call-accept', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
     
     // Emit socket events
-    const io = require('../utils/socket').getIO();
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
     
     // Notify fan
-    io.to(`user:${request.fan_id}`).emit('private_call_accepted', {
+// TODO: Replace with Ably publish
+//     io.to(`user:${request.fan_id}`).emit('private_call_accepted', {
       sessionId,
       channel: channelName,
       token: fanToken,
@@ -2633,7 +2647,8 @@ router.post('/private-call-accept', authenticateToken, async (req, res) => {
     });
     
     // Notify all stream viewers that stream is ending
-    io.to(`stream:${request.stream_id}`).emit('stream_ending', {
+// TODO: Replace with Ably publish
+//     io.to(`stream:${request.stream_id}`).emit('stream_ending', {
       reason: 'private_call',
       message: 'Stream ending for private call'
     });
@@ -2689,8 +2704,10 @@ router.post('/private-call-reject', authenticateToken, async (req, res) => {
     );
     
     // Emit socket event
-    const io = require('../utils/socket').getIO();
-    io.to(`user:${request.fan_id}`).emit('private_call_rejected', {
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
+// TODO: Replace with Ably publish
+//     io.to(`user:${request.fan_id}`).emit('private_call_rejected', {
       streamId: request.stream_id
     });
     
@@ -2847,7 +2864,8 @@ router.post('/private-call-end', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
     
     // Notify both parties
-    const io = require('../utils/socket').getIO();
+// Socket.io removed - using Ably
+//     const io = require('../utils/socket').getIO();
     const endData = {
       sessionId,
       duration: durationSeconds,
@@ -2856,8 +2874,10 @@ router.post('/private-call-end', authenticateToken, async (req, res) => {
       reason
     };
     
-    io.to(`user:${session.creator_id}`).emit('private_call_ended', endData);
-    io.to(`user:${session.fan_id}`).emit('private_call_ended', endData);
+// TODO: Replace with Ably publish
+//     io.to(`user:${session.creator_id}`).emit('private_call_ended', endData);
+// TODO: Replace with Ably publish
+//     io.to(`user:${session.fan_id}`).emit('private_call_ended', endData);
     
     res.json({
       success: true,

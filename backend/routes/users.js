@@ -11,7 +11,8 @@ const { validateUsername, checkUsernameAvailability } = require('../utils/userna
 const { profileUpdateSchema, validate } = require('../validators/schemas');
 const { logger } = require('../utils/secureLogger');
 // Socket.io removed - using Ably via publish helper
-// const { sendNotification } = require('../utils/socket');
+// Socket.io removed - using Ably
+// // const { sendNotification } = require('../utils/socket');
 const { sendFollowNotificationWithPush } = require('./notifications');
 const { uploadImage: uploadToSupabase } = require('../utils/supabase-storage');
 const { users: usersCache, creators: creatorsCache, TTL } = require('../utils/redis');

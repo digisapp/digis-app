@@ -3,7 +3,8 @@ const router = express.Router();
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
 const { logger } = require('../utils/logger');
-const { getIO } = require('../utils/socket');
+// Socket.io removed - using Ably
+// const { getIO } = require('../utils/socket');
 
 // Announce a ticketed show
 router.post('/announce', authenticateToken, async (req, res) => {
@@ -61,8 +62,10 @@ router.post('/announce', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
     
     // Emit to all viewers in the stream
-    const io = getIO();
-    io.to(`stream:${streamId}`).emit('ticketed_show_announced', {
+// TODO: Replace with Ably publish
+//     const io = getIO();
+// TODO: Replace with Ably publish
+//     io.to(`stream:${streamId}`).emit('ticketed_show_announced', {
       showId: show.rows[0].id,
       title: show.rows[0].title,
       tokenPrice: show.rows[0].token_price,
@@ -195,16 +198,19 @@ router.post('/buy-ticket', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
     
     // Emit socket events
-    const io = getIO();
+// TODO: Replace with Ably publish
+//     const io = getIO();
     
     // Notify viewer
-    io.to(`user:${viewerId}`).emit('ticket_purchased', {
+// TODO: Replace with Ably publish
+//     io.to(`user:${viewerId}`).emit('ticket_purchased', {
       showId,
       ticket: ticket.rows[0]
     });
     
     // Notify creator
-    io.to(`user:${show.creator_id}`).emit('ticket_sold', {
+// TODO: Replace with Ably publish
+//     io.to(`user:${show.creator_id}`).emit('ticket_sold', {
       viewerId,
       showId,
       price: ticketPrice
@@ -212,7 +218,8 @@ router.post('/buy-ticket', authenticateToken, async (req, res) => {
     
     // If show already started, allow immediate access
     if (show.status === 'started') {
-      io.to(`user:${viewerId}`).emit('join_private_show', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${viewerId}`).emit('join_private_show', {
         showId,
         channelId: show.channel_id
       });
@@ -288,17 +295,20 @@ router.post('/start', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
     
     // Emit socket events
-    const io = getIO();
+// TODO: Replace with Ably publish
+//     const io = getIO();
     
     // Notify all viewers in stream
-    io.to(`stream:${show.stream_id}`).emit('private_mode_started', {
+// TODO: Replace with Ably publish
+//     io.to(`stream:${show.stream_id}`).emit('private_mode_started', {
       showId,
       streamId: show.stream_id
     });
     
     // Notify ticket holders to enable video
     for (const ticket of tickets.rows) {
-      io.to(`user:${ticket.viewer_id}`).emit('enable_private_video', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${ticket.viewer_id}`).emit('enable_private_video', {
         showId,
         channelId: show.channel_id
       });
@@ -361,8 +371,10 @@ router.post('/end', authenticateToken, async (req, res) => {
     );
     
     // Emit socket event
-    const io = getIO();
-    io.to(`stream:${result.rows[0].stream_id}`).emit('private_show_ended', {
+// TODO: Replace with Ably publish
+//     const io = getIO();
+// TODO: Replace with Ably publish
+//     io.to(`stream:${result.rows[0].stream_id}`).emit('private_show_ended', {
       showId
     });
     

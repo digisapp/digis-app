@@ -112,7 +112,8 @@ router.post('/submit', async (req, res) => {
     // Emit to stream
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${channelId}`).emit('question_submitted', newQuestion);
+// TODO: Replace with Ably publish
+//       io.to(`stream:${channelId}`).emit('question_submitted', newQuestion);
     }
 
     res.json({ success: true, question: newQuestion });
@@ -191,7 +192,8 @@ router.post('/vote', async (req, res) => {
     // Emit update
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${channelId}`).emit('question_vote_updated', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${channelId}`).emit('question_vote_updated', {
         questionId,
         votes,
         upvotes: votesQuery.rows[0].upvotes,
@@ -234,7 +236,8 @@ router.post('/answer', async (req, res) => {
     // Emit update
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${question.rows[0].channel_id}`).emit('question_answered', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${question.rows[0].channel_id}`).emit('question_answered', {
         questionId,
         answeredAt: new Date()
       });
@@ -280,7 +283,8 @@ router.post('/prioritize', async (req, res) => {
     // Emit update
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${question.rows[0].channel_id}`).emit('question_prioritized', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${question.rows[0].channel_id}`).emit('question_prioritized', {
         questionId,
         priority
       });
@@ -321,7 +325,8 @@ router.delete('/:questionId', async (req, res) => {
     // Emit removal
     const io = req.app.get('io');
     if (io) {
-      io.to(`stream:${question.rows[0].channel_id}`).emit('question_removed', {
+// TODO: Replace with Ably publish
+//       io.to(`stream:${question.rows[0].channel_id}`).emit('question_removed', {
         questionId
       });
     }
