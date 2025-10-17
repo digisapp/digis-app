@@ -242,9 +242,14 @@ if (process.env.NODE_ENV === 'production') {
   }, 60000); // Check every minute
 }
 
-// Connection event handlers
+// Connection event handlers - Set per-connection timeouts for PgBouncer compatibility
 pool.on('connect', (client) => {
   console.log('✅ Connected to Supabase PostgreSQL database');
+
+  // Set per-connection timeouts (works better behind PgBouncer/pooler)
+  client.query("SET statement_timeout = '45s'; SET lock_timeout = '8s';").catch(err => {
+    console.warn('⚠️ Failed to set connection timeouts:', err.message);
+  });
 });
 
 pool.on('error', (err, client) => {

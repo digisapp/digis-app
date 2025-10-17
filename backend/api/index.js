@@ -256,6 +256,7 @@ try {
   const publicCreatorsRoutes = require('../routes/public-creators');
   const usernamesRoutes = require('../routes/usernames');
   const clientLogRoutes = require('../routes/client-log');
+  const healthRoutes = require('../routes/health');
 
   // Apply metrics middleware
   const metricsCollector = require('../utils/metrics-collector');
@@ -355,6 +356,7 @@ try {
   app.use('/api', rateLimiters.api || ((req, res, next) => next()), usernamesRoutes); // Username management
   app.use('/api', metaRoutes); // Deployment metadata endpoint (no auth required)
   app.use('/api', emergencyRoutes); // Emergency reset endpoints (NO AUTH, NO RATE LIMITING)
+  app.use('/', healthRoutes); // Health check endpoints (no auth, ultra-cheap)
 
   // Internal cron endpoints (custom auth via header)
   const payoutCronRoutes = require('../routes/cron/payouts');
