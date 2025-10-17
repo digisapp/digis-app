@@ -55,11 +55,8 @@ import DigisWatermark from '../DigisWatermark';
 import Container from '../ui/Container';
 
 const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onTokenPurchase }) => {
-  // Mount beacon for diagnostics
-  useEffect(() => {
-    console.info("[MOUNT] TVPage.js");
-  }, []);
-
+  // ✅ CRITICAL FIX: Move all useState hooks BEFORE useEffect
+  // React error #310 occurs when hooks are in different order between renders
   const [liveStreams, setLiveStreams] = useState([]);
   const [filteredStreams, setFilteredStreams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -209,9 +206,14 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
         setShowSuggestions(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // ✅ Mount beacon for diagnostics - placed AFTER all hooks
+  useEffect(() => {
+    console.info("[MOUNT] TVPage.js");
   }, []);
 
   const checkSubscription = async () => {
