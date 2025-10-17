@@ -915,11 +915,9 @@ const HybridCreatorDashboard = memo(({
               </div>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+                onClick={() => {
                   console.log('[CALLS] Manage button clicked');
-                  handleNavigateToPage('/call-requests');
+                  navigate('/call-requests');
                 }}
                 className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer"
                 aria-label="Manage call requests"
@@ -1096,11 +1094,9 @@ const HybridCreatorDashboard = memo(({
               </div>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+                onClick={() => {
                   console.log('[SCHEDULE] Manage button clicked');
-                  handleNavigateToPage('/schedule');
+                  navigate('/schedule');
                 }}
                 className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer"
                 aria-label="Manage schedule"
