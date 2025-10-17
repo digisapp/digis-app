@@ -30,7 +30,7 @@
 
 /* Safe area padding for iPhone notch and home indicator */
 .mobile-landing-safe-top {
-  padding-top: max(env(safe-area-inset-top, 20px), 40px);
+  padding-top: env(safe-area-inset-top, 16px);
 }
 
 .mobile-landing-safe-bottom {
@@ -53,8 +53,8 @@
 /* Logo section spacing */
 .mobile-landing-logo {
   flex: 0 0 auto;
-  margin-top: 20px;
-  padding-top: max(env(safe-area-inset-top, 0px), 20px);
+  margin-top: 0;
+  padding-top: 0;
 }
 
 /* Prevent any margin collapse */

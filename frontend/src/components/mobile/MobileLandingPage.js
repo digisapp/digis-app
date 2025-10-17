@@ -171,7 +171,7 @@ const MobileLandingPage = React.memo(({ onLogin }) => {
 
         {/* Logo section with proper spacing */}
         <motion.div
-          className="mobile-landing-logo text-center mb-8"
+          className="mobile-landing-logo text-center mb-6"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
