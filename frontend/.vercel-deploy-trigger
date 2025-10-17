@@ -1,2 +1,3 @@
-# Trigger redeploy for GoLiveSetup dynamic import fix
-# Frontend rebuild with new asset hashes
+# Trigger redeploy for cache header fix
+# Frontend rebuild with proper cache control headers
+# Deploy timestamp: 2025-10-17
