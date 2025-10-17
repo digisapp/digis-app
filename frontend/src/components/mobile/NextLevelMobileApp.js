@@ -440,18 +440,7 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
           console.log('✅ Rendering MobileCreatorDashboard');
           return (
             <MobileRouteBoundary routeName="Dashboard">
-              <div className="w-full min-h-screen bg-gray-50">
-                <div className="p-4">
-                  <h1 className="text-2xl font-bold text-purple-600 mb-4">Creator Dashboard</h1>
-                  <p className="text-gray-600 mb-4">Welcome back, {user?.username || user?.email}!</p>
-                  <div className="bg-white rounded-lg p-4 shadow-md mb-4">
-                    <p className="text-sm text-gray-500">Debug Info:</p>
-                    <p className="text-xs">is_creator: {String(user?.is_creator)}</p>
-                    <p className="text-xs">role: {user?.role}</p>
-                    <p className="text-xs">email: {user?.email}</p>
-                  </div>
-                </div>
-                <MobileCreatorDashboard
+              <MobileCreatorDashboard
                   user={user}
                   tokenBalance={user?.token_balance || 0}
                   onNavigate={(tab) => setActiveTab(tab)}
@@ -462,7 +451,6 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
                   onShowContent={handleShowContent}
                   onShowMessages={() => setActiveTab('messages')}
                 />
-              </div>
             </MobileRouteBoundary>
           );
         }
