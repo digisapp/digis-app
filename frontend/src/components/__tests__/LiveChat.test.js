@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom';
 import LiveChat from '../LiveChat';
 
-// Mock Socket.IO
+// Mock Ably (replaces Socket.IO)
 const mockSocket = {
   on: jest.fn(),
   off: jest.fn(),
@@ -11,8 +11,23 @@ const mockSocket = {
   disconnect: jest.fn(),
 };
 
-jest.mock('socket.io-client', () => {
-  return jest.fn(() => mockSocket);
+jest.mock('ably', () => {
+  return {
+    Realtime: jest.fn(() => ({
+      channels: {
+        get: jest.fn(() => ({
+          subscribe: jest.fn(),
+          unsubscribe: jest.fn(),
+          publish: jest.fn()
+        }))
+      },
+      connection: {
+        on: jest.fn(),
+        state: 'connected'
+      },
+      close: jest.fn()
+    }))
+  };
 });
 
 // Mock Supabase auth

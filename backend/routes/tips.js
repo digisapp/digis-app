@@ -188,25 +188,18 @@ router.post('/send', authenticateToken, async (req, res) => {
 
     // Broadcast tip event via Ably for live overlay (Pro Monetization)
     try {
-      const Ably = require('ably');
-      const ablyApiKey = process.env.ABLY_API_KEY;
+      const { publish } = require('../utils/ably-publish');
 
-      if (ablyApiKey && context.channel) {
-        const ablyClient = new Ably.Rest(ablyApiKey);
-        const channel = ablyClient.channels.get(`stream:${context.channel}`);
-
-        await channel.publish('tip:new', {
+      if (context.channel) {
+        await publish(`stream:${context.channel}`, 'tip:new', {
           tipId,
           amountTokens: amount,
           fromUsername: tipperInfo.username,
           fromUserId,
           toCreatorId: creatorInfo.supabase_id,
           message: message || null,
-          timestamp: new Date().toISOString(),
           ...context
         });
-
-        console.log(`Tip broadcasted via Ably to stream:${context.channel}`);
       }
     } catch (ablyError) {
       console.error('Ably broadcast error:', ablyError);

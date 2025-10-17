@@ -5,7 +5,7 @@ const { pool } = require('../utils/db');
 const { logger } = require('../utils/secureLogger');
 const { generateStableAgoraUid } = require('../utils/agoraUid');
 const { requireFeature } = require('../utils/featureFlags');
-const { emitCallRequest, emitCallAccepted, emitCallRejected } = require('../utils/ably-adapter');
+const { publish } = require('../utils/ably-publish');
 const router = express.Router();
 
 // Call cooldown: prevent spam calling (1 call per 60 seconds to same fan)
@@ -264,7 +264,7 @@ router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req,
       const creator = creatorDetails.rows[0];
 
       // Emit to fan's personal channel using Ably
-      await emitCallRequest(fanId, {
+      await publish(`user:${fanId}`, 'call:request', {
         callId,
         creatorId,
         requestId: callId, // For backward compatibility
@@ -402,7 +402,7 @@ router.post('/:callId/accept', requireFeature('CALLS'), authenticateToken, async
 
     // Send real-time notification to creator via Ably
     try {
-      await emitCallAccepted(call.creator_id, {
+      await publish(`user:${call.creator_id}`, 'call:accepted', {
         callId,
         type: call.call_type,
         roomId: call.agora_channel,
@@ -499,7 +499,7 @@ router.post('/:callId/decline', authenticateToken, async (req, res) => {
 
     // Send real-time notification to creator via Ably
     try {
-      await emitCallRejected(call.creator_id, {
+      await publish(`user:${call.creator_id}`, 'call:rejected', {
         callId,
         type: call.call_type,
         roomId: call.id,

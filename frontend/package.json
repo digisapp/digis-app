@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "build:analyze": "ANALYZE=true vite build",
     "build:optimize": "vite build --config vite.config.optimized.js",
-    "build:ci": "npm run type-check && npm run lint && npm run build",
+    "build:ci": "npm run type-check && npm run lint && npm run guard:realtime && npm run build",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -20,7 +20,8 @@
     "build:css": "tailwindcss -i ./src/index.css -o ./src/output.css --minify",
     "dev:css": "tailwindcss -i ./src/index.css -o ./src/output.css --watch",
     "analyze": "node analyze-bundle.js",
-    "clean": "rm -rf node_modules pnpm-lock.yaml dist && pnpm install"
+    "clean": "rm -rf node_modules pnpm-lock.yaml dist && pnpm install",
+    "guard:realtime": "! grep -R \"socket\\.io\" -n src || (echo '❌ Found socket.io references - use Ably instead' && exit 1)"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
@@ -68,7 +69,6 @@
     "react-window": "^1.8.11",
     "react-window-infinite-loader": "^1.0.10",
     "recharts": "^3.1.2",
-    "socket.io-client": "^4.8.1",
     "tailwind-merge": "^2.6.0",
     "use-debounce": "^10.0.5",
     "web-vitals": "^2.1.4",

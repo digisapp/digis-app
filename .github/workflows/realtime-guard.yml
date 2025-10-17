@@ -1,0 +1,48 @@
+name: Realtime Guard
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  guard-socket-io:
+    runs-on: ubuntu-latest
+    name: Prevent Socket.io regressions
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check frontend for socket.io references
+        run: |
+          echo "🔍 Checking frontend for socket.io references..."
+          if grep -R "socket\.io" -n frontend/src 2>/dev/null; then
+            echo "❌ Found socket.io references in frontend - use Ably instead"
+            exit 1
+          fi
+          echo "✅ Frontend is clean"
+
+      - name: Check backend for socket.io references
+        run: |
+          echo "🔍 Checking backend for socket.io references..."
+          if grep -R "socket\.io" -n backend/routes backend/utils backend/api 2>/dev/null; then
+            echo "❌ Found socket.io references in backend - use Ably instead"
+            exit 1
+          fi
+          echo "✅ Backend is clean"
+
+      - name: Check for global.io usage
+        run: |
+          echo "🔍 Checking for global.io usage..."
+          if grep -R "global\.io" -n backend 2>/dev/null; then
+            echo "❌ Found global.io references - use Ably publish helper instead"
+            exit 1
+          fi
+          echo "✅ No global.io usage found"
+
+      - name: Success
+        run: |
+          echo "✅ All realtime checks passed"
+          echo "✅ Socket.io has been fully replaced with Ably"

@@ -32,7 +32,8 @@
     "clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
     "logs": "tail -f logs/app.log",
     "security:audit": "pnpm audit",
-    "security:fix": "pnpm audit --fix"
+    "security:fix": "pnpm audit --fix",
+    "guard:realtime": "! grep -R \"socket\\.io\" -n routes utils api || (echo '❌ Found socket.io references - use Ably instead' && exit 1)"
   },
   "keywords": [
     "digis",
@@ -100,7 +101,6 @@
     "raw-body": "^3.0.0",
     "redis": "^4.6.12",
     "sharp": "^0.34.3",
-    "socket.io": "^4.8.1",
     "stripe": "^18.3.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

@@ -16,27 +16,22 @@ const LiveTipsOverlay = ({ channel }) => {
 
     const initializeAbly = async () => {
       try {
-        // Get Ably auth token from backend
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/ably-auth`, {
-          method: 'POST',
-          headers: {
+        const backend = import.meta.env.VITE_BACKEND_URL;
+
+        // Initialize Ably client with authUrl (handles token refresh automatically)
+        ablyClientRef.current = new Ably.Realtime({
+          authUrl: `${backend}/api/ably-auth`,
+          authMethod: 'POST',
+          authHeaders: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+            'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+          },
+          disconnectedRetryTimeout: 3000
         });
 
-        if (!response.ok) {
-          console.error('Failed to get Ably token');
-          return;
-        }
-
-        const tokenRequest = await response.json();
-
-        // Initialize Ably client with token request
-        ablyClientRef.current = new Ably.Realtime({
-          authCallback: async (tokenParams, callback) => {
-            callback(null, tokenRequest);
-          }
+        // Log connection state changes
+        ablyClientRef.current.connection.on((stateChange) => {
+          console.log('[Ably]', stateChange.current, stateChange.reason || '');
         });
 
         // Subscribe to stream channel for tip events
@@ -45,7 +40,7 @@ const LiveTipsOverlay = ({ channel }) => {
         ablyChannelRef.current.subscribe('tip:new', (message) => {
           console.log('New tip received via Ably:', message.data);
 
-          const tipData = message.data;
+          const tipData = message.data || {};
           const tip = {
             id: tipData.tipId || Date.now(),
             username: tipData.fromUsername || 'Anonymous',
