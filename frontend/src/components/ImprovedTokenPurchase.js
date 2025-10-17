@@ -315,40 +315,16 @@ const CheckoutForm = ({
   );
 };
 
-const ImprovedTokenPurchase = ({ 
-  user, 
-  onSuccess, 
-  onClose, 
-  isModal = false, 
-  isGift = false, 
+const ImprovedTokenPurchase = ({
+  user,
+  onSuccess,
+  onClose,
+  isModal = false,
+  isGift = false,
   giftRecipient = null,
-  initialPackage = null 
+  initialPackage = null
 }) => {
-  // Prop validation
-  if (!user?.id) {
-    console.error('ImprovedTokenPurchase: Missing user data');
-    toast.error('Please sign in to purchase tokens');
-    return null;
-  }
-  
-  if (isGift && !giftRecipient?.uid) {
-    console.error('ImprovedTokenPurchase: Missing gift recipient');
-    toast.error('Invalid gift recipient');
-    return null;
-  }
-  
-  if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
-    console.error('ImprovedTokenPurchase: Missing Stripe publishable key');
-    toast.error('Payment configuration error. Please contact support.');
-    return null;
-  }
-  
-  if (!import.meta.env.VITE_BACKEND_URL) {
-    console.error('ImprovedTokenPurchase: Missing backend URL');
-    toast.error('Configuration error. Please contact support.');
-    return null;
-  }
-
+  // ✅ CRITICAL FIX: Declare ALL hooks BEFORE any conditional returns
   const [selectedPackage, setSelectedPackage] = useState(initialPackage || TOKEN_PACKAGES[1]); // Default to popular
   const [showCheckout, setShowCheckout] = useState(!!initialPackage);
   const [loading, setLoading] = useState(false);
@@ -360,6 +336,31 @@ const ImprovedTokenPurchase = ({
       modalRef.current.focus();
     }
   }, [isModal]);
+
+  // ✅ Prop validation AFTER all hooks (moved from top)
+  if (!user?.id) {
+    console.error('ImprovedTokenPurchase: Missing user data');
+    toast.error('Please sign in to purchase tokens');
+    return null;
+  }
+
+  if (isGift && !giftRecipient?.uid) {
+    console.error('ImprovedTokenPurchase: Missing gift recipient');
+    toast.error('Invalid gift recipient');
+    return null;
+  }
+
+  if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+    console.error('ImprovedTokenPurchase: Missing Stripe publishable key');
+    toast.error('Payment configuration error. Please contact support.');
+    return null;
+  }
+
+  if (!import.meta.env.VITE_BACKEND_URL) {
+    console.error('ImprovedTokenPurchase: Missing backend URL');
+    toast.error('Configuration error. Please contact support.');
+    return null;
+  }
 
   // Handle package selection
   const handlePackageSelect = (pkg) => {
