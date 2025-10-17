@@ -2,46 +2,17 @@ const express = require('express');
 const { pool } = require('../utils/db');
 const { authenticateToken, requireTokens } = require('../middleware/auth');
 const { idempotency } = require('../middleware/idempotency');
+const { presets: rateLimitPresets } = require('../middleware/dual-tier-rate-limiter');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
-// Rate limiting: prevent tip spam (max 10 tips per 10 seconds per user)
-const tipRateLimits = new Map(); // userId -> { count, resetTime }
-
-function checkTipRateLimit(userId) {
-  const now = Date.now();
-  const limit = tipRateLimits.get(userId);
-
-  // Reset if window expired
-  if (!limit || now >= limit.resetTime) {
-    tipRateLimits.set(userId, { count: 1, resetTime: now + 10000 });
-    return { allowed: true };
-  }
-
-  // Check if under limit
-  if (limit.count < 10) {
-    limit.count++;
-    return { allowed: true };
-  }
-
-  // Over limit
-  const retryAfter = Math.ceil((limit.resetTime - now) / 1000);
-  return { allowed: false, retryAfter };
-}
-
-// Cleanup old rate limit entries (every 5 minutes)
-setInterval(() => {
-  const now = Date.now();
-  for (const [userId, limit] of tipRateLimits.entries()) {
-    if (now >= limit.resetTime + 60000) { // 1 minute grace period
-      tipRateLimits.delete(userId);
-    }
-  }
-}, 300000);
+// NOTE: Rate limiting is now handled by dual-tier middleware (Redis-based)
+// See middleware/dual-tier-rate-limiter.js for implementation
 
 // Send a tip to a creator (Pro Monetization)
 router.post('/send',
   authenticateToken,
+  rateLimitPresets.tips(), // Dual-tier: 10/sec burst, 100/min sustained
   idempotency({ prefix: 'tip', ttlSec: 24 * 60 * 60 }),
   async (req, res) => {
   const client = await pool.connect();
@@ -52,17 +23,6 @@ router.post('/send',
     const tipperId = fromUserId; // Keep compatibility
     const creatorId = toCreatorId || req.body.creatorId;
     const amount = amountTokens || req.body.amount;
-
-    // Rate limit check: prevent tip spam
-    const rateLimit = checkTipRateLimit(fromUserId);
-    if (!rateLimit.allowed) {
-      return res.status(429).json({
-        success: false,
-        error: 'Rate limit exceeded',
-        message: 'Too many tips sent. Please wait before sending another tip.',
-        retryAfter: rateLimit.retryAfter
-      });
-    }
 
     // Validate input
     if (!creatorId || !amount || amount <= 0) {
