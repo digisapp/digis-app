@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../utils/db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, optionalAuth } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
 // Helper to use req.pg if available (with JWT context), otherwise fall back to pool
@@ -859,7 +859,7 @@ router.get('/public/creators', async (req, res) => {
 });
 
 // Get creators list with enhanced filtering
-router.get('/creators', authenticateToken, async (req, res) => {
+router.get('/creators', optionalAuth, async (req, res) => {
   const {
     limit = 20,
     page = 1,
