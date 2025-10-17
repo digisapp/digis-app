@@ -255,6 +255,7 @@ try {
   const uploadsRoutes = require('../routes/uploads');
   const publicCreatorsRoutes = require('../routes/public-creators');
   const usernamesRoutes = require('../routes/usernames');
+  const clientLogRoutes = require('../routes/client-log');
 
   // Apply metrics middleware
   const metricsCollector = require('../utils/metrics-collector');
@@ -347,6 +348,7 @@ try {
   app.use('/api/metrics', rateLimiters.analytics || ((req, res, next) => next()), monitoringRoutes);
   app.use('/api/storage', rateLimiters.upload || ((req, res, next) => next()), storageRoutes);
   app.use('/api/uploads', rateLimiters.upload || ((req, res, next) => next()), uploadsRoutes);
+  app.use('/api/client-log', clientLogRoutes); // Client-side error logging (no auth during investigation)
   app.use('/api/fans', rateLimiters.api || ((req, res, next) => next()), fansRoutes);
   app.use('/api/calls', rateLimiters.api || ((req, res, next) => next()), callsRoutes);
   app.use('/api', rateLimiters.public || ((req, res, next) => next()), publicCreatorsRoutes); // Public creator profiles

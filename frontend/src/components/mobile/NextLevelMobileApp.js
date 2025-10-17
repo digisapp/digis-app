@@ -622,25 +622,27 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <Suspense fallback={
-              <div className="mobile-modal-fallback flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4" />
-                  <p className="text-gray-600">Loading video stream...</p>
+            <MobileRouteBoundary routeName="VideoStream">
+              <Suspense fallback={
+                <div className="mobile-modal-fallback flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4" />
+                    <p className="text-gray-600">Loading video stream...</p>
+                  </div>
                 </div>
-              </div>
-            }>
-              <MobileVideoStream
-                creator={selectedCreator}
-                user={user}
-                token="temp-token" // TODO: Generate from backend
-                channel={`video_${selectedCreator.id}_${Date.now()}`}
-                onEnd={() => {
-                  setShowVideoCall(false);
-                  setSelectedCreator(null);
-                }}
-              />
-            </Suspense>
+              }>
+                <MobileVideoStream
+                  creator={selectedCreator}
+                  user={user}
+                  token="temp-token" // TODO: Generate from backend
+                  channel={`video_${selectedCreator.id}_${Date.now()}`}
+                  onEnd={() => {
+                    setShowVideoCall(false);
+                    setSelectedCreator(null);
+                  }}
+                />
+              </Suspense>
+            </MobileRouteBoundary>
           </motion.div>
         )}
       </AnimatePresence>
@@ -648,52 +650,56 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
       {/* Go Live Setup Modal */}
       <AnimatePresence>
         {showGoLiveSetup && (
-          <Suspense fallback={
-            <div className="mobile-modal-fallback flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4" />
-                <p className="text-gray-600">Preparing stream setup...</p>
+          <MobileRouteBoundary routeName="GoLive">
+            <Suspense fallback={
+              <div className="mobile-modal-fallback flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4" />
+                  <p className="text-gray-600">Preparing stream setup...</p>
+                </div>
               </div>
-            </div>
-          }>
-            <GoLiveSetup
-              user={user}
-              onGoLive={handleGoLive}
-              onCancel={() => setShowGoLiveSetup(false)}
-            />
-          </Suspense>
+            }>
+              <GoLiveSetup
+                user={user}
+                onGoLive={handleGoLive}
+                onCancel={() => setShowGoLiveSetup(false)}
+              />
+            </Suspense>
+          </MobileRouteBoundary>
         )}
       </AnimatePresence>
 
       {/* Token Purchase Modal */}
       <AnimatePresence>
         {showTokenPurchase && (
-          <Suspense fallback={
-            <div className="mobile-modal-fallback flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4" />
-                <p className="text-gray-600">Loading token purchase...</p>
+          <MobileRouteBoundary routeName="TokenPurchase">
+            <Suspense fallback={
+              <div className="mobile-modal-fallback flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4" />
+                  <p className="text-gray-600">Loading token purchase...</p>
+                </div>
               </div>
-            </div>
-          }>
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="w-full max-w-md"
-              >
-                <TokenPurchase
-                  user={user}
-                  onClose={() => setShowTokenPurchase(false)}
-                  onSuccess={() => {
-                    setShowTokenPurchase(false);
-                    hapticFeedback('heavy');
-                  }}
-                />
-              </motion.div>
-            </div>
-          </Suspense>
+            }>
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="w-full max-w-md"
+                >
+                  <TokenPurchase
+                    user={user}
+                    onClose={() => setShowTokenPurchase(false)}
+                    onSuccess={() => {
+                      setShowTokenPurchase(false);
+                      hapticFeedback('heavy');
+                    }}
+                  />
+                </motion.div>
+              </div>
+            </Suspense>
+          </MobileRouteBoundary>
         )}
       </AnimatePresence>
 

@@ -31,14 +31,53 @@ class MobileErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     const { routeName, onError } = this.props;
+    const isHookError = /(^| )#?310( |$)/.test(error?.message || '') || /hook/i.test(error?.message || '');
 
-    // Log error with context
-    console.error(`🚨 Mobile Route Error [${routeName}]:`, {
-      error,
-      errorInfo,
-      componentStack: errorInfo.componentStack,
-      timestamp: new Date().toISOString()
-    });
+    const payload = {
+      route: routeName,
+      message: String(error?.message || error),
+      error: error.toString(),
+      stack: error?.stack,
+      componentStack: errorInfo?.componentStack,
+      timestamp: new Date().toISOString(),
+      isHook310: isHookError,
+      errorNumber: error?.message?.match(/#(\d+)/)?.[1],
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    };
+
+    // ✅ CRITICAL: Log with route name so minified component "AF" resolves to route name
+    console.error(`🚨 [Boundary:${routeName}] React Error Caught:`, payload);
+
+    // If it's React error #310, log specific guidance
+    if (isHookError) {
+      console.error(`❌ React Hook Error #310 in route: ${routeName}`);
+      console.error('Component stack:', errorInfo?.componentStack);
+      console.error('This means hooks are called in different order between renders.');
+      console.error('Check this component for:');
+      console.error('  1. Early returns BEFORE hook declarations');
+      console.error('  2. Conditional hook calls (if statements around useX)');
+      console.error('  3. Hooks declared after conditional logic');
+    }
+
+    // Ship to API for server-side logging (fire-and-forget)
+    try {
+      const apiUrl = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3005'}/api/client-log`;
+
+      if (navigator.sendBeacon) {
+        // Use sendBeacon for reliability (works even if page is closing)
+        navigator.sendBeacon(apiUrl, JSON.stringify(payload));
+      } else {
+        // Fallback to fetch
+        fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => {}); // Silent fail
+      }
+    } catch (e) {
+      // Silent fail - don't break error boundary
+    }
 
     this.setState(prevState => ({
       error,
