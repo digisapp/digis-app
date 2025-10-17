@@ -92,6 +92,9 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
       try {
         const AgoraRTC = await agoraLoader.loadRTC();
         setAgoraRTC(AgoraRTC);
+
+        // Initialize camera immediately after Agora loads (iOS allows this in user-initiated modal)
+        console.log('[EnhancedMobileLiveStream] Agora loaded, initializing camera...');
       } catch (error) {
         console.error('Failed to load Agora SDK:', error);
         toast.error('Failed to initialize streaming');
@@ -122,8 +125,26 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
     };
   }, []);
 
-  // Don't auto-initialize camera - wait for user gesture (iOS requirement)
-  // Camera will be initialized when user taps "Go Live"
+  // Initialize camera after Agora loads (iOS allows camera access in modals opened by user gesture)
+  useEffect(() => {
+    if (agoraRTC && !localTracks.video && !isLive) {
+      console.log('[EnhancedMobileLiveStream] Initializing camera preview...');
+      initializeCamera();
+    }
+
+    // Cleanup tracks on unmount
+    return () => {
+      console.log('[EnhancedMobileLiveStream] Cleaning up camera tracks...');
+      if (localTracks.video) {
+        localTracks.video.stop();
+        localTracks.video.close();
+      }
+      if (localTracks.audio) {
+        localTracks.audio.stop();
+        localTracks.audio.close();
+      }
+    };
+  }, [agoraRTC, isLive]);
 
   // Socket events for real-time updates
   useEffect(() => {
@@ -352,26 +373,41 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
 
   const handleStartStream = async () => {
     // Double-tap guard
-    if (clickedOnceRef.current) return;
+    if (clickedOnceRef.current) {
+      console.log('[handleStartStream] Double-tap guard triggered');
+      return;
+    }
     clickedOnceRef.current = true;
+
+    console.log('[handleStartStream] Starting stream process...');
+    console.log('[handleStartStream] Tracks status:', {
+      hasVideo: !!localTracks.video,
+      hasAudio: !!localTracks.audio,
+      agoraRTC: !!agoraRTC
+    });
 
     try {
       // Ensure camera is initialized (iOS gesture requirement)
       await ensureCamera();
 
       if (!localTracks.video || !localTracks.audio) {
-        toast.error('Camera not ready');
+        const errorMsg = `Camera not ready - Video: ${!!localTracks.video}, Audio: ${!!localTracks.audio}`;
+        console.error('[handleStartStream]', errorMsg);
+        toast.error('Camera not ready. Please try again.');
         clickedOnceRef.current = false;
         return;
       }
 
       setLoading(true);
+      console.log('[handleStartStream] Setting loading state...');
 
       if (!agoraRTC) throw new Error('Agora not initialized');
 
       // Create Agora client
+      console.log('[handleStartStream] Creating Agora client...');
       const client = agoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
       clientRef.current = client;
+      console.log('[handleStartStream] Agora client created');
 
       // Set up connection state listener
       client.on('connection-state-change', (cur, prev, reason) => {
@@ -424,20 +460,27 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
       }
 
       // Fetch RTC token from backend
+      console.log('[handleStartStream] Fetching token from backend...');
       const BASE = import.meta.env.VITE_BACKEND_URL;
       const auth = await getAuthToken();
+      console.log('[handleStartStream] Got auth token, backend URL:', BASE);
 
       const { token, appId, uid } = await fetchJSON(`${BASE}/api/agora/token`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${auth}` },
         body: { channelName: channel }
       });
+      console.log('[handleStartStream] Token received, appId:', appId, 'uid:', uid);
 
       // Join channel
+      console.log('[handleStartStream] Joining Agora channel:', channel);
       await client.join(appId, channel, token, uid || user?.id || null);
+      console.log('[handleStartStream] Successfully joined channel');
 
       // Publish local tracks
+      console.log('[handleStartStream] Publishing local tracks...');
       await client.publish([localTracks.audio, localTracks.video]);
+      console.log('[handleStartStream] Tracks published successfully');
 
       // Request wake lock
       await requestWakeLock();
@@ -447,13 +490,28 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
 
       setIsLive(true);
       setConnectionState('CONNECTED');
+      console.log('[handleStartStream] Stream started successfully!');
       toast.success('You are now live!');
     } catch (error) {
-      console.error('Failed to start stream:', error);
-      toast.error('Failed to start stream');
+      console.error('[handleStartStream] Failed to start stream:', error);
+      console.error('[handleStartStream] Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+
+      // More specific error messages
+      if (error.message?.includes('token')) {
+        toast.error('Failed to authenticate. Please try again.');
+      } else if (error.message?.includes('camera') || error.message?.includes('track')) {
+        toast.error('Camera or microphone error. Please check permissions.');
+      } else {
+        toast.error(`Failed to start stream: ${error.message || 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
       clickedOnceRef.current = false;
+      console.log('[handleStartStream] Cleanup complete');
     }
   };
 
