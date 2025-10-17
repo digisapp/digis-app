@@ -1,6 +1,7 @@
 const { pool } = require('./db');
 const logger = require('./logger');
-const { io } = require('./socket');
+// Socket.io removed - using Ably
+// const { io } = require('./socket');
 
 class LoyaltyService {
   constructor() {
@@ -114,7 +115,8 @@ class LoyaltyService {
       await this.deliverUpgradePerks(userId, creatorId, newLevel);
 
       // Send notification
-      io.to(`user:${userId}`).emit('loyalty_upgraded', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${userId}`).emit('loyalty_upgraded', {
         creatorId,
         newLevel,
         message: `Congratulations! You've been upgraded to ${newLevel} status!`,
@@ -122,7 +124,8 @@ class LoyaltyService {
       });
 
       // Notify creator
-      io.to(`user:${creatorId}`).emit('fan_loyalty_upgrade', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${creatorId}`).emit('fan_loyalty_upgrade', {
         fanId: userId,
         newLevel,
         message: `A fan has reached ${newLevel} loyalty status!`
@@ -424,7 +427,8 @@ class LoyaltyService {
         })]
       );
 
-      io.to(`user:${userId}`).emit('perk_delivered', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${userId}`).emit('perk_delivered', {
         type: perkType,
         message: 'Your daily exclusive content is ready!'
       });
@@ -454,7 +458,8 @@ class LoyaltyService {
         })]
       );
 
-      io.to(`user:${userId}`).emit('perk_delivered', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${userId}`).emit('perk_delivered', {
         type: perkType,
         message: 'Your weekly exclusive content is ready!'
       });

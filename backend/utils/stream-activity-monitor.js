@@ -1,6 +1,7 @@
 const { pool } = require('./db');
 const { logger } = require('./logger');
-const { io } = require('./socket');
+// Socket.io removed - using Ably
+// const { io } = require('./socket');
 
 class StreamActivityMonitor {
   constructor() {
@@ -170,7 +171,8 @@ class StreamActivityMonitor {
 
       // Send socket notification to creator
       // STANDARDIZED: Use user:${id} format consistently
-      io.to(`user:${stream.creator_id}`).emit('stream_inactivity_warning', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${stream.creator_id}`).emit('stream_inactivity_warning', {
         streamId: stream.id,
         message: `Your stream will end in ${minutesRemaining} minutes due to inactivity`,
         minutesRemaining,
@@ -215,7 +217,8 @@ class StreamActivityMonitor {
       });
 
       // Notify creator and viewers
-      io.to(`stream_${stream.id}`).emit('stream_auto_ended', {
+// TODO: Replace with Ably publish
+//       io.to(`stream_${stream.id}`).emit('stream_auto_ended', {
         streamId: stream.id,
         reason: reason === 'no_viewers' 
           ? 'Stream ended due to no viewers' 

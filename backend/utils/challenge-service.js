@@ -1,6 +1,7 @@
 const { pool } = require('./db');
 const { logger } = require('./logger');
-const { getIO } = require('./socket');
+// Socket.io removed - using Ably
+// const { getIO } = require('./socket');
 const loyaltyService = require('./loyalty-service');
 
 class ChallengeService {
@@ -105,7 +106,8 @@ class ChallengeService {
       
       // Send notifications
       const io = getIO();
-      io.to(`user:${userId}`).emit('challenge_completed', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${userId}`).emit('challenge_completed', {
         challengeId: challenge.id,
         name: challenge.name,
         rewards: {
@@ -227,7 +229,8 @@ class ChallengeService {
       
       // Notify all fans
       const io = getIO();
-      io.to(`creator:${creatorId}:fans`).emit('new_challenge', {
+// TODO: Replace with Ably publish
+//       io.to(`creator:${creatorId}:fans`).emit('new_challenge', {
         challenge: result.rows[0],
         message: `New challenge available: ${challengeData.name}`
       });
@@ -321,14 +324,16 @@ class ChallengeService {
       
       // Send notification
       const io = getIO();
-      io.to(`user:${userId}`).emit('milestone_achieved', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${userId}`).emit('milestone_achieved', {
         type: milestone.type,
         message: milestone.message,
         rewards: { tokens: milestone.tokens }
       });
       
       // Notify creator
-      io.to(`user:${creatorId}`).emit('fan_milestone', {
+// TODO: Replace with Ably publish
+//       io.to(`user:${creatorId}`).emit('fan_milestone', {
         fanId: userId,
         milestone: milestone.type,
         message: `A fan reached ${milestone.message}`
