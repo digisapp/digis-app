@@ -36,6 +36,85 @@ function checkCallCooldown(creatorId, fanId) {
   return { allowed: true };
 }
 
+// POST /api/calls/init - Initialize a pay-per-minute call (Pro Monetization)
+router.post('/init', authenticateToken, async (req, res) => {
+  try {
+    const fanId = req.user.supabase_id;
+    const { creatorId, rate_tokens_per_min } = req.body;
+
+    // Validation
+    if (!creatorId || !rate_tokens_per_min || rate_tokens_per_min <= 0) {
+      return res.status(400).json({ error: 'INVALID_REQUEST', message: 'Creator ID and rate required' });
+    }
+
+    // Verify creator exists and is a creator
+    const creatorCheck = await pool.query(
+      'SELECT is_creator, username FROM users WHERE supabase_id = $1',
+      [creatorId]
+    );
+
+    if (creatorCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'CREATOR_NOT_FOUND' });
+    }
+
+    if (!creatorCheck.rows[0].is_creator) {
+      return res.status(400).json({ error: 'NOT_A_CREATOR' });
+    }
+
+    // Check fan's balance (require at least 30 seconds worth)
+    const fanWallet = await pool.query(
+      'SELECT balance FROM wallets WHERE user_id = $1',
+      [fanId]
+    );
+
+    const balance = fanWallet.rows[0]?.balance || 0;
+    const minRequired = Math.ceil(rate_tokens_per_min / 2); // 30 seconds worth
+
+    if (balance < minRequired) {
+      return res.status(400).json({
+        error: 'INSUFFICIENT_TOKENS',
+        message: `Need at least ${minRequired} tokens to start call`,
+        required: minRequired,
+        current: balance
+      });
+    }
+
+    // Generate unique channel using nanoid
+    const { nanoid } = require('nanoid');
+    const channel = `call_${nanoid(12)}`;
+
+    // Create call record in new calls table
+    const callResult = await pool.query(
+      `INSERT INTO calls (
+        creator_id, fan_id, channel, rate_tokens_per_min, status
+      ) VALUES ($1, $2, $3, $4, 'active') RETURNING *`,
+      [creatorId, fanId, channel, rate_tokens_per_min]
+    );
+
+    const call = callResult.rows[0];
+
+    logger.info('Pro call initialized:', {
+      callId: call.id,
+      creatorId,
+      fanId,
+      channel,
+      rate: rate_tokens_per_min
+    });
+
+    res.json({
+      success: true,
+      callId: call.id,
+      channel: call.channel,
+      rate: rate_tokens_per_min,
+      started_at: call.started_at
+    });
+
+  } catch (error) {
+    logger.error('Error initializing pro call:', error);
+    res.status(500).json({ error: 'CALL_INIT_FAILED', message: error.message });
+  }
+});
+
 // POST /api/calls/initiate - Creator initiates a call to a fan
 router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req, res) => {
   const { fanId, callType, message } = req.body;

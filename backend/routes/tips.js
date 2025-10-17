@@ -4,13 +4,16 @@ const { authenticateToken, requireTokens } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
-// Send a tip to a creator
+// Send a tip to a creator (Pro Monetization)
 router.post('/send', authenticateToken, async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
-    const { creatorId, amount, message = '', sessionId = null } = req.body;
-    const tipperId = req.user.supabase_id;
+    const { toCreatorId, amountTokens, message = '', context = {} } = req.body;
+    const fromUserId = req.user.supabase_id;
+    const tipperId = fromUserId; // Keep compatibility
+    const creatorId = toCreatorId || req.body.creatorId;
+    const amount = amountTokens || req.body.amount;
     
     // Validate input
     if (!creatorId || !amount || amount <= 0) {
@@ -157,12 +160,60 @@ router.post('/send', authenticateToken, async (req, res) => {
       ]
     );
 
+    // Record in tips table if it exists (Pro Monetization)
+    try {
+      await client.query(
+        `INSERT INTO tips (from_user_id, to_creator_id, amount_tokens, message, context_type, context_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [fromUserId, creatorInfo.supabase_id, amount, message, context.type || null, context.id || null]
+      );
+    } catch (e) {
+      // Table might not exist yet, continue
+      console.log('Tips table not available yet:', e.message);
+    }
+
+    // Update stream stats if applicable
+    if (context.streamId) {
+      try {
+        await client.query(
+          'UPDATE streams SET total_tips = total_tips + $1 WHERE id = $2',
+          [amount, context.streamId]
+        );
+      } catch (e) {
+        console.log('Streams table not available yet:', e.message);
+      }
+    }
+
     await client.query('COMMIT');
+
+    // Broadcast socket event for live overlay (Pro Monetization)
+    try {
+      const io = req.app.get('io');
+      if (io && context.channel) {
+        io.to(context.channel).emit(`tip:new:${context.channel}`, {
+          tipId,
+          amountTokens: amount,
+          fromUsername: tipperInfo.username,
+          fromUserId,
+          toCreatorId: creatorInfo.supabase_id,
+          message: message || null,
+          timestamp: new Date().toISOString(),
+          ...context
+        });
+      }
+    } catch (socketError) {
+      console.error('Socket broadcast error:', socketError);
+      // Don't fail the request if socket fails
+    }
 
     res.json({
       success: true,
       tip: tipResult.rows[0],
-      new_balance: balance - amount
+      new_balance: balance - amount,
+      tipId,
+      amountTokens: amount,
+      creatorCut: amount,     // 100% to creator
+      platformFee: 0          // Digis margin comes only from token sales
     });
 
   } catch (error) {
