@@ -12,6 +12,18 @@ export async function disableAllServiceWorkers() {
   try {
     console.log('🧹 Starting aggressive service worker cleanup...');
 
+    // CRITICAL: Clear ALL caches first (including Cache Storage API)
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      console.log(`🧹 Found ${cacheNames.length} cache(s) to delete FIRST`);
+      await Promise.all(
+        cacheNames.map(async (cacheName) => {
+          await caches.delete(cacheName);
+          console.log(`✅ Cache deleted: ${cacheName}`);
+        })
+      );
+    }
+
     // Get all registrations
     const registrations = await navigator.serviceWorker.getRegistrations();
 
@@ -39,19 +51,6 @@ export async function disableAllServiceWorkers() {
     });
 
     await Promise.all(unregisterPromises);
-
-    // Clear all caches
-    if ('caches' in window) {
-      const cacheNames = await caches.keys();
-      console.log(`🧹 Found ${cacheNames.length} cache(s) to delete`);
-
-      await Promise.all(
-        cacheNames.map(async (cacheName) => {
-          await caches.delete(cacheName);
-          console.log(`✅ Cache deleted: ${cacheName}`);
-        })
-      );
-    }
 
     console.log('✅ Service worker cleanup complete - page will reload');
 
