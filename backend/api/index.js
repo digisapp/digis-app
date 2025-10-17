@@ -266,21 +266,31 @@ try {
   const metricsCollector = require('../utils/metrics-collector');
   app.use(metricsCollector.httpMetricsMiddleware());
 
-  // Mount v1 routes
+  // Mount v1 routes (versioned API)
   app.use('/api/v1', v1Routes);
+
+  // DUAL-MOUNT STRATEGY (temporary back-compat during migration)
+  // Mount v1 routes at both /api/v1 and /api for backwards compatibility
+  // This allows gradual frontend migration to versioned endpoints
+  // TODO: Remove /api/* mounts once all clients use /api/v1/*
+  app.use('/api', v1Routes); // Dual-mount for transition period
 
   // Use enhanced auth with JWT refresh tokens
   const authEnhancedRoutes = require('../routes/auth-enhanced');
 
   // Apply rate limiters to sensitive routes (disabled in development)
   const authLimiter = process.env.NODE_ENV === 'production' ? (rateLimiters.auth || ((req, res, next) => next())) : ((req, res, next) => next());
-  app.use('/api/auth', authLimiter, authRoutes);
+  app.use('/api/v1/auth', authLimiter, authRoutes); // Versioned auth
+  app.use('/api/auth', authLimiter, authRoutes); // Back-compat auth
   app.use('/api/auth/v2', authLimiter, authEnhancedRoutes); // New auth endpoints with refresh tokens
 
   // Ably token authentication endpoint (for Vercel real-time)
+  // Dual-mount on both paths for compatibility
   const ablyAuth = require('./ably-auth');
-  app.post('/api/ably-auth', ablyAuth);
-  app.get('/api/ably-auth', ablyAuth);
+  app.post('/api/v1/ably-auth', ablyAuth); // Versioned
+  app.get('/api/v1/ably-auth', ablyAuth); // Versioned
+  app.post('/api/ably-auth', ablyAuth); // Back-compat
+  app.get('/api/ably-auth', ablyAuth); // Back-compat
 
   // Inngest trigger endpoint (for QStash cron) - MUST be before general handler
   const inngestTrigger = require('./inngest-trigger');
