@@ -573,8 +573,8 @@ export const AuthProvider = ({ children }) => {
 
     const initAuth = async () => {
       // CRITICAL: Hard timeout fallback to prevent infinite loading on slow devices
-      // Mobile devices get longer timeout (10s) for slower 3G/4G networks
-      const MAX_BOOT_MS = (typeof window !== 'undefined' && window.innerWidth < 768) ? 10000 : 5000;
+      // Increased for pooler latency: 25s mobile, 20s desktop (was 10s/5s)
+      const MAX_BOOT_MS = (typeof window !== 'undefined' && window.innerWidth < 768) ? 25000 : 20000;
       const bootTimeout = setTimeout(() => {
         if (mounted) {
           console.warn(`⚠️ Hard auth timeout reached after ${MAX_BOOT_MS / 1000}s - forcing load complete`);
@@ -776,13 +776,13 @@ export const AuthProvider = ({ children }) => {
         setAuthLoading(false);
       }
 
-      // Timeout fallback - reduced from 30s to 10s
+      // Timeout fallback - increased to 25s for pooler latency (was 10s)
       timeoutId = setTimeout(() => {
         if (mounted && authLoading) {
-          console.error('⚠️ Auth timeout reached after 10s');
+          console.error('⚠️ Auth timeout reached after 25s');
           setAuthLoading(false);
         }
-      }, 10000);
+      }, 25000);
 
       // Guard to prevent double redirects on sign-out
       const hasRedirectedOnSignOut = { current: false };
