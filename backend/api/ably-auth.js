@@ -8,6 +8,7 @@
 
 const Ably = require('ably');
 const { verifySupabaseToken } = require('../utils/supabase-admin-v2');
+const { canUserJoinStream } = require('../utils/stream-access');
 
 /**
  * Serverless handler for Ably token authentication
@@ -69,7 +70,7 @@ async function handler(req, res) {
      */
 
     // Extract streamId from query params, body, or headers
-    const streamId = req.query?.streamId || req.body?.streamId || req.headers['x-stream-id'];
+    const requestedStreamId = req.query?.streamId || req.body?.streamId || req.headers['x-stream-id'];
 
     // Build minimal scoped capabilities
     const capabilities = {};
@@ -78,21 +79,62 @@ async function handler(req, res) {
       // Always grant: subscribe to personal notification channel
       capabilities[`user:${userId}`] = ["subscribe", "history"];
 
-      // If joining a stream: grant subscribe + presence (but NO publish)
-      if (streamId) {
-        capabilities[`stream:${streamId}`] = ["subscribe", "presence", "history"];
+      // If joining a stream: validate access first
+      if (requestedStreamId) {
+        // Validate stream access (prevents unauthorized stream access)
+        const accessCheck = await canUserJoinStream(userId, requestedStreamId);
+
+        if (!accessCheck.allowed) {
+          console.warn('🚫 Stream access denied:', {
+            userId,
+            streamId: requestedStreamId,
+            reason: accessCheck.reason
+          });
+
+          return res.status(403).json({
+            error: 'STREAM_ACCESS_DENIED',
+            message: 'You do not have permission to access this stream',
+            reason: accessCheck.reason,
+            details: {
+              STREAM_NOT_FOUND: 'The requested stream does not exist',
+              AUTH_REQUIRED: 'Authentication required to access this stream',
+              STREAM_PRIVATE: 'This is a private stream',
+              FOLLOWERS_ONLY: 'This stream is for followers only',
+              TICKET_REQUIRED: 'A ticket is required to access this stream',
+              ACCESS_CHECK_FAILED: 'Unable to verify stream access'
+            }[accessCheck.reason] || 'Access denied'
+          });
+        }
+
+        // Access granted: provide scoped capabilities for this stream
+        capabilities[`stream:${requestedStreamId}`] = ["subscribe", "presence", "history"];
 
         // OPTIONAL: Enable client-side chat publishing
         // Uncomment this line if you want clients to publish chat messages directly
-        // capabilities[`stream:${streamId}:chat`] = ["publish", "subscribe", "presence", "history"];
+        // capabilities[`stream:${requestedStreamId}:chat`] = ["publish", "subscribe", "presence", "history"];
+
+        console.log('✅ Stream access granted:', {
+          userId,
+          streamId: requestedStreamId
+        });
       }
 
       // Creators: NO additional wildcard rights
       // All critical events (tips, tickets, billing) are published server-side only
     } else {
-      // Anonymous users: minimal read-only access
-      if (streamId) {
-        capabilities[`stream:${streamId}`] = ["subscribe", "history"];
+      // Anonymous users: minimal read-only access to public streams only
+      if (requestedStreamId) {
+        // Check if stream allows anonymous access
+        const accessCheck = await canUserJoinStream(null, requestedStreamId);
+
+        if (!accessCheck.allowed) {
+          return res.status(403).json({
+            error: 'AUTH_REQUIRED',
+            message: 'Authentication required to access this stream'
+          });
+        }
+
+        capabilities[`stream:${requestedStreamId}`] = ["subscribe", "history"];
       }
     }
 
@@ -110,7 +152,7 @@ async function handler(req, res) {
       clientId,
       role: userRole,
       authenticated: isAuthenticated,
-      streamId: streamId || 'none',
+      streamId: requestedStreamId || 'none',
       ttl: '2 hours',
       capabilities: Object.keys(capabilities).join(', ')
     });
