@@ -127,10 +127,36 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
 
   // Initialize camera after Agora loads (iOS allows camera access in modals opened by user gesture)
   useEffect(() => {
-    if (agoraRTC && !localTracks.video && !isLive) {
-      console.log('[EnhancedMobileLiveStream] Initializing camera preview...');
-      initializeCamera();
-    }
+    if (!agoraRTC || isLive) return;
+    if (!videoRef.current) return;
+    if (localTracks.video) return; // Already initialized
+
+    const initPreview = async () => {
+      try {
+        console.log('[EnhancedMobileLiveStream] Initializing camera preview...');
+
+        // Ensure video element is ready for iOS
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          videoRef.current.playsInline = true;
+          videoRef.current.autoplay = true;
+        }
+
+        await initializeCamera();
+
+        // Ensure playback started
+        if (localTracks.video && videoRef.current) {
+          console.log('[EnhancedMobileLiveStream] Starting video playback...');
+          await localTracks.video.play(videoRef.current, { fit: 'cover' });
+          console.log('[EnhancedMobileLiveStream] Video playback started successfully');
+        }
+      } catch (e) {
+        console.error('[EnhancedMobileLiveStream] Preview init failed:', e);
+        toast.error('Camera preview failed. Please check permissions and try again.');
+      }
+    };
+
+    initPreview();
 
     // Cleanup tracks on unmount
     return () => {
@@ -234,18 +260,36 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
     };
   }, [isLive]);
 
+  // Orientation reflow fix for iOS (prevents layout issues in portrait)
+  useEffect(() => {
+    const fixLayout = () => {
+      document.body.style.transform = 'translateZ(0)';
+      requestAnimationFrame(() => {
+        document.body.style.transform = '';
+      });
+    };
+
+    window.addEventListener('orientationchange', fixLayout);
+    window.addEventListener('resize', fixLayout);
+
+    return () => {
+      window.removeEventListener('orientationchange', fixLayout);
+      window.removeEventListener('resize', fixLayout);
+    };
+  }, []);
+
   // Backgrounding cleanup (iOS Safari)
   useEffect(() => {
     const onHide = () => {
       if (isLive) {
-        console.log('Page backgrounded - ending stream');
+        console.log('[EnhancedMobileLiveStream] Page backgrounded - ending stream');
         handleEndStream();
       }
     };
 
     const onVisibilityChange = () => {
       if (document.hidden && isLive) {
-        console.log('Page hidden - ending stream');
+        console.log('[EnhancedMobileLiveStream] Page hidden - ending stream');
         onHide();
       }
     };
@@ -372,40 +416,50 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
   };
 
   const handleStartStream = async () => {
-    // Double-tap guard
-    if (clickedOnceRef.current) {
-      console.log('[handleStartStream] Double-tap guard triggered');
+    // Guard against multiple simultaneous clicks
+    if (isLive || loading) {
+      console.log('[handleStartStream] Already starting or live, ignoring click');
       return;
     }
-    clickedOnceRef.current = true;
 
     console.log('[handleStartStream] Starting stream process...');
-    console.log('[handleStartStream] Tracks status:', {
+    console.log('[handleStartStream] Initial tracks status:', {
       hasVideo: !!localTracks.video,
       hasAudio: !!localTracks.audio,
       agoraRTC: !!agoraRTC
     });
 
-    try {
-      // Ensure camera is initialized (iOS gesture requirement)
-      await ensureCamera();
+    setLoading(true);
 
+    try {
+      // Ensure preview tracks exist and are playing
       if (!localTracks.video || !localTracks.audio) {
-        const errorMsg = `Camera not ready - Video: ${!!localTracks.video}, Audio: ${!!localTracks.audio}`;
+        console.log('[handleStartStream] Tracks not ready, initializing camera...');
+        await initializeCamera();
+
+        // Ensure playback started
+        if (localTracks.video && videoRef.current) {
+          console.log('[handleStartStream] Starting video preview playback...');
+          await localTracks.video.play(videoRef.current, { fit: 'cover' });
+        }
+      }
+
+      // Final verification that tracks are ready
+      if (!localTracks.video || !localTracks.audio) {
+        const errorMsg = `Camera still not ready after initialization - Video: ${!!localTracks.video}, Audio: ${!!localTracks.audio}`;
         console.error('[handleStartStream]', errorMsg);
-        toast.error('Camera not ready. Please try again.');
-        clickedOnceRef.current = false;
+        toast.error('Camera not ready. Please allow camera and microphone permissions.');
+        setLoading(false);
         return;
       }
 
-      setLoading(true);
-      console.log('[handleStartStream] Setting loading state...');
+      console.log('[handleStartStream] Tracks verified ready');
 
       if (!agoraRTC) throw new Error('Agora not initialized');
 
       // Create Agora client
       console.log('[handleStartStream] Creating Agora client...');
-      const client = agoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      const client = agoraRTC.createClient({ mode: 'live', codec: 'vp8' });
       clientRef.current = client;
       console.log('[handleStartStream] Agora client created');
 
@@ -497,20 +551,44 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
       console.error('[handleStartStream] Error details:', {
         message: error.message,
         code: error.code,
+        name: error.name,
         stack: error.stack
       });
 
-      // More specific error messages
-      if (error.message?.includes('token')) {
-        toast.error('Failed to authenticate. Please try again.');
-      } else if (error.message?.includes('camera') || error.message?.includes('track')) {
-        toast.error('Camera or microphone error. Please check permissions.');
-      } else {
-        toast.error(`Failed to start stream: ${error.message || 'Unknown error'}`);
+      // Agora-specific error codes
+      const agoraErrors = {
+        'INVALID_PARAMS': 'Invalid stream parameters',
+        'NOT_SUPPORTED': 'Browser does not support streaming',
+        'INVALID_OPERATION': 'Invalid operation - please refresh and try again',
+        'OPERATION_ABORTED': 'Operation was cancelled',
+        'WEB_SECURITY_RESTRICT': 'Security restrictions prevent streaming',
+        'UNEXPECTED_ERROR': 'Unexpected streaming error',
+        'TIMEOUT': 'Connection timeout - check your internet',
+        'INVALID_APP_ID': 'Invalid Agora configuration',
+        'INVALID_CHANNEL_NAME': 'Invalid channel name',
+        'TOKEN_EXPIRED': 'Stream token expired',
+        'INVALID_TOKEN': 'Invalid stream token',
+        'UID_CONFLICT': 'User ID conflict - please try again',
+      };
+
+      // Determine user-friendly error message
+      let userMessage = 'Failed to start stream';
+
+      if (error.code && agoraErrors[error.code]) {
+        userMessage = agoraErrors[error.code];
+      } else if (error.message?.includes('token') || error.message?.includes('Token')) {
+        userMessage = 'Authentication failed. Please try again.';
+      } else if (error.message?.includes('camera') || error.message?.includes('track') || error.message?.includes('permission')) {
+        userMessage = 'Camera or microphone error. Please check permissions.';
+      } else if (error.message?.includes('network') || error.message?.includes('connection')) {
+        userMessage = 'Network error. Please check your internet connection.';
+      } else if (error.message) {
+        userMessage = `Failed to start: ${error.message}`;
       }
+
+      toast.error(userMessage);
     } finally {
       setLoading(false);
-      clickedOnceRef.current = false;
       console.log('[handleStartStream] Cleanup complete');
     }
   };
@@ -656,8 +734,18 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
   // Render before going live
   if (!isLive) {
     return (
-      <div className="fixed inset-0 bg-black z-[9999]">
-        <div className="relative h-full w-full">
+      <div
+        className="fixed inset-0 z-[9999] flex flex-col bg-black"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          blockSize: '100dvh',
+          WebkitOverflowScrolling: 'touch',
+          overflowY: 'auto',
+        }}
+        data-golive-modal="true"
+      >
+        <div className="relative flex-1 w-full">
           <video
             ref={videoRef}
             className="w-full h-full object-cover"
@@ -709,11 +797,19 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
   // Main live stream view
   return (
     <div
-      className="fixed inset-0 bg-black z-[9999]"
+      className="fixed inset-0 z-[9999] flex flex-col bg-black"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        blockSize: '100dvh',
+        WebkitOverflowScrolling: 'touch',
+        overflowY: 'auto',
+      }}
       onClick={resetControlsTimeout}
       onTouchStart={resetControlsTimeout}
+      data-golive-modal="true"
     >
-      <div className="relative h-full w-full">
+      <div className="relative flex-1 w-full">
         {/* Video */}
         <video
           ref={videoRef}
