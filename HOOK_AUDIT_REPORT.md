@@ -48,6 +48,49 @@ Components with early returns (loading/error states) that occur **before** all h
 3. **Source Maps**: Production build is minified - actual component name hidden
 4. **Another Component**: There may be another component not yet identified
 
+## ✅ Named Error Boundaries Added (Latest Fix)
+
+**Date**: 2025-10-16
+**File**: `frontend/src/components/mobile/NextLevelMobileApp.js`
+
+### What Changed
+Wrapped all mobile routes with `<MobileRouteBoundary routeName="...">` to identify exact failing route:
+- `Explore` route (MobileExplore component)
+- `Discover` route (Creator discovery grid)
+- `Messages` route (MobileMessages component)
+- `TV` route (TVPage component)
+- `Wallet` route (WalletOptimized component)
+- `Dashboard` route (MobileCreatorDashboard component)
+
+### How It Works
+```javascript
+// Before:
+case 'explore':
+  return <MobileExplore user={user} />;
+
+// After:
+case 'explore':
+  return (
+    <MobileRouteBoundary routeName="Explore">
+      <MobileExplore user={user} />
+    </MobileRouteBoundary>
+  );
+```
+
+### Expected Error Logs
+When error #310 occurs, console will now show:
+```
+🚨 [Boundary:Messages] React Error Caught: {
+  route: "Messages",
+  error: "Minified React error #310...",
+  isHookError: true,
+  componentStack: "..."
+}
+❌ React Hook Error #310 in route: Messages
+```
+
+This instantly identifies which route has the hook violation, even when production shows minified names like "Az".
+
 ## How to Identify the Exact Component
 
 Since production shows `Az` (minified name), you need to:

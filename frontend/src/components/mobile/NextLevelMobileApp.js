@@ -36,6 +36,7 @@ import MobileExplore from './MobileExplore';
 import Wallet from '../WalletOptimized';
 import { MobileStreamProvider } from '../../contexts/MobileStreamContext';
 import useIosVhFix from '../../hooks/useIosVhFix';
+import MobileRouteBoundary from './MobileRouteBoundary';
 // Lazy load heavy components for better performance
 const MobileVideoStream = lazy(() => import('./MobileVideoStream'));
 const GoLiveSetup = lazy(() => import('../GoLiveSetup'));
@@ -313,100 +314,112 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
     switch (activeTab) {
       case 'explore':
         return (
-          <MobileExplore
-            user={user}
-            onNavigate={(path) => setActiveTab(path)}
-            onCreatorSelect={handleCreatorSelect}
-            onTokenPurchase={handleTokenPurchase}
-            onStartVideoCall={handleStartVideoCall}
-            onStartVoiceCall={handleStartVoiceCall}
-          />
+          <MobileRouteBoundary routeName="Explore">
+            <MobileExplore
+              user={user}
+              onNavigate={(path) => setActiveTab(path)}
+              onCreatorSelect={handleCreatorSelect}
+              onTokenPurchase={handleTokenPurchase}
+              onStartVideoCall={handleStartVideoCall}
+              onStartVoiceCall={handleStartVoiceCall}
+            />
+          </MobileRouteBoundary>
         );
 
       case 'discover':
         return (
-          <div className="mobile-safe-area">
-            <div className="px-4">
-              <h1 className="text-2xl font-bold mb-6">Discover</h1>
-              
-              {/* Search Bar */}
-              <div className="relative mb-6">
-                <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search creators..."
-                  className="mobile-input-next pl-12"
-                />
-              </div>
+          <MobileRouteBoundary routeName="Discover">
+            <div className="mobile-safe-area">
+              <div className="px-4">
+                <h1 className="text-2xl font-bold mb-6">Discover</h1>
 
-              {/* Categories */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {['Gaming', 'Music', 'Art', 'Fitness', 'Comedy', 'Education'].map((category) => (
-                  <motion.button
-                    key={category}
-                    whileTap={{ scale: 0.95 }}
-                    className="mobile-glass-card p-4 text-center"
-                    onClick={() => hapticFeedback('light')}
-                  >
-                    <SparklesIcon className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                    <span className="font-medium">{category}</span>
-                  </motion.button>
-                ))}
-              </div>
+                {/* Search Bar */}
+                <div className="relative mb-6">
+                  <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search creators..."
+                    className="mobile-input-next pl-12"
+                  />
+                </div>
 
-              {/* All Creators Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                {creators.map((creator) => (
-                  <motion.div
-                    key={creator.id}
-                    whileTap={{ scale: 0.95 }}
-                    className="mobile-glass-card p-4"
-                    onClick={() => handleCreatorSelect(creator)}
-                  >
-                    <img 
-                      src={creator.profile_pic_url || '/api/placeholder/150/150'} 
-                      alt={creator.username}
-                      className="w-full aspect-square object-cover rounded-lg mb-3"
-                    />
-                    <h3 className="font-semibold truncate">{creator.username}</h3>
-                    <p className="text-sm text-gray-600">${creator.price_per_min}/min</p>
-                  </motion.div>
-                ))}
+                {/* Categories */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  {['Gaming', 'Music', 'Art', 'Fitness', 'Comedy', 'Education'].map((category) => (
+                    <motion.button
+                      key={category}
+                      whileTap={{ scale: 0.95 }}
+                      className="mobile-glass-card p-4 text-center"
+                      onClick={() => hapticFeedback('light')}
+                    >
+                      <SparklesIcon className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+                      <span className="font-medium">{category}</span>
+                    </motion.button>
+                  ))}
+                </div>
+
+                {/* All Creators Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  {creators.map((creator) => (
+                    <motion.div
+                      key={creator.id}
+                      whileTap={{ scale: 0.95 }}
+                      className="mobile-glass-card p-4"
+                      onClick={() => handleCreatorSelect(creator)}
+                    >
+                      <img
+                        src={creator.profile_pic_url || '/api/placeholder/150/150'}
+                        alt={creator.username}
+                        className="w-full aspect-square object-cover rounded-lg mb-3"
+                      />
+                      <h3 className="font-semibold truncate">{creator.username}</h3>
+                      <p className="text-sm text-gray-600">${creator.price_per_min}/min</p>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          </MobileRouteBoundary>
         );
 
       case 'messages':
-        return <MobileMessages user={user} />;
+        return (
+          <MobileRouteBoundary routeName="Messages">
+            <MobileMessages user={user} />
+          </MobileRouteBoundary>
+        );
 
       case 'tv':
         return (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-screen">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent" />
-            </div>
-          }>
-            <TVPage user={user} />
-          </Suspense>
+          <MobileRouteBoundary routeName="TV">
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent" />
+              </div>
+            }>
+              <TVPage user={user} />
+            </Suspense>
+          </MobileRouteBoundary>
         );
 
       case 'wallet':
         return (
-          <div className="mobile-safe-area">
-            <Wallet user={user} />
-            {!user?.creator_profile && (
-              <div className="px-4 mt-6">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  className="mobile-button-next"
-                  onClick={() => hapticFeedback('medium')}
-                >
-                  Buy More Tokens
-                </motion.button>
-              </div>
-            )}
-          </div>
+          <MobileRouteBoundary routeName="Wallet">
+            <div className="mobile-safe-area">
+              <Wallet user={user} />
+              {!user?.creator_profile && (
+                <div className="px-4 mt-6">
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    className="mobile-button-next"
+                    onClick={() => hapticFeedback('medium')}
+                  >
+                    Buy More Tokens
+                  </motion.button>
+                </div>
+              )}
+            </div>
+          </MobileRouteBoundary>
         );
 
       case 'dashboard':
@@ -415,29 +428,31 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
         if (isCreator) {
           console.log('✅ Rendering MobileCreatorDashboard');
           return (
-            <div className="w-full min-h-screen bg-gray-50">
-              <div className="p-4">
-                <h1 className="text-2xl font-bold text-purple-600 mb-4">Creator Dashboard</h1>
-                <p className="text-gray-600 mb-4">Welcome back, {user?.username || user?.email}!</p>
-                <div className="bg-white rounded-lg p-4 shadow-md mb-4">
-                  <p className="text-sm text-gray-500">Debug Info:</p>
-                  <p className="text-xs">is_creator: {String(user?.is_creator)}</p>
-                  <p className="text-xs">role: {user?.role}</p>
-                  <p className="text-xs">email: {user?.email}</p>
+            <MobileRouteBoundary routeName="Dashboard">
+              <div className="w-full min-h-screen bg-gray-50">
+                <div className="p-4">
+                  <h1 className="text-2xl font-bold text-purple-600 mb-4">Creator Dashboard</h1>
+                  <p className="text-gray-600 mb-4">Welcome back, {user?.username || user?.email}!</p>
+                  <div className="bg-white rounded-lg p-4 shadow-md mb-4">
+                    <p className="text-sm text-gray-500">Debug Info:</p>
+                    <p className="text-xs">is_creator: {String(user?.is_creator)}</p>
+                    <p className="text-xs">role: {user?.role}</p>
+                    <p className="text-xs">email: {user?.email}</p>
+                  </div>
                 </div>
+                <MobileCreatorDashboard
+                  user={user}
+                  tokenBalance={user?.token_balance || 0}
+                  onNavigate={(tab) => setActiveTab(tab)}
+                  onShowGoLive={handleShowGoLive}
+                  onShowAvailability={handleShowAvailability}
+                  onShowEarnings={() => setActiveTab('wallet')}
+                  onShowSettings={() => setActiveTab('settings')}
+                  onShowContent={handleShowContent}
+                  onShowMessages={() => setActiveTab('messages')}
+                />
               </div>
-              <MobileCreatorDashboard
-                user={user}
-                tokenBalance={user?.token_balance || 0}
-                onNavigate={(tab) => setActiveTab(tab)}
-                onShowGoLive={handleShowGoLive}
-                onShowAvailability={handleShowAvailability}
-                onShowEarnings={() => setActiveTab('wallet')}
-                onShowSettings={() => setActiveTab('settings')}
-                onShowContent={handleShowContent}
-                onShowMessages={() => setActiveTab('messages')}
-              />
-            </div>
+            </MobileRouteBoundary>
           );
         }
         // REMOVED inline setState - handled by useEffect guard instead
