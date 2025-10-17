@@ -349,11 +349,7 @@ const MobileCreatorCard = memo(({
                 <div className="grid grid-cols-3 gap-1.5">
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      hapticFeedback('light');
-                      onVideoCall?.(creator);
-                    }}
+                    onClick={handleVideoCall}
                     aria-label="Start video call"
                     className="min-h-[38px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
                              p-2 transition-all hover:bg-white/30 hover:scale-105 active:scale-95"
@@ -363,11 +359,7 @@ const MobileCreatorCard = memo(({
 
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      hapticFeedback('light');
-                      onMessage?.(creator);
-                    }}
+                    onClick={handleMessage}
                     aria-label="Send message"
                     className="min-h-[38px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
                              p-2 transition-all hover:bg-white/30 hover:scale-105 active:scale-95"

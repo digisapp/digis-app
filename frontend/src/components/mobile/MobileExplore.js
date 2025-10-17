@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { getDefaultAvatarUrl } from '../../utils/avatarHelpers';
 import { isSelf } from '../../utils/creatorFilters';
@@ -30,6 +31,8 @@ import {
 import { UserGroupIcon as UserGroupIconSolid, PhotoIcon as PhotoIconSolid } from '@heroicons/react/24/solid';
 
 const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
+  const navigate = useNavigate();
+
   // Auth state - gate data fetches behind auth resolution to prevent API hammering during bootstrap
   const { authLoading, roleResolved } = useAuth();
   const authReady = !authLoading && roleResolved;
@@ -266,8 +269,8 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
     if ('vibrate' in navigator) {
       navigator.vibrate(10);
     }
-    onCreatorSelect?.(creator);
-    onNavigate('creatorProfile');
+    // Navigate to creator's public profile page using react-router
+    navigate(`/profile/${creator.username}`);
   };
 
   // Pull to refresh handler
