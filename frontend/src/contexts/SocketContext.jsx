@@ -47,15 +47,18 @@ export const SocketProvider = ({ children }) => {
     let cleanupFns = [];
     const timeoutId = setTimeout(async () => {
       try {
-        console.log('📡 Initializing Socket.io connection...');
+        console.log('📡 Initializing real-time connection (Socket.io/Ably)...');
         await socketService.connect();
 
         // Subscribe to connection status
-        const unsubConnection = socketService.on('connection-status', ({ connected }) => {
-          console.log('📡 Socket connection status:', connected);
-          setConnected(connected);
+        const unsubConnection = socketService.onConnectionChange?.((status) => {
+          console.log('📡 Connection status:', status);
+          setConnected(status === 'connected');
         });
-        cleanupFns.push(unsubConnection);
+        if (unsubConnection) cleanupFns.push(unsubConnection);
+
+        // Set initial connection state
+        setConnected(socketService.connected || socketService.isConnected);
 
         // Subscribe to call requests (for creators)
         const unsubCallRequest = socketService.on('call-request', (data) => {

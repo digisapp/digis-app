@@ -5,6 +5,7 @@ const { pool } = require('../utils/db');
 const { logger } = require('../utils/secureLogger');
 const { generateStableAgoraUid } = require('../utils/agoraUid');
 const { requireFeature } = require('../utils/featureFlags');
+const { emitCallRequest, emitCallAccepted, emitCallRejected } = require('../utils/ably-adapter');
 const router = express.Router();
 
 // Call cooldown: prevent spam calling (1 call per 60 seconds to same fan)
@@ -252,7 +253,7 @@ router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req,
       channel
     });
 
-    // Send real-time notification to fan via Socket.io/Ably
+    // Send real-time notification to fan via Ably
     try {
       // Get creator details for the notification
       const creatorDetails = await pool.query(
@@ -262,27 +263,26 @@ router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req,
 
       const creator = creatorDetails.rows[0];
 
-      // Emit to fan's personal room
-      // Note: Your socket/Ably service should be imported at top of file
-      // For now, we'll try to access it if available
-      if (global.io) {
-        global.io.to(`user:${fanId}`).emit('call:incoming', {
-          callId,
-          creatorId,
-          creatorName: creator.display_name || creator.username,
-          avatar: creator.profile_pic_url,
-          callType,
-          expiresAt: new Date(Date.now() + 120000).toISOString(), // 2 minutes
-          channel,
-          message: message || `${creator.display_name || creator.username} is calling you`
-        });
+      // Emit to fan's personal channel using Ably
+      await emitCallRequest(fanId, {
+        callId,
+        creatorId,
+        requestId: callId, // For backward compatibility
+        type: callType,
+        fanId,
+        fanName: creator.display_name || creator.username,
+        rate: ratePerMinute,
+        creatorName: creator.display_name || creator.username,
+        avatar: creator.profile_pic_url,
+        callType,
+        expiresAt: new Date(Date.now() + 120000).toISOString(), // 2 minutes
+        channel,
+        message: message || `${creator.display_name || creator.username} is calling you`
+      });
 
-        logger.info('Call invitation sent to fan via socket', { fanId, callId });
-      } else {
-        logger.warn('Socket.io not available, fan will not receive real-time notification');
-      }
-    } catch (socketError) {
-      logger.error('Error sending socket notification:', socketError);
+      logger.info('Call invitation sent to fan via Ably', { fanId, callId });
+    } catch (ablyError) {
+      logger.error('Error sending Ably notification:', ablyError);
       // Continue anyway - fan can still see invitation in their pending calls
     }
 
@@ -400,23 +400,24 @@ router.post('/:callId/accept', requireFeature('CALLS'), authenticateToken, async
       callType: call.call_type
     });
 
-    // Send real-time notification to creator via Socket.io/Ably
+    // Send real-time notification to creator via Ably
     try {
-      if (global.io) {
-        global.io.to(`user:${call.creator_id}`).emit('call:status', {
-          callId,
-          state: 'accepted',
-          fanId,
-          channel: call.agora_channel
-        });
+      await emitCallAccepted(call.creator_id, {
+        callId,
+        type: call.call_type,
+        roomId: call.agora_channel,
+        creatorId: call.creator_id,
+        state: 'accepted',
+        fanId,
+        channel: call.agora_channel
+      });
 
-        logger.info('Call accepted notification sent to creator', {
-          creatorId: call.creator_id,
-          callId
-        });
-      }
-    } catch (socketError) {
-      logger.error('Error sending call accepted notification:', socketError);
+      logger.info('Call accepted notification sent to creator via Ably', {
+        creatorId: call.creator_id,
+        callId
+      });
+    } catch (ablyError) {
+      logger.error('Error sending call accepted notification:', ablyError);
     }
 
     res.json({
@@ -496,22 +497,23 @@ router.post('/:callId/decline', authenticateToken, async (req, res) => {
       fanId
     });
 
-    // Send real-time notification to creator via Socket.io/Ably
+    // Send real-time notification to creator via Ably
     try {
-      if (global.io) {
-        global.io.to(`user:${call.creator_id}`).emit('call:status', {
-          callId,
-          state: 'declined',
-          fanId
-        });
+      await emitCallRejected(call.creator_id, {
+        callId,
+        type: call.call_type,
+        roomId: call.id,
+        creatorId: call.creator_id,
+        state: 'declined',
+        fanId
+      });
 
-        logger.info('Call declined notification sent to creator', {
-          creatorId: call.creator_id,
-          callId
-        });
-      }
-    } catch (socketError) {
-      logger.error('Error sending call declined notification:', socketError);
+      logger.info('Call declined notification sent to creator via Ably', {
+        creatorId: call.creator_id,
+        callId
+      });
+    } catch (ablyError) {
+      logger.error('Error sending call declined notification:', ablyError);
     }
 
     res.json({

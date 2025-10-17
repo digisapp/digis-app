@@ -250,12 +250,37 @@ class AblyService {
 
   /**
    * Subscribe to events (Socket.io compatibility)
+   * Maps Socket.io event names to Ably channel subscriptions
    */
   on(event, callback) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
     this.listeners.get(event).add(callback);
+
+    // Map Socket.io events to Ably channels
+    const eventMap = {
+      'call-request': { channel: `user:${this.userId}`, event: 'call:request' },
+      'call-accepted': { channel: `user:${this.userId}`, event: 'call:accepted' },
+      'call-rejected': { channel: `user:${this.userId}`, event: 'call:rejected' },
+      'call-cancelled': { channel: `user:${this.userId}`, event: 'call:cancelled' },
+      'balance-update': { channel: `user:${this.userId}`, event: 'balance:update' },
+      'token-balance-update': { channel: `user:${this.userId}`, event: 'balance:update' },
+      'message': { channel: `user:${this.userId}`, event: 'message:new' },
+      'notification': { channel: `user:${this.userId}`, event: 'notification:new' }
+    };
+
+    const mapping = eventMap[event];
+    if (mapping && this.client) {
+      const channel = this.getChannel(mapping.channel);
+
+      // Subscribe to Ably event and map to callback
+      channel.subscribe(mapping.event, (message) => {
+        console.log(`📨 Ably event ${mapping.event}:`, message.data);
+        // Emit to all listeners registered for this Socket.io event name
+        this.emitToListeners(event, message.data);
+      });
+    }
 
     // Return cleanup function
     return () => {
@@ -312,24 +337,82 @@ class AblyService {
         return false;
       }
 
-      // Determine channel based on event
-      let channelName = 'chat:general';
+      // Map Socket.io emit events to Ably channel publishes
+      const emitMap = {
+        'call-request': {
+          channel: (d) => `user:${d.creatorId || d.toUserId}`,
+          event: 'call:request'
+        },
+        'call-response': {
+          channel: (d) => `user:${d.fanId || d.fromUserId}`,
+          event: d => d.accepted ? 'call:accepted' : 'call:rejected'
+        },
+        'call-accept': {
+          channel: (d) => `user:${d.fromUserId}`,
+          event: 'call:accepted'
+        },
+        'call-reject': {
+          channel: (d) => `user:${d.fromUserId}`,
+          event: 'call:rejected'
+        },
+        'call-cancel': {
+          channel: (d) => `user:${d.toUserId}`,
+          event: 'call:cancelled'
+        },
+        'message': {
+          channel: (d) => `user:${d.toUserId || d.recipientId}`,
+          event: 'message:new'
+        },
+        'join-room': {
+          channel: (d) => `stream:${d}`,
+          event: 'viewer:joined'
+        },
+        'leave-room': {
+          channel: (d) => `stream:${d}`,
+          event: 'viewer:left'
+        }
+      };
 
-      if (data.streamId || data.channel) {
-        channelName = `stream:${data.streamId || data.channel}`;
-      } else if (data.recipientId) {
-        channelName = `user:${data.recipientId}`;
+      const mapping = emitMap[event];
+
+      if (mapping) {
+        // Get channel name (might be a function)
+        const channelName = typeof mapping.channel === 'function'
+          ? mapping.channel(data)
+          : mapping.channel;
+
+        // Get event name (might be a function)
+        const eventName = typeof mapping.event === 'function'
+          ? mapping.event(data)
+          : mapping.event;
+
+        const channel = this.getChannel(channelName);
+
+        // Publish to Ably channel
+        await channel.publish(eventName, data);
+        console.log(`📤 Published ${eventName} to ${channelName}`);
+
+        return true;
+      } else {
+        // Fallback: determine channel based on data
+        let channelName = 'chat:general';
+
+        if (data.streamId || data.channel) {
+          channelName = `stream:${data.streamId || data.channel}`;
+        } else if (data.recipientId || data.toUserId) {
+          channelName = `user:${data.recipientId || data.toUserId}`;
+        }
+
+        const channel = this.getChannel(channelName);
+
+        // Publish to Ably channel
+        await channel.publish(event, data);
+
+        // Also emit to local listeners
+        this.emitToListeners(event, data);
+
+        return true;
       }
-
-      const channel = this.getChannel(channelName);
-
-      // Publish to Ably channel
-      await channel.publish(event, data);
-
-      // Also emit to local listeners
-      this.emitToListeners(event, data);
-
-      return true;
     } catch (error) {
       console.error(`Error emitting '${event}':`, error);
       return false;
