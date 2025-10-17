@@ -571,12 +571,32 @@ router.get('/profile', authenticateToken, async (req, res) => {
       logger.info('📝 User profile cached', { userId: targetUid });
     }
     const isOwnProfile = targetUid === req.user.sub || targetUid === req.user.supabase_id;
-    
+
+    // **CANONICAL ROLE COMPUTATION** - Override with server truth (matches auth.js logic)
+    const canonicalIsCreator = user.is_creator === true ||
+                                user.role === 'creator' ||
+                                (user.creator_type !== null && user.creator_type !== undefined);
+
+    const canonicalIsAdmin = user.is_super_admin === true ||
+                              user.role === 'admin';
+
+    // Debug logging for role computation
+    logger.info('🔍 /users/profile role computation:', {
+      username: user.username,
+      raw_is_creator: user.is_creator,
+      raw_role: user.role,
+      raw_creator_type: user.creator_type,
+      raw_is_super_admin: user.is_super_admin,
+      canonical_is_creator: canonicalIsCreator,
+      canonical_is_admin: canonicalIsAdmin
+    });
+
     const profileData = {
       id: user.id,
       supabase_id: user.id,
-      is_creator: user.is_creator,
-      is_super_admin: user.is_super_admin || false,
+      is_creator: canonicalIsCreator,  // Use canonical computation
+      is_super_admin: canonicalIsAdmin,  // Use canonical computation
+      is_admin: canonicalIsAdmin,        // Add is_admin for consistency
       role: user.role || 'user',
       bio: user.bio,
       username: user.username,
@@ -599,7 +619,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       gifter_tier: user.gifter_tier || 'Supporter',
       gifter_tier_color: user.gifter_tier_color || '#5C4033',
       lifetime_tokens_spent: user.lifetime_tokens_spent || 0,
-      notification_preferences: user.notification_preferences ? 
+      notification_preferences: user.notification_preferences ?
         (typeof user.notification_preferences === 'string' ? JSON.parse(user.notification_preferences) : user.notification_preferences) : {},
       privacy_settings: user.privacy_settings ? 
         (typeof user.privacy_settings === 'string' ? JSON.parse(user.privacy_settings) : user.privacy_settings) : {},

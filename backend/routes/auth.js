@@ -1279,6 +1279,14 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
 
     const user = result.rows[0];
 
+    // Debug logging for role detection
+    console.log('🔍 /auth/session role check:', {
+      supabaseId,
+      is_creator: user.is_creator,
+      is_admin: user.is_admin,
+      db_id: user.db_id
+    });
+
     // Build roles array
     const roles = [];
     if (user.is_creator) roles.push('creator');

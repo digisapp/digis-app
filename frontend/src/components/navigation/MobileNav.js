@@ -339,13 +339,14 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
         {showProfileMenu && (
           <LiquidGlassModal
             ref={menuRef}
-            className="fixed z-[102] w-72"
+            className="fixed z-[102] w-72 max-w-[calc(100vw-2rem)]"
             style={{
               bottom: 'calc(72px + env(safe-area-inset-bottom, 0px) + 8px)',
               right: '1rem',
               left: 'auto',
               top: 'auto',
-              padding: 0
+              padding: 0,
+              transformOrigin: 'bottom right'
             }}
             as={motion.div}
             initial={{ opacity: 0, y: 20, scale: 0.95 }}

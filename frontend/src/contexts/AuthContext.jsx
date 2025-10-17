@@ -734,9 +734,6 @@ export const AuthProvider = ({ children }) => {
               error: result.error
             });
 
-            // Fail open: mark role resolved even on failure to unblock ProtectedRoute
-            setRoleResolved(true);
-
             // Backend failed - use cached profile if available
             const cachedProfile = loadProfileCache();
 
@@ -746,34 +743,85 @@ export const AuthProvider = ({ children }) => {
               setProfile(cachedProfile);
               setTokenBalance(cachedProfile.token_balance || 0);
               setError('');
+              setRoleResolved(true); // Only resolve if we have cache
               setAuthLoading(false);
               clearTimeout(timeoutId);
               clearTimeout(bootTimeout);
             } else {
-              console.error('❌ No cached profile available and session fetch failed');
-              console.warn('⚠️ Keeping existing profile to prevent role downgrade');
+              // CRITICAL: No cache and backend failed
+              // Try fetching profile from /api/users/profile as last resort
+              console.warn('⚠️ No cached profile - attempting fallback to /api/users/profile');
 
-              // CRITICAL: Don't set profile = null if we already have one (prevents role downgrade)
-              // This handles the case where a late/failed session fetch tries to clobber a good profile
-              if (!profile) {
-                // Only show error if we truly have no profile at all
-                setError('Unable to load your profile. Please refresh the page or sign in again.');
-              }
+              try {
+                const userId = session.user.id;
+                const token = session.access_token;
 
-              setUser(session.user); // Keep session so they can sign out
+                const profileResponse = await fetch(
+                  `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${userId}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                    timeout: 8000 // 8 second timeout
+                  }
+                );
 
-              // Stop loading so error message shows (or app continues with cached data)
-              setAuthLoading(false);
-              clearTimeout(timeoutId);
-              clearTimeout(bootTimeout);
+                if (profileResponse.ok) {
+                  const profileData = await profileResponse.json();
+                  console.log('✅ Fallback profile fetched:', profileData.username, {
+                    is_creator: profileData.is_creator,
+                    is_admin: profileData.is_admin
+                  });
 
-              // Auto-retry after 3 seconds if we're in circuit breaker backoff
-              setTimeout(async () => {
-                if (shouldAttemptSyncUser() && mounted) {
-                  console.log('🔄 Auto-retrying session fetch after failure...');
-                  window.location.reload(); // Simple reload to retry
+                  setUser(session.user);
+                  setProfile({ ...profileData, __isCanonical: true });
+                  saveProfileCache(profileData, session);
+                  if (profileData.token_balance !== undefined) {
+                    setTokenBalance(profileData.token_balance);
+                  }
+                  setError('');
+                  setRoleResolved(true);
+                  setAuthLoading(false);
+                  clearTimeout(timeoutId);
+                  clearTimeout(bootTimeout);
+                } else {
+                  throw new Error(`Profile fetch failed: ${profileResponse.status}`);
                 }
-              }, 3000);
+              } catch (fallbackError) {
+                console.error('❌ Fallback profile fetch also failed:', fallbackError.message);
+
+                // CRITICAL: Don't set profile = null if we already have one (prevents role downgrade)
+                // This handles the case where a late/failed session fetch tries to clobber a good profile
+                if (!profile) {
+                  // Only show error if we truly have no profile at all
+                  setError('Unable to load your profile. Please refresh the page or sign in again.');
+
+                  // IMPORTANT: Don't resolve role without profile data
+                  // This prevents defaulting to "fan" when we haven't fetched creator status yet
+                  setRoleResolved(false);
+                } else {
+                  // Keep existing profile and mark as resolved
+                  console.warn('⚠️ Keeping existing profile to prevent role downgrade');
+                  setRoleResolved(true);
+                }
+
+                setUser(session.user); // Keep session so they can sign out
+
+                // Stop loading so error message shows (or app continues with cached data)
+                setAuthLoading(false);
+                clearTimeout(timeoutId);
+                clearTimeout(bootTimeout);
+
+                // Auto-retry after 5 seconds if we don't have a profile yet
+                if (!profile) {
+                  setTimeout(async () => {
+                    if (shouldAttemptSyncUser() && mounted) {
+                      console.log('🔄 Auto-retrying profile fetch after failure...');
+                      window.location.reload(); // Simple reload to retry
+                    }
+                  }, 5000);
+                }
+              }
             }
           }
         }
