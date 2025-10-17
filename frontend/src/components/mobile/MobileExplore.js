@@ -103,13 +103,16 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
 
   // Fetch creators from API with abort controller
   const fetchCreators = useCallback(async (pageNum = 1, append = false) => {
+    // Create controller outside try block so it's accessible in catch
+    let controller = null;
+
     try {
       // Cancel any in-flight request
       if (creatorsAbortRef.current) {
         creatorsAbortRef.current.abort();
       }
 
-      const controller = new AbortController();
+      controller = new AbortController();
       creatorsAbortRef.current = controller;
 
       setLoadingMore(append);
