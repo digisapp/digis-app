@@ -143,26 +143,52 @@ class AblyService {
 
     this.client.connection.on('connected', () => {
       this.isConnected = true;
-      console.log('Ably connected');
+      console.log('[Ably] ✅ Connected');
       this.notifyConnectionListeners('connected');
+    });
+
+    this.client.connection.on('connecting', () => {
+      console.log('[Ably] 🔄 Connecting...');
+      this.notifyConnectionListeners('connecting');
     });
 
     this.client.connection.on('disconnected', () => {
       this.isConnected = false;
-      console.log('Ably disconnected');
+      console.log('[Ably] ⚠️  Disconnected');
       this.notifyConnectionListeners('disconnected');
     });
 
     this.client.connection.on('suspended', () => {
       this.isConnected = false;
-      console.log('Ably connection suspended');
+      console.log('[Ably] ⏸️  Connection suspended (will retry)');
       this.notifyConnectionListeners('suspended');
+    });
+
+    this.client.connection.on('closing', () => {
+      console.log('[Ably] 👋 Closing connection...');
+      this.notifyConnectionListeners('closing');
+    });
+
+    this.client.connection.on('closed', () => {
+      this.isConnected = false;
+      console.log('[Ably] ❌ Connection closed');
+      this.notifyConnectionListeners('closed');
     });
 
     this.client.connection.on('failed', (error) => {
       this.isConnected = false;
-      console.error('Ably connection failed:', error);
+      console.error('[Ably] 💥 Connection failed:', error);
+      this.notifyConnectionListeners('failed', error);
       this.notifyErrorListeners(error);
+    });
+
+    this.client.connection.on('update', (stateChange) => {
+      console.log('[Ably] 🔄 Connection update:', {
+        previous: stateChange.previous,
+        current: stateChange.current,
+        reason: stateChange.reason || 'none'
+      });
+      this.notifyConnectionListeners('update', stateChange);
     });
   }
 

@@ -111,6 +111,47 @@ export function useAblyPresence(ably, streamId, user) {
     };
   }, [ably, streamId, user?.id]); // Only re-run if these change
 
+  // Handle visibility change for mobile (backgrounding/foregrounding)
+  // This keeps presence counts accurate when users switch apps
+  useEffect(() => {
+    if (!ably || !streamId || !user?.id) return;
+
+    const handleVisibilityChange = async () => {
+      try {
+        const channel = ably.channels.get(`stream:${streamId}`);
+
+        if (document.hidden) {
+          // App backgrounded: leave presence to keep counts accurate
+          await channel.presence.leave();
+          console.log(`👋 Left presence (app backgrounded): stream:${streamId}`);
+        } else {
+          // App foregrounded: rejoin presence
+          await channel.presence.enter({
+            userId: user.id,
+            name: user.username || user.display_name,
+            avatar: user.avatar || user.profile_pic_url
+          });
+          console.log(`✅ Rejoined presence (app foregrounded): stream:${streamId}`);
+
+          // Refresh member list
+          const updatedMembers = await channel.presence.get();
+          setMembers(updatedMembers.map(m => ({ clientId: m.clientId, data: m.data })));
+          setCount(updatedMembers.length);
+        }
+      } catch (error) {
+        console.error('Error handling visibility change:', error);
+      }
+    };
+
+    // Register visibility change listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup listener on unmount
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [ably, streamId, user?.id, user?.username, user?.display_name, user?.avatar, user?.profile_pic_url]);
+
   return {
     members,     // Array of { clientId, data: { userId, name, avatar } }
     count,       // Number of active viewers
