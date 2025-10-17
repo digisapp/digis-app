@@ -33,10 +33,8 @@ router.post('/message', authenticateToken, async (req, res) => {
     );
     
     const savedMessage = messageResult.rows[0];
-    
+
     // Emit to all users in the channel
-// TODO: Replace with Ably publish
-//     const io = getIO();
     const messageData = {
       id: savedMessage.id,
       user: user.display_name,
@@ -47,14 +45,12 @@ router.post('/message', authenticateToken, async (req, res) => {
       userId: userId,
       mentions: mentions
     };
-    
-try {
-  await publishToChannel(`stream:${channel}`, 'chat-message', {
-    Send notifications to mentioned users
-  });
-} catch (ablyError) {
-  logger.error('Failed to publish chat-message to Ably:', ablyError.message);
-}
+
+    try {
+      await publishToChannel(`stream:${channel}`, 'chat-message', messageData);
+    } catch (ablyError) {
+      console.error('Failed to publish chat-message to Ably:', ablyError.message);
+    }
     if (mentions && mentions.length > 0) {
       // Get mentioned users' IDs
       const mentionedUsersResult = await db.query(

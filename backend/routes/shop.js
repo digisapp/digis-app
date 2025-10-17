@@ -846,27 +846,23 @@ router.post('/checkout/tokens', authenticateToken, [
     );
     
     await client.query('COMMIT');
-    
+
     // Send real-time notification to creator for token payment
-// TODO: Replace with Ably publish
-//     const io = getIO();
-    if (io) {
-try {
-  await publishToChannel(`creator_${item.creator_id}`, 'shop_new_order', {
-    orderId: orderResult.rows[0].id,
-    itemName: item.name,
-    quantity: quantity,
-    amount: totalCost,
-    currency: 'Tokens',
-    buyerName: buyer.username || buyer.display_name || 'User',
-    buyerEmail: buyer.email,
-    timestamp: new Date()
-  });
-} catch (ablyError) {
-  logger.error('Failed to publish shop_new_order to Ably:', ablyError.message);
-}
+    try {
+      await publishToChannel(`creator_${item.creator_id}`, 'shop_new_order', {
+        orderId: orderResult.rows[0].id,
+        itemName: item.name,
+        quantity: quantity,
+        amount: totalCost,
+        currency: 'Tokens',
+        buyerName: buyer.username || buyer.display_name || 'User',
+        buyerEmail: buyer.email,
+        timestamp: new Date()
+      });
+    } catch (ablyError) {
+      console.error('Failed to publish shop_new_order to Ably:', ablyError.message);
     }
-    
+
     res.json({
       success: true,
       order: orderResult.rows[0],
@@ -972,40 +968,36 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
         }
         
         await client.query('COMMIT');
-        
+
         // Send real-time notification to creator
-// TODO: Replace with Ably publish
-//         const io = getIO();
-        if (io) {
-          // Get order details for notification
-          const orderDetails = await pool.query(
-            `SELECT o.*, i.name as item_name, i.price_usd, i.price_tokens,
-                    u.username as buyer_username, u.email as buyer_email
-             FROM shop_orders o
-             JOIN shop_items i ON o.item_id = i.id
-             LEFT JOIN users u ON o.buyer_id = u.id
-             WHERE o.id = $1`,
-            [order_id]
-          );
-          
-          if (orderDetails.rows[0]) {
-            const order = orderDetails.rows[0];
-try {
-  await publishToChannel(`creator_${creator_id}`, 'shop_new_order', {
-    orderId: order.id,
-    itemName: order.item_name,
-    quantity: order.quantity,
-    amount: order.amount_usd || order.amount_tokens,
-    netAmount: order.creator_net_tokens || order.amount_tokens, // Net after platform fee
-    platformFee: order.platform_fee_tokens || 0,
-    currency: order.payment_method === 'usd' ? 'USD' : 'Tokens',
-    buyerName: order.buyer_name || order.buyer_username || 'Guest',
-    buyerEmail: order.buyer_email,
-    timestamp: new Date()
-  });
-} catch (ablyError) {
-  logger.error('Failed to publish shop_new_order to Ably:', ablyError.message);
-}
+        // Get order details for notification
+        const orderDetails = await pool.query(
+          `SELECT o.*, i.name as item_name, i.price_usd, i.price_tokens,
+                  u.username as buyer_username, u.email as buyer_email
+           FROM shop_orders o
+           JOIN shop_items i ON o.item_id = i.id
+           LEFT JOIN users u ON o.buyer_id = u.id
+           WHERE o.id = $1`,
+          [order_id]
+        );
+
+        if (orderDetails.rows[0]) {
+          const order = orderDetails.rows[0];
+          try {
+            await publishToChannel(`creator_${creator_id}`, 'shop_new_order', {
+              orderId: order.id,
+              itemName: order.item_name,
+              quantity: order.quantity,
+              amount: order.amount_usd || order.amount_tokens,
+              netAmount: order.creator_net_tokens || order.amount_tokens, // Net after platform fee
+              platformFee: order.platform_fee_tokens || 0,
+              currency: order.payment_method === 'usd' ? 'USD' : 'Tokens',
+              buyerName: order.buyer_name || order.buyer_username || 'Guest',
+              buyerEmail: order.buyer_email,
+              timestamp: new Date()
+            });
+          } catch (ablyError) {
+            console.error('Failed to publish shop_new_order to Ably:', ablyError.message);
           }
         }
         

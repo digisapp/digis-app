@@ -282,8 +282,14 @@ router.post('/quick-purchase', authenticateToken, async (req, res) => {
       
       // Emit real-time balance update
       const newBalance = balanceResult.rows[0].balance;
-// TODO: Replace with Ably publish
-//       updateUserBalance(req.user.supabase_id, newBalance);
+      try {
+        await publishToChannel(`user:${req.user.supabase_id}`, 'balance_updated', {
+          balance: newBalance,
+          tokens: tokenAmount
+        });
+      } catch (ablyError) {
+        console.error('Failed to publish balance_updated to Ably:', ablyError.message);
+      }
       
       // Track successful purchase
       span.addEvent('purchase_completed', { 
@@ -564,11 +570,13 @@ router.post('/tip', authenticateToken, async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Notify both parties
-// TODO: Replace with Ably publish
-//     updateUserBalance(fanId);
-// TODO: Replace with Ably publish
-//     updateUserBalance(creatorId);
+    // Notify both parties of balance update
+    try {
+      await publishToChannel(`user:${fanId}`, 'balance_updated', { tip: -tip });
+      await publishToChannel(`user:${creatorId}`, 'balance_updated', { tip: tip });
+    } catch (ablyError) {
+      console.error('Failed to publish balance updates to Ably:', ablyError.message);
+    }
 
     return res.json({ success: true });
   } catch (e) {
@@ -657,10 +665,13 @@ router.post('/calls/deduct', authenticateToken, async (req, res) => {
 
     await client.query('COMMIT');
 
-// TODO: Replace with Ably publish
-//     updateUserBalance(payerId);
-// TODO: Replace with Ably publish
-//     updateUserBalance(counterpartyId);
+    // Notify both parties of balance update
+    try {
+      await publishToChannel(`user:${payerId}`, 'balance_updated', { call_deduct: -amt });
+      await publishToChannel(`user:${counterpartyId}`, 'balance_updated', { call_credit: amt });
+    } catch (ablyError) {
+      console.error('Failed to publish balance updates to Ably:', ablyError.message);
+    }
 
     return res.json({ success: true });
   } catch (e) {

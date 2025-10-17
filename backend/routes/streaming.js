@@ -2902,15 +2902,14 @@ router.post('/private-call-end', authenticateToken, async (req, res) => {
       tokensCharged,
       reason
     };
-    
-try {
-  await publishToChannel(`user:${session.creator_id}`, 'private_call_ended', {
-    TODO: Replace with Ably publish
-    io.to(`user:${session.fan_id}`).emit('private_call_ended', endData);
-  });
-} catch (ablyError) {
-  logger.error('Failed to publish private_call_ended to Ably:', ablyError.message);
-}
+
+    try {
+      await publishToChannel(`user:${session.creator_id}`, 'private_call_ended', endData);
+      await publishToChannel(`user:${session.fan_id}`, 'private_call_ended', endData);
+    } catch (ablyError) {
+      console.error('Failed to publish private_call_ended to Ably:', ablyError.message);
+    }
+
     res.json({
       success: true,
       message: 'Private call ended',
