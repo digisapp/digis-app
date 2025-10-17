@@ -81,7 +81,7 @@ const WalletPageOptimized = ({ user, isCreator, isAdmin, tokenBalance, onTokenUp
 
   return (
     <WalletErrorBoundary>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 md:space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
         {/* Desktop Navigation - Only show for creators */}
         {isCreator && (
           <div className="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-sm p-2">

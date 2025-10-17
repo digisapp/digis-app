@@ -743,7 +743,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
 
       {/* Clean Header - Hidden on mobile */}
       <div className="hidden md:block bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-        <Container className="py-4">
+        <Container className="py-6 md:py-8">
           <div className="w-full">
             {/* Search Bar and Filters - All on one row for desktop */}
             <div className="flex items-center gap-3 flex-wrap">
