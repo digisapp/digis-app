@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   VideoCameraIcon,
   MicrophoneIcon,
   CameraIcon,
@@ -22,15 +22,19 @@ import {
 import { useAgoraSession } from '../../hooks/useAgoraSession';
 import { fetchJSON } from '../../utils/http';
 import { getAuthToken } from '../../utils/auth-helpers';
+import TipButton from '../payments/TipButton';
+import LiveTipsOverlay from '../overlays/LiveTipsOverlay';
 
-const MobileVideoStream = ({ 
-  creator, 
-  user, 
-  token, 
-  channel, 
+const MobileVideoStream = ({
+  creator,
+  user,
+  token,
+  channel,
   onEnd,
   sessionType = 'call_2way', // 'broadcast_public', 'broadcast_private', 'call_2way'
-  isPrivate = false
+  isPrivate = false,
+  socket = null, // Socket.io instance for real-time features
+  streamId = null // Stream ID for context (optional)
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showChat, setShowChat] = useState(false);
@@ -307,16 +311,21 @@ const MobileVideoStream = ({
     <div ref={videoContainerRef} className="mobile-video-container">
       {/* Remote Video (Full Screen) */}
       <div ref={remoteVideoRef} className="mobile-video-remote" />
-      
+
       {/* Local Video (Picture-in-Picture) */}
-      <motion.div 
-        ref={localVideoRef} 
+      <motion.div
+        ref={localVideoRef}
         className="mobile-video-local"
         drag
         dragConstraints={videoContainerRef}
         dragElastic={0.1}
         whileDrag={{ scale: 0.9 }}
       />
+
+      {/* Live Tips Overlay - Shows real-time tip animations */}
+      {socket && channel && (
+        <LiveTipsOverlay socket={socket} channel={channel} />
+      )}
 
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 p-4 mobile-safe-top">
@@ -464,6 +473,24 @@ const MobileVideoStream = ({
           >
             <SparklesIcon className="w-6 h-6 text-white" />
           </motion.button>
+
+          {/* Tip Button - Only show for audience or in 2-way calls */}
+          {creator && creator.id !== user?.id && (
+            <TipButton
+              toCreatorId={creator.id}
+              context={{
+                streamId,
+                callId: null,
+                channel,
+                type: sessionType
+              }}
+              onTipped={(data) => {
+                console.log('Tip sent:', data);
+                // Optional: Show success toast
+              }}
+              className="mobile-video-control-btn !bg-gradient-to-r !from-pink-500 !to-purple-500"
+            />
+          )}
         </div>
 
         {/* Token Counter & Stats */}
