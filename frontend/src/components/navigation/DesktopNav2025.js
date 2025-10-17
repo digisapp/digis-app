@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import { 
-  BellIcon, 
+import {
+  BellIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   ArrowRightOnRectangleIcon,
@@ -43,6 +43,7 @@ import NotificationDropdown from '../NotificationDropdown';
 import ProfileDropdown from '../ProfileDropdown';
 import WalletQuickView from '../WalletQuickView';
 import ImprovedTokenPurchase from '../ImprovedTokenPurchase';
+import LiquidGlass, { LiquidGlassModal } from '../ui/LiquidGlass';
 import useHybridStore from '../../stores/useHybridStore';
 import useAuthStore from '../../stores/useAuthStore';
 import useStore from '../../stores/useStore';
@@ -274,16 +275,17 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
 
   return (
     <>
-      <motion.nav 
+      <LiquidGlass
+        as={motion.nav}
         className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
           scrolled ? 'shadow-2xl' : 'shadow-lg'
         }`}
         style={{
-          backgroundColor: theme === 'dark' ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: `blur(${scrolled ? '25px' : '15px'}) saturate(180%)`,
-          WebkitBackdropFilter: `blur(${scrolled ? '25px' : '15px'}) saturate(180%)`,
+          borderRadius: 0,
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
         }}
+        intensity={scrolled ? 'strong' : 'medium'}
+        enableRefraction={true}
       >
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
@@ -474,7 +476,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
           animate={{ scaleX: 0 }}
           transition={{ duration: 0.3 }}
         />
-      </motion.nav>
+      </LiquidGlass>
 
       {/* Command Palette Modal */}
       <AnimatePresence>
@@ -487,18 +489,12 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
             onClick={() => setShowCommandPalette(false)}
           >
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-            <motion.div
+            <LiquidGlassModal
+              as={motion.div}
               initial={{ scale: 0.95, y: -20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: -20 }}
-              className="relative w-full max-w-2xl p-4 rounded-2xl"
-              style={{
-                backgroundColor: theme === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)'
-              }}
+              className="relative w-full max-w-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center space-x-3 mb-4">
@@ -512,7 +508,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
                 <kbd className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400">ESC</kbd>
               </div>
               {/* Command suggestions would go here */}
-            </motion.div>
+            </LiquidGlassModal>
           </motion.div>
         )}
       </AnimatePresence>

@@ -22,6 +22,7 @@ import { getMobileBottomItems, getMobileCenterAction } from '../../config/navSch
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import WalletQuickView from '../WalletQuickView';
 import ImprovedTokenPurchase from '../ImprovedTokenPurchase';
+import { LiquidGlassNav, LiquidGlassModal } from '../ui/LiquidGlass';
 import useAuthStore from '../../stores/useAuthStore';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -164,27 +165,19 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
 
   return (
     <>
-      {/* Modern 2025 Tab Bar with Glassmorphism */}
-      <motion.nav
+      {/* Liquid Glass Navigation Bar */}
+      <LiquidGlassNav
+        position="bottom"
+        className="z-[100] mobile-nav-liquid-glass"
         ref={navRef}
-        animate={controls}
-        className="fixed bottom-0 left-0 right-0 z-[100] mobile-nav-2025"
-        style={{
-          paddingBottom: 'env(safe-area-inset-bottom)',
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.85) 30%, rgba(255,255,255,0.95) 100%)',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          borderTop: '0.5px solid rgba(0,0,0,0.1)',
-          boxShadow: '0 -10px 40px -10px rgba(0,0,0,0.1), inset 0 1px 0 0 rgba(255,255,255,0.5)'
-        }}
         role="navigation"
         aria-label="Primary navigation"
       >
-        {/* Animated gradient border */}
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 opacity-60 animate-gradient-x" />
-        
-        
-        <div className="flex items-center justify-around h-[72px] px-4 relative w-full">
+        <motion.div animate={controls}>
+          {/* Animated gradient border */}
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 opacity-60 animate-gradient-x" />
+
+          <div className="flex items-center justify-around h-[72px] px-4 relative w-full">
           {bottomItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = activePath === item.path;
@@ -317,8 +310,9 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
               </motion.button>
             );
           })}
-        </div>
-      </motion.nav>
+          </div>
+        </motion.div>
+      </LiquidGlassNav>
 
 
       {/* Top Status Bar removed - not needed for this implementation */}
@@ -334,17 +328,18 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
 
       <AnimatePresence mode="wait">
         {showProfileMenu && (
-          <motion.div
+          <LiquidGlassModal
             ref={menuRef}
+            className="fixed bottom-20 right-4 z-[102] w-72"
+            style={{
+              marginBottom: 'calc(env(safe-area-inset-bottom) + 8px)',
+              padding: 0
+            }}
+            as={motion.div}
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="fixed bottom-20 right-4 z-[102] w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800"
-            style={{
-              marginBottom: 'calc(env(safe-area-inset-bottom) + 8px)',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-            }}
           >
             {/* User Profile Header */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-800">
@@ -567,7 +562,7 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
                 <span className="font-medium">{isLoggingOut ? 'Signing out…' : 'Sign Out'}</span>
               </button>
             </div>
-          </motion.div>
+          </LiquidGlassModal>
         )}
       </AnimatePresence>
 
@@ -578,12 +573,17 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowPricingRatesModal(false)}
           />
-          <motion.div
+          <LiquidGlassModal
+            as={motion.div}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-3xl z-[201] max-h-[85vh] overflow-hidden"
+            className="relative w-full max-w-lg z-[201] max-h-[85vh] overflow-hidden"
+            style={{
+              borderRadius: '24px 24px 0 0',
+              padding: 0
+            }}
           >
             {/* Header */}
             <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
@@ -642,7 +642,7 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
                 </p>
               </div>
             </div>
-          </motion.div>
+          </LiquidGlassModal>
         </div>
       )}
 
@@ -653,12 +653,17 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowOffersModal(false)}
           />
-          <motion.div
+          <LiquidGlassModal
+            as={motion.div}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-3xl z-[201] max-h-[85vh] overflow-hidden"
+            className="relative w-full max-w-lg z-[201] max-h-[85vh] overflow-hidden"
+            style={{
+              borderRadius: '24px 24px 0 0',
+              padding: 0
+            }}
           >
             {/* Header */}
             <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
@@ -734,7 +739,7 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </LiquidGlassModal>
         </div>
       )}
 
