@@ -120,14 +120,47 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
     };
   }, []);
 
+  // Handle page visibility changes (iOS backgrounding)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isJoined) {
+        console.log('📱 App backgrounded while live - ending stream');
+        handleCancel();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isJoined]);
+
   const initializeCamera = async () => {
     try {
       console.log('📷 Initializing camera via Agora...');
       await initAgora();
 
-      // Play local preview
+      // Play local preview - iOS requires video element to be ready first
       if (localVideoTrack.current && localVideoEl.current) {
-        localVideoTrack.current.play(localVideoEl.current, { fit: 'cover' });
+        // Ensure video element is in DOM and visible
+        localVideoEl.current.style.display = 'block';
+        localVideoEl.current.muted = true;
+        localVideoEl.current.playsInline = true;
+
+        try {
+          await localVideoTrack.current.play(localVideoEl.current, { fit: 'cover' });
+          console.log('✅ Local video playing');
+        } catch (playErr) {
+          console.error('Video play error:', playErr);
+          // Retry once after a short delay for iOS
+          setTimeout(() => {
+            if (localVideoTrack.current && localVideoEl.current) {
+              localVideoTrack.current.play(localVideoEl.current, { fit: 'cover' }).catch(e =>
+                console.error('Retry play failed:', e)
+              );
+            }
+          }, 300);
+        }
       }
 
       setIsVideoEnabled(true);
@@ -248,9 +281,13 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
           <div className="flex flex-col h-full">
             {/* Camera Preview */}
             <div className="flex-1 bg-black relative overflow-hidden">
-              <div
+              {/* iOS-safe video element with required attributes */}
+              <video
                 ref={localVideoEl}
-                className="absolute inset-0 w-full h-full"
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 w-full h-full object-cover"
                 style={{
                   transform: isFrontCamera ? 'scaleX(-1)' : 'none', // Mirror only front camera
                   display: agoraError || !isVideoEnabled ? 'none' : 'block'
@@ -595,6 +632,25 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col" data-golive-modal="true">
+      {/* Global Error Toast */}
+      {agoraError && (
+        <div className="absolute top-20 left-4 right-4 z-50 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg animate-slide-down">
+          <div className="flex items-start gap-2">
+            <span className="text-lg">⚠️</span>
+            <div className="flex-1">
+              <p className="font-medium text-sm">Connection Error</p>
+              <p className="text-xs opacity-90 mt-1">{agoraError}</p>
+            </div>
+            <button
+              onClick={resetError}
+              className="text-white/80 hover:text-white"
+            >
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -668,10 +724,23 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
         </motion.button>
       </div>
 
-      {/* Safe area styles for iOS */}
+      {/* Safe area styles for iOS + animations */}
       <style>{`
         .safe-area-bottom {
           padding-bottom: env(safe-area-inset-bottom);
+        }
+        @keyframes slide-down {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
         }
       `}</style>
     </div>
