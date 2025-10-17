@@ -2,15 +2,5 @@
   "version": 2,
   "framework": null,
   "buildCommand": "npm run build",
-  "outputDirectory": "frontend/dist",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x",
-      "memory": 1024,
-      "maxDuration": 60
-    }
-  },
-  "routes": [
-    { "src": "/(.*)", "dest": "frontend/dist/$1" }
-  ]
+  "outputDirectory": "frontend/dist"
 }
