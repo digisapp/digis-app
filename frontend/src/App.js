@@ -734,13 +734,19 @@ const App = () => {
 
   // Loading state with modern skeleton - check AFTER auth modal
   if (authLoading) {
-    // Mobile loading state - simple and clean
+    // Mobile loading state - gradient background with logo
     if (isMobile) {
       return (
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
+        <div className="min-h-screen flex flex-col items-center" style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          paddingTop: 'env(safe-area-inset-top, 20px)'
+        }}>
+          <div className="flex-1 flex items-start justify-center pt-8">
+            <img
+              src="/digis-logo-white.png"
+              alt="Digis"
+              className="w-32 h-32 object-contain"
+            />
           </div>
         </div>
       );

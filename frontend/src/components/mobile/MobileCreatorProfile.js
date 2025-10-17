@@ -1912,7 +1912,7 @@ const MobileCreatorProfile = ({
           </motion.button>
         </div>
 
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           {isLiveNow ? (
             <motion.button
               onClick={handleJoinLiveStream}
@@ -1991,47 +1991,6 @@ const MobileCreatorProfile = ({
             aria-label="Send Tip"
           >
             <GiftIcon className="w-5 h-5" />
-          </motion.button>
-          <motion.button
-            onClick={() => {
-              triggerHaptic('medium');
-              // Navigate to schedule page or open schedule modal
-              openBottomSheet({
-                title: `Schedule with ${creatorData.displayName}`,
-                content: (
-                  <div className="space-y-4 p-4">
-                    <div className="bg-indigo-50 rounded-xl p-4">
-                      <p className="text-sm text-gray-600 mb-3">Available for booking:</p>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">Video Calls</span>
-                          <span className="text-sm font-semibold text-purple-600">{creatorData.videoCallRate} tokens/min</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">Voice Calls</span>
-                          <span className="text-sm font-semibold text-blue-600">{creatorData.voiceCallRate} tokens/min</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        console.log('Navigate to schedule page for creator:', creatorId);
-                        // Navigate to /schedule/{creatorId} or open full calendar
-                        window.location.href = `/schedule/${creatorId}`;
-                      }}
-                      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-semibold"
-                    >
-                      View Available Times
-                    </button>
-                  </div>
-                )
-              });
-            }}
-            className="bg-indigo-100 text-indigo-600 p-2.5 rounded-lg flex items-center justify-center min-h-[44px]"
-            whileTap={{ scale: 0.95 }}
-            aria-label="Schedule"
-          >
-            <CalendarIcon className="w-5 h-5" />
           </motion.button>
         </div>
       </div>

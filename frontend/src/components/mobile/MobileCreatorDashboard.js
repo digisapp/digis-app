@@ -143,13 +143,14 @@ const MobileCreatorDashboard = ({
       return;
     }
     clickLock.current = true;
-    try {
-      fn();
-    } finally {
-      setTimeout(() => {
-        clickLock.current = false;
-      }, 400);
-    }
+
+    // Execute immediately
+    fn();
+
+    // Unlock after shorter delay
+    setTimeout(() => {
+      clickLock.current = false;
+    }, 300);
   }, []);
 
   useEffect(() => {
@@ -562,18 +563,20 @@ const MobileCreatorDashboard = ({
                         window.navigator.vibrate(10);
                       }
 
-                      // Call handler
-                      if (action.onClick && typeof action.onClick === 'function') {
-                        console.log('✅ Calling handler for:', action.title);
-                        try {
-                          action.onClick();
-                          console.log('✅ Handler completed for:', action.title);
-                        } catch (error) {
-                          console.error('❌ Handler error:', error);
+                      // Call handler with small delay to allow animation
+                      requestAnimationFrame(() => {
+                        if (action.onClick && typeof action.onClick === 'function') {
+                          console.log('✅ Calling handler for:', action.title);
+                          try {
+                            action.onClick();
+                            console.log('✅ Handler completed for:', action.title);
+                          } catch (error) {
+                            console.error('❌ Handler error:', error);
+                          }
+                        } else {
+                          console.error('❌ No handler for:', action.title);
                         }
-                      } else {
-                        console.error('❌ No handler for:', action.title);
-                      }
+                      });
                     });
                   }}
                   className={`
@@ -583,17 +586,18 @@ const MobileCreatorDashboard = ({
                     gap-1
                     px-1 py-3
                     rounded-lg
-                    transition-all duration-200
+                    transition-transform duration-150
                     min-h-[60px]
                     ${action.color} text-white shadow-md
-                    transform active:scale-95
+                    active:scale-95
                     cursor-pointer select-none
                   `}
                   style={{
                     position: 'relative',
                     zIndex: 30,
                     WebkitUserSelect: 'none',
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    WebkitTapHighlightColor: 'transparent'
                   }}
                   aria-label={action.title}
                   type="button"

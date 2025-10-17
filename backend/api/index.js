@@ -233,7 +233,7 @@ try {
   const stripeRoutes = require('../routes/stripe');
   const stripeWebhookRoutes = require('../routes/stripe-webhooks');
   const recordingRoutes = require('../routes/recording');
-  const contentRoutes = require('../routes/content');
+  const contentRoutes = require('../routes/content-supabase'); // Using Supabase Storage
   const experiencesRoutes = require('../routes/experiences');
   const sessionsRoutes = require('../routes/sessions');
   const streamChatRoutes = require('../routes/stream-chat');

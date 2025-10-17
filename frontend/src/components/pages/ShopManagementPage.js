@@ -424,10 +424,10 @@ const ShopManagementPage = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24 md:pb-0">
       {/* Enhanced Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: '100vw' }}>
           <div className="py-4 sm:py-6">
             <div className="flex items-center justify-between">
               {/* Shop header */}
@@ -479,7 +479,7 @@ const ShopManagementPage = ({ user }) => {
 
       {/* Navigation Tabs - Mobile Optimized */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8" style={{ maxWidth: '100vw' }}>
           <div className="grid grid-cols-5 md:flex md:gap-1 gap-1 py-2">
             {tabs.map((tab) => (
               <button
@@ -527,7 +527,7 @@ const ShopManagementPage = ({ user }) => {
       </div>
 
       {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
         <AnimatePresence mode="wait">
           {/* Products Tab */}
           {activeTab === 'products' && (

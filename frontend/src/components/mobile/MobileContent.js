@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PhotoIcon,
@@ -15,70 +15,85 @@ import {
   CloudArrowUpIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
+import axios from 'axios';
 
 const MobileContent = ({ user, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('all');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedContent, setSelectedContent] = useState(null);
+  const [allContentItems, setAllContentItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  // Mock content data
-  const [allContentItems] = useState([
-    {
-      id: 1,
-      type: 'photo',
-      title: 'Beach Sunset',
-      thumbnail: '/api/placeholder/150/150',
-      views: 234,
-      likes: 45,
-      price: 50,
-      date: '2 days ago',
-      status: 'published'
-    },
-    {
-      id: 2,
-      type: 'video',
-      title: 'Behind the Scenes',
-      thumbnail: '/api/placeholder/150/150',
-      views: 567,
-      likes: 123,
-      price: 100,
-      date: '1 week ago',
-      status: 'published'
-    },
-    {
-      id: 3,
-      type: 'photo',
-      title: 'New Photoshoot',
-      thumbnail: '/api/placeholder/150/150',
-      views: 890,
-      likes: 234,
-      price: 75,
-      date: '2 weeks ago',
-      status: 'draft'
-    },
-    {
-      id: 4,
-      type: 'post',
-      title: 'My thoughts on the new update',
-      thumbnail: '/api/placeholder/150/150',
-      views: 120,
-      likes: 45,
-      price: 25,
-      date: '3 weeks ago',
-      status: 'published'
-    },
-    {
-      id: 5,
-      type: 'video',
-      title: 'Tutorial: Getting Started',
-      thumbnail: '/api/placeholder/150/150',
-      views: 2340,
-      likes: 567,
-      price: 150,
-      date: '1 month ago',
-      status: 'published'
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3005';
+
+  // Fetch creator's content on mount
+  useEffect(() => {
+    fetchContent();
+  }, [user]);
+
+  const fetchContent = async () => {
+    if (!user?.username && !user?.supabase_id) {
+      setLoading(false);
+      return;
     }
-  ]);
+
+    try {
+      setLoading(true);
+      const identifier = user.username || user.supabase_id;
+      const response = await axios.get(`${backendUrl}/api/content/creator/${identifier}`);
+
+      if (response.data) {
+        const photos = (response.data.pictures || []).map(p => ({
+          id: p.id,
+          type: 'photo',
+          title: p.title,
+          thumbnail: p.thumbnail_url,
+          contentUrl: p.content_url,
+          views: p.views || 0,
+          likes: p.likes || 0,
+          price: p.price || 0,
+          date: formatDate(p.created_at),
+          status: p.is_active ? 'published' : 'draft'
+        }));
+
+        const videos = (response.data.videos || []).map(v => ({
+          id: v.id,
+          type: 'video',
+          title: v.title,
+          thumbnail: v.thumbnail_url,
+          contentUrl: v.content_url,
+          views: v.views || 0,
+          likes: v.likes || 0,
+          price: v.price || 0,
+          date: formatDate(v.created_at),
+          status: v.is_active ? 'published' : 'draft'
+        }));
+
+        setAllContentItems([...photos, ...videos]);
+      }
+    } catch (error) {
+      console.error('Error fetching content:', error);
+      setAllContentItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
+    return `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) > 1 ? 's' : ''} ago`;
+  };
 
   // Filter content based on active tab
   const contentItems = activeTab === 'all'
@@ -86,39 +101,111 @@ const MobileContent = ({ user, onNavigate }) => {
     : allContentItems.filter(item => {
         if (activeTab === 'photos') return item.type === 'photo';
         if (activeTab === 'videos') return item.type === 'video';
-        if (activeTab === 'posts') return item.type === 'post';
         return true;
       });
 
+  // Calculate stats from real data
   const stats = {
-    totalContent: 42,
-    totalViews: 12500,
-    totalEarnings: 3250,
-    avgRating: 4.8
+    totalContent: allContentItems.length,
+    totalViews: allContentItems.reduce((sum, item) => sum + (item.views || 0), 0),
+    totalLikes: allContentItems.reduce((sum, item) => sum + (item.likes || 0), 0),
+    totalEarnings: allContentItems.reduce((sum, item) => sum + (item.price || 0) * (item.purchases || 0), 0)
   };
 
   const contentTypes = [
     { id: 'all', label: 'All', count: allContentItems.length },
     { id: 'photos', label: 'Photos', count: allContentItems.filter(item => item.type === 'photo').length },
-    { id: 'videos', label: 'Videos', count: allContentItems.filter(item => item.type === 'video').length },
-    { id: 'posts', label: 'Posts', count: allContentItems.filter(item => item.type === 'post').length }
+    { id: 'videos', label: 'Videos', count: allContentItems.filter(item => item.type === 'video').length }
   ];
 
   const handleUpload = () => {
     setShowUploadModal(true);
   };
 
-  const handleDelete = (id) => {
-    console.log('Delete content:', id);
+  const handleFileUpload = async (file, type) => {
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+      setShowUploadModal(false);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', type);
+      formData.append('title', file.name.split('.')[0]);
+      formData.append('price', 0); // Default free content
+
+      const token = localStorage.getItem('token');
+
+      const response = await axios.post(`${backendUrl}/api/content/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
+      });
+
+      if (response.data.success) {
+        console.log('Upload successful:', response.data);
+        // Refresh content list
+        await fetchContent();
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload content. Please try again.');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this content?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${backendUrl}/api/content/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      // Remove from local state
+      setAllContentItems(prev => prev.filter(item => item.id !== id));
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Failed to delete content. Please try again.');
+    }
   };
 
   const handleEdit = (item) => {
     setSelectedContent(item);
     console.log('Edit content:', item);
+    // TODO: Implement edit modal
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pb-4">
+      {/* Upload Progress */}
+      {uploading && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 max-w-sm mx-4">
+            <h3 className="font-semibold mb-3">Uploading...</h3>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <p className="text-sm text-gray-600 mt-2 text-center">{uploadProgress}%</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white pb-6" style={{ paddingTop: 'env(safe-area-inset-top, 20px)' }}>
         <div className="px-4 pt-4">
@@ -126,7 +213,8 @@ const MobileContent = ({ user, onNavigate }) => {
             <h1 className="text-2xl font-bold">My Content</h1>
             <button
               onClick={handleUpload}
-              className="bg-white/20 backdrop-blur-sm p-2 rounded-full active:scale-95 transition-transform"
+              disabled={uploading}
+              className="bg-white/20 backdrop-blur-sm p-2 rounded-full active:scale-95 transition-transform disabled:opacity-50"
               aria-label="Upload content"
             >
               <PlusIcon className="w-6 h-6" />
@@ -187,8 +275,14 @@ const MobileContent = ({ user, onNavigate }) => {
 
       {/* Content Grid */}
       <div className="px-4 mt-4">
-        <div className="space-y-3">
-          {contentItems.map((item) => (
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
+            <p className="text-gray-500">Loading content...</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {contentItems.map((item) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, y: 20 }}
@@ -263,15 +357,16 @@ const MobileContent = ({ user, onNavigate }) => {
               </div>
             </motion.div>
           ))}
-        </div>
 
-        {/* Empty State */}
-        {contentItems.length === 0 && (
-          <div className="text-center py-12">
-            <PhotoIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No content yet</p>
-            <p className="text-gray-400 text-sm mt-1">Upload your first content to get started</p>
-          </div>
+          {/* Empty State */}
+          {contentItems.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <PhotoIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No content yet</p>
+              <p className="text-gray-400 text-sm mt-1">Upload your first content to get started</p>
+            </div>
+          )}
+        </div>
         )}
       </div>
 
@@ -299,16 +394,13 @@ const MobileContent = ({ user, onNavigate }) => {
               <div className="space-y-3">
                 <button
                   onClick={() => {
-                    console.log('Upload Photo clicked');
                     const input = document.createElement('input');
                     input.type = 'file';
                     input.accept = 'image/*';
                     input.onchange = (e) => {
                       const file = e.target.files[0];
                       if (file) {
-                        console.log('Photo selected:', file.name);
-                        setShowUploadModal(false);
-                        // Handle file upload here
+                        handleFileUpload(file, 'photos');
                       }
                     };
                     input.click();
@@ -324,16 +416,13 @@ const MobileContent = ({ user, onNavigate }) => {
 
                 <button
                   onClick={() => {
-                    console.log('Upload Video clicked');
                     const input = document.createElement('input');
                     input.type = 'file';
                     input.accept = 'video/*';
                     input.onchange = (e) => {
                       const file = e.target.files[0];
                       if (file) {
-                        console.log('Video selected:', file.name);
-                        setShowUploadModal(false);
-                        // Handle file upload here
+                        handleFileUpload(file, 'videos');
                       }
                     };
                     input.click();
@@ -347,24 +436,6 @@ const MobileContent = ({ user, onNavigate }) => {
                   <ChevronRightIcon className="w-5 h-5 text-gray-400" />
                 </button>
 
-                <button
-                  onClick={() => {
-                    console.log('Create Post clicked - this would bundle photos/videos with text');
-                    setShowUploadModal(false);
-                    // This should open a media post creator that allows:
-                    // 1. Selecting multiple photos/videos
-                    // 2. Adding captions/descriptions
-                    // 3. Setting price for the bundle
-                    alert('Post creation will bundle your photos/videos with captions - coming soon!');
-                  }}
-                  className="w-full flex items-center space-x-3 p-4 bg-purple-50 rounded-xl active:scale-95 transition-transform">
-                  <DocumentTextIcon className="w-6 h-6 text-purple-600" />
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold">Create Post</p>
-                    <p className="text-xs text-gray-500">Bundle photos/videos with captions</p>
-                  </div>
-                  <ChevronRightIcon className="w-5 h-5 text-gray-400" />
-                </button>
               </div>
 
               <button

@@ -321,8 +321,17 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
       {/* Backdrop to close menu when clicking outside */}
       {showProfileMenu && (
         <div
-          className="fixed inset-0 z-[101]"
-          onClick={() => setShowProfileMenu(false)}
+          className="fixed inset-0 z-[101] bg-black/20"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowProfileMenu(false);
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowProfileMenu(false);
+          }}
         />
       )}
 
@@ -330,9 +339,10 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
         {showProfileMenu && (
           <LiquidGlassModal
             ref={menuRef}
-            className="fixed bottom-20 right-4 z-[102] w-72"
+            className="fixed z-[102] w-72"
             style={{
-              marginBottom: 'calc(env(safe-area-inset-bottom) + 8px)',
+              bottom: 'calc(72px + env(safe-area-inset-bottom) + 8px)',
+              right: '1rem',
               padding: 0
             }}
             as={motion.div}

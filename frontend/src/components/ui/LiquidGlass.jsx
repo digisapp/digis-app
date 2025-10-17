@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 
 /**
@@ -188,9 +188,10 @@ export const LiquidGlassNav = ({ children, position = 'bottom', className = '', 
 /**
  * LiquidGlassModal - Specialized for modals and panels
  */
-export const LiquidGlassModal = ({ children, className = '', ...props }) => {
+export const LiquidGlassModal = forwardRef(({ children, className = '', ...props }, ref) => {
   return (
     <LiquidGlass
+      ref={ref}
       className={`liquid-glass-modal ${className}`}
       intensity="medium"
       enableRefraction={true}
@@ -204,6 +205,8 @@ export const LiquidGlassModal = ({ children, className = '', ...props }) => {
       {children}
     </LiquidGlass>
   );
-};
+});
+
+LiquidGlassModal.displayName = 'LiquidGlassModal';
 
 export default LiquidGlass;
