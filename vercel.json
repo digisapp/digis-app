@@ -4,6 +4,11 @@
   "buildCommand": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
   "outputDirectory": "frontend/dist",
   "functions": {
+    "backend/api/ping.js": {
+      "runtime": "nodejs20.x",
+      "memory": 512,
+      "maxDuration": 10
+    },
     "backend/api/index.js": {
       "runtime": "nodejs20.x",
       "memory": 1024,
@@ -11,6 +16,7 @@
     }
   },
   "routes": [
+    { "src": "^/api/ping$", "dest": "backend/api/ping.js" },
     { "src": "^/api/(.*)$", "dest": "backend/api/index.js" },
     { "src": "/(.*)",       "dest": "frontend/dist/$1" }
   ]
