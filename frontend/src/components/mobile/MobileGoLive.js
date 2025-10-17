@@ -41,13 +41,18 @@ import { useMobileStream } from '../../contexts/MobileStreamContext';
  * @param {string} token - Server-generated Agora token (or null for test mode)
  */
 const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
-  console.log('📱 MobileGoLive component rendered with user:', user?.username);
+  // Production logging helper
+  const log = (...args) => console?.error?.('[MobileGoLive]', ...args);
+
+  log('Component rendered', { user: user?.username, appId: !!appId, channel });
+
   const [currentStep, setCurrentStep] = useState(0);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isFrontCamera, setIsFrontCamera] = useState(true);
   const [loading, setLoading] = useState(false);
   const localVideoEl = useRef(null);
+  const initRef = useRef(false); // Guard against double init
 
   // Stream settings
   const [streamTitle, setStreamTitle] = useState('');
@@ -108,24 +113,31 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
   useEffect(() => {
     // Check if another stream is active before initializing
     if (!canStartStream()) {
+      log('Another stream is already active, cannot init');
       toast.error('Another stream is already active');
       onCancel();
       return;
     }
 
+    log('Component mounted, initializing camera');
     initializeCamera();
+
+    // Cleanup on unmount
     return () => {
-      // Cleanup handled by useMobileAgora hook
+      log('Component unmounting, running cleanup');
+      cleanupAll();
       resetError();
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle page visibility changes (iOS backgrounding)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && isJoined) {
-        console.log('📱 App backgrounded while live - ending stream');
-        handleCancel();
+        log('App backgrounded while live - ending stream');
+        cleanupAll().then(() => {
+          onCancel();
+        });
       }
     };
 
@@ -133,11 +145,18 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isJoined]);
+  }, [isJoined, cleanupAll, onCancel]);
 
   const initializeCamera = async () => {
+    // Guard against double init (race condition on fast mounts)
+    if (initRef.current) {
+      log('Init already in progress, skipping');
+      return;
+    }
+
+    initRef.current = true;
     try {
-      console.log('📷 Initializing camera via Agora...');
+      log('Initializing camera via Agora');
       await initAgora();
 
       // Play local preview - iOS requires video element to be ready first
@@ -149,25 +168,28 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
 
         try {
           await localVideoTrack.current.play(localVideoEl.current, { fit: 'cover' });
-          console.log('✅ Local video playing');
+          log('Local video playing successfully');
         } catch (playErr) {
-          console.error('Video play error:', playErr);
+          log('Video play error, retrying:', playErr);
           // Retry once after a short delay for iOS
           setTimeout(() => {
             if (localVideoTrack.current && localVideoEl.current) {
               localVideoTrack.current.play(localVideoEl.current, { fit: 'cover' }).catch(e =>
-                console.error('Retry play failed:', e)
+                log('Retry play failed:', e)
               );
             }
-          }, 300);
+          }, 500);
         }
       }
 
       setIsVideoEnabled(true);
       setIsAudioEnabled(true);
+      log('Camera initialization complete');
     } catch (error) {
-      console.error('Camera initialization error:', error);
+      log('Camera initialization error:', error);
+      initRef.current = false; // Allow retry on failure
       toast.error('Unable to access camera. Please check permissions.');
+      throw error;
     }
   };
 
@@ -220,6 +242,7 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
   };
 
   const handleGoLive = async () => {
+    log('Attempting to go live', { channel, hasVideo: !!localVideoTrack.current, hasAudio: !!localAudioTrack.current });
     setLoading(true);
 
     try {
@@ -245,11 +268,11 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
         localVideoTrack: localVideoTrack.current
       };
 
-      console.log('🎬 Going live with config:', streamConfig);
+      log('Calling onGoLive with config', { title: streamConfig.title, category: streamConfig.category });
       await onGoLive(streamConfig);
 
       // Set global stream lock ONLY after successful go live
-      startStream({
+      const lockAcquired = startStream({
         channel,
         uid: user?.id,
         mode: 'live',
@@ -257,19 +280,49 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
         audioTrack: localAudioTrack.current,
         videoTrack: localVideoTrack.current
       });
-      console.log('✅ Global stream lock acquired');
+
+      if (lockAcquired) {
+        log('Global stream lock acquired - now LIVE');
+      } else {
+        log('Failed to acquire stream lock');
+        throw new Error('Could not acquire stream lock');
+      }
     } catch (error) {
-      console.error('Go live error:', error);
-      toast.error('Failed to start live stream');
+      log('Go live error:', error);
+      toast.error(error.message || 'Failed to start live stream');
       setLoading(false);
       // Release lock on failure
       endStream();
     }
   };
 
+  // Unified cleanup function used on ALL exits
+  const cleanupAll = useCallback(async () => {
+    log('Starting cleanup');
+    try {
+      // Clear video element srcObject
+      if (localVideoEl.current) {
+        localVideoEl.current.srcObject = null;
+      }
+
+      // Leave Agora (handles unpublish + track cleanup internally)
+      await leaveAgora();
+
+      // Clear global stream lock
+      endStream();
+
+      // Reset init guard to allow future sessions
+      initRef.current = false;
+
+      log('Cleanup complete');
+    } catch (error) {
+      log('Cleanup error (non-fatal):', error);
+    }
+  }, [leaveAgora, endStream]);
+
   const handleCancel = async () => {
-    await leaveAgora();
-    endStream(); // Clear global stream lock
+    log('User cancelled, cleaning up');
+    await cleanupAll();
     onCancel();
   };
 
