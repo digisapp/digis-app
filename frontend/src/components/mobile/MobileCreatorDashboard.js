@@ -606,17 +606,6 @@ const MobileCreatorDashboard = ({
                   <span className="text-[11px] font-semibold leading-tight" style={{ pointerEvents: 'none' }}>
                     {action.title}
                   </span>
-                  {action.badge > 0 && (
-                    <span
-                      className="absolute -top-1 -right-1 bg-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-md min-w-[20px] text-center"
-                      style={{
-                        color: action.id === 'messages' ? '#10b981' : '#ef4444',
-                        pointerEvents: 'none'
-                      }}
-                    >
-                      {action.badge > 99 ? '99+' : action.badge}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
