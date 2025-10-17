@@ -436,12 +436,13 @@ export const AuthProvider = ({ children }) => {
   /**
    * Fetch token balance from backend
    */
-  const fetchTokenBalance = useCallback(async (currentUser = user) => {
+  const fetchTokenBalance = useCallback(async (currentUser = user, forceRefresh = false) => {
     if (!currentUser) return;
 
-    // Throttle
+    // Throttle (unless force refresh)
     const now = Date.now();
-    if (fetchInProgress.current.balance || now - lastFetch.current.balance < FETCH_THROTTLE_MS) {
+    if (!forceRefresh && (fetchInProgress.current.balance || now - lastFetch.current.balance < FETCH_THROTTLE_MS)) {
+      console.log('⏸️ Token balance fetch throttled');
       return;
     }
 
@@ -465,13 +466,20 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         console.log('✅ Token balance fetched:', data.balance);
         setTokenBalance(data.balance || 0);
+
+        // Also update profile token_balance to keep them in sync
+        if (profile) {
+          setProfile({ ...profile, token_balance: data.balance || 0 });
+        }
+
+        return data.balance || 0;
       }
     } catch (error) {
       console.error('Error fetching token balance:', error);
     } finally {
       fetchInProgress.current.balance = false;
     }
-  }, [user]);
+  }, [user, profile, setProfile]);
 
   /**
    * Update token balance (for purchases/spending)

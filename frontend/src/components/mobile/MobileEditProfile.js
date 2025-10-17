@@ -34,12 +34,14 @@ import {
   DocumentDuplicateIcon,
   TrashIcon,
   ArrowPathIcon,
-  CreditCardIcon
+  CreditCardIcon,
+  WalletIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import '../../styles/mobile-scrollbar-hide.css';
 import ImageCropModal from '../media/ImageCropModal';
 import { uploadAvatar } from '../../services/imageUploadService';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Helper function for default avatar
 const getDefaultAvatarUrl = (name, size = 100) => {
@@ -82,6 +84,8 @@ const toNum = (v) => Math.max(0.01, Number.parseFloat(v || 0));
 const cleanUsername = (v) => v.replace(/^@/,'').replace(/[^a-z0-9_]/g, '').trim().toLowerCase();
 
 const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
+  // Get auth context methods for syncing token balance and profile
+  const { fetchTokenBalance, refreshProfile } = useAuth();
 
   console.log('MobileEditProfile user data:', user);
 
@@ -173,6 +177,9 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
   const [autoRefillAmount, setAutoRefillAmount] = useState(user?.auto_refill_amount || 500);
   const [autoRefillThreshold, setAutoRefillThreshold] = useState(user?.auto_refill_threshold || 100);
 
+  // Sync state
+  const [isSyncing, setIsSyncing] = useState(false);
+
   // File input refs
   const profileInputRef = useRef(null);
   const bannerInputRef = useRef(null);
@@ -259,6 +266,39 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
     }
     onNavigate('dashboard');
   }, [hasChanges, onNavigate]);
+
+  // Handle token balance sync
+  const handleSyncTokenBalance = async () => {
+    if (isSyncing) return;
+
+    setIsSyncing(true);
+    try {
+      await fetchTokenBalance(user, true); // Force refresh bypasses throttling
+      toast.success('Token balance refreshed');
+    } catch (error) {
+      console.error('Failed to sync token balance:', error);
+      toast.error('Failed to refresh token balance');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Handle full profile sync (for creators)
+  const handleSyncCreator = async () => {
+    if (isSyncing) return;
+
+    setIsSyncing(true);
+    try {
+      await refreshProfile(); // Refresh full profile from backend
+      await fetchTokenBalance(user, true); // Also refresh token balance
+      toast.success('Creator profile synced');
+    } catch (error) {
+      console.error('Failed to sync creator profile:', error);
+      toast.error('Failed to sync creator profile');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Handle category selection
   const handleCategoryChange = (value) => {
@@ -1848,6 +1888,58 @@ const MobileEditProfile = ({ user, isCreator, onSave, onNavigate }) => {
                   </div>
                 </div>
               )}
+
+              {/* Sync Actions */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <ArrowPathIcon className="w-5 h-5 text-purple-600" />
+                  Sync & Refresh
+                </h3>
+
+                <div className="space-y-3">
+                  {/* Sync Token Balance - for all users */}
+                  <button
+                    onClick={handleSyncTokenBalance}
+                    disabled={isSyncing}
+                    className="w-full flex items-center justify-between p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-center gap-3">
+                      <WalletIcon className="w-5 h-5 text-purple-600" />
+                      <div className="text-left">
+                        <p className="font-medium text-gray-900 dark:text-white">Sync Token Balance</p>
+                        <p className="text-xs text-gray-500">Refresh your current token balance</p>
+                      </div>
+                    </div>
+                    {isSyncing ? (
+                      <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
+
+                  {/* Sync Creator Profile - only for creators */}
+                  {isCreator && (
+                    <button
+                      onClick={handleSyncCreator}
+                      disabled={isSyncing}
+                      className="w-full flex items-center justify-between p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-center gap-3">
+                        <ShieldCheckIcon className="w-5 h-5 text-purple-600" />
+                        <div className="text-left">
+                          <p className="font-medium text-gray-900 dark:text-white">Sync Creator Profile</p>
+                          <p className="text-xs text-gray-500">Refresh your creator status and data</p>
+                        </div>
+                      </div>
+                      {isSyncing ? (
+                        <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
 
               {/* Account Actions */}
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
