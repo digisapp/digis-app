@@ -436,7 +436,14 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent" />
               </div>
             }>
-              <TVPage user={user} />
+              <TVPage
+                user={user}
+                isCreator={isCreator}
+                tokenBalance={user?.token_balance || 0}
+                onJoinStream={handleCreatorSelect}
+                onGoLive={handleShowGoLive}
+                onTokenPurchase={handleTokenPurchase}
+              />
             </Suspense>
           </MobileRouteBoundary>
         );
