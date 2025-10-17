@@ -92,13 +92,15 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
   const [trendingStreams, setTrendingStreams] = useState([]);
   const [savedFilters, setSavedFilters] = useState(null);
   const [featuredCreators, setFeaturedCreators] = useState([]);
-  const searchRef = useRef(null);
   const [viewerCounts, setViewerCounts] = useState({});
   const [upcomingStreams, setUpcomingStreams] = useState([]);
   const [replays, setReplays] = useState([]);
   const [showVODPurchase, setShowVODPurchase] = useState(false);
   const [selectedVOD, setSelectedVOD] = useState(null);
   const [vodAccess, setVodAccess] = useState({});
+
+  // ✅ All useRef hooks after useState hooks
+  const searchRef = useRef(null);
 
   // Categories configuration
   const categories = [
