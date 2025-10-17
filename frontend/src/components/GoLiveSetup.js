@@ -666,6 +666,37 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
                   </div>
                 ) : null}
               </div>
+
+              {/* Camera/Mic Controls - Mobile-friendly */}
+              <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={toggleVideo}
+                  className={`p-3 sm:p-4 rounded-full shadow-lg transition-all ${
+                    isVideoEnabled
+                      ? 'bg-gradient-to-br from-purple-600 to-pink-600 text-white'
+                      : 'bg-gray-300 text-gray-600'
+                  }`}
+                  disabled={deviceError}
+                >
+                  <VideoCameraIcon className="w-6 h-6 sm:w-7 sm:h-7" />
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={toggleAudio}
+                  className={`p-3 sm:p-4 rounded-full shadow-lg transition-all ${
+                    isAudioEnabled
+                      ? 'bg-gradient-to-br from-purple-600 to-pink-600 text-white'
+                      : 'bg-gray-300 text-gray-600'
+                  }`}
+                  disabled={deviceError}
+                >
+                  <MicrophoneIcon className="w-6 h-6 sm:w-7 sm:h-7" />
+                </motion.button>
+              </div>
             </motion.div>
           </div>
 
