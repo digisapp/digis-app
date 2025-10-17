@@ -169,40 +169,40 @@ const MobileLandingPage = React.memo(({ onLogin }) => {
         {/* Top spacer */}
         <div className="mobile-landing-safe-top" />
 
-        {/* Logo section with proper spacing */}
-        <motion.div
-          className="mobile-landing-logo text-center mb-6"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Digis Logo */}
-        <div className="mb-2">
-          <img
-            src="/digis-logo-white.png"
-            alt="Digis"
-            className="mx-auto h-16 w-auto hover:scale-105 transition-transform duration-200"
-          />
-        </div>
-        
-        {/* Subtitle only for specific actions */}
-        {isForgotPassword && (
-          <p className="text-white/90 text-lg mt-4">Reset your password</p>
-        )}
-        {isSignUp && (
-          <p className="text-white/90 text-lg mt-4">Create your account</p>
-        )}
-      </motion.div>
-
         {/* Center content vertically */}
         <div className="flex-1 flex flex-col justify-center">
+          {/* Logo section - moved above form and centered */}
+          <motion.div
+            className="text-center mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {/* Digis Logo */}
+            <div className="mb-3">
+              <img
+                src="/digis-logo-white.png"
+                alt="Digis"
+                className="mx-auto h-16 w-auto hover:scale-105 transition-transform duration-200"
+              />
+            </div>
+
+            {/* Subtitle only for specific actions */}
+            {isForgotPassword && (
+              <p className="text-white/90 text-lg mt-2">Reset your password</p>
+            )}
+            {isSignUp && (
+              <p className="text-white/90 text-lg mt-2">Create your account</p>
+            )}
+          </motion.div>
+
           {/* Auth Form */}
           <motion.div
             className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/20 mx-auto w-full max-w-md"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-      >
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email Input */}
           <div className="relative">
