@@ -117,19 +117,19 @@ class LoyaltyService {
       // Send notification
 // TODO: Replace with Ably publish
 //       io.to(`user:${userId}`).emit('loyalty_upgraded', {
-        creatorId,
-        newLevel,
-        message: `Congratulations! You've been upgraded to ${newLevel} status!`,
-        perks: this.getLevelPerks(newLevel)
-      });
+//         creatorId,
+//         newLevel,
+//         message: `Congratulations! You've been upgraded to ${newLevel} status!`,
+//         perks: this.getLevelPerks(newLevel)
+//       });
 
       // Notify creator
 // TODO: Replace with Ably publish
 //       io.to(`user:${creatorId}`).emit('fan_loyalty_upgrade', {
-        fanId: userId,
-        newLevel,
-        message: `A fan has reached ${newLevel} loyalty status!`
-      });
+//         fanId: userId,
+//         newLevel,
+//         message: `A fan has reached ${newLevel} loyalty status!`
+//       });
 
       logger.info(`User ${userId} upgraded to ${newLevel} for creator ${creatorId}`);
     } catch (error) {
@@ -429,9 +429,9 @@ class LoyaltyService {
 
 // TODO: Replace with Ably publish
 //       io.to(`user:${userId}`).emit('perk_delivered', {
-        type: perkType,
-        message: 'Your daily exclusive content is ready!'
-      });
+//         type: perkType,
+//         message: 'Your daily exclusive content is ready!'
+//       });
     }
   }
 
@@ -460,9 +460,9 @@ class LoyaltyService {
 
 // TODO: Replace with Ably publish
 //       io.to(`user:${userId}`).emit('perk_delivered', {
-        type: perkType,
-        message: 'Your weekly exclusive content is ready!'
-      });
+//         type: perkType,
+//         message: 'Your weekly exclusive content is ready!'
+//       });
     }
   }
 }
