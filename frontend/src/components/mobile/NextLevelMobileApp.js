@@ -33,6 +33,7 @@ import MobileMessages from './MobileMessages';
 import MobileOnboarding from './MobileOnboarding';
 import MobileCreatorDashboard from './MobileCreatorDashboard';
 import MobileExplore from './MobileExplore';
+import MobileEditProfile from './MobileEditProfile';
 import Wallet from '../WalletOptimized';
 import { MobileStreamProvider } from '../../contexts/MobileStreamContext';
 import useIosVhFix from '../../hooks/useIosVhFix';
@@ -279,6 +280,33 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
     // TODO: Implement voice call modal
   };
 
+  // Handle profile save
+  const handleProfileSave = async (profileData) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        },
+        body: JSON.stringify(profileData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const updatedUser = await response.json();
+      console.log('✅ Profile updated successfully:', updatedUser);
+
+      // You might want to update the user state here
+      // For now, just log success
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  };
+
   // Set body background to prevent black overscroll - MUST be before conditional returns
   useEffect(() => {
     document.body.style.backgroundColor = '#f9fafb'; // bg-gray-50
@@ -458,6 +486,18 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
         // Fall through to explore for non-creators (redirect happens in useEffect)
         console.log('❌ Not a creator, waiting for useEffect redirect');
         return null;
+
+      case 'profile':
+        return (
+          <MobileRouteBoundary routeName="Profile">
+            <MobileEditProfile
+              user={user}
+              isCreator={isCreator}
+              onSave={handleProfileSave}
+              onNavigate={(tab) => setActiveTab(tab)}
+            />
+          </MobileRouteBoundary>
+        );
 
       default:
         return null;
