@@ -1,9 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { SocketProvider, useSocket } from '../SocketContext';
-import socketService from '../../services/socket';
+import socketService from '../../services/socketServiceWrapper';
 
 // Mock socket service
-jest.mock('../../services/socket', () => ({
+jest.mock('../../services/socketServiceWrapper', () => ({
   connect: jest.fn(),
   disconnect: jest.fn(),
   on: jest.fn(),

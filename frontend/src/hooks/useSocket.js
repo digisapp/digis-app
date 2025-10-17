@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import socketService from '../services/socket';
+import socketService from '../services/socketServiceWrapper';
 
 export const useSocket = () => {
   const [connected, setConnected] = useState(socketService.isConnected);

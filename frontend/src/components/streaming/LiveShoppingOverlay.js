@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { apiClient } from '../../services/api';
-import socketService from '../../services/socket';
+import socketService from '../../services/socketServiceWrapper';
 import { toast } from 'react-hot-toast';
 import LiveShoppingBuyButton from './LiveShoppingBuyButton';
 

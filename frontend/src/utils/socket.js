@@ -1,7 +1,7 @@
 // Socket utility wrapper
 // This file exports the socket service for backward compatibility
 
-import socketService from '../services/socket';
+import socketService from '../services/socketServiceWrapper';
 
 export default socketService;
 

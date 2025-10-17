@@ -74,7 +74,7 @@ const SimpleMobileApp = lazy(() => import('./components/mobile/SimpleMobileApp')
 import recentlyViewedService from './utils/recentlyViewedService';
 import serviceWorkerManager from './utils/ServiceWorkerManager';
 import agoraLoader from './utils/AgoraLoader';
-import socketService from './services/socket';
+import socketService from '../services/socketServiceWrapper';
 import { useBalance, useNotifications } from './hooks/useSocket';
 
 // Loading component for lazy loaded components

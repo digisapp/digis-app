@@ -26,7 +26,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { BellAlertIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
-import socketService from '../services/socket';
+import socketService from '../services/socketServiceWrapper';
 import { getAuthToken } from '../utils/auth-helpers';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 import PropTypes from 'prop-types';

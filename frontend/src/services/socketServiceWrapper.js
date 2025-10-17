@@ -1,26 +1,17 @@
 /**
- * Socket Service Wrapper - Feature Flag Based Selection
+ * Real-time Service Wrapper
  *
- * Conditionally exports either Socket.io or Ably based on VITE_USE_ABLY flag.
- * This allows for zero-downtime migration to Vercel-compatible Ably.
+ * Exports Ably service for all real-time features (Socket.io fully replaced).
+ * All connections use Ably for serverless compatibility (Vercel).
  *
  * Usage:
  * import socketService from './services/socketServiceWrapper';
  * await socketService.connect();
  */
 
-const USE_ABLY = import.meta.env.VITE_USE_ABLY === 'true';
+console.log('🔌 Real-time service: Ably (serverless-compatible)');
 
-console.log(`🔌 Real-time service: ${USE_ABLY ? 'Ably (Vercel)' : 'Socket.io (legacy)'}`);
+// Import Ably service (Socket.io fully removed)
+const { default: ablyService } = await import('./ablyService.js');
 
-// Import the correct service based on feature flag
-let service;
-if (USE_ABLY) {
-  const { default: ablyService } = await import('./ablyService.js');
-  service = ablyService;
-} else {
-  const { default: socketService } = await import('./socket.js');
-  service = socketService;
-}
-
-export default service;
+export default ablyService;

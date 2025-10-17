@@ -37,7 +37,7 @@ import api from '../services/api';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 import { getAuthToken } from '../utils/supabase-auth';
 import { getSession, authedFetch } from '../utils/requireAuth';
-import socketService from '../services/socket';
+import socketService from '../services/socketServiceWrapper';
 import toast from 'react-hot-toast';
 import { addBreadcrumb } from '../lib/sentry.client';
 import { useAuthGatedAction } from '../utils/withAuthGate';

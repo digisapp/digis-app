@@ -21,7 +21,7 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import Tooltip from './ui/Tooltip';
 import toast from 'react-hot-toast';
-import socketService from '../services/socket';
+import socketService from '../services/socketServiceWrapper';
 
 const LiveChatEnhanced = ({ 
   user, 

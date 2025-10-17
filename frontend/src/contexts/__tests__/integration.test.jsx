@@ -5,12 +5,12 @@ import { ModalProvider, useModal, MODALS } from '../ModalContext';
 import { DeviceProvider, useDevice } from '../DeviceContext';
 import { supabase } from '../../utils/supabase-auth';
 import { verifyUserRole } from '../../utils/roleVerification';
-import socketService from '../../services/socket';
+import socketService from '../../services/socketServiceWrapper';
 
 // Mock dependencies
 jest.mock('../../utils/supabase-auth');
 jest.mock('../../utils/roleVerification');
-jest.mock('../../services/socket');
+jest.mock('../../services/socketServiceWrapper');
 jest.mock('../../utils/profileCache', () => ({
   loadProfileCache: jest.fn(),
   saveProfileCache: jest.fn(),

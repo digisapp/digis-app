@@ -16,7 +16,7 @@ import StreamReactionsBar from './StreamReactionsBar';
 import StreamQualitySelector from './StreamQualitySelector';
 import StreamMilestones from './StreamMilestones';
 import StreamQuickShare from './StreamQuickShare';
-import socketService from '../services/socket';
+import socketService from '../services/socketServiceWrapper';
 
 const EnhancedStreamingOverlay = ({
   user,
