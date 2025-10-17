@@ -55,45 +55,52 @@ async function handler(req, res) {
     const client = new Ably.Rest(process.env.ABLY_API_KEY);
 
     /**
-     * Capability-based access control
+     * Capability-based access control - SCOPED by streamId
+     *
+     * Security model:
+     * - NO wildcards (prevents cross-stream access)
+     * - Backend-only publishing (clients can only subscribe + presence)
+     * - Scoped to specific streamId from request
      *
      * Channel naming convention:
-     * - chat:* - Chat channels (streams, DMs)
-     * - presence:* - User presence channels
-     * - stream:* - Live stream data channels
-     * - ops:* - Operational/system channels (admin only)
-     * - user:{userId} - Private user channels
+     * - user:{userId} - Private user notifications (balance, call status, tips received)
+     * - stream:{streamId} - Stream events (tips, tickets) - subscribe + presence only
+     * - stream:{streamId}:chat - Stream chat (optional: can enable publish for client chat)
      */
-    // Capability-based access control - RESTRICTIVE by default
-    // Viewers can ONLY subscribe, creators can publish
-    const capabilities = isAuthenticated
-      ? {
-          // All authenticated users can subscribe to public channels (READ-ONLY)
-          "chat:*": ["subscribe", "presence", "history"],
-          "stream:*": ["subscribe", "presence", "history"],
-          "presence:*": ["subscribe", "presence", "history"],
-          // Users can ONLY subscribe to their own channel (server publishes to it)
-          [`user:${userId}`]: ["subscribe", "presence", "history"],
-          // Creators get publish rights to their own stream channels
-          ...(userRole === 'creator' && {
-            "chat:*": ["subscribe", "publish", "presence", "history"],
-            // Only allow publishing to streams they own (enforced by naming: stream:{creatorId}_*)
-            "stream:*": ["subscribe", "publish", "presence", "history"],
-            "presence:*": ["subscribe", "publish", "presence", "history"]
-          })
-        }
-      : {
-          // Anonymous users can only subscribe (strict read-only)
-          "chat:*": ["subscribe", "history"],
-          "stream:*": ["subscribe", "history"],
-          "presence:*": ["subscribe", "history"]
-        };
 
-    // Create token request with fine-grained permissions
+    // Extract streamId from query params, body, or headers
+    const streamId = req.query?.streamId || req.body?.streamId || req.headers['x-stream-id'];
+
+    // Build minimal scoped capabilities
+    const capabilities = {};
+
+    if (isAuthenticated && userId) {
+      // Always grant: subscribe to personal notification channel
+      capabilities[`user:${userId}`] = ["subscribe", "history"];
+
+      // If joining a stream: grant subscribe + presence (but NO publish)
+      if (streamId) {
+        capabilities[`stream:${streamId}`] = ["subscribe", "presence", "history"];
+
+        // OPTIONAL: Enable client-side chat publishing
+        // Uncomment this line if you want clients to publish chat messages directly
+        // capabilities[`stream:${streamId}:chat`] = ["publish", "subscribe", "presence", "history"];
+      }
+
+      // Creators: NO additional wildcard rights
+      // All critical events (tips, tickets, billing) are published server-side only
+    } else {
+      // Anonymous users: minimal read-only access
+      if (streamId) {
+        capabilities[`stream:${streamId}`] = ["subscribe", "history"];
+      }
+    }
+
+    // Create token request with fine-grained scoped permissions
     const tokenRequest = await client.auth.createTokenRequest({
       clientId,
       capability: capabilities,
-      ttl: 60 * 60 * 1000, // 1 hour TTL (3600000ms)
+      ttl: 2 * 60 * 60 * 1000, // 2 hours TTL (recommended for mobile)
       // Add metadata for server-side validation if needed
       timestamp: Date.now()
     });
@@ -103,7 +110,8 @@ async function handler(req, res) {
       clientId,
       role: userRole,
       authenticated: isAuthenticated,
-      ttl: '1 hour',
+      streamId: streamId || 'none',
+      ttl: '2 hours',
       capabilities: Object.keys(capabilities).join(', ')
     });
 

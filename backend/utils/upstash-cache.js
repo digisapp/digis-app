@@ -176,18 +176,28 @@ async function increment(key, ttlSeconds = 60) {
 }
 
 /**
- * Store online users (presence)
+ * DEPRECATED: Use Ably Presence instead
+ * Presence is now handled entirely by Ably Presence API.
+ * This provides:
+ * - Automatic cleanup on disconnect
+ * - Real-time member list updates
+ * - No manual TTL management needed
+ *
+ * See frontend/src/services/presence.ts for implementation
  */
 async function setUserOnline(userId, ttlSeconds = 300) {
-  return set(`presence:${userId}`, Date.now(), ttlSeconds);
+  console.warn('⚠️  setUserOnline is deprecated - use Ably Presence instead');
+  // No-op: presence is handled by Ably now
+  return true;
 }
 
 /**
- * Check if user is online
+ * DEPRECATED: Use Ably Presence instead
  */
 async function isUserOnline(userId) {
-  const timestamp = await get(`presence:${userId}`);
-  return timestamp !== null;
+  console.warn('⚠️  isUserOnline is deprecated - use Ably Presence instead');
+  // For server-side checks, use Ably REST API channel.presence.get()
+  return false;
 }
 
 /**

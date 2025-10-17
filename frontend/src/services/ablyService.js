@@ -30,8 +30,9 @@ class AblyService {
   /**
    * Connect to Ably using token authentication
    * Token endpoint prevents API key exposure
+   * @param {string} streamId - Optional streamId for scoped capabilities
    */
-  async connect() {
+  async connect(streamId = null) {
     try {
       // If already connected, return immediately
       if (this.isConnected && this.client) {
@@ -54,16 +55,23 @@ class AblyService {
       // Get current user for clientId
       const token = await this.getAuthToken();
 
+      // Build auth params with streamId for scoped capabilities
+      const authParams = {};
+      if (streamId) {
+        authParams.streamId = streamId;
+      }
+
       // Initialize Ably client with token authentication
       this.client = new Ably.Realtime({
         authUrl,
         authMethod: 'POST',
+        authParams, // Pass streamId to backend for scoped token
         authHeaders: token ? {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         } : {},
         // Automatic reconnection with exponential backoff
-        disconnectedRetryTimeout: 5000,
+        disconnectedRetryTimeout: 3000,
         suspendedRetryTimeout: 10000,
         // Enable message history (last 50 messages on rejoin)
         recover: (lastConnectionDetails, callback) => {
