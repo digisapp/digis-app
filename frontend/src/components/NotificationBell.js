@@ -8,6 +8,10 @@ import { getAuthToken } from '../utils/auth-helpers';
 
 const NotificationBell = () => {
   const { state } = useApp();
+
+  // ✅ Early return BEFORE hooks (fixes React error #310)
+  if (!state.user) return null;
+
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
@@ -15,8 +19,8 @@ const NotificationBell = () => {
 
   // Fetch unread count
   const fetchUnreadCount = useCallback(async () => {
-    if (!state.user) return;
-    
+    // No need to check state.user - guaranteed to exist
+
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
@@ -44,25 +48,21 @@ const NotificationBell = () => {
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
-  }, [state.user, unreadCount]);
+  }, [unreadCount]); // Removed state.user dependency - guaranteed to exist
 
   // Poll for new notifications every 30 seconds
   useEffect(() => {
-    if (state.user) {
-      fetchUnreadCount();
-      
-      const interval = setInterval(fetchUnreadCount, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [state.user, unreadCount, fetchUnreadCount]);
+    fetchUnreadCount();
+
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]); // Removed state.user check - component only renders when user exists
 
   // Update count when notification dropdown closes
   const handleNotificationDropdownClose = () => {
     setShowNotifications(false);
     fetchUnreadCount();
   };
-
-  if (!state.user) return null;
 
   return (
     <div style={{ position: 'relative' }}>

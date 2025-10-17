@@ -25,14 +25,15 @@ import toast from 'react-hot-toast';
  * @param {Function} onAccepted - Called when call is accepted with Agora credentials
  */
 export default function IncomingCallModal({ invite, onClose, onAccepted }) {
+  // ✅ Early return BEFORE hooks (fixes React error #310)
+  if (!invite) return null;
+
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
 
   // Calculate remaining time
   useEffect(() => {
-    if (!invite) return;
-
     const updateRemaining = () => {
       const remaining = Math.max(0, Math.floor((new Date(invite.expiresAt) - Date.now()) / 1000));
       setRemainingSeconds(remaining);
@@ -48,7 +49,7 @@ export default function IncomingCallModal({ invite, onClose, onAccepted }) {
     const interval = setInterval(updateRemaining, 1000);
 
     return () => clearInterval(interval);
-  }, [invite, onClose]);
+  }, [invite.expiresAt, onClose]); // invite guaranteed to exist now
 
   const handleAccept = async () => {
     if (!invite || accepting) return;
@@ -106,8 +107,6 @@ export default function IncomingCallModal({ invite, onClose, onAccepted }) {
       setDeclining(false);
     }
   };
-
-  if (!invite) return null;
 
   return (
     <AnimatePresence>

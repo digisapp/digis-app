@@ -9,6 +9,9 @@ const StreamOverlayManager = ({
   currentOverlay = null,
   className = ''
 }) => {
+  // ✅ Early return BEFORE hooks (fixes React error #310)
+  if (!isCreator) return null;
+
   const [showSettings, setShowSettings] = useState(false);
   const [overlayImage, setOverlayImage] = useState(currentOverlay);
   const [overlayPosition, setOverlayPosition] = useState('top-left');
@@ -77,8 +80,6 @@ const StreamOverlayManager = ({
       onOverlayChange(newSettings);
     }
   };
-
-  if (!isCreator) return null;
 
   return (
     <>

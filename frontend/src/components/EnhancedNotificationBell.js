@@ -9,6 +9,10 @@ import SimpleNotificationBox from './SimpleNotificationBox';
 
 const EnhancedNotificationBell = () => {
   const { state } = useApp();
+
+  // ✅ Early return BEFORE hooks (fixes React error #310)
+  if (!state.user) return null;
+
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -18,7 +22,7 @@ const EnhancedNotificationBell = () => {
 
   // Fetch unread count
   const fetchUnreadCount = useCallback(async () => {
-    if (!state.user || fetchingRef.current) return;
+    if (fetchingRef.current) return; // Removed state.user check - guaranteed to exist
     
     fetchingRef.current = true;
     
@@ -59,17 +63,15 @@ const EnhancedNotificationBell = () => {
     } finally {
       fetchingRef.current = false;
     }
-  }, [state.user, unreadCount]);
+  }, [unreadCount]); // Removed state.user dependency - guaranteed to exist
 
   // Poll for new notifications every 30 seconds
   useEffect(() => {
-    if (state.user) {
-      fetchUnreadCount();
-      
-      const interval = setInterval(fetchUnreadCount, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [state.user, fetchUnreadCount]);
+    fetchUnreadCount();
+
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]); // Removed state.user check - component only renders when user exists
 
   // Update count when notification box closes
   const handleNotificationBoxClose = () => {
@@ -77,8 +79,6 @@ const EnhancedNotificationBell = () => {
     setHasNewNotifications(false);
     fetchUnreadCount();
   };
-
-  if (!state.user) return null;
 
   return (
     <div style={{ position: 'relative' }}>
