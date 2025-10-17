@@ -110,24 +110,21 @@ export default function AuthGate({ children, fallback = null }) {
         background: 'linear-gradient(to bottom right, #9333ea, #ec4899)'
       }}>
         <div style={{ textAlign: 'center', color: 'white' }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            border: '4px solid rgba(255,255,255,0.3)',
-            borderTop: '4px solid white',
-            borderRadius: '50%',
-            margin: '0 auto 16px',
-            animation: 'spin 1s linear infinite'
-          }} />
-          <p style={{ fontSize: '16px', marginTop: '16px' }}>Verifying your session…</p>
-          {errored && (
-            <p style={{ fontSize: '12px', marginTop: '8px', opacity: 0.8 }}>
-              Taking longer than expected. Continuing anyway...
-            </p>
-          )}
+          <img
+            src="/digis-logo-white.png"
+            alt="Digis"
+            style={{
+              width: '192px',
+              height: 'auto',
+              margin: '0 auto',
+              filter: 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.3))',
+              animation: 'pulse 2s ease-in-out infinite'
+            }}
+          />
           <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
+            @keyframes pulse {
+              0%, 100% { opacity: 0.9; transform: scale(1); }
+              50% { opacity: 1; transform: scale(1.05); }
             }
           `}</style>
         </div>

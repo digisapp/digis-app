@@ -110,7 +110,6 @@ function BootstrapLoader() {
         >
           {/* Animated Digis Logo */}
           <motion.div
-            className="mb-8"
             animate={{
               scale: [1, 1.05, 1],
               opacity: [0.9, 1, 0.9]
@@ -127,54 +126,6 @@ function BootstrapLoader() {
               className="w-48 h-auto mx-auto filter drop-shadow-2xl"
             />
           </motion.div>
-
-          {/* Loading Text */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <p className="text-white text-lg font-medium">Verifying your session...</p>
-          </motion.div>
-
-          {/* Animated Progress Bar */}
-          <motion.div
-            className="mt-8 w-64 h-1 bg-purple-700 rounded-full overflow-hidden mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            <motion.div
-              className="h-full bg-gradient-to-r from-pink-500 via-purple-400 to-pink-500"
-              animate={{
-                x: ['-100%', '100%']
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: 'easeInOut'
-              }}
-            />
-          </motion.div>
-
-          {/* Decorative Elements */}
-          <div className="mt-12 flex justify-center gap-2">
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                className="w-2 h-2 bg-pink-400 rounded-full"
-                animate={{
-                  scale: [1, 1.5, 1],
-                  opacity: [0.3, 1, 0.3]
-                }}
-                transition={{
-                  duration: 1,
-                  repeat: Infinity,
-                  delay: i * 0.2
-                }}
-              />
-            ))}
-          </div>
         </motion.div>
       </AnimatePresence>
     </div>
