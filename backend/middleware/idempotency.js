@@ -63,13 +63,15 @@ const getIdempotentResponse = async (key) => {
 /**
  * Middleware for request idempotency
  * @param {Object} options - Configuration options
- * @param {number} options.ttl - Time to live in seconds (default: 24 hours)
+ * @param {string} options.prefix - Key prefix for namespacing (e.g., 'tip', 'ticket')
+ * @param {number} options.ttlSec - Time to live in seconds (default: 24 hours)
  * @param {boolean} options.useHeader - Use Idempotency-Key header (default: true)
  * @param {Array<string>} options.methods - HTTP methods to apply idempotency (default: ['POST', 'PUT', 'PATCH'])
  */
 const idempotency = (options = {}) => {
   const {
-    ttl = 86400, // 24 hours default
+    prefix = 'req',
+    ttlSec = 86400, // 24 hours default
     useHeader = true,
     methods = ['POST', 'PUT', 'PATCH']
   } = options;
@@ -80,71 +82,85 @@ const idempotency = (options = {}) => {
       return next();
     }
 
-    let idempotencyKey;
+    try {
+      let key;
 
-    // Use header-based key if provided
-    if (useHeader && req.headers['idempotency-key']) {
-      const userId = req.user?.supabase_id || req.user?.uid || 'anonymous';
-      idempotencyKey = `idem:${userId}:${req.headers['idempotency-key']}`;
-    } else {
-      // Generate key from request
-      idempotencyKey = generateIdempotencyKey(req);
-    }
+      // Build key from header or request fingerprint
+      if (useHeader && req.headers['idempotency-key']) {
+        key = req.headers['idempotency-key'];
+      } else if (req.body.idempotencyKey) {
+        key = req.body.idempotencyKey;
+      } else {
+        // Fallback: generate from request signature
+        const userId = req.user?.supabase_id || 'anon';
+        const body = JSON.stringify(req.body || {});
+        key = `${userId}:${req.method}:${req.originalUrl}:${body}`;
+      }
 
-    // Check for existing response
-    const existingResponse = await getIdempotentResponse(idempotencyKey);
+      // Add environment and prefix to namespace properly
+      const env = process.env.NODE_ENV || 'development';
+      const idempotencyKey = `idemp:${env}:${prefix}:${key}`;
 
-    if (existingResponse) {
-      logger.info('Idempotent request detected', {
-        key: idempotencyKey,
-        path: req.path,
-        userId: req.user?.supabase_id
-      });
+      // Check for existing response (Redis SET NX)
+      const existingResponse = await getIdempotentResponse(idempotencyKey);
 
-      // Return cached response
-      res.setHeader('X-Idempotency-Key', idempotencyKey);
-      res.setHeader('X-Idempotency-Replay', 'true');
-      return res.status(existingResponse.statusCode).json(existingResponse.body);
-    }
+      if (existingResponse) {
+        logger.info('Idempotent request detected', {
+          key: idempotencyKey,
+          path: req.path,
+          userId: req.user?.supabase_id
+        });
 
-    // Store the key to prevent concurrent duplicate processing
-    const lockKey = `${idempotencyKey}:lock`;
-    const lockAcquired = await redis.set(lockKey, '1', 'NX', 'EX', 10); // 10 second lock
+        // Return cached response
+        res.setHeader('X-Idempotency-Key', idempotencyKey);
+        res.setHeader('X-Idempotency-Replay', 'true');
+        return res.status(existingResponse.statusCode).json(existingResponse.body);
+      }
 
-    if (!lockAcquired) {
-      return res.status(409).json({
-        success: false,
-        code: 'REQUEST_IN_PROGRESS',
-        message: 'Request is already being processed'
-      });
-    }
+      // Try to acquire lock (SET NX with short TTL)
+      const lockKey = `${idempotencyKey}:lock`;
+      const lockAcquired = await redis.set(lockKey, '1', 'NX', 'EX', 10); // 10 second lock
 
-    // Override res.json to capture response
-    const originalJson = res.json.bind(res);
-    res.json = function(body) {
-      // Store response for future idempotency
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        storeIdempotentResponse(idempotencyKey, {
-          statusCode: res.statusCode,
-          body
-        }, ttl).catch(err => {
-          logger.error('Failed to store idempotent response', {
-            error: err.message,
-            key: idempotencyKey
-          });
+      if (!lockAcquired) {
+        return res.status(409).json({
+          success: false,
+          error: 'DUPLICATE_REQUEST',
+          message: 'Request is already being processed'
         });
       }
 
-      // Clean up lock
-      redis.del(lockKey).catch(err => {
-        logger.error('Failed to delete lock', { error: err.message, key: lockKey });
-      });
+      // Override res.json to capture response for caching
+      const originalJson = res.json.bind(res);
+      res.json = function(body) {
+        // Store successful response for idempotency replay
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          storeIdempotentResponse(idempotencyKey, {
+            statusCode: res.statusCode,
+            body
+          }, ttlSec).catch(err => {
+            logger.error('Failed to store idempotent response', {
+              error: err.message,
+              key: idempotencyKey
+            });
+          });
+        }
 
-      res.setHeader('X-Idempotency-Key', idempotencyKey);
-      return originalJson(body);
-    };
+        // Clean up lock
+        redis.del(lockKey).catch(err => {
+          logger.error('Failed to delete lock', { error: err.message, key: lockKey });
+        });
 
-    next();
+        res.setHeader('X-Idempotency-Key', idempotencyKey);
+        return originalJson(body);
+      };
+
+      next();
+    } catch (error) {
+      // Fail-open: if Redis hiccups, don't block legitimate requests
+      logger.error('Idempotency middleware error', { error: error.message });
+      req.idempotencyBypassed = true;
+      next();
+    }
   };
 };
 

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
+const { idempotency } = require('../middleware/idempotency');
 const { v4: uuidv4 } = require('uuid');
 const { nanoid } = require('nanoid');
 
@@ -48,7 +49,10 @@ router.get('/streams/:streamId/access', authenticateToken, async (req, res) => {
 });
 
 // Buy a ticket with tokens (tokens-only)
-router.post('/streams/:streamId/tickets/checkout', authenticateToken, async (req, res) => {
+router.post('/streams/:streamId/tickets/checkout',
+  authenticateToken,
+  idempotency({ prefix: 'ticket', ttlSec: 24 * 60 * 60 }),
+  async (req, res) => {
   const client = await pool.connect();
 
   try {

@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../utils/db');
 const { authenticateToken, requireTokens } = require('../middleware/auth');
+const { idempotency } = require('../middleware/idempotency');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
@@ -39,7 +40,10 @@ setInterval(() => {
 }, 300000);
 
 // Send a tip to a creator (Pro Monetization)
-router.post('/send', authenticateToken, async (req, res) => {
+router.post('/send',
+  authenticateToken,
+  idempotency({ prefix: 'tip', ttlSec: 24 * 60 * 60 }),
+  async (req, res) => {
   const client = await pool.connect();
 
   try {
