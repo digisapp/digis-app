@@ -179,7 +179,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
   const authReady = !authLoading && roleResolved;
 
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const openBuyTokens = useOpenBuyTokens();
+  const openBuyTokensHook = useOpenBuyTokens();
   const [showMobileTokenPurchase, setShowMobileTokenPurchase] = useState(false);
   const [walletData, setWalletData] = useState({ tokens: 0, total_balance: 0 });
   const [earningsData, setEarningsData] = useState(null);
@@ -372,7 +372,15 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
         role: isCreator ? 'creator' : 'fan'
       });
 
-      openBuyTokens({
+      // If onTokenPurchase callback is provided (mobile context), use it directly
+      if (onTokenPurchase && typeof onTokenPurchase === 'function') {
+        setStartingPurchase(false);
+        onTokenPurchase();
+        return;
+      }
+
+      // Otherwise use the modal hook (desktop context)
+      openBuyTokensHook({
         onSuccess: (tokensAdded) => {
           setStartingPurchase(false);
           onTokensPurchased(tokensAdded);
@@ -416,7 +424,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
         role: isCreator ? 'creator' : 'fan'
       });
     }
-  }, [startingPurchase, isCreator, openBuyTokens, onTokensPurchased, onTokenUpdate, walletData]);
+  }, [startingPurchase, isCreator, openBuyTokensHook, onTokenPurchase, onTokensPurchased, onTokenUpdate, walletData]);
 
   const formatTokensAsUsd = useCallback((tokens) => {
     return TOKEN_USD_FORMAT.format(tokens * TOKEN_PAYOUT_USD_PER_TOKEN);

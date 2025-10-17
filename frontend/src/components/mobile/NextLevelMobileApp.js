@@ -453,7 +453,7 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
         return (
           <MobileRouteBoundary routeName="Wallet">
             <div className="mobile-safe-area">
-              <Wallet user={user} onBuyTokens={handleTokenPurchase} />
+              <Wallet user={user} onTokenPurchase={handleTokenPurchase} />
             </div>
           </MobileRouteBoundary>
         );
