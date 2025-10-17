@@ -28,14 +28,22 @@ async function publish(channelName, event, payload) {
   }
 
   try {
-    const channel = client.channels.get(channelName);
-    await channel.publish(event, {
+    const enrichedPayload = {
       ...payload,
       timestamp: payload.timestamp || new Date().toISOString(),
       serverTime: Date.now()
-    });
+    };
 
-    console.log(`[ably-publish] ✓ Published ${event} to ${channelName}`);
+    const channel = client.channels.get(channelName);
+    await channel.publish(event, enrichedPayload);
+
+    // Structured logging for observability
+    console.info('[ably]', {
+      channel: channelName,
+      event,
+      payloadSize: JSON.stringify(enrichedPayload).length,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
     console.error(`[ably-publish] ✗ Failed to publish ${event} to ${channelName}:`, error.message);
     throw error;

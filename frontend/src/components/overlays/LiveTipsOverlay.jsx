@@ -6,10 +6,12 @@ import * as Ably from 'ably';
 const LiveTipsOverlay = ({ channel }) => {
   const [tips, setTips] = useState([]);
   const [displayedTips, setDisplayedTips] = useState([]);
+  const [connectionState, setConnectionState] = useState('connecting'); // connecting, connected, disconnected, suspended
   const tipQueueRef = useRef([]);
   const processingRef = useRef(false);
   const ablyClientRef = useRef(null);
   const ablyChannelRef = useRef(null);
+  const seenTipIdsRef = useRef(new Set()); // Idempotency: track seen tip IDs
 
   useEffect(() => {
     if (!channel) return;
@@ -26,12 +28,16 @@ const LiveTipsOverlay = ({ channel }) => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
           },
-          disconnectedRetryTimeout: 3000
+          disconnectedRetryTimeout: 3000,
+          useBinaryProtocol: true, // Smaller payloads for better performance
+          closeOnUnload: true,
+          autoConnect: true
         });
 
-        // Log connection state changes
+        // Log connection state changes and update UI
         ablyClientRef.current.connection.on((stateChange) => {
           console.log('[Ably]', stateChange.current, stateChange.reason || '');
+          setConnectionState(stateChange.current);
         });
 
         // Subscribe to stream channel for tip events
@@ -41,8 +47,24 @@ const LiveTipsOverlay = ({ channel }) => {
           console.log('New tip received via Ably:', message.data);
 
           const tipData = message.data || {};
+          const tipId = tipData.tipId || `tip_${Date.now()}`;
+
+          // Idempotency: skip if already seen
+          if (seenTipIdsRef.current.has(tipId)) {
+            console.log('[Ably] Duplicate tip ignored:', tipId);
+            return;
+          }
+
+          seenTipIdsRef.current.add(tipId);
+
+          // Limit seen IDs to last 1000 to prevent memory leak
+          if (seenTipIdsRef.current.size > 1000) {
+            const idsArray = Array.from(seenTipIdsRef.current);
+            seenTipIdsRef.current = new Set(idsArray.slice(-500)); // Keep last 500
+          }
+
           const tip = {
-            id: tipData.tipId || Date.now(),
+            id: tipId,
             username: tipData.fromUsername || 'Anonymous',
             amount: tipData.amountTokens || 0,
             message: tipData.message || null,
@@ -102,6 +124,27 @@ const LiveTipsOverlay = ({ channel }) => {
 
   return (
     <div className="fixed top-20 left-4 right-4 z-40 pointer-events-none">
+      {/* Reconnection Banner */}
+      <AnimatePresence>
+        {(connectionState === 'connecting' || connectionState === 'suspended' || connectionState === 'disconnected') && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-2 max-w-sm"
+          >
+            <div className="bg-yellow-500/90 backdrop-blur-sm text-black px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 pointer-events-auto">
+              <div className="w-2 h-2 bg-black rounded-full animate-pulse" />
+              <span>
+                {connectionState === 'connecting' && 'Connecting to live updates...'}
+                {connectionState === 'suspended' && 'Reconnecting...'}
+                {connectionState === 'disconnected' && 'Connection lost. Retrying...'}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-sm space-y-2">
         <AnimatePresence>
           {displayedTips.map((tip) => (

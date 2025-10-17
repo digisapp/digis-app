@@ -64,23 +64,26 @@ async function handler(req, res) {
      * - ops:* - Operational/system channels (admin only)
      * - user:{userId} - Private user channels
      */
+    // Capability-based access control - RESTRICTIVE by default
+    // Viewers can ONLY subscribe, creators can publish
     const capabilities = isAuthenticated
       ? {
-          // Authenticated users can subscribe and publish to public channels
+          // All authenticated users can subscribe to public channels (READ-ONLY)
           "chat:*": ["subscribe", "presence", "history"],
           "stream:*": ["subscribe", "presence", "history"],
           "presence:*": ["subscribe", "presence", "history"],
-          // Users can publish to their own channel
-          [`user:${userId}`]: ["subscribe", "publish", "presence", "history"],
-          // Creators get additional publish rights
+          // Users can ONLY subscribe to their own channel (server publishes to it)
+          [`user:${userId}`]: ["subscribe", "presence", "history"],
+          // Creators get publish rights to their own stream channels
           ...(userRole === 'creator' && {
             "chat:*": ["subscribe", "publish", "presence", "history"],
+            // Only allow publishing to streams they own (enforced by naming: stream:{creatorId}_*)
             "stream:*": ["subscribe", "publish", "presence", "history"],
             "presence:*": ["subscribe", "publish", "presence", "history"]
           })
         }
       : {
-          // Anonymous users can only subscribe (read-only)
+          // Anonymous users can only subscribe (strict read-only)
           "chat:*": ["subscribe", "history"],
           "stream:*": ["subscribe", "history"],
           "presence:*": ["subscribe", "history"]
