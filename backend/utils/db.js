@@ -197,20 +197,20 @@ const isDirectConnection = !isPoolerHost;
 
 const poolConfig = {
   ...connectionConfig,
-  // Connection pool sizing based on connection mode
+  // Connection pool sizing based on connection mode - ULTRA CONSERVATIVE for pooler
   max: isUsingTransactionPooler
-    ? (isServerless ? 1 : 2)          // Transaction pooler: very limited
+    ? 1          // Transaction pooler: very limited
     : isUsingSessionPooler
-    ? (isServerless ? 2 : 3)          // Session pooler: limited
+    ? 1          // Session pooler: ONLY 1 connection per serverless function
     : (isServerless ? 2 : 5),         // Direct: optimal for serverless (2-3)
   min: 0, // Start with no connections
-  idleTimeoutMillis: isServerless ? 1000 : 3000, // Aggressive cleanup for serverless
-  connectionTimeoutMillis: 10000, // 10s timeout for connection acquisition
-  keepAlive: isDirectConnection,     // Enable keepalive for direct connections only
+  idleTimeoutMillis: isServerless ? 500 : 3000, // Very aggressive cleanup for serverless
+  connectionTimeoutMillis: 30000, // 30s timeout for pooler (was 10s)
+  keepAlive: false,     // Disable keepalive for pooler
   keepAliveInitialDelayMillis: 0,
-  maxUses: 1000, // Recycle connections after 1000 uses
-  statement_timeout: 30000, // 30 seconds
-  query_timeout: 30000, // 30 seconds
+  maxUses: 100, // Recycle connections more frequently (was 1000)
+  statement_timeout: 45000, // 45 seconds (increased for pooler)
+  query_timeout: 45000, // 45 seconds (increased for pooler)
   application_name: 'digis-backend',
   allowExitOnIdle: true, // ALWAYS allow cleanup when idle
 };
