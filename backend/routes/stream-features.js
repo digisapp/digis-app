@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
+const { publishToChannel } = require('../utils/ably-adapter');
 // Socket.io removed - using Ably
 // const { getIO } = require('../utils/socket');
 
@@ -39,26 +40,30 @@ router.post('/poll', authenticateToken, async (req, res) => {
     
     poll.votes = votes;
     poll.totalVotes = 0;
-    
+
     // Emit poll to stream
-// TODO: Replace with Ably publish
-//     const io = getIO();
-// TODO: Replace with Ably publish
-//     io.to(`stream:${channel}`).emit('poll-created', {
-      // poll
-    // });
-    
+    try {
+      await publishToChannel(`stream:${channel}`, 'poll-created', {
+        poll
+      });
+    } catch (ablyError) {
+      console.error('Failed to publish poll-created to Ably:', ablyError.message);
+    }
+
     // Set timer to close poll
     setTimeout(async () => {
       await db.query(
         'UPDATE stream_polls SET is_active = false WHERE id = $1',
         [poll.id]
       );
-      
-// TODO: Replace with Ably publish
-//       io.to(`stream:${channel}`).emit('poll-ended', {
-        // pollId: poll.id
-      // });
+
+      try {
+        await publishToChannel(`stream:${channel}`, 'poll-ended', {
+          pollId: poll.id
+        });
+      } catch (ablyError) {
+        console.error('Failed to publish poll-ended to Ably:', ablyError.message);
+      }
     }, duration * 1000);
     
     res.json({ success: true, poll });
@@ -129,15 +134,16 @@ router.post('/poll/:pollId/vote', authenticateToken, async (req, res) => {
     });
     
     // Emit vote update
-// TODO: Replace with Ably publish
-//     const io = getIO();
-// TODO: Replace with Ably publish
-//     io.to(`stream:${poll.channel}`).emit('poll-update', {
-      // pollId,
-      // votes,
-      // totalVotes
-    // });
-    
+    try {
+      await publishToChannel(`stream:${poll.channel}`, 'poll-update', {
+        pollId,
+        votes,
+        totalVotes
+      });
+    } catch (ablyError) {
+      console.error('Failed to publish poll-update to Ably:', ablyError.message);
+    }
+
     res.json({ success: true, votes, totalVotes });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -217,27 +223,31 @@ router.post('/gift', authenticateToken, async (req, res) => {
       'SELECT display_name, profile_pic_url FROM users WHERE supabase_id = $1',
       [senderId]
     );
-    
+
     // Emit gift animation
-// TODO: Replace with Ably publish
-//     const io = getIO();
-// TODO: Replace with Ably publish
-//     io.to(`stream:${channel}`).emit('gift-received', {
-      // sender: senderResult.rows[0].display_name,
-      // giftType,
-      // quantity,
-      // totalValue: totalCost
-    // });
-    
+    try {
+      await publishToChannel(`stream:${channel}`, 'gift-received', {
+        sender: senderResult.rows[0].display_name,
+        giftType,
+        quantity,
+        totalValue: totalCost
+      });
+    } catch (ablyError) {
+      console.error('Failed to publish gift-received to Ably:', ablyError.message);
+    }
+
     // Notify creator
-// TODO: Replace with Ably publish
-//     io.to(`user:${creatorId}`).emit('gift-notification', {
-      // sender: senderResult.rows[0].display_name,
-      // giftType,
-      // quantity,
-      // earnings: creatorAmount
-    // });
-    
+    try {
+      await publishToChannel(`user:${creatorId}`, 'gift-notification', {
+        sender: senderResult.rows[0].display_name,
+        giftType,
+        quantity,
+        earnings: creatorAmount
+      });
+    } catch (ablyError) {
+      console.error('Failed to publish gift-notification to Ably:', ablyError.message);
+    }
+
     res.json({ 
       success: true,
       newBalance: balanceResult.rows[0].token_balance - totalCost
@@ -311,26 +321,30 @@ router.post('/tip', authenticateToken, async (req, res) => {
       'SELECT display_name, profile_pic_url FROM users WHERE supabase_id = $1',
       [senderId]
     );
-    
+
     // Emit tip notification
-// TODO: Replace with Ably publish
-//     const io = getIO();
-// TODO: Replace with Ably publish
-//     io.to(`stream:${channel}`).emit('tip-received', {
-      // sender: senderResult.rows[0].display_name,
-      // amount,
-      // message
-    // });
-    
+    try {
+      await publishToChannel(`stream:${channel}`, 'tip-received', {
+        sender: senderResult.rows[0].display_name,
+        amount,
+        message
+      });
+    } catch (ablyError) {
+      console.error('Failed to publish tip-received to Ably:', ablyError.message);
+    }
+
     // Notify creator
-// TODO: Replace with Ably publish
-//     io.to(`user:${creatorId}`).emit('tip-notification', {
-      // sender: senderResult.rows[0].display_name,
-      // amount,
-      // message,
-      // earnings: creatorAmount
-    // });
-    
+    try {
+      await publishToChannel(`user:${creatorId}`, 'tip-notification', {
+        sender: senderResult.rows[0].display_name,
+        amount,
+        message,
+        earnings: creatorAmount
+      });
+    } catch (ablyError) {
+      console.error('Failed to publish tip-notification to Ably:', ablyError.message);
+    }
+
     res.json({ 
       success: true,
       newBalance: balanceResult.rows[0].token_balance - amount

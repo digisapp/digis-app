@@ -1,5 +1,6 @@
 const { pool } = require('./db');
 const { logger } = require('./logger');
+const { publishToChannel } = require('./ably-adapter');
 // Socket.io removed - using Ably
 // const { getIO } = require('./socket');
 const loyaltyService = require('./loyalty-service');
@@ -105,18 +106,20 @@ class ChallengeService {
       }
       
       // Send notifications
-      const io = getIO();
-// TODO: Replace with Ably publish
-//       io.to(`user:${userId}`).emit('challenge_completed', {
-        // challengeId: challenge.id,
-        // name: challenge.name,
-        // rewards: {
-          // points: challenge.reward_points,
-          // tokens: challenge.reward_tokens
-        // },
-        // message: `🎉 Challenge completed: ${challenge.name}!`
-      // });
-      
+      try {
+        await publishToChannel(`user:${userId}`, 'challenge_completed', {
+          challengeId: challenge.id,
+          name: challenge.name,
+          rewards: {
+            points: challenge.reward_points,
+            tokens: challenge.reward_tokens
+          },
+          message: `🎉 Challenge completed: ${challenge.name}!`
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish challenge_completed to Ably:', ablyError.message);
+      }
+
       // Create notification
       await pool.query(
         `INSERT INTO notifications 
@@ -228,13 +231,15 @@ class ChallengeService {
       );
       
       // Notify all fans
-      const io = getIO();
-// TODO: Replace with Ably publish
-//       io.to(`creator:${creatorId}:fans`).emit('new_challenge', {
-        // challenge: result.rows[0],
-        // message: `New challenge available: ${challengeData.name}`
-      // });
-      
+      try {
+        await publishToChannel(`creator:${creatorId}:fans`, 'new_challenge', {
+          challenge: result.rows[0],
+          message: `New challenge available: ${challengeData.name}`
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish new_challenge to Ably:', ablyError.message);
+      }
+
       return result.rows[0];
       
     } catch (error) {
@@ -323,22 +328,27 @@ class ChallengeService {
       );
       
       // Send notification
-      const io = getIO();
-// TODO: Replace with Ably publish
-//       io.to(`user:${userId}`).emit('milestone_achieved', {
-        // type: milestone.type,
-        // message: milestone.message,
-        // rewards: { tokens: milestone.tokens }
-      // });
-      
+      try {
+        await publishToChannel(`user:${userId}`, 'milestone_achieved', {
+          type: milestone.type,
+          message: milestone.message,
+          rewards: { tokens: milestone.tokens }
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish milestone_achieved to Ably:', ablyError.message);
+      }
+
       // Notify creator
-// TODO: Replace with Ably publish
-//       io.to(`user:${creatorId}`).emit('fan_milestone', {
-        // fanId: userId,
-        // milestone: milestone.type,
-        // message: `A fan reached ${milestone.message}`
-      // });
-      
+      try {
+        await publishToChannel(`user:${creatorId}`, 'fan_milestone', {
+          fanId: userId,
+          milestone: milestone.type,
+          message: `A fan reached ${milestone.message}`
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish fan_milestone to Ably:', ablyError.message);
+      }
+
       logger.info(`User ${userId} achieved ${milestone.type} milestone with creator ${creatorId}`);
       
     } catch (error) {

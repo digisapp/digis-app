@@ -8,6 +8,7 @@ const { getVerifiedRole, getUserRole, clearRoleCache } = require('../middleware/
 const { sendCreatorWelcomeEmail, sendFanWelcomeEmail } = require('../services/emailService');
 const { sessions, users: usersCache, TTL } = require('../utils/redis');
 const noStore = require('../middleware/noStore');
+const { publishToChannel } = require('../utils/ably-adapter');
 
 // Helper to use req.pg if available (with JWT context), otherwise fall back to pool
 const db = (req) => req.pg || pool;
@@ -566,16 +567,16 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
           ]);
         }
         
-        // Emit socket event for real-time update
-        const io = req.app.get('io');
-        if (io) {
-// TODO: Replace with Ably publish
-//           io.to('admins').emit('new_creator_application', {
-//             applicationId,
-//             username,
-//             email,
-//             timestamp: new Date().toISOString()
-//           });
+        // Emit Ably event for real-time update to admin dashboard
+        try {
+          await publishToChannel('admins', 'new_creator_application', {
+            applicationId,
+            username,
+            email,
+            timestamp: new Date().toISOString()
+          });
+        } catch (ablyError) {
+          console.error('Failed to publish to Ably:', ablyError.message);
         }
       } catch (notifError) {
         console.error('Failed to send admin notifications:', notifError);

@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
 const { logger } = require('../utils/logger');
+const { publishToChannel } = require('../utils/ably-adapter');
 // Socket.io removed - using Ably
 // const { getIO } = require('../utils/socket');
 
@@ -60,20 +61,21 @@ router.post('/announce', authenticateToken, async (req, res) => {
     );
     
     await client.query('COMMIT');
-    
+
     // Emit to all viewers in the stream
-// TODO: Replace with Ably publish
-//     const io = getIO();
-// TODO: Replace with Ably publish
-//     io.to(`stream:${streamId}`).emit('ticketed_show_announced', {
-      // showId: show.rows[0].id,
-      // title: show.rows[0].title,
-      // tokenPrice: show.rows[0].token_price,
-      // earlyBirdPrice: show.rows[0].early_bird_price,
-      // startTime: show.rows[0].start_time,
-      // maxTickets: show.rows[0].max_tickets
-    // });
-    
+    try {
+      await publishToChannel(`stream:${streamId}`, 'ticketed_show_announced', {
+        showId: show.rows[0].id,
+        title: show.rows[0].title,
+        tokenPrice: show.rows[0].token_price,
+        earlyBirdPrice: show.rows[0].early_bird_price,
+        startTime: show.rows[0].start_time,
+        maxTickets: show.rows[0].max_tickets
+      });
+    } catch (ablyError) {
+      logger.error('Failed to publish ticketed show announcement to Ably:', ablyError.message);
+    }
+
     logger.info('Ticketed show announced', { 
       showId: show.rows[0].id, 
       creatorId, 
@@ -196,35 +198,40 @@ router.post('/buy-ticket', authenticateToken, async (req, res) => {
     );
     
     await client.query('COMMIT');
-    
-    // Emit socket events
-// TODO: Replace with Ably publish
-//     const io = getIO();
-    
+
     // Notify viewer
-// TODO: Replace with Ably publish
-//     io.to(`user:${viewerId}`).emit('ticket_purchased', {
-      // showId,
-      // ticket: ticket.rows[0]
-    // });
-    
+    try {
+      await publishToChannel(`user:${viewerId}`, 'ticket_purchased', {
+        showId,
+        ticket: ticket.rows[0]
+      });
+    } catch (ablyError) {
+      logger.error('Failed to publish ticket_purchased to Ably:', ablyError.message);
+    }
+
     // Notify creator
-// TODO: Replace with Ably publish
-//     io.to(`user:${show.creator_id}`).emit('ticket_sold', {
-      // viewerId,
-      // showId,
-      // price: ticketPrice
-    // });
-    
+    try {
+      await publishToChannel(`user:${show.creator_id}`, 'ticket_sold', {
+        viewerId,
+        showId,
+        price: ticketPrice
+      });
+    } catch (ablyError) {
+      logger.error('Failed to publish ticket_sold to Ably:', ablyError.message);
+    }
+
     // If show already started, allow immediate access
     if (show.status === 'started') {
-// TODO: Replace with Ably publish
-//       io.to(`user:${viewerId}`).emit('join_private_show', {
-        // showId,
-        // channelId: show.channel_id
-      // });
+      try {
+        await publishToChannel(`user:${viewerId}`, 'join_private_show', {
+          showId,
+          channelId: show.channel_id
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish join_private_show to Ably:', ablyError.message);
+      }
     }
-    
+
     logger.info('Ticket purchased', { 
       showId, 
       viewerId, 
@@ -293,27 +300,29 @@ router.post('/start', authenticateToken, async (req, res) => {
     );
     
     await client.query('COMMIT');
-    
-    // Emit socket events
-// TODO: Replace with Ably publish
-//     const io = getIO();
-    
+
     // Notify all viewers in stream
-// TODO: Replace with Ably publish
-//     io.to(`stream:${show.stream_id}`).emit('private_mode_started', {
-      // showId,
-      // streamId: show.stream_id
-    // });
-    
+    try {
+      await publishToChannel(`stream:${show.stream_id}`, 'private_mode_started', {
+        showId,
+        streamId: show.stream_id
+      });
+    } catch (ablyError) {
+      logger.error('Failed to publish private_mode_started to Ably:', ablyError.message);
+    }
+
     // Notify ticket holders to enable video
     for (const ticket of tickets.rows) {
-// TODO: Replace with Ably publish
-//       io.to(`user:${ticket.viewer_id}`).emit('enable_private_video', {
-        // showId,
-        // channelId: show.channel_id
-      // });
+      try {
+        await publishToChannel(`user:${ticket.viewer_id}`, 'enable_private_video', {
+          showId,
+          channelId: show.channel_id
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish enable_private_video to Ably:', ablyError.message);
+      }
     }
-    
+
     // Create announcement
     await client.query(
       `INSERT INTO show_announcements (show_id, message, announcement_type)
@@ -363,21 +372,22 @@ router.post('/end', authenticateToken, async (req, res) => {
     // Calculate analytics
     const analytics = await pool.query(
       `INSERT INTO show_analytics (show_id, peak_viewers, chat_messages_count)
-       VALUES ($1, 
+       VALUES ($1,
          (SELECT COUNT(*) FROM show_tickets WHERE show_id = $1),
          0
        )`,
       [showId]
     );
-    
+
     // Emit socket event
-// TODO: Replace with Ably publish
-//     const io = getIO();
-// TODO: Replace with Ably publish
-//     io.to(`stream:${result.rows[0].stream_id}`).emit('private_show_ended', {
-      // showId
-    // });
-    
+    try {
+      await publishToChannel(`stream:${result.rows[0].stream_id}`, 'private_show_ended', {
+        showId
+      });
+    } catch (ablyError) {
+      logger.error('Failed to publish private_show_ended to Ably:', ablyError.message);
+    }
+
     logger.info('Private show ended', { showId, creatorId });
     
     res.json({ 

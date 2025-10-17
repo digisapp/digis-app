@@ -1,5 +1,6 @@
 const { pool } = require('./db');
 const { logger } = require('./logger');
+const { publishToChannel } = require('./ably-adapter');
 // Socket.io removed - using Ably
 // const { io } = require('./socket');
 
@@ -171,13 +172,16 @@ class StreamActivityMonitor {
 
       // Send socket notification to creator
       // STANDARDIZED: Use user:${id} format consistently
-// TODO: Replace with Ably publish
-//       io.to(`user:${stream.creator_id}`).emit('stream_inactivity_warning', {
-        // streamId: stream.id,
-        // message: `Your stream will end in ${minutesRemaining} minutes due to inactivity`,
-        // minutesRemaining,
-        // viewerCount: stream.viewer_count
-      // });
+      try {
+        await publishToChannel(`user:${stream.creator_id}`, 'stream_inactivity_warning', {
+          streamId: stream.id,
+          message: `Your stream will end in ${minutesRemaining} minutes due to inactivity`,
+          minutesRemaining,
+          viewerCount: stream.viewer_count
+        });
+      } catch (ablyError) {
+        console.error('Failed to publish stream_inactivity_warning to Ably:', ablyError.message);
+      }
 
       // Log the warning
       await this.logActivity(stream.id, 'inactivity_warning', null, {
@@ -217,14 +221,17 @@ class StreamActivityMonitor {
       });
 
       // Notify creator and viewers
-// TODO: Replace with Ably publish
-//       io.to(`stream_${stream.id}`).emit('stream_auto_ended', {
-        // streamId: stream.id,
-        // reason: reason === 'no_viewers' 
-          // ? 'Stream ended due to no viewers' 
-          // : 'Stream ended due to inactivity',
-        // message: this.getAutoEndMessage(reason)
-      // });
+      try {
+        await publishToChannel(`stream_${stream.id}`, 'stream_auto_ended', {
+          streamId: stream.id,
+          reason: reason === 'no_viewers'
+            ? 'Stream ended due to no viewers'
+            : 'Stream ended due to inactivity',
+          message: this.getAutoEndMessage(reason)
+        });
+      } catch (ablyError) {
+        console.error('Failed to publish stream_auto_ended to Ably:', ablyError.message);
+      }
 
       // Clean up from active streams
       this.activeStreams.delete(stream.id);

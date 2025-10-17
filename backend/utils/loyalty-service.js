@@ -1,5 +1,6 @@
 const { pool } = require('./db');
 const logger = require('./logger');
+const { publishToChannel } = require('./ably-adapter');
 // Socket.io removed - using Ably
 // const { io } = require('./socket');
 
@@ -115,21 +116,27 @@ class LoyaltyService {
       await this.deliverUpgradePerks(userId, creatorId, newLevel);
 
       // Send notification
-// TODO: Replace with Ably publish
-//       io.to(`user:${userId}`).emit('loyalty_upgraded', {
-//         creatorId,
-//         newLevel,
-//         message: `Congratulations! You've been upgraded to ${newLevel} status!`,
-//         perks: this.getLevelPerks(newLevel)
-//       });
+      try {
+        await publishToChannel(`user:${userId}`, 'loyalty_upgraded', {
+          creatorId,
+          newLevel,
+          message: `Congratulations! You've been upgraded to ${newLevel} status!`,
+          perks: this.getLevelPerks(newLevel)
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish loyalty_upgraded to Ably:', ablyError.message);
+      }
 
       // Notify creator
-// TODO: Replace with Ably publish
-//       io.to(`user:${creatorId}`).emit('fan_loyalty_upgrade', {
-//         fanId: userId,
-//         newLevel,
-//         message: `A fan has reached ${newLevel} loyalty status!`
-//       });
+      try {
+        await publishToChannel(`user:${creatorId}`, 'fan_loyalty_upgrade', {
+          fanId: userId,
+          newLevel,
+          message: `A fan has reached ${newLevel} loyalty status!`
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish fan_loyalty_upgrade to Ably:', ablyError.message);
+      }
 
       logger.info(`User ${userId} upgraded to ${newLevel} for creator ${creatorId}`);
     } catch (error) {
@@ -418,20 +425,23 @@ class LoyaltyService {
 
     if (existing.rows.length === 0) {
       await pool.query(
-        `INSERT INTO perk_deliveries 
+        `INSERT INTO perk_deliveries
          (user_id, creator_id, perk_type, status, delivery_data, delivered_at)
          VALUES ($1, $2, $3, 'delivered', $4, CURRENT_TIMESTAMP)`,
-        [userId, creatorId, perkType, JSON.stringify({ 
+        [userId, creatorId, perkType, JSON.stringify({
           message: 'Your daily exclusive content is ready!',
           url: `/exclusive/${creatorId}/daily`
         })]
       );
 
-// TODO: Replace with Ably publish
-//       io.to(`user:${userId}`).emit('perk_delivered', {
-//         type: perkType,
-//         message: 'Your daily exclusive content is ready!'
-//       });
+      try {
+        await publishToChannel(`user:${userId}`, 'perk_delivered', {
+          type: perkType,
+          message: 'Your daily exclusive content is ready!'
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish perk_delivered to Ably:', ablyError.message);
+      }
     }
   }
 
@@ -449,20 +459,23 @@ class LoyaltyService {
 
     if (existing.rows.length === 0) {
       await pool.query(
-        `INSERT INTO perk_deliveries 
+        `INSERT INTO perk_deliveries
          (user_id, creator_id, perk_type, status, delivery_data, delivered_at)
          VALUES ($1, $2, $3, 'delivered', $4, CURRENT_TIMESTAMP)`,
-        [userId, creatorId, perkType, JSON.stringify({ 
+        [userId, creatorId, perkType, JSON.stringify({
           message: 'Your weekly exclusive content is ready!',
           url: `/exclusive/${creatorId}/weekly`
         })]
       );
 
-// TODO: Replace with Ably publish
-//       io.to(`user:${userId}`).emit('perk_delivered', {
-//         type: perkType,
-//         message: 'Your weekly exclusive content is ready!'
-//       });
+      try {
+        await publishToChannel(`user:${userId}`, 'perk_delivered', {
+          type: perkType,
+          message: 'Your weekly exclusive content is ready!'
+        });
+      } catch (ablyError) {
+        logger.error('Failed to publish perk_delivered to Ably:', ablyError.message);
+      }
     }
   }
 }
