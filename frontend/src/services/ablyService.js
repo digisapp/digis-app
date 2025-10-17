@@ -55,7 +55,7 @@ class AblyService {
       const token = await this.getAuthToken();
 
       // Initialize Ably client with token authentication
-      this.client = new Ably.Realtime.Promise({
+      this.client = new Ably.Realtime({
         authUrl,
         authMethod: 'POST',
         authHeaders: token ? {

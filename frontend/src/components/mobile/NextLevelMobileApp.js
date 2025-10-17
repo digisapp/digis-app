@@ -279,6 +279,17 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
     // TODO: Implement voice call modal
   };
 
+  // Set body background to prevent black overscroll - MUST be before conditional returns
+  useEffect(() => {
+    document.body.style.backgroundColor = '#f9fafb'; // bg-gray-50
+    document.documentElement.style.backgroundColor = '#f9fafb';
+
+    return () => {
+      document.body.style.backgroundColor = '';
+      document.documentElement.style.backgroundColor = '';
+    };
+  }, []);
+
   // Navigation items - memoized for performance
   const navItems = useMemo(() => isCreator ? [
     { id: 'dashboard', label: 'Dashboard', icon: HomeIcon, iconSolid: HomeIconSolid },
@@ -494,17 +505,6 @@ const NextLevelMobileApp = ({ user, logout, isCreator: propIsCreator }) => {
       </div>
     );
   }
-
-  // Set body background to prevent black overscroll
-  useEffect(() => {
-    document.body.style.backgroundColor = '#f9fafb'; // bg-gray-50
-    document.documentElement.style.backgroundColor = '#f9fafb';
-
-    return () => {
-      document.body.style.backgroundColor = '';
-      document.documentElement.style.backgroundColor = '';
-    };
-  }, []);
 
   return (
     <MobileStreamProvider>

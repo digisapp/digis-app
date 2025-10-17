@@ -149,11 +149,29 @@ const MobileCreatorCard = memo(({
     onTip?.(creator);
   }, [creator, onTip, hapticFeedback]);
 
-  const handleSave = useCallback((e) => {
+  const handleSave = useCallback(async (e) => {
     e.stopPropagation();
-    setIsSaved(!isSaved);
+    const newFollowState = !isSaved;
+    setIsSaved(newFollowState);
     hapticFeedback('medium');
-    onSaveCreator?.(creator, !isSaved);
+
+    // Call backend API to follow/unfollow
+    try {
+      const { apiClient } = await import('../../services/api');
+      const username = creator?.username || creator?.display_name?.toLowerCase().replace(/\s+/g, '');
+
+      if (username) {
+        await apiClient.post('/api/users/follow', {
+          creatorUsername: username
+        });
+        console.log(`${newFollowState ? 'Followed' : 'Unfollowed'} creator: ${username}`);
+      }
+      onSaveCreator?.(creator, newFollowState);
+    } catch (error) {
+      console.error('Failed to follow/unfollow creator:', error);
+      // Revert state on error
+      setIsSaved(isSaved);
+    }
   }, [isSaved, creator, onSaveCreator, hapticFeedback]);
 
   const handleMessage = useCallback((e) => {
