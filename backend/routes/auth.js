@@ -571,11 +571,11 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         if (io) {
 // TODO: Replace with Ably publish
 //           io.to('admins').emit('new_creator_application', {
-            applicationId,
-            username,
-            email,
-            timestamp: new Date().toISOString()
-          });
+//             applicationId,
+//             username,
+//             email,
+//             timestamp: new Date().toISOString()
+//           });
         }
       } catch (notifError) {
         console.error('Failed to send admin notifications:', notifError);
