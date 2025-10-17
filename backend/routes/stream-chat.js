@@ -62,11 +62,11 @@ router.post('/message', authenticateToken, async (req, res) => {
       for (const mentionedUser of mentionedUsersResult.rows) {
 // TODO: Replace with Ably publish
 //         io.to(`user:${mentionedUser.supabase_id}`).emit('mention-notification', {
-          channelId: channel,
-          message: message,
-          mentionedBy: user.display_name,
-          timestamp: savedMessage.created_at
-        });
+          // channelId: channel,
+          // message: message,
+          // mentionedBy: user.display_name,
+          // timestamp: savedMessage.created_at
+        // });
         
         // Store notification in database
         await db.query(
@@ -132,8 +132,8 @@ router.post('/pin', authenticateToken, async (req, res) => {
 //       const io = getIO();
 // TODO: Replace with Ably publish
 //       io.to(`stream:${channel}`).emit('message-pinned', {
-        message: pinnedResult.rows[0]
-      });
+        // message: pinnedResult.rows[0]
+      // });
     } else {
       // Unpin message
       await db.query(
@@ -145,8 +145,8 @@ router.post('/pin', authenticateToken, async (req, res) => {
 //       const io = getIO();
 // TODO: Replace with Ably publish
 //       io.to(`stream:${channel}`).emit('message-unpinned', {
-        messageId
-      });
+        // messageId
+      // });
     }
     
     res.json({ success: true });
@@ -197,7 +197,7 @@ router.post('/moderate', authenticateToken, async (req, res) => {
       // userId: targetUserId,
       // username: userResult.rows[0]?.display_name,
       // action,
-      duration
+      // duration
     // });
     
     // Notify the moderated user
@@ -205,7 +205,7 @@ router.post('/moderate', authenticateToken, async (req, res) => {
 //     io.to(`user:${targetUserId}`).emit('moderation-action', {
       // channel,
       // action,
-      duration
+      // duration
     // });
     
     res.json({ success: true });
@@ -252,7 +252,7 @@ router.delete('/message/:messageId', authenticateToken, async (req, res) => {
 //     const io = getIO();
 // TODO: Replace with Ably publish
 //     io.to(`stream:${message.channel}`).emit('message-deleted', {
-      messageId
+      // messageId
     // });
     
     res.json({ success: true });

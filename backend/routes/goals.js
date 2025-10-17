@@ -65,16 +65,16 @@ router.post('/stream/:streamId', authenticateToken, async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream_${streamId}`).emit('goalUpdated', {
-        goal: {
-          id: goal.id,
-          goalAmount: parseFloat(goal.goal_amount),
-          currentAmount,
-          description: goal.description,
-          category: goal.category,
-          progressPercentage: Math.min((currentAmount / parseFloat(goal.goal_amount)) * 100, 100),
-          isReached: currentAmount >= parseFloat(goal.goal_amount)
-        }
-      });
+        // goal: {
+          // id: goal.id,
+          // goalAmount: parseFloat(goal.goal_amount),
+          // currentAmount,
+          // description: goal.description,
+          // category: goal.category,
+          // progressPercentage: Math.min((currentAmount / parseFloat(goal.goal_amount)) * 100, 100),
+          // isReached: currentAmount >= parseFloat(goal.goal_amount)
+        // }
+      // });
     }
 
     res.json({
@@ -202,14 +202,14 @@ router.post('/stream/:streamId/progress', authenticateToken, async (req, res) =>
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream_${streamId}`).emit('goalProgress', {
-        tipAmount,
-        tipperUsername,
-        currentAmount,
-        goalAmount: parseFloat(goal.goal_amount),
-        progressPercentage: Math.min((currentAmount / parseFloat(goal.goal_amount)) * 100, 100),
-        isReached: wasGoalReached,
-        justReached: wasGoalReached && (currentAmount - tipAmount) < parseFloat(goal.goal_amount)
-      });
+        // tipAmount,
+        // tipperUsername,
+        // currentAmount,
+        // goalAmount: parseFloat(goal.goal_amount),
+        // progressPercentage: Math.min((currentAmount / parseFloat(goal.goal_amount)) * 100, 100),
+        // isReached: wasGoalReached,
+        // justReached: wasGoalReached && (currentAmount - tipAmount) < parseFloat(goal.goal_amount)
+      // });
     }
 
     // If goal just reached, award achievement

@@ -194,11 +194,11 @@ router.post('/vote', async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${channelId}`).emit('question_vote_updated', {
-        questionId,
-        votes,
-        upvotes: votesQuery.rows[0].upvotes,
-        downvotes: votesQuery.rows[0].downvotes
-      });
+        // questionId,
+        // votes,
+        // upvotes: votesQuery.rows[0].upvotes,
+        // downvotes: votesQuery.rows[0].downvotes
+      // });
     }
 
     res.json({ success: true, votes });
@@ -238,9 +238,9 @@ router.post('/answer', async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${question.rows[0].channel_id}`).emit('question_answered', {
-        questionId,
-        answeredAt: new Date()
-      });
+        // questionId,
+        // answeredAt: new Date()
+      // });
     }
 
     res.json({ success: true });
@@ -285,9 +285,9 @@ router.post('/prioritize', async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${question.rows[0].channel_id}`).emit('question_prioritized', {
-        questionId,
-        priority
-      });
+        // questionId,
+        // priority
+      // });
     }
 
     res.json({ success: true, priority });
@@ -327,8 +327,8 @@ router.delete('/:questionId', async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${question.rows[0].channel_id}`).emit('question_removed', {
-        questionId
-      });
+        // questionId
+      // });
     }
 
     res.json({ success: true });

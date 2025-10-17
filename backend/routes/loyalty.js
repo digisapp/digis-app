@@ -211,7 +211,7 @@ router.post('/perks/deliver', authenticateToken, async (req, res) => {
 //     io.to(`user:${userId}`).emit('perk_delivered', {
       // type: perkType,
       // data: deliveryData,
-      creatorId
+      // creatorId
     // });
     
     res.json({

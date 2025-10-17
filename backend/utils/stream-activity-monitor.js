@@ -173,11 +173,11 @@ class StreamActivityMonitor {
       // STANDARDIZED: Use user:${id} format consistently
 // TODO: Replace with Ably publish
 //       io.to(`user:${stream.creator_id}`).emit('stream_inactivity_warning', {
-        streamId: stream.id,
-        message: `Your stream will end in ${minutesRemaining} minutes due to inactivity`,
-        minutesRemaining,
-        viewerCount: stream.viewer_count
-      });
+        // streamId: stream.id,
+        // message: `Your stream will end in ${minutesRemaining} minutes due to inactivity`,
+        // minutesRemaining,
+        // viewerCount: stream.viewer_count
+      // });
 
       // Log the warning
       await this.logActivity(stream.id, 'inactivity_warning', null, {
@@ -219,12 +219,12 @@ class StreamActivityMonitor {
       // Notify creator and viewers
 // TODO: Replace with Ably publish
 //       io.to(`stream_${stream.id}`).emit('stream_auto_ended', {
-        streamId: stream.id,
-        reason: reason === 'no_viewers' 
-          ? 'Stream ended due to no viewers' 
-          : 'Stream ended due to inactivity',
-        message: this.getAutoEndMessage(reason)
-      });
+        // streamId: stream.id,
+        // reason: reason === 'no_viewers' 
+          // ? 'Stream ended due to no viewers' 
+          // : 'Stream ended due to inactivity',
+        // message: this.getAutoEndMessage(reason)
+      // });
 
       // Clean up from active streams
       this.activeStreams.delete(stream.id);

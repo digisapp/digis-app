@@ -289,11 +289,11 @@ router.post('/streams/:streamId/stop-recording', authenticateToken, async (req, 
 //         const io = require('../utils/socket').getIO();
 // TODO: Replace with Ably publish
 //         io.to(`user:${creatorId}`).emit('recording_auto_saved', {
-          recordingId: savedRecording.id,
-          title: savedRecording.title,
-          fileUrl: savedRecording.file_url,
-          tokenPrice: savedRecording.token_price
-        });
+          // recordingId: savedRecording.id,
+          // title: savedRecording.title,
+          // fileUrl: savedRecording.file_url,
+          // tokenPrice: savedRecording.token_price
+        // });
         
         res.json({ 
           success: true,

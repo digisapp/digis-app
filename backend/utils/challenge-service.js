@@ -108,14 +108,14 @@ class ChallengeService {
       const io = getIO();
 // TODO: Replace with Ably publish
 //       io.to(`user:${userId}`).emit('challenge_completed', {
-        challengeId: challenge.id,
-        name: challenge.name,
-        rewards: {
-          points: challenge.reward_points,
-          tokens: challenge.reward_tokens
-        },
-        message: `🎉 Challenge completed: ${challenge.name}!`
-      });
+        // challengeId: challenge.id,
+        // name: challenge.name,
+        // rewards: {
+          // points: challenge.reward_points,
+          // tokens: challenge.reward_tokens
+        // },
+        // message: `🎉 Challenge completed: ${challenge.name}!`
+      // });
       
       // Create notification
       await pool.query(
@@ -231,9 +231,9 @@ class ChallengeService {
       const io = getIO();
 // TODO: Replace with Ably publish
 //       io.to(`creator:${creatorId}:fans`).emit('new_challenge', {
-        challenge: result.rows[0],
-        message: `New challenge available: ${challengeData.name}`
-      });
+        // challenge: result.rows[0],
+        // message: `New challenge available: ${challengeData.name}`
+      // });
       
       return result.rows[0];
       
@@ -326,18 +326,18 @@ class ChallengeService {
       const io = getIO();
 // TODO: Replace with Ably publish
 //       io.to(`user:${userId}`).emit('milestone_achieved', {
-        type: milestone.type,
-        message: milestone.message,
-        rewards: { tokens: milestone.tokens }
-      });
+        // type: milestone.type,
+        // message: milestone.message,
+        // rewards: { tokens: milestone.tokens }
+      // });
       
       // Notify creator
 // TODO: Replace with Ably publish
 //       io.to(`user:${creatorId}`).emit('fan_milestone', {
-        fanId: userId,
-        milestone: milestone.type,
-        message: `A fan reached ${milestone.message}`
-      });
+        // fanId: userId,
+        // milestone: milestone.type,
+        // message: `A fan reached ${milestone.message}`
+      // });
       
       logger.info(`User ${userId} achieved ${milestone.type} milestone with creator ${creatorId}`);
       

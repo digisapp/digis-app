@@ -852,15 +852,15 @@ router.post('/checkout/tokens', authenticateToken, [
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`creator_${item.creator_id}`).emit('shop_new_order', {
-        orderId: orderResult.rows[0].id,
-        itemName: item.name,
-        quantity: quantity,
-        amount: totalCost,
-        currency: 'Tokens',
-        buyerName: buyer.username || buyer.display_name || 'User',
-        buyerEmail: buyer.email,
-        timestamp: new Date()
-      });
+        // orderId: orderResult.rows[0].id,
+        // itemName: item.name,
+        // quantity: quantity,
+        // amount: totalCost,
+        // currency: 'Tokens',
+        // buyerName: buyer.username || buyer.display_name || 'User',
+        // buyerEmail: buyer.email,
+        // timestamp: new Date()
+      // });
     }
     
     res.json({
@@ -988,17 +988,17 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
             const order = orderDetails.rows[0];
 // TODO: Replace with Ably publish
 //             io.to(`creator_${creator_id}`).emit('shop_new_order', {
-              orderId: order.id,
-              itemName: order.item_name,
-              quantity: order.quantity,
-              amount: order.amount_usd || order.amount_tokens,
-              netAmount: order.creator_net_tokens || order.amount_tokens, // Net after platform fee
-              platformFee: order.platform_fee_tokens || 0,
-              currency: order.payment_method === 'usd' ? 'USD' : 'Tokens',
-              buyerName: order.buyer_name || order.buyer_username || 'Guest',
-              buyerEmail: order.buyer_email,
-              timestamp: new Date()
-            });
+              // orderId: order.id,
+              // itemName: order.item_name,
+              // quantity: order.quantity,
+              // amount: order.amount_usd || order.amount_tokens,
+              // netAmount: order.creator_net_tokens || order.amount_tokens, // Net after platform fee
+              // platformFee: order.platform_fee_tokens || 0,
+              // currency: order.payment_method === 'usd' ? 'USD' : 'Tokens',
+              // buyerName: order.buyer_name || order.buyer_username || 'Guest',
+              // buyerEmail: order.buyer_email,
+              // timestamp: new Date()
+            // });
           }
         }
         

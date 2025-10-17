@@ -2031,7 +2031,7 @@ router.post('/co-host-request', authenticateToken, async (req, res) => {
       // requesterId,
       // requesterName: requester.username,
       // requesterAvatar: requester.profile_pic_url,
-      streamId
+      // streamId
     // });
     
     res.json({
@@ -2254,7 +2254,7 @@ router.post('/co-host-remove', authenticateToken, async (req, res) => {
     // Broadcast to stream viewers
 // TODO: Replace with Ably publish
 //     io.to(`stream:${streamId}`).emit('co_host_left', {
-      coHostId
+      // coHostId
     // });
     
     res.json({
@@ -2495,7 +2495,7 @@ router.post('/private-call-request', authenticateToken, async (req, res) => {
       // fanAvatar: fan.profile_pic_url,
       // pricePerMinute,
       // minimumMinutes,
-      streamId
+      // streamId
     // });
     
     res.json({

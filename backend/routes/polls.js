@@ -59,9 +59,9 @@ router.post('/create', async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${channelId}`).emit('poll_created', {
-        poll,
-        channelId
-      });
+        // poll,
+        // channelId
+      // });
     }
 
     res.json({ success: true, poll });
@@ -154,10 +154,10 @@ router.post('/vote', async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${poll.rows[0].channel_id}`).emit('poll_updated', {
-        pollId,
-        results,
-        totalVotes
-      });
+        // pollId,
+        // results,
+        // totalVotes
+      // });
     }
 
     res.json({ success: true, results, totalVotes });
@@ -214,10 +214,10 @@ router.post('/end', async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${poll.rows[0].channel_id}`).emit('poll_closed', {
-        pollId,
-        finalResults,
-        totalVotes
-      });
+        // pollId,
+        // finalResults,
+        // totalVotes
+      // });
     }
 
     res.json({ success: true, finalResults, totalVotes });

@@ -220,9 +220,9 @@ router.post('/buy-ticket', authenticateToken, async (req, res) => {
     if (show.status === 'started') {
 // TODO: Replace with Ably publish
 //       io.to(`user:${viewerId}`).emit('join_private_show', {
-        showId,
-        channelId: show.channel_id
-      });
+        // showId,
+        // channelId: show.channel_id
+      // });
     }
     
     logger.info('Ticket purchased', { 
@@ -309,9 +309,9 @@ router.post('/start', authenticateToken, async (req, res) => {
     for (const ticket of tickets.rows) {
 // TODO: Replace with Ably publish
 //       io.to(`user:${ticket.viewer_id}`).emit('enable_private_video', {
-        showId,
-        channelId: show.channel_id
-      });
+        // showId,
+        // channelId: show.channel_id
+      // });
     }
     
     // Create announcement
@@ -375,7 +375,7 @@ router.post('/end', authenticateToken, async (req, res) => {
 //     const io = getIO();
 // TODO: Replace with Ably publish
 //     io.to(`stream:${result.rows[0].stream_id}`).emit('private_show_ended', {
-      showId
+      // showId
     // });
     
     logger.info('Private show ended', { showId, creatorId });

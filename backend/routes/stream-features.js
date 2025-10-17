@@ -45,7 +45,7 @@ router.post('/poll', authenticateToken, async (req, res) => {
 //     const io = getIO();
 // TODO: Replace with Ably publish
 //     io.to(`stream:${channel}`).emit('poll-created', {
-      poll
+      // poll
     // });
     
     // Set timer to close poll
@@ -57,8 +57,8 @@ router.post('/poll', authenticateToken, async (req, res) => {
       
 // TODO: Replace with Ably publish
 //       io.to(`stream:${channel}`).emit('poll-ended', {
-        pollId: poll.id
-      });
+        // pollId: poll.id
+      // });
     }, duration * 1000);
     
     res.json({ success: true, poll });
@@ -135,7 +135,7 @@ router.post('/poll/:pollId/vote', authenticateToken, async (req, res) => {
 //     io.to(`stream:${poll.channel}`).emit('poll-update', {
       // pollId,
       // votes,
-      totalVotes
+      // totalVotes
     // });
     
     res.json({ success: true, votes, totalVotes });
@@ -319,7 +319,7 @@ router.post('/tip', authenticateToken, async (req, res) => {
 //     io.to(`stream:${channel}`).emit('tip-received', {
       // sender: senderResult.rows[0].display_name,
       // amount,
-      message
+      // message
     // });
     
     // Notify creator

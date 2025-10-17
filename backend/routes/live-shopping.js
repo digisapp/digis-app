@@ -96,12 +96,12 @@ router.post('/streams/:streamId/products', authenticateToken, async (req, res) =
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${streamId}`).emit('product:added', {
-        streamId,
-        product: {
-          ...productCheck.rows[0],
-          ...result.rows[0]
-        }
-      });
+        // streamId,
+        // product: {
+          // ...productCheck.rows[0],
+          // ...result.rows[0]
+        // }
+      // });
     }
     
     res.json({
@@ -140,9 +140,9 @@ router.delete('/streams/:streamId/products/:productId', authenticateToken, async
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${streamId}`).emit('product:removed', {
-        streamId,
-        productId
-      });
+        // streamId,
+        // productId
+      // });
     }
     
     res.json({ success: true });
@@ -197,10 +197,10 @@ router.put('/streams/:streamId/products/:productId/feature', authenticateToken, 
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${streamId}`).emit('product:featured', {
-        streamId,
-        productId,
-        featured
-      });
+        // streamId,
+        // productId,
+        // featured
+      // });
     }
     
     // Log showcase event
@@ -279,15 +279,15 @@ router.post('/flash-sales', authenticateToken, async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${streamId}`).emit('flash:sale:started', {
-        streamId,
-        productId,
-        productName,
-        originalPrice,
-        salePrice,
-        discountPercentage,
-        endsAt,
-        maxQuantity
-      });
+        // streamId,
+        // productId,
+        // productName,
+        // originalPrice,
+        // salePrice,
+        // discountPercentage,
+        // endsAt,
+        // maxQuantity
+      // });
     }
     
     res.json({
@@ -455,21 +455,21 @@ router.post('/live-purchases', authenticateToken, async (req, res) => {
       // Notify everyone in the stream
 // TODO: Replace with Ably publish
 //       io.to(`stream:${streamId}`).emit('product:purchased', {
-        streamId,
-        productId,
-        productName: product.name,
-        buyer: buyerInfo.rows[0].display_name || buyerInfo.rows[0].username,
-        quantity,
-        price: totalPrice,
-        purchaseType
-      });
+        // streamId,
+        // productId,
+        // productName: product.name,
+        // buyer: buyerInfo.rows[0].display_name || buyerInfo.rows[0].username,
+        // quantity,
+        // price: totalPrice,
+        // purchaseType
+      // });
       
       // Update product stock for everyone
 // TODO: Replace with Ably publish
 //       io.to(`stream:${streamId}`).emit('product:stock:updated', {
-        productId,
-        newStock: product.stock_quantity ? product.stock_quantity - quantity : null
-      });
+        // productId,
+        // newStock: product.stock_quantity ? product.stock_quantity - quantity : null
+      // });
     }
     
     res.json({
@@ -551,8 +551,8 @@ router.post('/shopping-interactions', authenticateToken, async (req, res) => {
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${streamId}`).emit('shopping:interaction:created', {
-        interaction: result.rows[0]
-      });
+        // interaction: result.rows[0]
+      // });
     }
     
     res.json({
@@ -605,9 +605,9 @@ router.post('/shopping-interactions/:interactionId/respond', authenticateToken, 
     if (io) {
 // TODO: Replace with Ably publish
 //       io.to(`stream:${interaction.stream_id}`).emit('shopping:interaction:updated', {
-        interactionId,
-        responses: responseCounts.rows
-      });
+        // interactionId,
+        // responses: responseCounts.rows
+      // });
     }
     
     res.json({
