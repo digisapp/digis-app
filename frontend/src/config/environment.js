@@ -12,7 +12,7 @@ const getEnvVar = (viteName, reactName, defaultValue = '') => {
 
 // API Configuration
 const API_CONFIG = {
-  BASE_URL: getEnvVar('VITE_BACKEND_URL', 'REACT_APP_BACKEND_URL', 'https://backend-digis.vercel.app'),
+  BASE_URL: getEnvVar('VITE_BACKEND_URL', 'REACT_APP_BACKEND_URL', 'https://backend-digis.vercel.app/api/v1'),
   TIMEOUT: 30000,
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000,
