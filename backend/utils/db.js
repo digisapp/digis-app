@@ -834,9 +834,13 @@ const atomicTokenUpdate = async (userId, tokenAmount, operation = 'add') => {
   }
 };
 
+// Singleton pool getter function
+const getPool = () => pool;
+
 // Export the pool and helper functions
 module.exports = {
   pool,
+  getPool, // Singleton getter for pool
   query,
   executeQuery, // Enhanced query function
   withTransaction, // Enhanced transaction function
