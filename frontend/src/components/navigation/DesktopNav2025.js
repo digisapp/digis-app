@@ -51,6 +51,8 @@ import toast from 'react-hot-toast';
 import { preload } from '../../lib/preload';
 
 const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
+  // ✅ CRITICAL FIX: Declare ALL hooks BEFORE any early returns (fixes React error #310)
+
   // Mount beacon for diagnostics
   useEffect(() => {
     console.info("[MOUNT] DesktopNav2025.js");
@@ -58,23 +60,9 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
 
   // Use AuthContext as SINGLE SOURCE OF TRUTH
   const { currentUser, isCreator, isAdmin, role, roleResolved } = useAuth();
-
-  // Debug log for QA (can be removed in production)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('🧭 DesktopNav Menu role:', role, {
-      isCreator,
-      isAdmin,
-      roleResolved
-    });
-  }
-
-  // Let the component render; we have a skeleton for roleResolved=false below
-  // Only bail if signed out entirely
-  if (!currentUser) return null;
-
   const { activePath, onNavigate, badges = { notifications: 0 }, tokenBalance } = useNavigation();
   const storeTokenBalance = useHybridStore((state) => state.tokenBalance);
-  const theme = useStore((state) => state.theme); // Get theme from store instead of document.*
+  const theme = useStore((state) => state.theme);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showCreatorMenu, setShowCreatorMenu] = useState(false);
@@ -90,6 +78,18 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
   const { scrollY } = useScroll();
   const navOpacity = useTransform(scrollY, [0, 100], [0.95, 0.98]);
   const navBlur = useTransform(scrollY, [0, 100], [15, 25]);
+
+  // Debug log for QA (can be removed in production)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🧭 DesktopNav Menu role:', role, {
+      isCreator,
+      isAdmin,
+      roleResolved
+    });
+  }
+
+  // ✅ NOW safe to do early return AFTER all hooks are declared
+  if (!currentUser) return null;
 
   // Use store token balance if context doesn't have it
   const effectiveTokenBalance = tokenBalance !== undefined ? tokenBalance : storeTokenBalance;

@@ -14,6 +14,9 @@ import toast from 'react-hot-toast';
 import { getAuthToken } from '../utils/auth-helpers';
 
 const CreatorSelectionPopup = ({ isOpen, onClose, callType, onCreatorSelect }) => {
+  // ✅ Early return BEFORE hooks (fixes React error #310)
+  if (!isOpen) return null;
+
   const [creators, setCreators] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedCreator, setSelectedCreator] = useState(null);
@@ -21,10 +24,8 @@ const CreatorSelectionPopup = ({ isOpen, onClose, callType, onCreatorSelect }) =
   const [filter, setFilter] = useState('all'); // all, online, favorites
 
   useEffect(() => {
-    if (isOpen) {
-      fetchAvailableCreators();
-    }
-  }, [isOpen]);
+    fetchAvailableCreators();
+  }, []); // Run on mount (component only renders when isOpen=true)
 
   const fetchAvailableCreators = async () => {
     setLoading(true);
@@ -162,8 +163,6 @@ const CreatorSelectionPopup = ({ isOpen, onClose, callType, onCreatorSelect }) =
     if (filter === 'favorites') return creator.isFavorite;
     return true;
   });
-
-  if (!isOpen) return null;
 
   return (
     <AnimatePresence>

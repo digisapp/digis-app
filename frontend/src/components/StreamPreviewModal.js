@@ -28,15 +28,18 @@ const StreamPreviewModal = ({
   isSubscribed = false,
   isLiked = false
 }) => {
+  // ✅ Early return BEFORE hooks (fixes React error #310)
+  if (!stream) return null;
+
   const [isMuted, setIsMuted] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewerCount, setViewerCount] = useState(stream?.viewers || 0);
+  const [viewerCount, setViewerCount] = useState(stream.viewers || 0); // Now safe - stream guaranteed to exist
   const videoRef = useRef(null);
 
   // Simulate viewer count updates
   useEffect(() => {
     if (!isOpen) return;
-    
+
     const interval = setInterval(() => {
       setViewerCount(prev => {
         const change = Math.floor(Math.random() * 10) - 5;
@@ -55,8 +58,6 @@ const StreamPreviewModal = ({
       });
     }
   }, [isOpen]);
-
-  if (!stream) return null;
 
   const handleFollow = async () => {
     if (!user) {
