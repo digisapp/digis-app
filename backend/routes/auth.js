@@ -69,7 +69,7 @@ const db = (req) => req.pg || pool;
 // Sync user from Supabase Auth to our database
 router.post('/sync-user', verifySupabaseToken, async (req, res) => {
   const rid = req.headers['x-request-id'] || uuidv4();
-  const TIMEOUT_MS = 1500; // 1.5 second timeout
+  const TIMEOUT_MS = 10000; // 10 second timeout (increased from 1.5s to handle slow pooler connections)
 
   // Environment variable validation
   const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL'];
@@ -190,15 +190,101 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       // Use pool (service role) to bypass RLS
       await pool.query('BEGIN');
 
-      // 1) Check if user exists by supabase_id
-      const rowById = await pool.query(
-        `SELECT id, supabase_id FROM users WHERE supabase_id = $1 LIMIT 1`,
+      // SAFE MERGE LOGIC: Check for both email and supabase_id rows
+      // Prevents FK constraint violations by linking, not deleting
+
+      // 1) Fetch potential duplicate rows
+      const { rows: byIdRows } = await pool.query(
+        `SELECT id, supabase_id, email, role, is_creator FROM users WHERE supabase_id = $1 LIMIT 1`,
         [supabaseId]
       );
+      const byId = byIdRows[0] || null;
 
-      if (rowById.rows.length) {
-        // User exists by supabase_id - UPDATE
+      let byEmail = null;
+      if (email) {
+        const { rows } = await pool.query(
+          `SELECT id, supabase_id, email, role, is_creator FROM users WHERE LOWER(email) = $1 LIMIT 1`,
+          [email.toLowerCase()]
+        );
+        byEmail = rows[0] || null;
+      }
+
+      // CASE A: Two rows exist (duplicate accounts) - MERGE SAFELY
+      if (byEmail && byId && byEmail.id !== byId.id) {
+        console.log('🔗 Duplicate accounts detected, merging safely', {
+          rid,
+          emailRowId: byEmail.id,
+          supabaseRowId: byId.id,
+          email,
+          supabaseId
+        });
+
+        // Make the EMAIL row canonical (it has all the creator data + FK references)
+        await pool.query(`
+          UPDATE users SET
+            supabase_id = $1,
+            username = COALESCE($2, username),
+            role = $3,
+            is_creator = $4,
+            is_super_admin = $5,
+            video_rate_cents = $6,
+            voice_rate_cents = $7,
+            stream_rate_cents = $8,
+            message_price_cents = $9,
+            email_verified = true,
+            last_active = NOW(),
+            updated_at = NOW()
+          WHERE id = $10
+        `, [supabaseId, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp, byEmail.id]);
+
+        // Mark the duplicate supabase_id row as merged (DO NOT DELETE to avoid FK breaks)
+        // Clear unique fields to prevent conflicts
+        await pool.query(`
+          UPDATE users SET
+            email = NULL,
+            username = CONCAT(COALESCE(username, 'user'), '__merged_', id),
+            supabase_id = NULL,
+            last_active = NOW(),
+            updated_at = NOW()
+          WHERE id = $1
+        `, [byId.id]);
+
+        console.log('✅ Merged duplicate accounts', {
+          rid,
+          canonicalId: byEmail.id,
+          mergedId: byId.id
+        });
+
+      // CASE B: Only email row exists - link supabase_id
+      } else if (byEmail && !byId) {
+        console.log('✅ User found by email, linking to supabase_id', {
+          rid,
+          email,
+          supabaseId,
+          existingId: byEmail.id
+        });
+
+        await pool.query(`
+          UPDATE users SET
+            supabase_id = $1,
+            username = COALESCE($2, username),
+            role = $3,
+            is_creator = $4,
+            is_super_admin = $5,
+            video_rate_cents = $6,
+            voice_rate_cents = $7,
+            stream_rate_cents = $8,
+            message_price_cents = $9,
+            email_verified = true,
+            last_active = NOW(),
+            updated_at = NOW()
+          WHERE id = $10
+        `, [supabaseId, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp, byEmail.id]);
+
+      // CASE C: Only supabase_id row exists - update with email
+      } else if (!byEmail && byId) {
         console.log('✅ User found by supabase_id, updating', { rid, supabaseId });
+
         await pool.query(`
           UPDATE users SET
             email = COALESCE($2, email),
@@ -216,54 +302,25 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
           WHERE supabase_id = $1
         `, [supabaseId, email || null, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp]);
 
-      } else if (email) {
-        // 2) Check if user exists by email
-        const rowByEmail = await pool.query(
-          `SELECT id, supabase_id FROM users WHERE LOWER(email) = $1 LIMIT 1`,
-          [email.toLowerCase()]
-        );
+      // CASE D: Neither row exists - create new user
+      } else if (!byEmail && !byId) {
+        console.log('✅ New user, inserting', { rid, email, supabaseId });
 
-        if (rowByEmail.rows.length) {
-          // EMAIL-LINKING: Link existing email account to new supabase_id
-          console.log('✅ User found by email, linking to supabase_id', { rid, email, supabaseId, existingId: rowByEmail.rows[0].id });
-          await pool.query(`
-            UPDATE users SET
-              supabase_id = $1,
-              username = COALESCE($2, username),
-              role = $3,
-              is_creator = $4,
-              is_super_admin = $5,
-              video_rate_cents = $6,
-              voice_rate_cents = $7,
-              stream_rate_cents = $8,
-              message_price_cents = $9,
-              email_verified = true,
-              last_active = NOW(),
-              updated_at = NOW()
-            WHERE id = $10
-          `, [supabaseId, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp, rowByEmail.rows[0].id]);
-
-        } else {
-          // 3) Fresh insert - user doesn't exist
-          console.log('✅ New user, inserting', { rid, email, supabaseId });
-          await pool.query(`
-            INSERT INTO users (
-              supabase_id, email, username, role, is_creator, is_super_admin,
-              video_rate_cents, voice_rate_cents, stream_rate_cents, message_price_cents,
-              email_verified, last_active, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW(), NOW())
-          `, [supabaseId, email || null, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp]);
-        }
-      } else {
-        // No email - create with placeholder
-        console.log('✅ New user without email, inserting with placeholder', { rid, supabaseId });
         await pool.query(`
           INSERT INTO users (
             supabase_id, email, username, role, is_creator, is_super_admin,
             video_rate_cents, voice_rate_cents, stream_rate_cents, message_price_cents,
             email_verified, last_active, created_at, updated_at
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW(), NOW())
-        `, [supabaseId, `${supabaseId}@placeholder.local`, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp]);
+        `, [
+          supabaseId,
+          email || `${supabaseId}@placeholder.local`,
+          safeUsername || null,
+          roleForUpsert,
+          isCreatorForUpsert,
+          isAdminForUpsert,
+          vr, ar, sr, mp
+        ]);
       }
 
       // Commit the user transaction BEFORE token balance (so user creation succeeds even if token balance fails)

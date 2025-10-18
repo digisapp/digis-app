@@ -114,7 +114,19 @@ export async function syncAccountOnce(reason = 'manual') {
 
       // 2) Idempotent user sync (server handles email-linking + defaults)
       try {
-        await api.post('/auth/sync-user', {}, { withAuth: true });
+        const session = data.session;
+        const requestBody = {
+          supabaseId: session.user.id,
+          email: session.user.email || `${session.user.id}@placeholder.local`,
+          metadata: {
+            username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
+            account_type: session.user.user_metadata?.account_type || 'fan',
+            role: session.user.user_metadata?.role || 'fan',
+            is_creator: session.user.user_metadata?.is_creator || false
+          }
+        };
+
+        await api.post('/auth/sync-user', requestBody, { withAuth: true });
         console.log(`[AuthSync] sync-user completed`);
       } catch (syncError) {
         // Non-blocking: Continue to session fetch even if sync-user fails
