@@ -168,8 +168,10 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
 
     // IDEMPOTENT: Ensure user exists (create or update)
     // ROBUST UPSERT: Provide safe defaults for ALL NOT NULL fields to prevent 23502 errors
-    const accountType = metadata?.account_type || 'fan';
-    const isCreator = accountType === 'creator';
+
+    // Safe account type and creator status fallbacks
+    const accountTypeForUpsert = metadata?.account_type || 'fan';
+    const isCreatorForUpsert = accountTypeForUpsert === 'creator';
 
     // Safe username fallback: metadata.username > email local-part > user_{id_prefix}
     const safeUsername = metadata?.username ||
@@ -217,8 +219,8 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         email,
         safeUsername,
         metadata?.username || safeUsername,
-        isCreator,
-        isCreator ? 'creator' : 'fan'
+        isCreatorForUpsert,
+        isCreatorForUpsert ? 'creator' : 'fan'
       ]);
     } catch (dbError) {
       console.error('❌ sync-user DB upsert user failed', {
