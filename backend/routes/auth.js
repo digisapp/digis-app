@@ -1469,6 +1469,65 @@ router.get('/debug-db', async (req, res) => {
   }
 });
 
+// Debug endpoint - check users table schema
+router.get('/debug-schema', async (req, res) => {
+  try {
+    // Get users table columns
+    const columnsResult = await db(req).query(`
+      SELECT
+        column_name,
+        data_type,
+        is_nullable,
+        column_default
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'users'
+      ORDER BY ordinal_position;
+    `);
+
+    // Get primary key
+    const pkResult = await db(req).query(`
+      SELECT a.attname
+      FROM pg_index i
+      JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+      WHERE i.indrelid = 'users'::regclass AND i.indisprimary;
+    `);
+
+    // Check for critical columns
+    const columnNames = columnsResult.rows.map(r => r.column_name);
+    const criticalColumns = {
+      id: columnNames.includes('id'),
+      supabase_id: columnNames.includes('supabase_id'),
+      firebase_uid: columnNames.includes('firebase_uid'),
+      email: columnNames.includes('email'),
+      username: columnNames.includes('username'),
+      display_name: columnNames.includes('display_name'),
+      is_creator: columnNames.includes('is_creator'),
+      email_verified: columnNames.includes('email_verified'),
+      last_active: columnNames.includes('last_active')
+    };
+
+    const notNullColumns = columnsResult.rows
+      .filter(r => r.is_nullable === 'NO')
+      .map(r => r.column_name);
+
+    res.json({
+      success: true,
+      columns: columnsResult.rows,
+      primaryKey: pkResult.rows.map(r => r.attname),
+      criticalColumns,
+      notNullColumns,
+      totalColumns: columnsResult.rows.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Schema check failed',
+      message: error.message
+    });
+  }
+});
+
 // Debug endpoint - show DATABASE_URL connection info (no secrets)
 router.get('/debug-db-info', async (req, res) => {
   try {
