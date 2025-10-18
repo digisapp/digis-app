@@ -10,11 +10,11 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT
-        firebase_uid, username, display_name, profile_pic_url, bio,
+        supabase_id, username, display_name, profile_pic_url, bio,
         fan_privacy_visibility, fan_allow_dm, fan_allow_calls,
         fan_share_token, fan_share_token_expires_at, fan_allow_search
       FROM users
-      WHERE firebase_uid = $1`,
+      WHERE supabase_id = $1`,
       [req.user.supabase_id]
     );
 
@@ -28,7 +28,7 @@ router.get('/me', authenticateToken, async (req, res) => {
     const profile = result.rows[0];
 
     res.json({
-      id: profile.firebase_uid,
+      id: profile.supabase_id,
       username: profile.username,
       displayName: profile.display_name,
       avatarUrl: profile.profile_pic_url,
@@ -97,9 +97,9 @@ router.patch('/me', authenticateToken, async (req, res) => {
     const result = await pool.query(
       `UPDATE users
        SET ${updates.join(', ')}, updated_at = NOW()
-       WHERE firebase_uid = $1
+       WHERE supabase_id = $1
        RETURNING
-         firebase_uid, fan_privacy_visibility, fan_allow_dm,
+         supabase_id, fan_privacy_visibility, fan_allow_dm,
          fan_allow_calls, fan_allow_search`,
       values
     );
@@ -146,7 +146,7 @@ router.post('/share/enable', authenticateToken, async (req, res) => {
        SET fan_share_token = $1,
            fan_share_token_expires_at = $2,
            updated_at = NOW()
-       WHERE firebase_uid = $3`,
+       WHERE supabase_id = $3`,
       [token, expiresAt, req.user.supabase_id]
     );
 
@@ -178,7 +178,7 @@ router.post('/share/disable', authenticateToken, async (req, res) => {
        SET fan_share_token = NULL,
            fan_share_token_expires_at = NULL,
            updated_at = NOW()
-       WHERE firebase_uid = $1`,
+       WHERE supabase_id = $1`,
       [req.user.supabase_id]
     );
 
@@ -249,7 +249,7 @@ router.get('/:fanId', authenticateToken, async (req, res) => {
   try {
     // Check if requester is creator or admin
     const requesterCheck = await pool.query(
-      'SELECT is_creator, is_super_admin FROM users WHERE firebase_uid = $1',
+      'SELECT is_creator, is_super_admin FROM users WHERE supabase_id = $1',
       [creatorId]
     );
 
@@ -269,10 +269,10 @@ router.get('/:fanId', authenticateToken, async (req, res) => {
     // Get fan profile
     const fanResult = await pool.query(
       `SELECT
-        firebase_uid, username, display_name, profile_pic_url,
+        supabase_id, username, display_name, profile_pic_url,
         fan_privacy_visibility, fan_allow_dm, fan_allow_calls
       FROM users
-      WHERE firebase_uid = $1`,
+      WHERE supabase_id = $1`,
       [fanId]
     );
 
@@ -288,7 +288,7 @@ router.get('/:fanId', authenticateToken, async (req, res) => {
     // If owner or admin, return full profile
     if (isOwner || isAdmin) {
       return res.json({
-        id: fan.firebase_uid,
+        id: fan.supabase_id,
         username: fan.username,
         displayName: fan.display_name,
         avatarUrl: fan.profile_pic_url,
@@ -328,7 +328,7 @@ router.get('/:fanId', authenticateToken, async (req, res) => {
 
     // Return sanitized profile for creator
     res.json({
-      id: fan.firebase_uid,
+      id: fan.supabase_id,
       displayName: fan.display_name,
       avatarUrl: fan.profile_pic_url,
       permissions: {

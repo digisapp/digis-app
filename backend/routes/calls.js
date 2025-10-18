@@ -138,7 +138,7 @@ router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req,
   try {
     // Check if requester is a creator
     const creatorCheck = await pool.query(
-      'SELECT is_creator FROM users WHERE firebase_uid = $1',
+      'SELECT is_creator FROM users WHERE supabase_id = $1',
       [creatorId]
     );
 
@@ -165,7 +165,7 @@ router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req,
 
     // Check if fan exists and get their call settings
     const fanCheck = await pool.query(
-      'SELECT firebase_uid, fan_allow_calls FROM users WHERE firebase_uid = $1',
+      'SELECT supabase_id, fan_allow_calls FROM users WHERE supabase_id = $1',
       [fanId]
     );
 
@@ -210,7 +210,7 @@ router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req,
 
     // Get creator's rate per minute
     const rateResult = await pool.query(
-      'SELECT price_per_min FROM users WHERE firebase_uid = $1',
+      'SELECT price_per_min FROM users WHERE supabase_id = $1',
       [creatorId]
     );
     const ratePerMinute = rateResult.rows[0]?.price_per_min || 1.00;
@@ -257,7 +257,7 @@ router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req,
     try {
       // Get creator details for the notification
       const creatorDetails = await pool.query(
-        'SELECT display_name, username, profile_pic_url FROM users WHERE firebase_uid = $1',
+        'SELECT display_name, username, profile_pic_url FROM users WHERE supabase_id = $1',
         [creatorId]
       );
 
@@ -720,7 +720,7 @@ router.get('/pending', authenticateToken, async (req, res) => {
         u.profile_pic_url as creator_avatar_url
       FROM call_invitations ci
       JOIN calls c ON ci.call_id = c.id
-      JOIN users u ON ci.creator_id = u.firebase_uid
+      JOIN users u ON ci.creator_id = u.supabase_id
       WHERE ci.fan_id = $1
         AND ci.state = 'pending'
         AND ci.expires_at > NOW()
@@ -775,8 +775,8 @@ router.get('/history', authenticateToken, async (req, res) => {
         u_fan.display_name as fan_display_name,
         u_fan.profile_pic_url as fan_avatar_url
       FROM calls c
-      JOIN users u_creator ON c.creator_id = u_creator.firebase_uid
-      JOIN users u_fan ON c.fan_id = u_fan.firebase_uid
+      JOIN users u_creator ON c.creator_id = u_creator.supabase_id
+      JOIN users u_fan ON c.fan_id = u_fan.supabase_id
       WHERE (c.creator_id = $1 OR c.fan_id = $1)
         AND c.state IN ('connected', 'ended')
       ORDER BY c.initiated_at DESC
@@ -785,7 +785,7 @@ router.get('/history', authenticateToken, async (req, res) => {
     );
 
     const isCreator = await pool.query(
-      'SELECT is_creator FROM users WHERE firebase_uid = $1',
+      'SELECT is_creator FROM users WHERE supabase_id = $1',
       [userId]
     );
 

@@ -231,7 +231,7 @@ router.post('/update-creator-status', authenticateToken, async (req, res) => {
   try {
     // First check if user exists
     const checkUser = await pool.query(
-      'SELECT * FROM users WHERE id = $1::uuid',
+      'SELECT * FROM users WHERE supabase_id = $1::uuid',
       [userId]
     );
     
@@ -418,7 +418,7 @@ router.put('/profile', authenticateToken, validate(profileUpdateSchema), async (
     }
 
     const existingUser = await client.query(
-      'SELECT * FROM users WHERE id = $1::uuid',
+      'SELECT * FROM users WHERE supabase_id = $1::uuid',
       [uid]
     );
 
@@ -553,7 +553,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
     } else {
       // Fetch from database if not cached
       const result = await pool.query(
-        'SELECT * FROM users WHERE id = $1::uuid',
+        'SELECT * FROM users WHERE supabase_id = $1::uuid',
         [targetUid]
       );
 
