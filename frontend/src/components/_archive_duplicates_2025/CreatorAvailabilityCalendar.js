@@ -24,7 +24,7 @@ const CreatorAvailabilityCalendar = ({ user, onClose }) => {
     try {
       setLoading(true);
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/availability`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/availability`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
 
@@ -64,7 +64,7 @@ const CreatorAvailabilityCalendar = ({ user, onClose }) => {
     try {
       setSaving(true);
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/availability`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/availability`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

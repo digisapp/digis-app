@@ -23,7 +23,7 @@ const CreatorOffers = ({ creatorId, creatorUsername, auth }) => {
 
   const fetchCreatorOffers = useCallback(async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/offers/creator/${creatorId}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/offers/creator/${creatorId}`);
       
       if (!response.ok) throw new Error('Failed to fetch offers');
       
@@ -58,7 +58,7 @@ const CreatorOffers = ({ creatorId, creatorUsername, auth }) => {
 
     try {
       const token = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/offers/${selectedOffer.id}/purchase`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/offers/${selectedOffer.id}/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

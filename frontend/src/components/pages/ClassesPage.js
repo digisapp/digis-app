@@ -85,7 +85,7 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token;
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/classes/enrolled`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/enrolled`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
 
@@ -128,7 +128,7 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
         endDate: endDate.toISOString()
       });
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/classes?${params}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes?${params}`, {
         headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
       });
 
@@ -161,7 +161,7 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/classes/${classItem.id}/join`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/${classItem.id}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -82,7 +82,7 @@ const InstantChatWidget = ({ user, onSendMessage, className = '' }) => {
         // Get RTM token from backend
         const authToken = await getAuthToken();
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/agora/rtm-token?uid=${user.id}`,
+          `${import.meta.env.VITE_BACKEND_URL}/agora/rtm-token?uid=${user.id}`,
           {
             headers: {
               Authorization: `Bearer ${authToken}`,
@@ -133,7 +133,7 @@ const InstantChatWidget = ({ user, onSendMessage, className = '' }) => {
 
       // Check user balance
       const balanceResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
+        `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
         {
           headers: {
             'Authorization': `Bearer ${await getAuthToken()}`
@@ -161,7 +161,7 @@ const InstantChatWidget = ({ user, onSendMessage, className = '' }) => {
       }, selectedChat.userId);
 
       // Deduct tokens from sender and add to creator
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/messages/send`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/messages/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +222,7 @@ const InstantChatWidget = ({ user, onSendMessage, className = '' }) => {
     try {
       // Find creator by username
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/username/${creatorUsername}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/username/${creatorUsername}`,
         {
           headers: {
             'Authorization': `Bearer ${await getAuthToken()}`

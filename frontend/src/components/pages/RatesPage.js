@@ -73,7 +73,7 @@ const RatesPage = ({ user, isCreator }) => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/rates`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/rates`, {
         headers: {
           'Authorization': `Bearer ${session?.access_token}`
         }
@@ -104,7 +104,7 @@ const RatesPage = ({ user, isCreator }) => {
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/rates`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/rates`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session?.access_token}`,

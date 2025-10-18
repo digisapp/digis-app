@@ -24,7 +24,7 @@ export const useCallRecording = (channel, uid) => {
    */
   const startCloudRecording = useCallback(async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/recording/start`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/recording/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ export const useCallRecording = (channel, uid) => {
    */
   const stopCloudRecording = useCallback(async (recId) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/recording/stop`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/recording/stop`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

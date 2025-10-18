@@ -420,7 +420,7 @@ class PWAService {
       const user = JSON.parse(localStorage.getItem('user'));
       if (!user) return;
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/push/subscribe`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/push/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -444,7 +444,7 @@ class PWAService {
       const user = JSON.parse(localStorage.getItem('user'));
       if (!user) return;
 
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/push/unsubscribe`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/push/unsubscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -135,7 +135,7 @@ const ClassScheduler = ({ isOpen, onClose, onClassScheduled, user }) => {
         imageFormData.append('type', 'class_cover');
         
         try {
-          const uploadResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/upload`, {
+          const uploadResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/upload`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${authToken}`
@@ -181,7 +181,7 @@ const ClassScheduler = ({ isOpen, onClose, onClassScheduled, user }) => {
         }
       };
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/classes`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

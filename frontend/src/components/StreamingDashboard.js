@@ -303,7 +303,7 @@ const StreamingDashboard = ({
       if (!isRecording) {
         // Start recording
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/recording/streams/${streamId}/start-recording`,
+          `${import.meta.env.VITE_BACKEND_URL}/recording/streams/${streamId}/start-recording`,
           {
             method: 'POST',
             headers: {
@@ -329,7 +329,7 @@ const StreamingDashboard = ({
       } else {
         // Stop recording with auto-save
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/recording/streams/${streamId}/stop-recording`,
+          `${import.meta.env.VITE_BACKEND_URL}/recording/streams/${streamId}/stop-recording`,
           {
             method: 'POST',
             headers: {
@@ -732,7 +732,7 @@ const StreamingDashboard = ({
       try {
         const authToken = await getAuthToken();
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/recording/streams/${streamId}/stop-recording`,
+          `${import.meta.env.VITE_BACKEND_URL}/recording/streams/${streamId}/stop-recording`,
           {
             method: 'POST',
             headers: {
@@ -914,7 +914,7 @@ const StreamingDashboard = ({
       setStreamRecordingData(recordingData);
       
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streams/save`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streams/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -378,7 +378,7 @@ const HybridCreatorDashboard = memo(({
       
       // Fetch creator profile
       const profileResponse = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/public/creators/${user?.username || user?.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/public/creators/${user?.username || user?.id}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -400,7 +400,7 @@ const HybridCreatorDashboard = memo(({
         try {
           // Fetch shop items
           const itemsResponse = await fetchWithRetry(
-            `${import.meta.env.VITE_BACKEND_URL}/api/shop/items/manage?includeInactive=true`,
+            `${import.meta.env.VITE_BACKEND_URL}/shop/items/manage?includeInactive=true`,
             {
               headers: { Authorization: `Bearer ${authToken}` }
             }
@@ -423,7 +423,7 @@ const HybridCreatorDashboard = memo(({
 
           // Fetch shop analytics
           const analyticsResponse = await fetchWithRetry(
-            `${import.meta.env.VITE_BACKEND_URL}/api/shop/analytics`,
+            `${import.meta.env.VITE_BACKEND_URL}/shop/analytics`,
             {
               headers: { Authorization: `Bearer ${authToken}` }
             }
@@ -440,7 +440,7 @@ const HybridCreatorDashboard = memo(({
       
       // Fetch subscription tiers
       const tiersResponse = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscription-tiers/creator/${user?.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscription-tiers/creator/${user?.id}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -455,7 +455,7 @@ const HybridCreatorDashboard = memo(({
       const creatorId = user?.supabase_id || user?.id;
       if (creatorId) {
         const contentResponse = await fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/content/creator/${creatorId}`,
+          `${import.meta.env.VITE_BACKEND_URL}/content/creator/${creatorId}`,
           {
             headers: { Authorization: `Bearer ${authToken}` }
           }
@@ -472,7 +472,7 @@ const HybridCreatorDashboard = memo(({
       
       // Fetch upcoming sessions
       const sessionsResponse = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/sessions/upcoming`,
+        `${import.meta.env.VITE_BACKEND_URL}/sessions/upcoming`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -491,7 +491,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/digitals/my`,
+        `${import.meta.env.VITE_BACKEND_URL}/digitals/my`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -514,7 +514,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/offers/my-offers`,
+        `${import.meta.env.VITE_BACKEND_URL}/offers/my-offers`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -533,7 +533,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/offers`,
+        `${import.meta.env.VITE_BACKEND_URL}/offers`,
         {
           method: 'POST',
           headers: {
@@ -560,7 +560,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/offers/${offerId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/offers/${offerId}`,
         {
           method: 'PUT',
           headers: {
@@ -587,7 +587,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/offers/${offerId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/offers/${offerId}`,
         {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${authToken}` }
@@ -619,7 +619,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/analytics/creator/${user?.id}/overview?period=7d`,
+        `${import.meta.env.VITE_BACKEND_URL}/analytics/creator/${user?.id}/overview?period=7d`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -681,7 +681,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/analytics/creator/${user?.id}/top-fans`,
+        `${import.meta.env.VITE_BACKEND_URL}/analytics/creator/${user?.id}/top-fans`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -702,7 +702,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile`,
         {
           method: 'PATCH',
           headers: {
@@ -740,7 +740,7 @@ const HybridCreatorDashboard = memo(({
       
       const authToken = await getAuthToken();
       const uploadResponse = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/storage/profile-picture`,
+        `${import.meta.env.VITE_BACKEND_URL}/storage/profile-picture`,
         {
           method: 'POST',
           headers: {
@@ -789,7 +789,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/upload-image`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/upload-image`,
         {
           method: 'POST',
           headers: {
@@ -872,7 +872,7 @@ const HybridCreatorDashboard = memo(({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows`,
+        `${import.meta.env.VITE_BACKEND_URL}/ticketed-shows`,
         {
           method: 'POST',
           headers: {
@@ -1817,7 +1817,7 @@ const HybridCreatorDashboard = memo(({
           if (user?.supabase_id) {
             try {
               const authToken = await getAuthToken();
-              const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+              const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
                 headers: {
                   'Authorization': `Bearer ${authToken}`
                 }

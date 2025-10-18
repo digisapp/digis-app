@@ -229,7 +229,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tv-subscription/status`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tv-subscription/status`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -288,7 +288,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
 
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
-    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tv-subscription/start-trial`, {
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tv-subscription/start-trial`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -316,7 +316,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
 
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
-    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tv-subscription/subscribe`, {
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tv-subscription/subscribe`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -338,7 +338,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
 
   const fetchFeaturedCreators = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/creators/featured`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/public/creators/featured`);
       if (response.ok) {
         const data = await response.json();
         setFeaturedCreators(data.creators || []);
@@ -353,7 +353,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
 
   const fetchUpcomingStreams = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/streams/upcoming`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/public/streams/upcoming`);
       if (response.ok) {
         const data = await response.json();
         // Transform the data to match the expected format
@@ -380,7 +380,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
 
   const fetchReplays = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/streams/replays`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/public/streams/replays`);
       if (response.ok) {
         const data = await response.json();
         // Transform the data to match the expected format
@@ -419,7 +419,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
       setLoading(true);
       
       // Fetch real streams from API
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/streams/live`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/public/streams/live`);
       
       if (response.ok) {
         const data = await response.json();

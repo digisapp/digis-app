@@ -82,7 +82,7 @@ const CreatorSubscriptionTiersEnhanced = ({ user, isCreator }) => {
       
       // Load creator's tier pricing
       const pricingResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/creator/${user.id}/tier-pricing`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/creator/${user.id}/tier-pricing`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -108,7 +108,7 @@ const CreatorSubscriptionTiersEnhanced = ({ user, isCreator }) => {
 
       // Load subscribers and stats
       const subscribersResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/my-subscribers`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/my-subscribers`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -175,7 +175,7 @@ const CreatorSubscriptionTiersEnhanced = ({ user, isCreator }) => {
       const token = session?.access_token;
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/creator/tier-pricing`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/creator/tier-pricing`,
         {
           method: 'PUT',
           headers: {
@@ -227,7 +227,7 @@ const CreatorSubscriptionTiersEnhanced = ({ user, isCreator }) => {
       toast.loading('Processing subscription...');
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/subscribe`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/subscribe`,
         {
           method: 'POST',
           headers: {

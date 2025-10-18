@@ -69,7 +69,7 @@ const MyCollections = ({ user, isCreator = false }) => {
       setLoading(true);
       const authToken = await getAuthToken();
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/purchased`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/content/purchased`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
@@ -167,7 +167,7 @@ const MyCollections = ({ user, isCreator = false }) => {
     // Track view
     try {
       const authToken = await getAuthToken();
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/view/${content.id}`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/content/view/${content.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`
@@ -188,7 +188,7 @@ const MyCollections = ({ user, isCreator = false }) => {
 
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/download/${content.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/content/download/${content.id}`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }

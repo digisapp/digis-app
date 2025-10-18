@@ -39,7 +39,7 @@ const DigitalsPage = () => {
   const fetchDigitals = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/digitals/creator/${username}`
+        `${import.meta.env.VITE_BACKEND_URL}/digitals/creator/${username}`
       );
 
       if (!response.ok) {

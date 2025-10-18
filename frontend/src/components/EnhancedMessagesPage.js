@@ -269,7 +269,7 @@ const EnhancedMessagesPage = ({
       try {
         const token = await getAuthToken();
         const response = await fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/creators/rates`,
+          `${import.meta.env.VITE_BACKEND_URL}/creators/rates`,
           {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -311,7 +311,7 @@ const EnhancedMessagesPage = ({
       try {
         const token = await getAuthToken();
         const response = await fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/conversations`,
+          `${import.meta.env.VITE_BACKEND_URL}/conversations`,
           {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -486,7 +486,7 @@ const EnhancedMessagesPage = ({
     try {
       const token = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/conversations/${conversationId}/messages`,
+        `${import.meta.env.VITE_BACKEND_URL}/conversations/${conversationId}/messages`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -553,7 +553,7 @@ const EnhancedMessagesPage = ({
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/messages/send`,
+        `${import.meta.env.VITE_BACKEND_URL}/messages/send`,
         {
           method: 'POST',
           headers: {
@@ -638,7 +638,7 @@ const EnhancedMessagesPage = ({
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/messages/upload`,
+        `${import.meta.env.VITE_BACKEND_URL}/messages/upload`,
         {
           method: 'POST',
           headers: {
@@ -700,7 +700,7 @@ const EnhancedMessagesPage = ({
     try {
       const token = await getAuthToken();
       await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/messages/${messageId}/read`,
+        `${import.meta.env.VITE_BACKEND_URL}/messages/${messageId}/read`,
         {
           method: 'PUT',
           headers: {

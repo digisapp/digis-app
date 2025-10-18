@@ -71,7 +71,7 @@ const EnhancedStreamChat = ({
       try {
         const authToken = await getAuthToken();
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/stream-chat/history/${channel}?limit=50`,
+          `${import.meta.env.VITE_BACKEND_URL}/stream-chat/history/${channel}?limit=50`,
           {
             headers: {
               Authorization: `Bearer ${authToken}`
@@ -159,7 +159,7 @@ const EnhancedStreamChat = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/stream-chat/message`,
+        `${import.meta.env.VITE_BACKEND_URL}/stream-chat/message`,
         {
           method: 'POST',
           headers: {
@@ -210,7 +210,7 @@ const EnhancedStreamChat = ({
     try {
       const authToken = await getAuthToken();
       await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/stream-chat/pin`,
+        `${import.meta.env.VITE_BACKEND_URL}/stream-chat/pin`,
         {
           method: 'POST',
           headers: {
@@ -236,7 +236,7 @@ const EnhancedStreamChat = ({
     try {
       const authToken = await getAuthToken();
       await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/stream-chat/moderate`,
+        `${import.meta.env.VITE_BACKEND_URL}/stream-chat/moderate`,
         {
           method: 'POST',
           headers: {
@@ -261,7 +261,7 @@ const EnhancedStreamChat = ({
     try {
       const authToken = await getAuthToken();
       await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/stream-chat/message/${messageId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/stream-chat/message/${messageId}`,
         {
           method: 'DELETE',
           headers: {

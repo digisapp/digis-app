@@ -133,7 +133,7 @@ const LiveChatEnhanced = ({
         const chatUserId = user.id || user.supabase_id || `user_${Date.now()}`;
         
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/agora/chat-token?userId=${chatUserId}`,
+          `${import.meta.env.VITE_BACKEND_URL}/agora/chat-token?userId=${chatUserId}`,
           {
             headers: {
               Authorization: `Bearer ${authToken}`,

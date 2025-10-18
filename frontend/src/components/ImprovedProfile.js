@@ -42,7 +42,7 @@ const uploadProfileImage = async (file, userId) => {
   formData.append('file', file);
   
   const { data: { session } } = await supabase.auth.getSession();
-  const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/upload-profile-image`, {
+  const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/upload-profile-image`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${session?.access_token}`
@@ -197,7 +197,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
       console.log('🔄 Loading profile for user:', user.id);
       const token = (await supabase.auth.getSession()).data.session?.access_token;
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${user.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${user.id}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -402,7 +402,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         profileData.voice_memo_price = parseFloat(voiceMemoPrice) || 2;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -540,7 +540,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         profileData.voice_memo_price = parseFloat(voiceMemoPrice);
       }
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

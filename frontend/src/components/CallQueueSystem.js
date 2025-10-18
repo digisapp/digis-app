@@ -112,7 +112,7 @@ const CallQueueSystem = memo(({ user, isCreator = false, creatorId = null }) => 
 
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/join-queue`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/join-queue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +153,7 @@ const CallQueueSystem = memo(({ user, isCreator = false, creatorId = null }) => 
 
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/leave-queue`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/leave-queue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ const CallQueueSystem = memo(({ user, isCreator = false, creatorId = null }) => 
 
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/call-next`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/call-next`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,7 +214,7 @@ const CallQueueSystem = memo(({ user, isCreator = false, creatorId = null }) => 
     if (!isCreator || !user) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/skip-queue-user`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/skip-queue-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -461,7 +461,7 @@ export const useCallQueue = (user) => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/join-queue`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/join-queue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

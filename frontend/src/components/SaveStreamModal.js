@@ -170,7 +170,7 @@ const SaveStreamModal = ({
       setSaveProgress(50);
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/recording/streams/${streamData.streamId}/save-recording`,
+        `${import.meta.env.VITE_BACKEND_URL}/recording/streams/${streamData.streamId}/save-recording`,
         {
           method: 'POST',
           headers: {

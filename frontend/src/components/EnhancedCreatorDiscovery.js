@@ -55,7 +55,7 @@ const EnhancedCreatorDiscovery = ({ user, onClose, isModal = true }) => {
   const loadCategories = useCallback(async () => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/discovery/categories`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/discovery/categories`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
         },
@@ -74,7 +74,7 @@ const EnhancedCreatorDiscovery = ({ user, onClose, isModal = true }) => {
     setLoading(true);
     try {
       const authToken = await getAuthToken();
-      let url = `${import.meta.env.VITE_BACKEND_URL}/api/discovery/`;
+      let url = `${import.meta.env.VITE_BACKEND_URL}/discovery/`;
       let params = new URLSearchParams();
 
       // Set endpoint based on tab

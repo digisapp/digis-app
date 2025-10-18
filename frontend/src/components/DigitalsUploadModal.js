@@ -96,7 +96,7 @@ const DigitalsUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
       uploadData.append('isPublic', formData.isPublic);
       uploadData.append('allowDownload', formData.allowDownload);
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/digitals/upload`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/digitals/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

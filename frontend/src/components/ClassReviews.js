@@ -29,7 +29,7 @@ const ClassReviews = ({ classId, user, className = "" }) => {
       setLoading(true);
       const authToken = user ? await getAuthToken() : null;
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/classes/${classId}/reviews`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/${classId}/reviews`, {
         headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
       });
 

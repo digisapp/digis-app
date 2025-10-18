@@ -41,7 +41,7 @@ const FanProfilePage = ({ user: currentUser }) => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/fan-profile/${username}`
+        `${import.meta.env.VITE_BACKEND_URL}/users/fan-profile/${username}`
       );
 
       if (!response.ok) {
@@ -76,7 +76,7 @@ const FanProfilePage = ({ user: currentUser }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/follow/${profile.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/follow/${profile.id}`,
         {
           method: isFollowing ? 'DELETE' : 'POST',
           headers: {

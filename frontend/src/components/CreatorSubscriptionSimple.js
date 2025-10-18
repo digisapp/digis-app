@@ -37,7 +37,7 @@ const CreatorSubscriptionSimple = ({ user, isCreator }) => {
 
       // Load current subscription price
       const priceResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscription-tiers/price`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscription-tiers/price`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -55,7 +55,7 @@ const CreatorSubscriptionSimple = ({ user, isCreator }) => {
 
       // Load subscribers
       const subscribersResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscription-tiers/my-subscribers`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscription-tiers/my-subscribers`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -91,7 +91,7 @@ const CreatorSubscriptionSimple = ({ user, isCreator }) => {
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscription-tiers/price`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscription-tiers/price`,
         {
           method: 'PUT',
           headers: {

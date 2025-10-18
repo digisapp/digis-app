@@ -36,7 +36,7 @@ const PreCallValidation = ({
     if (!user) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/balance`, {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
@@ -58,7 +58,7 @@ const PreCallValidation = ({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/dynamic-pricing?` +
+        `${import.meta.env.VITE_BACKEND_URL}/users/dynamic-pricing?` +
         `creatorId=${creator.id || creator.supabase_id}&sessionType=${sessionType}&duration=${estimatedDuration}`,
         {
           headers: {
@@ -93,7 +93,7 @@ const PreCallValidation = ({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/fan-engagement/${creator.id || creator.supabase_id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/fan-engagement/${creator.id || creator.supabase_id}`,
         {
           headers: {
             'Authorization': `Bearer ${await getAuthToken()}`

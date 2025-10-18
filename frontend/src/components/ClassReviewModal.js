@@ -55,7 +55,7 @@ const ClassReviewModal = ({ isOpen, onClose, classData, user, onReviewSubmitted 
         userAvatar: user.photoURL
       };
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/classes/${classData.id}/reviews`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/${classData.id}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

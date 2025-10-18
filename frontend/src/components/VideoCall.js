@@ -121,7 +121,7 @@ const VideoCall = forwardRef(({
       }
       
       const data = await fetchJSONWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
+        `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -153,7 +153,7 @@ const VideoCall = forwardRef(({
       const role = isHost || isStreaming ? 'host' : 'audience';
       
       const data = await fetchJSONWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/agora/token?channel=${channel}&uid=${uid}&role=${role}`,
+        `${import.meta.env.VITE_BACKEND_URL}/agora/token?channel=${channel}&uid=${uid}&role=${role}`,
         {
           headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -220,7 +220,7 @@ const VideoCall = forwardRef(({
       
       const creatorId = channelParts[1];
       const creatorData = await fetchJSONWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${creatorId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${creatorId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1479,7 +1479,7 @@ const VideoCall = forwardRef(({
         const authToken = await getAuthToken();
         
         // Start cloud recording via API
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/recording/start`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/recording/start`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1534,7 +1534,7 @@ const VideoCall = forwardRef(({
         
         // Stop cloud recording via API
         const authToken = await getAuthToken();
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/recording/stop`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/recording/stop`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

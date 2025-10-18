@@ -447,7 +447,7 @@ class AnalyticsCollector {
         // Continue without auth token
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/analytics/events`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/analytics/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

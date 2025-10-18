@@ -167,7 +167,7 @@ const AnalyticsDashboard = ({ user, className = '' }) => {
 
   const fetchRealtime = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/analytics/realtime/${user.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/analytics/realtime/${user.id}`, {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }

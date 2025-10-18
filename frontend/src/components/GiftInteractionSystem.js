@@ -147,7 +147,7 @@ const GiftInteractionSystem = ({ user, tokenBalance, onTokenUpdate }) => {
     try {
       setSending(true);
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gifts/send`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/gifts/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

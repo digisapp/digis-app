@@ -25,7 +25,7 @@ const CoHostManager = ({ streamId, isCreator, user, onCoHostsUpdate, onRequestsU
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streaming/co-hosts/${streamId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/streaming/co-hosts/${streamId}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         },
@@ -62,7 +62,7 @@ const CoHostManager = ({ streamId, isCreator, user, onCoHostsUpdate, onRequestsU
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streaming/co-host-requests`,
+        `${import.meta.env.VITE_BACKEND_URL}/streaming/co-host-requests`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         },
@@ -90,7 +90,7 @@ const CoHostManager = ({ streamId, isCreator, user, onCoHostsUpdate, onRequestsU
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streaming/co-host-request`,
+        `${import.meta.env.VITE_BACKEND_URL}/streaming/co-host-request`,
         {
           method: 'POST',
           headers: {
@@ -120,7 +120,7 @@ const CoHostManager = ({ streamId, isCreator, user, onCoHostsUpdate, onRequestsU
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streaming/co-host-accept`,
+        `${import.meta.env.VITE_BACKEND_URL}/streaming/co-host-accept`,
         {
           method: 'POST',
           headers: {
@@ -152,7 +152,7 @@ const CoHostManager = ({ streamId, isCreator, user, onCoHostsUpdate, onRequestsU
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streaming/co-host-reject`,
+        `${import.meta.env.VITE_BACKEND_URL}/streaming/co-host-reject`,
         {
           method: 'POST',
           headers: {
@@ -183,7 +183,7 @@ const CoHostManager = ({ streamId, isCreator, user, onCoHostsUpdate, onRequestsU
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streaming/co-host-remove`,
+        `${import.meta.env.VITE_BACKEND_URL}/streaming/co-host-remove`,
         {
           method: 'POST',
           headers: {

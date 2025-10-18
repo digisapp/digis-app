@@ -68,7 +68,7 @@ export const useExperiences = (user) => {
         headers = { 'Authorization': `Bearer ${authToken}` };
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/experiences`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/public/experiences`, {
         headers
       });
       
@@ -118,7 +118,7 @@ export const useExperiences = (user) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/experiences/${experienceId}/join`,
+        `${import.meta.env.VITE_BACKEND_URL}/experiences/${experienceId}/join`,
         {
           method: 'POST',
           headers: {
@@ -161,7 +161,7 @@ export const useExperiences = (user) => {
 
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/experiences`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/experiences`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -200,7 +200,7 @@ export const useExperiences = (user) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/experiences/${experienceId}/cancel`,
+        `${import.meta.env.VITE_BACKEND_URL}/experiences/${experienceId}/cancel`,
         {
           method: 'POST',
           headers: {

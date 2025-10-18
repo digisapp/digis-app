@@ -309,13 +309,13 @@ const MobileCreatorProfile = ({
           offersRes,
           ticketedShowsRes
         ] = await Promise.allSettled([
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/creator/${creatorId}?type=photo`, { headers }),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/creator/${creatorId}?type=video`, { headers }),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streams/recordings/${creatorId}`, { headers }),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/digitals/creator/${creatorId}`, { headers }),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/shop/items?creator_id=${creatorId}`, { headers }),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/offers/creator/${creatorId}`, { headers }),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/creator/${creatorId}`, { headers })
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/content/creator/${creatorId}?type=photo`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/content/creator/${creatorId}?type=video`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/streams/recordings/${creatorId}`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/digitals/creator/${creatorId}`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/shop/items?creator_id=${creatorId}`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/offers/creator/${creatorId}`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/ticketed-shows/creator/${creatorId}`, { headers })
         ]);
 
         // Process photos
@@ -575,7 +575,7 @@ const MobileCreatorProfile = ({
                 // Send call request to creator
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session) {
-                  const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/sessions/request-call`, {
+                  const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/sessions/request-call`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -728,7 +728,7 @@ const MobileCreatorProfile = ({
                 // Send call request to creator
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session) {
-                  const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/sessions/request-call`, {
+                  const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/sessions/request-call`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',

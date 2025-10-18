@@ -50,7 +50,7 @@ class AblyService {
       this.isConnecting = true;
 
       // Get auth token from backend (prevents API key exposure)
-      const authUrl = `${import.meta.env.VITE_BACKEND_URL}/api/ably-auth`;
+      const authUrl = `${import.meta.env.VITE_BACKEND_URL}/ably-auth`;
 
       // Get current user for clientId
       const token = await this.getAuthToken();

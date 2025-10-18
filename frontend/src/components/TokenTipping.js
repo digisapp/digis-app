@@ -79,7 +79,7 @@ const TokenTipping = ({ recipient: initialRecipient, onClose, onSuccess, userTok
         setSearching(true);
         try {
           const authToken = await getAuthToken();
-          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/search?q=${searchQuery}`, {
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/search?q=${searchQuery}`, {
             headers: {
               'Authorization': `Bearer ${authToken}`
             }
@@ -140,7 +140,7 @@ const TokenTipping = ({ recipient: initialRecipient, onClose, onSuccess, userTok
 
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tips/send`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tips/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

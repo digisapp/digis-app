@@ -95,19 +95,19 @@ const ShopManagementPage = ({ user }) => {
       // Fetch all data in parallel
       const [settingsRes, itemsRes, ordersRes, analyticsRes] = await Promise.all([
         fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/shop/settings`,
+          `${import.meta.env.VITE_BACKEND_URL}/shop/settings`,
           { headers: { Authorization: `Bearer ${authToken}` } }
         ),
         fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/shop/items/manage?includeInactive=true`,
+          `${import.meta.env.VITE_BACKEND_URL}/shop/items/manage?includeInactive=true`,
           { headers: { Authorization: `Bearer ${authToken}` } }
         ),
         fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/shop/orders?limit=50`,
+          `${import.meta.env.VITE_BACKEND_URL}/shop/orders?limit=50`,
           { headers: { Authorization: `Bearer ${authToken}` } }
         ),
         fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/shop/analytics`,
+          `${import.meta.env.VITE_BACKEND_URL}/shop/analytics`,
           { headers: { Authorization: `Bearer ${authToken}` } }
         )
       ]);
@@ -148,7 +148,7 @@ const ShopManagementPage = ({ user }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/live-shopping/creator/stream-analytics`,
+        `${import.meta.env.VITE_BACKEND_URL}/live-shopping/creator/stream-analytics`,
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
       
@@ -168,7 +168,7 @@ const ShopManagementPage = ({ user }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/settings`,
+        `${import.meta.env.VITE_BACKEND_URL}/shop/settings`,
         {
           method: 'PUT',
           headers: {
@@ -266,8 +266,8 @@ const ShopManagementPage = ({ user }) => {
       }
       
       const endpoint = editingProduct 
-        ? `${import.meta.env.VITE_BACKEND_URL}/api/shop/items/${editingProduct.id}`
-        : `${import.meta.env.VITE_BACKEND_URL}/api/shop/items`;
+        ? `${import.meta.env.VITE_BACKEND_URL}/shop/items/${editingProduct.id}`
+        : `${import.meta.env.VITE_BACKEND_URL}/shop/items`;
       
       const response = await fetchWithRetry(endpoint, {
         method: editingProduct ? 'PUT' : 'POST',
@@ -313,7 +313,7 @@ const ShopManagementPage = ({ user }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/items/${productId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/shop/items/${productId}`,
         {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${authToken}` }
@@ -334,7 +334,7 @@ const ShopManagementPage = ({ user }) => {
     try {
       const authToken = await getAuthToken();
       await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/orders/${orderId}/status`,
+        `${import.meta.env.VITE_BACKEND_URL}/shop/orders/${orderId}/status`,
         {
           method: 'PUT',
           headers: {

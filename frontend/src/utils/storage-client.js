@@ -61,7 +61,7 @@ class StorageClient {
     try {
       const token = await this.getAuthToken();
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/storage/${endpoint}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/storage/${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -151,7 +151,7 @@ class StorageClient {
     try {
       const token = await this.getAuthToken();
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/storage/signed-url`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/storage/signed-url`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -183,7 +183,7 @@ class StorageClient {
     try {
       const token = await this.getAuthToken();
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/storage/file`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/storage/file`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -212,7 +212,7 @@ class StorageClient {
       const params = new URLSearchParams(options);
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/storage/my-files/${bucket}?${params}`,
+        `${import.meta.env.VITE_BACKEND_URL}/storage/my-files/${bucket}?${params}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -238,7 +238,7 @@ class StorageClient {
     try {
       const token = await this.getAuthToken();
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/storage/usage`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/storage/usage`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -417,7 +417,7 @@ class StorageClient {
       });
       
       this.getAuthToken().then(token => {
-        xhr.open('POST', `${import.meta.env.VITE_BACKEND_URL}/api/storage/${endpoint}`);
+        xhr.open('POST', `${import.meta.env.VITE_BACKEND_URL}/storage/${endpoint}`);
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         xhr.send(formData);
       }).catch(reject);

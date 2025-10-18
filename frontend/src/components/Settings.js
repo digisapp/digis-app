@@ -64,7 +64,7 @@ const Settings = ({ user, onClose, onSettingsUpdate, onLogout }) => {
     const fetchSettings = async () => {
       try {
         const authToken = await getAuthToken();
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
           headers: {
             Authorization: `Bearer ${authToken}`,
           },
@@ -92,7 +92,7 @@ const Settings = ({ user, onClose, onSettingsUpdate, onLogout }) => {
 
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/settings/auto-refill`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/settings/auto-refill`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

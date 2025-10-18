@@ -39,7 +39,7 @@ const CreatorKYCVerification = ({ user, onVerificationComplete }) => {
 
   const checkVerificationStatus = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/kyc/status`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/kyc/status`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -70,7 +70,7 @@ const CreatorKYCVerification = ({ user, onVerificationComplete }) => {
     try {
       setLoading(true);
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/kyc/start-verification`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/kyc/start-verification`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -113,7 +113,7 @@ const CreatorKYCVerification = ({ user, onVerificationComplete }) => {
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/kyc/tax-form`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/kyc/tax-form`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -149,7 +149,7 @@ const CreatorKYCVerification = ({ user, onVerificationComplete }) => {
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/kyc/verify-address`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/kyc/verify-address`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

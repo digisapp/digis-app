@@ -27,7 +27,7 @@ const FanEngagement = ({ user, onCreatorSelect, tokenBalance }) => {
       setLoading(true);
       const authToken = await getAuthToken();
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/engagement`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/engagement`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
 
@@ -150,7 +150,7 @@ const FanEngagement = ({ user, onCreatorSelect, tokenBalance }) => {
   const toggleFavorite = async (creatorId) => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/favorite`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/favorite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -115,7 +115,7 @@ const VirtualGifts = ({
     try {
       const authToken = await getAuthToken();
       const data = await fetchJSONWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
+        `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`,
@@ -134,7 +134,7 @@ const VirtualGifts = ({
     try {
       const authToken = await getAuthToken();
       const data = await fetchJSONWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tokens/catalog`,
+        `${import.meta.env.VITE_BACKEND_URL}/tokens/catalog`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`,
@@ -203,7 +203,7 @@ const VirtualGifts = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/stream-features/gift`,
+        `${import.meta.env.VITE_BACKEND_URL}/stream-features/gift`,
         {
           method: 'POST',
           headers: {
@@ -285,7 +285,7 @@ const VirtualGifts = ({
       const tokenAmount = Math.ceil(amount / 0.05); // Convert USD to tokens ($0.05 per token)
       
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/stream-features/tip`,
+        `${import.meta.env.VITE_BACKEND_URL}/stream-features/tip`,
         {
           method: 'POST',
           headers: {

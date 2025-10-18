@@ -317,7 +317,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const fetchFn = useTimeout ? fetchWithTimeout : fetch;
       const response = await fetchFn(
-        `${import.meta.env.VITE_BACKEND_URL}/api/auth/session`,
+        `${import.meta.env.VITE_BACKEND_URL}/auth/session`,
         {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
@@ -406,7 +406,7 @@ export const AuthProvider = ({ children }) => {
       const userId = session.user.id || currentUser.id;
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${userId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${userId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -454,7 +454,7 @@ export const AuthProvider = ({ children }) => {
       const token = session?.access_token;
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
+        `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -757,7 +757,7 @@ export const AuthProvider = ({ children }) => {
                 const token = session.access_token;
 
                 const profileResponse = await fetch(
-                  `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${userId}`,
+                  `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${userId}`,
                   {
                     headers: {
                       Authorization: `Bearer ${token}`,

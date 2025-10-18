@@ -29,7 +29,7 @@ const Chat = ({ user, channel, isCreator, token, onLogin, onLogout }) => {
     if (!user || !channel) return;
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/agora/chat/messages/${channel}?limit=50`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/agora/chat/messages/${channel}?limit=50`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -443,7 +443,7 @@ const Chat = ({ user, channel, isCreator, token, onLogin, onLogout }) => {
 
       // Save message to backend
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/agora/chat/message`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/agora/chat/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -514,7 +514,7 @@ const Chat = ({ user, channel, isCreator, token, onLogin, onLogout }) => {
 
       // Save message to backend
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/agora/chat/message`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/agora/chat/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -574,7 +574,7 @@ const Chat = ({ user, channel, isCreator, token, onLogin, onLogout }) => {
 
       // Save message to backend
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/agora/chat/message`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/agora/chat/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

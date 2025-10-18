@@ -42,7 +42,7 @@ const MobileOptimizedAuth = ({ onLogin, mode = 'signin', onClose }) => {
         
         // Create user profile
         const token = await getAuthToken();
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/create-profile`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/create-profile`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',

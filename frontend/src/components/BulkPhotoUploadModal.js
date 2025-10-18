@@ -203,7 +203,7 @@ const BulkPhotoUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           }));
         });
 
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/upload-bundle`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/content/upload-bundle`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${authToken}`
@@ -268,7 +268,7 @@ const BulkPhotoUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             [file.id]: { status: 'uploading', progress: 0 }
           }));
 
-          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/upload`, {
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/content/upload`, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${authToken}`

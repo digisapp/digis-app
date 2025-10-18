@@ -125,7 +125,7 @@ const CreatorAvailabilitySystem = memo(({
   // Handle status change
   const handleStatusChange = useCallback(async (newStatus) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/availability`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/availability`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,7 +157,7 @@ const CreatorAvailabilitySystem = memo(({
     if (!user) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/creator-stats`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/creator-stats`, {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }

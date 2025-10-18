@@ -39,7 +39,7 @@ const VODPurchaseModal = ({
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/vod/purchase/${recording.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/vod/purchase/${recording.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

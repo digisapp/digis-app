@@ -101,7 +101,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       });
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications?${params}`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications?${params}`,
         {
           headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -131,7 +131,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/preferences`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/preferences`,
         {
           headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -156,7 +156,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/${notificationId}/read`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/${notificationId}/read`,
         {
           method: 'PUT',
           headers: {
@@ -188,7 +188,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/read-all`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/read-all`,
         {
           method: 'PUT',
           headers: {
@@ -216,7 +216,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/${notificationId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/${notificationId}`,
         {
           method: 'DELETE',
           headers: {
@@ -246,7 +246,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/preferences`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/preferences`,
         {
           method: 'PUT',
           headers: {

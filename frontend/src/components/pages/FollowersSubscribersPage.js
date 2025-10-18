@@ -50,7 +50,7 @@ const FollowersSubscribersPage = ({ user, isCreator, initialTab }) => {
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/creators/stats`,
+        `${import.meta.env.VITE_BACKEND_URL}/creators/stats`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -75,7 +75,7 @@ const FollowersSubscribersPage = ({ user, isCreator, initialTab }) => {
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/creators/followers`,
+        `${import.meta.env.VITE_BACKEND_URL}/creators/followers`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -102,7 +102,7 @@ const FollowersSubscribersPage = ({ user, isCreator, initialTab }) => {
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/creators/subscribers`,
+        `${import.meta.env.VITE_BACKEND_URL}/creators/subscribers`,
         {
           headers: {
             'Authorization': `Bearer ${token}`

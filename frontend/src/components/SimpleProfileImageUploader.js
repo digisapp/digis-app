@@ -72,7 +72,7 @@ const SimpleProfileImageUploader = ({
       cardFormData.append('type', 'card');
       
       const cardResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/upload-profile-image`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/upload-profile-image`,
         {
           method: 'POST',
           headers: {
@@ -95,7 +95,7 @@ const SimpleProfileImageUploader = ({
       avatarFormData.append('type', 'avatar');
       
       const avatarResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/upload-profile-image`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/upload-profile-image`,
         {
           method: 'POST',
           headers: {
@@ -119,7 +119,7 @@ const SimpleProfileImageUploader = ({
       };
       
       const updateResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile`,
         {
           method: 'POST',
           headers: {

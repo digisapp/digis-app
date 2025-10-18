@@ -57,7 +57,7 @@ const StreamAnalytics = forwardRef(({ channel, className = '' }, ref) => {
       try {
         const authToken = await getAuthToken();
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/stream-features/analytics/${channel}`,
+          `${import.meta.env.VITE_BACKEND_URL}/stream-features/analytics/${channel}`,
           {
             headers: {
               Authorization: `Bearer ${authToken}`

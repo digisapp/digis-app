@@ -53,16 +53,16 @@ const CreatorProtectionSystem = ({ user, isCreator = false }) => {
 
     try {
       const [settingsRes, blockedRes, reportsRes, warningsRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/protection-settings`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/users/protection-settings`, {
           headers: { 'Authorization': `Bearer ${await getAuthToken()}` }
         }),
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/blocked-users`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/users/blocked-users`, {
           headers: { 'Authorization': `Bearer ${await getAuthToken()}` }
         }),
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/reports`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/users/reports`, {
           headers: { 'Authorization': `Bearer ${await getAuthToken()}` }
         }),
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/warnings`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/users/warnings`, {
           headers: { 'Authorization': `Bearer ${await getAuthToken()}` }
         })
       ]);
@@ -93,7 +93,7 @@ const CreatorProtectionSystem = ({ user, isCreator = false }) => {
   // Update protection settings
   const updateProtectionSettings = async (newSettings) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/protection-settings`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/protection-settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ const CreatorProtectionSystem = ({ user, isCreator = false }) => {
   // Block user
   const blockUser = async (targetUserId, reason = '') => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/block-user`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/block-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -141,7 +141,7 @@ const CreatorProtectionSystem = ({ user, isCreator = false }) => {
   // Unblock user
   const unblockUser = async (targetUserId) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/unblock-user`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/unblock-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +168,7 @@ const CreatorProtectionSystem = ({ user, isCreator = false }) => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/report-user`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/report-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -202,7 +202,7 @@ const CreatorProtectionSystem = ({ user, isCreator = false }) => {
   // Give warning to user
   const giveWarning = async (targetUserId, reason) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/give-warning`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/give-warning`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -226,7 +226,7 @@ const CreatorProtectionSystem = ({ user, isCreator = false }) => {
   // Timeout user (temporary restriction)
   const timeoutUser = async (targetUserId, duration = 5) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/timeout-user`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/timeout-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -625,7 +625,7 @@ const CreatorProtectionSystem = ({ user, isCreator = false }) => {
 export const QuickBlockButton = ({ user, targetUserId, onSuccess }) => {
   const handleBlock = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/block-user`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/block-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -662,7 +662,7 @@ export const QuickReportButton = ({ user, targetUserId, onSuccess }) => {
     if (!reason) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/report-user`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/report-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

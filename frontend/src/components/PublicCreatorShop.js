@@ -60,7 +60,7 @@ const PublicCreatorShop = () => {
         // Fetch user's token balance
         const authToken = await getAuthToken();
         const response = await fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
+          `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
           {
             headers: { Authorization: `Bearer ${authToken}` }
           }
@@ -76,7 +76,7 @@ const PublicCreatorShop = () => {
   const fetchShopData = async () => {
     try {
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/public/${username}`
+        `${import.meta.env.VITE_BACKEND_URL}/shop/public/${username}`
       );
       
       if (!response.ok) {
@@ -175,7 +175,7 @@ const PublicCreatorShop = () => {
         : { 'Content-Type': 'application/json' };
       
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/checkout/stripe`,
+        `${import.meta.env.VITE_BACKEND_URL}/shop/checkout/stripe`,
         {
           method: 'POST',
           headers,
@@ -236,7 +236,7 @@ const PublicCreatorShop = () => {
         if (!item.price_tokens) continue;
         
         await fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/shop/checkout/tokens`,
+          `${import.meta.env.VITE_BACKEND_URL}/shop/checkout/tokens`,
           {
             method: 'POST',
             headers: {

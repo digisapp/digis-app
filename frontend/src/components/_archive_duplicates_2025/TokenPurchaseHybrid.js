@@ -113,7 +113,7 @@ const CheckoutForm = ({
       console.log('💳 Payment method created:', paymentMethod.id);
 
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/purchase`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -475,7 +475,7 @@ const TokenPurchase = ({ user: propUser, onSuccess, onClose, isModal = false }) 
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/search?q=${encodeURIComponent(query)}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/search?q=${encodeURIComponent(query)}`,
         {
           headers: { 'Authorization': `Bearer ${authToken}` }
         }

@@ -192,7 +192,7 @@ const EnhancedNotificationBox = ({ isOpen, onClose, anchorElement }) => {
       }
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications?limit=50`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications?limit=50`,
         {
           headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -235,7 +235,7 @@ const EnhancedNotificationBox = ({ isOpen, onClose, anchorElement }) => {
     try {
       const authToken = await getAuthToken();
       await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/${notificationId}/read`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/${notificationId}/read`,
         {
           method: 'PUT',
           headers: {
@@ -260,7 +260,7 @@ const EnhancedNotificationBox = ({ isOpen, onClose, anchorElement }) => {
     try {
       const authToken = await getAuthToken();
       await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/read-all`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/read-all`,
         {
           method: 'PUT',
           headers: {

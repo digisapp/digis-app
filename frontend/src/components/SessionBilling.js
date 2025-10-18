@@ -151,7 +151,7 @@ const SessionBilling = ({ user, sessionId, onPaymentSuccess, onClose }) => {
       try {
         const token = await getAuthToken();
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/users/session/${sessionId}/billing`,
+          `${import.meta.env.VITE_BACKEND_URL}/users/session/${sessionId}/billing`,
           {
             headers: {
               'Authorization': `Bearer ${token}`

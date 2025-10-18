@@ -43,7 +43,7 @@ export const useWalletBalance = (user, websocket = null) => {
 
       const token = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
+        `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
         {
           headers: {
             'Authorization': `Bearer ${token}`

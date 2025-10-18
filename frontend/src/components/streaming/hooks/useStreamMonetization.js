@@ -31,7 +31,7 @@ export const useStreamMonetization = (streamId, user) => {
   const processTip = useCallback(async (amount, message, sender) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/tip`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/tip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +77,7 @@ export const useStreamMonetization = (streamId, user) => {
   const processGift = useCallback(async (gift, sender) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/gift`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/gift`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ export const useStreamMonetization = (streamId, user) => {
   const processSubscription = useCallback(async (tier, subscriber) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/subscribe`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -208,7 +208,7 @@ export const useStreamMonetization = (streamId, user) => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/streaming/earnings/${streamId}`,
+          `${import.meta.env.VITE_BACKEND_URL}/streaming/earnings/${streamId}`,
           {
             headers: {
               'Authorization': `Bearer ${session?.access_token}`

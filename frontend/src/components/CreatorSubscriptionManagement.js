@@ -67,7 +67,7 @@ const CreatorSubscriptionManagement = ({ user, isCreator }) => {
       
       // Load subscription plans
       const plansResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/creator/${user.id || user.uid}/plans`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/creator/${user.id || user.uid}/plans`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -82,7 +82,7 @@ const CreatorSubscriptionManagement = ({ user, isCreator }) => {
 
       // Load subscribers
       const subscribersResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/my-subscribers`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/my-subscribers`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -136,7 +136,7 @@ const CreatorSubscriptionManagement = ({ user, isCreator }) => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/plans`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/plans`,
         {
           method: 'POST',
           headers: {
@@ -184,7 +184,7 @@ const CreatorSubscriptionManagement = ({ user, isCreator }) => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/plans/${selectedPlan.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/plans/${selectedPlan.id}`,
         {
           method: 'PUT',
           headers: {
@@ -225,7 +225,7 @@ const CreatorSubscriptionManagement = ({ user, isCreator }) => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/plans/${plan.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/plans/${plan.id}`,
         {
           method: 'PUT',
           headers: {

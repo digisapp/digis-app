@@ -91,7 +91,7 @@ const AppContent = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseToken = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         headers: {
           Authorization: `Bearer ${supabaseToken}`,
         },
@@ -114,7 +114,7 @@ const AppContent = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseToken = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/balance`, {
         headers: {
           Authorization: `Bearer ${supabaseToken}`,
         },
@@ -354,7 +354,7 @@ const AppContent = () => {
   // Handle accepting incoming call
   const handleAcceptCall = useCallback(async (callRequest) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/sessions/call-response`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/sessions/call-response`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -402,7 +402,7 @@ const AppContent = () => {
   // Handle declining incoming call
   const handleDeclineCall = useCallback(async (callRequest) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/sessions/call-response`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/sessions/call-response`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

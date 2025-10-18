@@ -163,7 +163,7 @@ const CreatorCard = ({
     
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/follow`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/follow`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

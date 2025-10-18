@@ -25,7 +25,7 @@ export const useUsername = (user) => {
       try {
         const token = await getAuthToken();
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${user.id}`,
+          `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${user.id}`,
           {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -65,7 +65,7 @@ export const fetchUsernameById = async (userId, authToken) => {
 
   try {
     const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${userId}`,
+      `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${userId}`,
       {
         headers: {
           'Authorization': `Bearer ${authToken}`

@@ -195,7 +195,7 @@ const ConnectPage = ({ user, isCreator }) => {
         headers = { 'Authorization': `Bearer ${authToken}` };
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/collaborations`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/public/collaborations`, {
         headers
       });
       
@@ -240,7 +240,7 @@ const ConnectPage = ({ user, isCreator }) => {
         headers = { 'Authorization': `Bearer ${authToken}` };
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/experiences`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/public/experiences`, {
         headers
       });
       
@@ -286,7 +286,7 @@ const ConnectPage = ({ user, isCreator }) => {
       const authToken = await getAuthToken();
       
       // Send application
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/collaborations/${collab.id}/apply`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/collaborations/${collab.id}/apply`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -316,7 +316,7 @@ const ConnectPage = ({ user, isCreator }) => {
     try {
       const authToken = await getAuthToken();
       
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/messages`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -345,7 +345,7 @@ const ConnectPage = ({ user, isCreator }) => {
     try {
       const authToken = await getAuthToken();
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/collaborations`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/collaborations`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,

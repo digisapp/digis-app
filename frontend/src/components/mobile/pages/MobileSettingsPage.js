@@ -25,7 +25,7 @@ const MobileSettingsPage = memo(({ user, navigateTo }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session');
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/update-profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/update-profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

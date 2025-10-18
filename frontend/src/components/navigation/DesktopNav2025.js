@@ -151,7 +151,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
 
           if (session?.access_token) {
             const response = await fetch(
-              `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
+              `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
               {
                 headers: {
                   Authorization: `Bearer ${session.access_token}`,

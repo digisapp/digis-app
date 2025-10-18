@@ -238,7 +238,7 @@ const EnhancedContentGallery = ({
         });
       }, 200);
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/content/upload`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/content/upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${authToken}`

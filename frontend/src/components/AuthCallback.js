@@ -21,7 +21,7 @@ const AuthCallback = () => {
 
         if (session) {
           // Sync user with backend
-          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/sync-user`, {
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/sync-user`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

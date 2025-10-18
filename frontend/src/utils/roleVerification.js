@@ -42,7 +42,7 @@ export async function verifyUserRole(forceRefresh = false) {
 
     // Verify role with backend
     const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/api/auth/verify-role`,
+      `${import.meta.env.VITE_BACKEND_URL}/auth/verify-role`,
       {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -168,7 +168,7 @@ export async function syncUserRole() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/auth/clear-role-cache`,
+          `${import.meta.env.VITE_BACKEND_URL}/auth/clear-role-cache`,
           {
             method: 'POST',
             headers: {

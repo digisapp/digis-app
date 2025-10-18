@@ -31,7 +31,7 @@ const CreatorSelectionPopup = ({ isOpen, onClose, callType, onCreatorSelect }) =
     setLoading(true);
     try {
       const token = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/available`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/available`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -126,7 +126,7 @@ const CreatorSelectionPopup = ({ isOpen, onClose, callType, onCreatorSelect }) =
     try {
       // Notify the creator about the incoming call
       const token = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calls/request`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/calls/request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

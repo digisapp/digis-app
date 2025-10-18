@@ -42,7 +42,7 @@ const CreatorSingleSubscription = ({
 
       // Check if already subscribed
       const checkResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/check/${creatorId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/check/${creatorId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -57,7 +57,7 @@ const CreatorSingleSubscription = ({
 
       // Get creator's subscription price
       const priceResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/creator/${creatorId}/price`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/creator/${creatorId}/price`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -93,7 +93,7 @@ const CreatorSingleSubscription = ({
       const token = session?.access_token;
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscriptions/subscribe`,
+        `${import.meta.env.VITE_BACKEND_URL}/subscriptions/subscribe`,
         {
           method: 'POST',
           headers: {

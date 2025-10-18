@@ -206,7 +206,7 @@ const NotificationSystem = ({ user, isVisible = true }) => {
   // Fetch notifications from backend
   const fetchNotifications = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/notifications`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/notifications`, {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
@@ -239,7 +239,7 @@ const NotificationSystem = ({ user, isVisible = true }) => {
   // Mark notification as read
   const markAsRead = async (notificationId) => {
     try {
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/notifications/${notificationId}/read`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/notifications/${notificationId}/read`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
@@ -262,7 +262,7 @@ const NotificationSystem = ({ user, isVisible = true }) => {
   // Mark all as read
   const markAllAsRead = async () => {
     try {
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/notifications/mark-all-read`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/notifications/mark-all-read`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
@@ -633,7 +633,7 @@ export const useNotifications = (user) => {
     try {
       const token = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/send-notification`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/send-notification`,
         {
           method: 'POST',
           headers: {

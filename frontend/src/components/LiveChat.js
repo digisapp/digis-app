@@ -198,7 +198,7 @@ const LiveChat = ({
         const rtmUserId = user.id || user.supabase_id || `user_${Date.now()}`;
         
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/agora/rtm-token?uid=${rtmUserId}`,
+          `${import.meta.env.VITE_BACKEND_URL}/agora/rtm-token?uid=${rtmUserId}`,
           {
             headers: {
               Authorization: `Bearer ${authToken}`,

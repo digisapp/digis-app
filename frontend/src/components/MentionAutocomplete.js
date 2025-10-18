@@ -30,7 +30,7 @@ const MentionAutocomplete = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/search-by-username?q=${encodeURIComponent(term)}&limit=${maxResults}${channelId ? `&channel=${channelId}` : ''}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/search-by-username?q=${encodeURIComponent(term)}&limit=${maxResults}${channelId ? `&channel=${channelId}` : ''}`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`

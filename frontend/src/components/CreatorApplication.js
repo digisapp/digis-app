@@ -89,7 +89,7 @@ const CreatorApplication = ({ onClose, onSuccess }) => {
       }
 
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/apply-creator`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/apply-creator`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -21,10 +21,10 @@ const FollowingSystem = memo(({ user, onCreatorSelect }) => {
       const authToken = await getAuthToken();
       
       const [followingResponse, activityResponse] = await Promise.all([
-        fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/api/users/following`, {
+        fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/users/following`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         }),
-        fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/api/users/following/activity`, {
+        fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/users/following/activity`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         })
       ]);
@@ -121,7 +121,7 @@ const FollowingSystem = memo(({ user, onCreatorSelect }) => {
   const handleUnfollow = async (creatorId) => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/api/users/unfollow`, {
+      const response = await fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/users/unfollow`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

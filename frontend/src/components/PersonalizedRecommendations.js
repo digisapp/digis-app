@@ -33,7 +33,7 @@ const PersonalizedRecommendations = ({ user, onCreatorSelect, onTipCreator, onSt
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/preferences`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/preferences`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -58,7 +58,7 @@ const PersonalizedRecommendations = ({ user, onCreatorSelect, onTipCreator, onSt
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/recommendations`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/recommendations`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

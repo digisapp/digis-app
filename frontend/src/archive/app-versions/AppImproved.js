@@ -177,7 +177,7 @@ const App = () => {
       }
 
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${currentUser.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${currentUser.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -219,7 +219,7 @@ const App = () => {
       }
 
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`,
+        `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

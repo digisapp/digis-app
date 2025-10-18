@@ -38,7 +38,7 @@ const LivePoll = ({ user, channel, onClose, isHost }) => {
     setLoading(true);
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/polls/create`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/polls/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ const LivePoll = ({ user, channel, onClose, isHost }) => {
     setLoading(true);
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/polls/vote`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/polls/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ const LivePoll = ({ user, channel, onClose, isHost }) => {
   const endPoll = async () => {
     try {
       const authToken = await getAuthToken();
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/polls/end`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/polls/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -373,7 +373,7 @@ const QuestionsQueue = ({ user, channel, onClose, isHost }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/questions/${channel}`,
+        `${import.meta.env.VITE_BACKEND_URL}/questions/${channel}`,
         {
           headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -399,7 +399,7 @@ const QuestionsQueue = ({ user, channel, onClose, isHost }) => {
     setLoading(true);
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/questions/submit`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/questions/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -430,7 +430,7 @@ const QuestionsQueue = ({ user, channel, onClose, isHost }) => {
   const answerQuestion = async (questionId) => {
     try {
       const authToken = await getAuthToken();
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/questions/answer`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/questions/answer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -449,7 +449,7 @@ const QuestionsQueue = ({ user, channel, onClose, isHost }) => {
   const prioritizeQuestion = async (questionId, priority) => {
     try {
       const authToken = await getAuthToken();
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/questions/prioritize`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/questions/prioritize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

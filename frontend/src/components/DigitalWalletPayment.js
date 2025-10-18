@@ -104,7 +104,7 @@ const DigitalWalletPayment = ({
   const handleApplePayValidation = async (validationURL) => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payments/apple-pay-validate`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/payments/apple-pay-validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,7 +130,7 @@ const DigitalWalletPayment = ({
   const handleApplePayAuthorization = async (payment) => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/purchase-apple-pay`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/purchase-apple-pay`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -203,7 +203,7 @@ const DigitalWalletPayment = ({
   const handleGooglePayAuthorization = async (paymentData) => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/purchase-google-pay`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/purchase-google-pay`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

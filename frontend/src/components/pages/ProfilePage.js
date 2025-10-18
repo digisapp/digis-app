@@ -47,7 +47,7 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${user.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${user.id}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -72,7 +72,7 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
     setSettingsSaving(true);
     try {
       const token = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -21,7 +21,7 @@ const CollectibleCardsMarketplace = ({ user, tokenBalance, onTokenUpdate }) => {
   const fetchCreators = async () => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
 
@@ -47,7 +47,7 @@ const CollectibleCardsMarketplace = ({ user, tokenBalance, onTokenUpdate }) => {
     try {
       setLoading(true);
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/cards/available`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/cards/available`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
 
@@ -114,7 +114,7 @@ const CollectibleCardsMarketplace = ({ user, tokenBalance, onTokenUpdate }) => {
     try {
       setPurchasing(card.id);
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/cards/purchase`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/cards/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

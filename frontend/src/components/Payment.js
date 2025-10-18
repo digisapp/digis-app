@@ -64,7 +64,7 @@ const CheckoutForm = ({ user, amount, isTip, sessionId, creatorId, onSuccess }) 
 
       // Call backend to create payment
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payments/create-payment`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/payments/create-payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

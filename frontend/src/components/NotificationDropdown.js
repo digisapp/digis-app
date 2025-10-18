@@ -101,7 +101,7 @@ const NotificationDropdown = ({ isOpen, onClose, anchorRef }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications?limit=20&offset=0`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications?limit=20&offset=0`,
         {
           headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -135,7 +135,7 @@ const NotificationDropdown = ({ isOpen, onClose, anchorRef }) => {
     try {
       const authToken = await getAuthToken();
       await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/${notificationId}/read`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/${notificationId}/read`,
         {
           method: 'PUT',
           headers: {

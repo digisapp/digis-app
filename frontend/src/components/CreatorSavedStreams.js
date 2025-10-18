@@ -33,7 +33,7 @@ const CreatorSavedStreams = ({
   const fetchSavedStreams = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streams/creator/${creatorId}`
+        `${import.meta.env.VITE_BACKEND_URL}/streams/creator/${creatorId}`
       );
       
       if (response.ok) {
@@ -69,7 +69,7 @@ const CreatorSavedStreams = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streams/${streamId}/purchase-status`,
+        `${import.meta.env.VITE_BACKEND_URL}/streams/${streamId}/purchase-status`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`,
@@ -93,7 +93,7 @@ const CreatorSavedStreams = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streams/${selectedStream.id}/purchase`,
+        `${import.meta.env.VITE_BACKEND_URL}/streams/${selectedStream.id}/purchase`,
         {
           method: 'POST',
           headers: {
@@ -123,7 +123,7 @@ const CreatorSavedStreams = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streams/${streamId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/streams/${streamId}`,
         {
           method: 'DELETE',
           headers: {

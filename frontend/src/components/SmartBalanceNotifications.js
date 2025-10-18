@@ -49,7 +49,7 @@ const SmartBalanceNotifications = ({
     
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/notification-settings`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/notification-settings`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
 
@@ -67,7 +67,7 @@ const SmartBalanceNotifications = ({
     
     try {
       const authToken = await getAuthToken();
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/notification-settings`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/notification-settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

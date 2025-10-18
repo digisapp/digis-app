@@ -61,7 +61,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/wallet`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/wallet`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
 
@@ -80,7 +80,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payments/withdrawal-settings`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/payments/withdrawal-settings`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
 
@@ -109,7 +109,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
         updates.reservedBalance = newReservedBalance;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payments/withdrawal-settings`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/payments/withdrawal-settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +171,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
     try {
       setPayoutsLoading(true);
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stripe/payouts`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/stripe/payouts`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
 
@@ -190,7 +190,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
     try {
       setIntentLoading(true);
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creator-payouts/intent`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creator-payouts/intent`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
 
@@ -209,7 +209,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
     try {
       setReleasingFunds(true);
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creator-payouts/intent`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creator-payouts/intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,7 +237,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
     try {
       setReleasingFunds(true);
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creator-payouts/intent`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creator-payouts/intent`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
@@ -275,7 +275,7 @@ const PayoutSettings = memo(({ user, tokenBalance = 0 }) => {
   const handleStripeSetup = async () => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stripe/account-link`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/stripe/account-link`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

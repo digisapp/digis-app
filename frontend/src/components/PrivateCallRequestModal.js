@@ -65,7 +65,7 @@ const PrivateCallRequestModal = ({
 
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/private-call-request`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/private-call-request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

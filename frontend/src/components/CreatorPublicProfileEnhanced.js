@@ -390,7 +390,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/creator/${creator.id}/preference`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/creator/${creator.id}/preference`,
         {
           headers: {
             'Authorization': `Bearer ${authToken}`
@@ -419,7 +419,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications/creator/${creator.id}/toggle`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications/creator/${creator.id}/toggle`,
         {
           method: 'POST',
           headers: {
@@ -761,7 +761,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
       try {
         const token = await getAuthToken();
         // Backend authenticates via JWT token, no need to pass user ID in URL
-        const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`;
+        const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`;
         console.log('CreatorPublicProfileEnhanced - Fetching from:', apiUrl);
 
         const response = await fetch(apiUrl, {
@@ -880,7 +880,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/recording/recordings/${recording.id}/purchase`,
+        `${import.meta.env.VITE_BACKEND_URL}/recording/recordings/${recording.id}/purchase`,
         {
           method: 'POST',
           headers: {
@@ -1049,7 +1049,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
       try {
         const authToken = await getAuthToken();
         const response = await fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/shop/cart/add`,
+          `${import.meta.env.VITE_BACKEND_URL}/shop/cart/add`,
           {
             method: 'POST',
             headers: {
@@ -1090,7 +1090,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
       // Call API to purchase stream access
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/streaming/purchase-access`,
+        `${import.meta.env.VITE_BACKEND_URL}/streaming/purchase-access`,
         {
           method: 'POST',
           headers: {

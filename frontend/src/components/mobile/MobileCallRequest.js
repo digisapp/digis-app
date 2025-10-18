@@ -35,7 +35,7 @@ const MobileCallRequest = ({
       try {
         const token = await getAuthToken();
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/creators/${recipient.id}/rates`,
+          `${import.meta.env.VITE_BACKEND_URL}/creators/${recipient.id}/rates`,
           {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -82,7 +82,7 @@ const MobileCallRequest = ({
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/calls/request`,
+        `${import.meta.env.VITE_BACKEND_URL}/calls/request`,
         {
           method: 'POST',
           headers: {

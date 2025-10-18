@@ -301,7 +301,7 @@ const Auth = ({ mode: initialMode = 'signin', onModeSwitch, onLogin }) => {
     
     setCheckingUsername(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-username/${usernameToCheck}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/check-username/${usernameToCheck}`);
       const data = await response.json();
       setUsernameAvailable(data.available);
     } catch (error) {

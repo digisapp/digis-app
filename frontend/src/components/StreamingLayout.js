@@ -393,7 +393,7 @@ const StreamingLayout = ({
     try {
       // Here you would call your backend API to block the user
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/block`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/block`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -421,7 +421,7 @@ const StreamingLayout = ({
   const handleSaveStream = async (saveData) => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streams/save`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streams/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

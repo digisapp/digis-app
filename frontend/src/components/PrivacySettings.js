@@ -31,13 +31,13 @@ const PrivacySettings = ({ user, onClose }) => {
       
       // Load all privacy data in parallel
       const [settingsRes, blockedRes, activityRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/privacy/settings`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/privacy/settings`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         }),
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/privacy/blocked`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/privacy/blocked`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         }),
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/privacy/activity?limit=10`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/privacy/activity?limit=10`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         })
       ]);
@@ -79,7 +79,7 @@ const PrivacySettings = ({ user, onClose }) => {
     try {
       const authToken = await getAuthToken();
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/privacy/settings`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/privacy/settings`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -103,7 +103,7 @@ const PrivacySettings = ({ user, onClose }) => {
     try {
       const authToken = await getAuthToken();
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/privacy/unblock`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/privacy/unblock`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -125,7 +125,7 @@ const PrivacySettings = ({ user, onClose }) => {
       const authToken = await getAuthToken();
       const endpoint = twoFactorEnabled ? 'disable' : 'enable';
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/privacy/2fa/${endpoint}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/privacy/2fa/${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,

@@ -435,8 +435,8 @@ const CreatorShopSection = ({
       }
       
       const endpoint = editingProduct 
-        ? `${import.meta.env.VITE_BACKEND_URL}/api/shop/items/${editingProduct.id}`
-        : `${import.meta.env.VITE_BACKEND_URL}/api/shop/items`;
+        ? `${import.meta.env.VITE_BACKEND_URL}/shop/items/${editingProduct.id}`
+        : `${import.meta.env.VITE_BACKEND_URL}/shop/items`;
       
       const response = await fetchWithRetry(endpoint, {
         method: editingProduct ? 'PUT' : 'POST',

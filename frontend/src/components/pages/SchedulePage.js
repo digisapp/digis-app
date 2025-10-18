@@ -59,7 +59,7 @@ const SchedulePage = ({ user, isCreator = false }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/sessions/requests?status=pending`,
+        `${import.meta.env.VITE_BACKEND_URL}/sessions/requests?status=pending`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -81,7 +81,7 @@ const SchedulePage = ({ user, isCreator = false }) => {
       
       // Fetch calendar events from the new endpoint
       const calendarResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/schedule/calendar-events/${user?.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/schedule/calendar-events/${user?.id}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -89,7 +89,7 @@ const SchedulePage = ({ user, isCreator = false }) => {
       
       // Fetch regular events (calls, etc.)
       const eventsResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/schedule/${user?.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/schedule/${user?.id}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -139,7 +139,7 @@ const SchedulePage = ({ user, isCreator = false }) => {
       
       // Fetch enrolled classes
       const classesResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/classes/enrolled/${user?.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/classes/enrolled/${user?.id}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -168,7 +168,7 @@ const SchedulePage = ({ user, isCreator = false }) => {
       // If user is a creator, also fetch classes they're hosting
       if (isCreator) {
         const hostingResponse = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/classes/hosting/${user?.id}`,
+          `${import.meta.env.VITE_BACKEND_URL}/classes/hosting/${user?.id}`,
           {
             headers: { Authorization: `Bearer ${authToken}` }
           }
@@ -226,7 +226,7 @@ const SchedulePage = ({ user, isCreator = false }) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/schedule/event/${eventId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/schedule/event/${eventId}`,
         {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${authToken}` }

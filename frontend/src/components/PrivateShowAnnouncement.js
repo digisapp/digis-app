@@ -80,7 +80,7 @@ const PrivateShowAnnouncement = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/stream/${streamId}/active`,
+        `${import.meta.env.VITE_BACKEND_URL}/ticketed-shows/stream/${streamId}/active`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`
@@ -102,7 +102,7 @@ const PrivateShowAnnouncement = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/${showId}/details`,
+        `${import.meta.env.VITE_BACKEND_URL}/ticketed-shows/${showId}/details`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`
@@ -130,7 +130,7 @@ const PrivateShowAnnouncement = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/${showId}/analytics`,
+        `${import.meta.env.VITE_BACKEND_URL}/ticketed-shows/${showId}/analytics`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`
@@ -168,7 +168,7 @@ const PrivateShowAnnouncement = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/announce`,
+        `${import.meta.env.VITE_BACKEND_URL}/ticketed-shows/announce`,
         {
           method: 'POST',
           headers: {
@@ -210,7 +210,7 @@ const PrivateShowAnnouncement = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/start`,
+        `${import.meta.env.VITE_BACKEND_URL}/ticketed-shows/start`,
         {
           method: 'POST',
           headers: {
@@ -245,7 +245,7 @@ const PrivateShowAnnouncement = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/end`,
+        `${import.meta.env.VITE_BACKEND_URL}/ticketed-shows/end`,
         {
           method: 'POST',
           headers: {
@@ -281,7 +281,7 @@ const PrivateShowAnnouncement = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/ticketed-shows/buy-ticket`,
+        `${import.meta.env.VITE_BACKEND_URL}/ticketed-shows/buy-ticket`,
         {
           method: 'POST',
           headers: {

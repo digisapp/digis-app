@@ -71,7 +71,7 @@ const MobileTokenPurchase = ({ isOpen, onClose, user, onPurchaseSuccess }) => {
             amount: parseFloat(customAmount) * 100 // Convert to cents
           };
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payments/create-checkout`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/payments/create-checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

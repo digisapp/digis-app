@@ -224,7 +224,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
       const data = await fetchWithCache('wallet', async () => {
         const { data: { session } } = await supabase.auth.getSession();
         const authToken = session?.access_token;
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/wallet`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/wallet`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
         if (response.ok) {
@@ -249,7 +249,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
         const { data: { session } } = await supabase.auth.getSession();
         const authToken = session?.access_token;
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/earnings/analytics?period=${dateRange}`,
+          `${import.meta.env.VITE_BACKEND_URL}/earnings/analytics?period=${dateRange}`,
           { headers: { 'Authorization': `Bearer ${authToken}` } }
         );
         

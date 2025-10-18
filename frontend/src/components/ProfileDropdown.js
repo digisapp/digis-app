@@ -128,7 +128,7 @@ const ProfileDropdown = ({
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/creators/stats`,
+        `${import.meta.env.VITE_BACKEND_URL}/creators/stats`,
         {
           headers: {
             'Authorization': `Bearer ${token}`

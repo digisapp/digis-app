@@ -34,7 +34,7 @@ const SmartUpgradePrompt = ({
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/analytics/upgrade-suggestion/${user.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/analytics/upgrade-suggestion/${user.id}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }

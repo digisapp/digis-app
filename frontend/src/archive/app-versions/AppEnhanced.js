@@ -80,7 +80,7 @@ const AppEnhanced = () => {
     if (!user) return;
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${user.access_token}`
         }
@@ -103,7 +103,7 @@ const AppEnhanced = () => {
     if (!user) return;
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/balance`, {
         headers: {
           'Authorization': `Bearer ${user.access_token}`
         }

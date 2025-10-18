@@ -24,7 +24,7 @@ const NotificationBell = () => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/notifications?limit=1&unread_only=true`,
+        `${import.meta.env.VITE_BACKEND_URL}/notifications?limit=1&unread_only=true`,
         {
           headers: {
             'Authorization': `Bearer ${authToken}`,

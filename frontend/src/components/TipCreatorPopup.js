@@ -36,7 +36,7 @@ const TipCreatorPopup = ({ isOpen, onClose, userTokenBalance, onTipSent }) => {
     setLoading(true);
     try {
       const token = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/directory`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/directory`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -144,7 +144,7 @@ const TipCreatorPopup = ({ isOpen, onClose, userTokenBalance, onTipSent }) => {
 
     try {
       const token = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tips/send`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tips/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

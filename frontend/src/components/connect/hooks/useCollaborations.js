@@ -72,7 +72,7 @@ export const useCollaborations = (user) => {
         headers = { 'Authorization': `Bearer ${authToken}` };
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/collaborations`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/public/collaborations`, {
         headers
       });
       
@@ -123,7 +123,7 @@ export const useCollaborations = (user) => {
 
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/collaborations`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/collaborations`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -162,7 +162,7 @@ export const useCollaborations = (user) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/collaborations/${collaborationId}/apply`,
+        `${import.meta.env.VITE_BACKEND_URL}/collaborations/${collaborationId}/apply`,
         {
           method: 'POST',
           headers: {
@@ -207,7 +207,7 @@ export const useCollaborations = (user) => {
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/collaborations/${collaborationId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/collaborations/${collaborationId}`,
         {
           method: 'DELETE',
           headers: {

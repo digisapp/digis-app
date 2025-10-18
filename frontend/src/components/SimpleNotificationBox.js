@@ -68,7 +68,7 @@ const SimpleNotificationBox = ({ isOpen, onClose, anchorElement }) => {
         }
         
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/notifications?limit=20`,
+          `${import.meta.env.VITE_BACKEND_URL}/notifications?limit=20`,
           {
             headers: {
               'Authorization': `Bearer ${session.access_token}`,

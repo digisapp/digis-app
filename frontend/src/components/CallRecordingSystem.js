@@ -49,7 +49,7 @@ const CallRecordingSystem = ({ user, isCreator = false }) => {
     if (!user) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/recordings`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/recordings`, {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
@@ -143,7 +143,7 @@ const CallRecordingSystem = ({ user, isCreator = false }) => {
     formData.append('sessionType', sessionType);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/upload-recording`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/upload-recording`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
@@ -212,7 +212,7 @@ const CallRecordingSystem = ({ user, isCreator = false }) => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/recordings/${recordingId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/recordings/${recordingId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
@@ -670,7 +670,7 @@ export const useCallRecording = (user) => {
         formData.append('sessionId', sessionId);
         formData.append('sessionType', sessionType);
 
-        await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/upload-recording`, {
+        await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/upload-recording`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${await getAuthToken()}`

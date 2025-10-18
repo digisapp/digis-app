@@ -93,7 +93,7 @@ const CreatorShopManagement = ({
       
       // Check settings first
       const settingsRes = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/settings`,
+        `${import.meta.env.VITE_BACKEND_URL}/shop/settings`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -127,15 +127,15 @@ const CreatorShopManagement = ({
       // Fetch all data in parallel
       const [itemsRes, ordersRes, analyticsRes] = await Promise.all([
         fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/shop/items/manage?includeInactive=true`,
+          `${import.meta.env.VITE_BACKEND_URL}/shop/items/manage?includeInactive=true`,
           { headers: { Authorization: `Bearer ${authToken}` } }
         ),
         fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/shop/orders?limit=20`,
+          `${import.meta.env.VITE_BACKEND_URL}/shop/orders?limit=20`,
           { headers: { Authorization: `Bearer ${authToken}` } }
         ),
         fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/shop/analytics`,
+          `${import.meta.env.VITE_BACKEND_URL}/shop/analytics`,
           { headers: { Authorization: `Bearer ${authToken}` } }
         )
       ]);
@@ -164,7 +164,7 @@ const CreatorShopManagement = ({
     try {
       const authToken = await getAuthToken();
       const res = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/initialize`,
+        `${import.meta.env.VITE_BACKEND_URL}/shop/initialize`,
         {
           method: 'POST',
           headers: {
@@ -192,7 +192,7 @@ const CreatorShopManagement = ({
       const newStatus = !shopEnabled;
       
       await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/settings`,
+        `${import.meta.env.VITE_BACKEND_URL}/shop/settings`,
         {
           method: 'PUT',
           headers: {
@@ -219,7 +219,7 @@ const CreatorShopManagement = ({
     try {
       const authToken = await getAuthToken();
       await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/items/${itemId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/shop/items/${itemId}`,
         {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${authToken}` }
@@ -238,7 +238,7 @@ const CreatorShopManagement = ({
     try {
       const authToken = await getAuthToken();
       await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/shop/orders/${orderId}/status`,
+        `${import.meta.env.VITE_BACKEND_URL}/shop/orders/${orderId}/status`,
         {
           method: 'PUT',
           headers: {
@@ -977,8 +977,8 @@ export const ItemModal = ({ item, onClose, onSuccess }) => {
       }
       
       const endpoint = item 
-        ? `${import.meta.env.VITE_BACKEND_URL}/api/shop/items/${item.id}`
-        : `${import.meta.env.VITE_BACKEND_URL}/api/shop/items`;
+        ? `${import.meta.env.VITE_BACKEND_URL}/shop/items/${item.id}`
+        : `${import.meta.env.VITE_BACKEND_URL}/shop/items`;
       
       const response = await fetchWithRetry(endpoint, {
         method: item ? 'PUT' : 'POST',

@@ -167,7 +167,7 @@ const CreatorToolsQuickAccess = ({ user, onShowAvailability, onShowGoLive, onSho
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile?uid=${user.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${user.id}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -193,7 +193,7 @@ const CreatorToolsQuickAccess = ({ user, onShowAvailability, onShowGoLive, onSho
     setSavingPrices(true);
     try {
       const token = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

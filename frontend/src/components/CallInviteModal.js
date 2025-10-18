@@ -87,7 +87,7 @@ const CallInviteModal = memo(({
       }
       
       // Replace with actual API call when endpoint is ready
-      // const response = await fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/api/users/search`, {
+      // const response = await fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/users/search`, {
       //   method: 'POST',
       //   headers: {
       //     'Content-Type': 'application/json',
@@ -174,7 +174,7 @@ const CallInviteModal = memo(({
       }
 
       // API call with retry logic
-      const response = await fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/api/sessions/invite`, {
+      const response = await fetchWithRetry(`${import.meta.env.VITE_BACKEND_URL}/sessions/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

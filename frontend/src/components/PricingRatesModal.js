@@ -77,7 +77,7 @@ const PricingRatesModal = ({ isOpen, onClose, isCreator }) => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/rates`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/rates`, {
         headers: {
           'Authorization': `Bearer ${session?.access_token}`
         }
@@ -108,7 +108,7 @@ const PricingRatesModal = ({ isOpen, onClose, isCreator }) => {
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/rates`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/rates`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session?.access_token}`,
@@ -121,7 +121,7 @@ const PricingRatesModal = ({ isOpen, onClose, isCreator }) => {
         customToast.success('Rates updated successfully', { icon: '💰' });
         
         // Also update the profile endpoint to ensure consistency
-        const profileResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+        const profileResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${session?.access_token}`,

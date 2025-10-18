@@ -88,7 +88,7 @@ const QuickBuyWidget = ({ user, onSuccess, onClose }) => {
         setLoading(true);
         try {
           const authToken = await getAuthToken();
-          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/quick-purchase`, {
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/quick-purchase`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -334,7 +334,7 @@ const MobileCheckoutForm = ({ user, selectedPackage, onSuccess, onClose }) => {
     setLoading(true);
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/purchase`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

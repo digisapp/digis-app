@@ -74,7 +74,7 @@ const PrivateCallSession = ({
       // Update backend
       try {
         const authToken = await getAuthToken();
-        await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/private-call-update`, {
+        await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/private-call-update`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -141,7 +141,7 @@ const PrivateCallSession = ({
 
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/private-call-end`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/private-call-end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

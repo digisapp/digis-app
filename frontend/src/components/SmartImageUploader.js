@@ -115,7 +115,7 @@ const SmartImageUploader = ({
         formData.append('type', type);
         
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/users/upload-profile-image`,
+          `${import.meta.env.VITE_BACKEND_URL}/users/upload-profile-image`,
           {
             method: 'POST',
             headers: {
@@ -142,7 +142,7 @@ const SmartImageUploader = ({
       };
       
       const updateResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile`,
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile`,
         {
           method: 'POST',
           headers: {

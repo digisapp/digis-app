@@ -536,7 +536,7 @@ const FanProfileModal = ({
                               // Save notes to backend
                               try {
                                 const { data: { session } } = await supabase.auth.getSession();
-                                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/fan-notes`, {
+                                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/fan-notes`, {
                                   method: 'POST',
                                   headers: {
                                     'Authorization': `Bearer ${session?.access_token}`,

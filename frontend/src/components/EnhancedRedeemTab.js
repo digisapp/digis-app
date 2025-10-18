@@ -95,7 +95,7 @@ const EnhancedRedeemTab = ({ walletData = {}, experiences = [], recordings = [],
     setLoadingRecordings(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/recording/creator/${creatorId}/recordings`
+        `${import.meta.env.VITE_BACKEND_URL}/recording/creator/${creatorId}/recordings`
       );
       
       if (response.ok) {
@@ -121,7 +121,7 @@ const EnhancedRedeemTab = ({ walletData = {}, experiences = [], recordings = [],
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/recording/recordings/${recording.id}/purchase`,
+        `${import.meta.env.VITE_BACKEND_URL}/recording/recordings/${recording.id}/purchase`,
         {
           method: 'POST',
           headers: {

@@ -159,7 +159,7 @@ const CreatorCallModal = ({
       const authToken = user ? await getAuthToken() : null;
       
       // In production, this would fetch from your API
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/available?type=${callType}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/available?type=${callType}`, {
         headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
       });
 
@@ -224,7 +224,7 @@ const CreatorCallModal = ({
       setCallStatus('calling');
 
       const authToken = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/creators/call-request`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/call-request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

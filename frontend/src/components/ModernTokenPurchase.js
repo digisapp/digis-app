@@ -165,7 +165,7 @@ const ModernCheckoutForm = ({ user, selectedPackage, onSuccess, onClose }) => {
     mutationFn: async (paymentData) => {
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseToken = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/purchase`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

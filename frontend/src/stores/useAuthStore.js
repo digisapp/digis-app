@@ -118,7 +118,7 @@ const useAuthStore = create(
       refreshSession: async () => {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_BACKEND_URL}/api/auth/session`,
+            `${import.meta.env.VITE_BACKEND_URL}/auth/session`,
             {
               credentials: 'include',
               headers: {
@@ -157,7 +157,7 @@ const useAuthStore = create(
         get().setAuthLoading();
 
         try {
-          const url = `${import.meta.env.VITE_BACKEND_URL}/api/auth/session`;
+          const url = `${import.meta.env.VITE_BACKEND_URL}/auth/session`;
           console.log('🔐 [Auth] Fetching from:', url);
           console.log('🔐 [Auth] Token preview:', token?.substring(0, 20) + '...');
 

@@ -28,7 +28,7 @@ const AdminUserManagement = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/admin/users`,
+        `${import.meta.env.VITE_BACKEND_URL}/admin/users`,
         {
           headers: {
             Authorization: `Bearer ${session?.access_token}`,
@@ -55,7 +55,7 @@ const AdminUserManagement = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/admin/users/${userId}/role`,
+        `${import.meta.env.VITE_BACKEND_URL}/admin/users/${userId}/role`,
         {
           method: 'PUT',
           headers: {

@@ -33,7 +33,7 @@ const QuickCheckoutForm = ({ user, selectedPackage, onSuccess, onClose }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseToken = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/payment-methods`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/payment-methods`, {
         headers: { Authorization: `Bearer ${supabaseToken}` }
       });
 
@@ -51,7 +51,7 @@ const QuickCheckoutForm = ({ user, selectedPackage, onSuccess, onClose }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseToken = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/purchase-saved`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/purchase-saved`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,7 +114,7 @@ const QuickCheckoutForm = ({ user, selectedPackage, onSuccess, onClose }) => {
 
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseToken = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/purchase`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

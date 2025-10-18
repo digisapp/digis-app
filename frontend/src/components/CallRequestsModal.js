@@ -37,7 +37,7 @@ const CallRequestsModal = ({ isOpen, onClose, user, onRequestAccepted, setCurren
       
       // Fetch private call requests
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/sessions/requests?status=${activeTab}`,
+        `${import.meta.env.VITE_BACKEND_URL}/sessions/requests?status=${activeTab}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -63,7 +63,7 @@ const CallRequestsModal = ({ isOpen, onClose, user, onRequestAccepted, setCurren
       const authToken = await getAuthToken();
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/sessions/requests/${request.id}/accept`,
+        `${import.meta.env.VITE_BACKEND_URL}/sessions/requests/${request.id}/accept`,
         {
           method: 'POST',
           headers: {
@@ -106,7 +106,7 @@ const CallRequestsModal = ({ isOpen, onClose, user, onRequestAccepted, setCurren
       const authToken = await getAuthToken();
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/sessions/requests/${request.id}/decline`,
+        `${import.meta.env.VITE_BACKEND_URL}/sessions/requests/${request.id}/decline`,
         {
           method: 'POST',
           headers: {
@@ -143,7 +143,7 @@ const CallRequestsModal = ({ isOpen, onClose, user, onRequestAccepted, setCurren
       const authToken = await getAuthToken();
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/sessions/requests/${request.id}/cancel`,
+        `${import.meta.env.VITE_BACKEND_URL}/sessions/requests/${request.id}/cancel`,
         {
           method: 'POST',
           headers: {

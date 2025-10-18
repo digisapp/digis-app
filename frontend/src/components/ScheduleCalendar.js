@@ -75,7 +75,7 @@ const ScheduleCalendar = ({ userType = 'fan', userId, onScheduleEvent, externalE
 
       // Fetch scheduled sessions/calls
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/sessions/schedule`,
+        `${import.meta.env.VITE_BACKEND_URL}/sessions/schedule`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`

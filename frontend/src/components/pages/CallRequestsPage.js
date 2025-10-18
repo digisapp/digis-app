@@ -128,7 +128,7 @@ const CallRequestsPage = ({ user }) => {
       const authToken = await getAuthToken();
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/sessions/requests?status=${activeTab}`,
+        `${import.meta.env.VITE_BACKEND_URL}/sessions/requests?status=${activeTab}`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
@@ -307,7 +307,7 @@ const CallRequestsPage = ({ user }) => {
       const authToken = await getAuthToken();
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/sessions/requests/${request.id}/reschedule`,
+        `${import.meta.env.VITE_BACKEND_URL}/sessions/requests/${request.id}/reschedule`,
         {
           method: 'POST',
           headers: {

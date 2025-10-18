@@ -123,7 +123,7 @@ const CheckoutForm = ({
 
       // Create payment intent with retry logic
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tokens/purchase`,
+        `${import.meta.env.VITE_BACKEND_URL}/tokens/purchase`,
         {
           method: 'POST',
           headers: {

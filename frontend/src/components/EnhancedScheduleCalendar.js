@@ -101,7 +101,7 @@ const EnhancedScheduleCalendar = ({
       if (userId) {
         const token = await getAuthToken();
         const response = await fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/api/sessions/scheduled`,
+          `${import.meta.env.VITE_BACKEND_URL}/sessions/scheduled`,
           {
             headers: {
               'Authorization': `Bearer ${token}`

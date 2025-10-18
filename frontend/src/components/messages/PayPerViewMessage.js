@@ -81,7 +81,7 @@ const PayPerViewMessage = ({
     try {
       const token = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/messages/ppv/unlock`,
+        `${import.meta.env.VITE_BACKEND_URL}/messages/ppv/unlock`,
         {
           method: 'POST',
           headers: {

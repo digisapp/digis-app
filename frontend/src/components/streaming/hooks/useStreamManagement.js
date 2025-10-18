@@ -40,7 +40,7 @@ export const useStreamManagement = (user, channel) => {
       setStreamStatus('preparing');
       
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/prepare`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/prepare`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +77,7 @@ export const useStreamManagement = (user, channel) => {
       streamStartTime.current = Date.now();
       
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/start`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ export const useStreamManagement = (user, channel) => {
       }
       
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/end`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ export const useStreamManagement = (user, channel) => {
   const updateStreamSettings = useCallback(async (updates) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/streaming/update`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/update`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
