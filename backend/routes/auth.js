@@ -266,6 +266,9 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         `, [supabaseId, `${supabaseId}@placeholder.local`, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp]);
       }
 
+      // Commit the user transaction BEFORE token balance (so user creation succeeds even if token balance fails)
+      await pool.query('COMMIT');
+
       console.log('✅ sync-user upsert/link complete', {
         rid,
         supabaseId,
@@ -293,30 +296,19 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     }
 
     // IDEMPOTENT: Ensure token balance exists using SECURITY DEFINER function
-    // This bypasses RLS without needing an INSERT policy
+    // This runs AFTER the user transaction commits, so it's independent
+    // If this fails, user still exists (non-fatal)
     try {
       await pool.query(`SELECT public.ensure_token_balance($1)`, [supabaseId]);
       console.log('✅ Token balance ensured', { rid, supabaseId });
     } catch (dbError) {
-      console.error('❌ sync-user token balance failed', {
+      console.error('❌ sync-user token balance failed (non-fatal)', {
         rid,
         code: dbError.code,
         message: dbError.message
       });
       // Non-fatal: token balance can be created later
-    }
-
-    // Commit the transaction
-    try {
-      await pool.query('COMMIT');
-    } catch (commitError) {
-      await pool.query('ROLLBACK');
-      console.error('❌ sync-user commit failed', { rid, error: commitError.message });
-      return fail(500, {
-        error: 'INTERNAL',
-        message: 'Transaction commit failed',
-        code: commitError.code
-      });
+      // Don't return error - user creation succeeded
     }
 
     // Now fetch the complete profile
