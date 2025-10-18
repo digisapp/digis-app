@@ -46,13 +46,26 @@ const isRetryable = (error) => {
   return false;
 };
 
-// Get current auth token
+// Get current auth token with auto-refresh
 const getAuthToken = async () => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || null;
-  } catch (error) {
-    logger.warn('Failed to get auth token:', error);
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      logger.warn('Supabase session error:', error.message);
+      return null;
+    }
+    if (!data?.session) {
+      // Try refreshing if session expired
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        logger.warn('Failed to refresh Supabase session:', refreshError.message);
+        return null;
+      }
+      return refreshed?.session?.access_token || null;
+    }
+    return data.session.access_token;
+  } catch (err) {
+    logger.error('Error getting Supabase token:', err);
     return null;
   }
 };
@@ -106,9 +119,18 @@ class ApiClient {
       logger.warn('[apiClient] Absolute URL detected; prefer relative paths:', path);
       return path;
     }
+
+    // Normalize path
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    const baseURL = this.baseURL.endsWith('/') ? this.baseURL.slice(0, -1) : this.baseURL;
-    return `${baseURL}${cleanPath}`;
+
+    // Prevent double /api/v1 prefix
+    // If baseURL already ends with /api/v1 and path starts with /api/v1, strip it from path
+    const cleanedBase = this.baseURL.replace(/\/+$/, ''); // Remove trailing slashes
+    const finalPath = cleanedBase.endsWith('/api/v1') && cleanPath.startsWith('/api/v1')
+      ? cleanPath.replace('/api/v1', '')
+      : cleanPath;
+
+    return `${cleanedBase}${finalPath}`;
   }
 
   // Execute request with retries

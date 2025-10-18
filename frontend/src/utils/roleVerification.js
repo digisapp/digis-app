@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { supabase } from './supabase-auth';
+import { apiClient } from './apiClient';
 
 // Role constants
 export const ROLES = {
@@ -40,39 +41,31 @@ export async function verifyUserRole(forceRefresh = false) {
       return null;
     }
 
-    // Verify role with backend
-    const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/$/,''); // Remove trailing slash
-    const response = await fetch(
-      `${backendUrl}/auth/verify-role`,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      }
-    );
+    // Verify role with backend using apiClient (prevents double /api/v1)
+    try {
+      const data = await apiClient.get('/auth/verify-role', {
+        withAuth: true
+      });
+    
+      if (data.success && data.role) {
+        // Cache the verified role
+        verifiedRoleCache = data.role;
+        cacheTimestamp = Date.now();
 
-    if (!response.ok) {
-      console.error('Failed to verify role:', response.status);
+        // Store in sessionStorage as backup
+        sessionStorage.setItem('verifiedRole', JSON.stringify(data.role));
+        sessionStorage.setItem('roleTimestamp', Date.now().toString());
+
+        return data.role;
+      }
+
+      clearRoleCache();
+      return null;
+    } catch (apiError) {
+      console.error('Failed to verify role with API:', apiError);
       clearRoleCache();
       return null;
     }
-
-    const data = await response.json();
-    
-    if (data.success && data.role) {
-      // Cache the verified role
-      verifiedRoleCache = data.role;
-      cacheTimestamp = Date.now();
-      
-      // Store in sessionStorage as backup
-      sessionStorage.setItem('verifiedRole', JSON.stringify(data.role));
-      sessionStorage.setItem('roleTimestamp', Date.now().toString());
-      
-      return data.role;
-    }
-
-    clearRoleCache();
-    return null;
   } catch (error) {
     console.error('Error verifying user role:', error);
     
@@ -166,19 +159,9 @@ export async function syncUserRole() {
   if (role) {
     // Notify backend to clear any server-side cache
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/$/,'');
-        await fetch(
-          `${backendUrl}/auth/clear-role-cache`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
-      }
+      await apiClient.post('/auth/clear-role-cache', {}, {
+        withAuth: true
+      });
     } catch (error) {
       console.error('Error clearing role cache:', error);
     }
