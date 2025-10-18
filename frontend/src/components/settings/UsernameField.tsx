@@ -35,8 +35,8 @@ export default function UsernameField({ initial = '', onSaved, className = '' }:
       const authToken = await getAuthToken();
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
-      const res = await fetch(`${backendUrl}/users/me/username`, {
-        method: 'PATCH',
+      const res = await fetch(`${backendUrl}/users/profile`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
