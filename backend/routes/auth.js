@@ -596,13 +596,27 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     }
     
     // Create token balance for new user
-    await db(req).query(`
-      INSERT INTO token_balances (
-        user_id,
-        balance,
-        created_at
-      ) VALUES ($1::uuid, 0.00, NOW())
-    `, [supabaseId]);
+    try {
+      await db(req).query(`
+        INSERT INTO token_balances (
+          user_id,
+          balance,
+          total_earned,
+          total_spent,
+          total_purchased,
+          created_at,
+          updated_at
+        ) VALUES ($1::uuid, 0, 0, 0, 0, NOW(), NOW())
+        ON CONFLICT (user_id) DO NOTHING
+      `, [supabaseId]);
+    } catch (tokenBalanceError) {
+      console.error('❌ Failed to create token balance (non-fatal):', {
+        error: tokenBalanceError.message,
+        code: tokenBalanceError.code,
+        supabaseId
+      });
+      // Non-fatal: token balance can be created later
+    }
 
     // Send welcome email based on account type (non-blocking)
     try {
