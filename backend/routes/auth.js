@@ -214,45 +214,56 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         console.log('🔗 Duplicate accounts detected, merging safely', {
           rid,
           emailRowId: byEmail.id,
+          emailRowIsCreator: byEmail.is_creator,
           supabaseRowId: byId.id,
+          supabaseRowIsCreator: byId.is_creator,
           email,
           supabaseId
         });
 
-        // Make the EMAIL row canonical (it has all the creator data + FK references)
+        // Determine which row is the canonical one (has creator data/FK references)
+        // Prefer the one that's marked as creator, or the email row as fallback
+        const canonicalRow = byEmail.is_creator ? byEmail : byId;
+        const duplicateRow = byEmail.is_creator ? byId : byEmail;
+
+        console.log('📍 Canonical row selected:', {
+          rid,
+          canonicalId: canonicalRow.id,
+          isCreator: canonicalRow.is_creator,
+          duplicateId: duplicateRow.id
+        });
+
+        // Update the CANONICAL row to have supabase_id (ensure it's login-ready)
         await pool.query(`
           UPDATE users SET
             supabase_id = $1,
-            username = COALESCE($2, username),
-            role = $3,
-            is_creator = $4,
-            is_super_admin = $5,
-            video_rate_cents = $6,
-            voice_rate_cents = $7,
-            stream_rate_cents = $8,
-            message_price_cents = $9,
+            email = COALESCE($2, email),
+            username = COALESCE($3, username),
+            role = COALESCE($4, role),
+            is_creator = COALESCE($5, is_creator),
+            is_super_admin = COALESCE($6, is_super_admin),
             email_verified = true,
             last_active = NOW(),
             updated_at = NOW()
-          WHERE id = $10
-        `, [supabaseId, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp, byEmail.id]);
+          WHERE id = $7
+        `, [
+          supabaseId,
+          email || null,
+          safeUsername || null,
+          roleForUpsert,
+          isCreatorForUpsert,
+          isAdminForUpsert,
+          canonicalRow.id
+        ]);
 
-        // Mark the duplicate supabase_id row as merged (DO NOT DELETE to avoid FK breaks)
-        // Clear unique fields to prevent conflicts
-        await pool.query(`
-          UPDATE users SET
-            email = NULL,
-            username = CONCAT(COALESCE(username, 'user'), '__merged_', id),
-            supabase_id = NULL,
-            last_active = NOW(),
-            updated_at = NOW()
-          WHERE id = $1
-        `, [byId.id]);
+        // DO NOT touch the duplicate row - leave it completely alone
+        // Avoids FK constraint violations from creator_payout_intents and other tables
+        // The duplicate row will just sit unused (orphaned but harmless)
 
-        console.log('✅ Merged duplicate accounts', {
+        console.log('✅ Merged duplicate accounts (duplicate row left intact)', {
           rid,
-          canonicalId: byEmail.id,
-          mergedId: byId.id
+          canonicalId: canonicalRow.id,
+          duplicateId: duplicateRow.id
         });
 
       // CASE B: Only email row exists - link supabase_id
