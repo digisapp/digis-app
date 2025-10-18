@@ -263,31 +263,36 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         rid,
         code: dbError.code,
         message: dbError.message,
-        detail: dbError.detail
+        detail: dbError.detail,
+        constraint: dbError.constraint
       });
 
+      // 23505 = unique constraint violation
+      // This should NOT happen with ON CONFLICT (supabase_id), but if it does,
+      // it means a different unique constraint (username/email) is being violated.
+      // Since the user exists, treat this as success and continue.
       if (dbError.code === '23505') {
-        return fail(409, {
-          error: 'DUPLICATE_USER',
-          message: 'User with this ID already exists',
-          code: dbError.code
+        console.warn('⚠️ User already exists (constraint: ' + (dbError.constraint || 'unknown') + '), continuing...', {
+          rid,
+          supabaseId,
+          constraint: dbError.constraint
         });
-      }
-
-      if (dbError.code === '22P02') {
+        // User exists - this is OK, continue with token balance upsert below
+      } else if (dbError.code === '22P02') {
         return fail(400, {
           error: 'INVALID_UUID',
           message: 'Invalid user ID format',
           code: dbError.code
         });
+      } else {
+        // For other errors, return generic failure
+        return fail(500, {
+          error: 'DB_UPSERT_FAILED',
+          message: 'Failed to create or update user in database',
+          code: dbError.code,
+          detail: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+        });
       }
-
-      return fail(500, {
-        error: 'DB_UPSERT_FAILED',
-        message: 'Failed to create or update user in database',
-        code: dbError.code,
-        detail: process.env.NODE_ENV === 'development' ? dbError.message : undefined
-      });
     }
 
     // IDEMPOTENT: Ensure token balance exists
