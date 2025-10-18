@@ -209,18 +209,20 @@ try {
       <ErrorBoundary>
         <BrowserRouter>
           <QueryClientProvider client={queryClient}>
-            {/* SIMPLIFIED: Removed redundant AppBootstrap - just use AuthGate */}
+            {/* CRITICAL: AuthProvider must wrap AuthGate since AuthGate uses useAuth() */}
             <AuthProvider>
               <AuthGate>
-                {/* Additional Context Providers - Order matters! */}
-                <DeviceProvider>
-                  {/* SocketProvider now handles all socket logic internally */}
-                  <SocketProvider>
-                    <ModalProvider>
-                      <App />
-                    </ModalProvider>
-                  </SocketProvider>
-                </DeviceProvider>
+                <AppBootstrap>
+                  {/* Additional Context Providers - Order matters! */}
+                  <DeviceProvider>
+                    {/* SocketProvider now handles all socket logic internally */}
+                    <SocketProvider>
+                      <ModalProvider>
+                        <App />
+                      </ModalProvider>
+                    </SocketProvider>
+                  </DeviceProvider>
+                </AppBootstrap>
               </AuthGate>
             </AuthProvider>
             <Toaster position="top-right" />

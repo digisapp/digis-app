@@ -17,16 +17,16 @@ export default function AuthGate({ children, fallback = null }) {
   useEffect(() => {
     let cancelled = false;
 
-    // Hard fail-open after 3s to avoid infinite splash screen
+    // Hard fail-open after 8s to avoid infinite splash screen
     const timeout = setTimeout(() => {
       if (!cancelled) {
-        console.warn('🔐 AuthGate: Hit 3s timeout, forcing fail-open render');
+        console.warn('🔐 AuthGate: Hit 8s timeout, forcing fail-open render');
         setErrored(true);
         setRoleResolved?.(true);     // Let routes render public/fan UI (defensive)
         setAuthLoading?.(false);     // Defensive guard
         setReady(true);
       }
-    }, 3000);
+    }, 8000);
 
     const bootstrapAuth = async () => {
       try {
