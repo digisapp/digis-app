@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { pool } = require('../utils/db');
 const { authenticateToken } = require('../middleware/auth');
 const { idempotency } = require('../middleware/idempotency');
 const { v4: uuidv4 } = require('uuid');
-const { nanoid } = require('nanoid');
 
 // Check access for private stream
 router.get('/streams/:streamId/access', authenticateToken, async (req, res) => {
@@ -194,7 +194,7 @@ router.post('/streams/create', authenticateToken, async (req, res) => {
     }
 
     // Generate unique channel
-    const channel = `stream_${nanoid(12)}`;
+    const channel = `stream_${crypto.randomBytes(9).toString('base64url')}`;
 
     // Create stream
     const result = await pool.query(
