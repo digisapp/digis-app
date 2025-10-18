@@ -493,14 +493,20 @@ const ProfileDropdown = ({
                 {isActuallyCreator && !isActuallyAdmin && (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => handleNavigation('/followers')}
+                      onClick={() => {
+                        setIsOpen(false);
+                        handleNavigation('/followers');
+                      }}
                       className="flex-1 bg-white/20 backdrop-blur rounded-lg px-3 py-2 hover:bg-white/30 transition-all duration-200 text-left"
                     >
                       <p className="text-xs opacity-90">Followers</p>
                       <p className="font-bold text-lg">{stats.followersCount}</p>
                     </button>
                     <button
-                      onClick={() => handleNavigation('/subscribers')}
+                      onClick={() => {
+                        setIsOpen(false);
+                        handleNavigation('/subscribers');
+                      }}
                       className="flex-1 bg-white/20 backdrop-blur rounded-lg px-3 py-2 hover:bg-white/30 transition-all duration-200 text-left"
                     >
                       <p className="text-xs opacity-90">Subscribers</p>
@@ -568,7 +574,10 @@ const ProfileDropdown = ({
                     {/* Go Live - Special Button */}
                     {(
                       <button
-                        onClick={() => handleNavigation('/go-live-setup')}
+                        onClick={() => {
+                          setIsOpen(false);
+                          handleNavigation('/go-live-setup');
+                        }}
                         className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-3 py-2.5 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
                       >
                         <div className="flex items-center gap-2">
@@ -597,9 +606,11 @@ const ProfileDropdown = ({
                           <button
                             key={item.path || item.label}
                             onClick={() => {
+                              // Always close menu first for better UX
+                              setIsOpen(false);
+
                               if (item.action) {
                                 item.action();
-                                setIsOpen(false);
                               } else if (item.onClick) {
                                 item.onClick();
                               } else {
@@ -648,12 +659,15 @@ const ProfileDropdown = ({
                         return (
                           <button
                             key={item.path}
-                            onClick={() => handleNavigation(item.path)}
+                            onClick={() => {
+                              setIsOpen(false);
+                              handleNavigation(item.path);
+                            }}
                             className={`
                               w-full flex items-center justify-between px-2 py-2 rounded-lg
                               transition-all duration-200 group
-                              ${isActive 
-                                ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' 
+                              ${isActive
+                                ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400'
                                 : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                               }
                             `}
@@ -688,12 +702,13 @@ const ProfileDropdown = ({
                           <button
                             key={item.path || item.label}
                             onClick={() => {
+                              // Close menu for all items (theme toggle doesn't need to keep menu open)
+                              setIsOpen(false);
+
                               if (item.action) {
                                 item.action();
-                                setIsOpen(false);
                               } else if (item.onClick) {
                                 item.onClick();
-                                if (!item.isToggle) setIsOpen(false);
                               } else {
                                 handleNavigation(item.path);
                               }
