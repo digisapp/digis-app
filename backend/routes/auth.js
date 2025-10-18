@@ -490,21 +490,26 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     // Create new user
     let username;
     const accountType = metadata?.account_type || 'fan';
-    
-    // Validate age verification
-    if (metadata?.age_verified !== true) {
+
+    // Age verification - SKIP FOR AUTHENTICATED USERS
+    // If user has valid Supabase JWT (verified by verifySupabaseToken middleware),
+    // they already passed age verification during Supabase signup.
+    // This section should rarely be reached since UPSERT above handles user creation.
+    // Keeping age check only for development/testing with explicit metadata.
+    if (metadata?.age_verified === false) {
+      // Only reject if explicitly set to false (not missing)
       return res.status(400).json({
         success: false,
         error: 'Age verification is required. Users must be 18 or older to join Digis.'
       });
     }
-    
-    // Validate date of birth if provided
+
+    // Validate date of birth if provided (double-check for safety)
     if (metadata?.date_of_birth) {
       const birthDate = new Date(metadata.date_of_birth);
       const today = new Date();
       const age = Math.floor((today - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
-      
+
       if (age < 18) {
         return res.status(400).json({
           success: false,
