@@ -424,7 +424,7 @@ const TokenPurchase = ({ user: propUser, onSuccess, onClose, isModal = false }) 
     const fetchTokenPackages = async () => {
       try {
         const authToken = await getAuthToken();
-        const response = await fetch(`${ENV.BACKEND_URL}/api/tokens/packages`, {
+        const response = await fetch(`${ENV.BACKEND_URL}/tokens/packages`, {
           headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
         });
         if (response.ok) {

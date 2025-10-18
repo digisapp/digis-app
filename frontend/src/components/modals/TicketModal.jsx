@@ -29,7 +29,7 @@ export default function TicketModal({
         const BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3005';
         const token = localStorage.getItem('supabase_token');
 
-        const response = await fetch(`${BASE}/api/streams/${streamId}/access`, {
+        const response = await fetch(`${BASE}/streams/${streamId}/access`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ export default function TicketModal({
       const BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3005';
       const token = localStorage.getItem('supabase_token');
 
-      const response = await fetch(`${BASE}/api/streams/${streamId}/tickets/checkout`, {
+      const response = await fetch(`${BASE}/streams/${streamId}/tickets/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

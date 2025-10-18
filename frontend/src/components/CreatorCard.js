@@ -261,7 +261,7 @@ const CreatorCard = ({
 
     // Fire-and-forget prefetch (snappier subsequent navigation)
     const BASE_URL = import.meta.env.VITE_BACKEND_URL || '';
-    fetch(`${BASE_URL}/api/public/creators/${encodeURIComponent(safeHandle)}`, {
+    fetch(`${BASE_URL}/public/creators/${encodeURIComponent(safeHandle)}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     }).catch(() => {

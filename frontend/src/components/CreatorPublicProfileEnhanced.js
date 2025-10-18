@@ -320,7 +320,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     
     try {
       const BASE_URL = import.meta.env.VITE_BACKEND_URL;
-      const res = await fetchWithRetry(`${BASE_URL}/api/recording/creator/${creatorUsername}/recordings`).catch(() => null);
+      const res = await fetchWithRetry(`${BASE_URL}/recording/creator/${creatorUsername}/recordings`).catch(() => null);
       
       if (res?.ok) {
         const data = await res.json();
@@ -339,7 +339,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     try {
       const BASE_URL = import.meta.env.VITE_BACKEND_URL;
       // Fetch public shop items for this creator
-      const res = await fetchWithRetry(`${BASE_URL}/api/shop/public/${creatorUsername}/items`).catch(() => null);
+      const res = await fetchWithRetry(`${BASE_URL}/shop/public/${creatorUsername}/items`).catch(() => null);
       
       if (res?.ok) {
         const data = await res.json();
@@ -471,7 +471,7 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
         
         // Load critical creator data first
         const BASE_URL = import.meta.env.VITE_BACKEND_URL;
-        const apiUrl = `${BASE_URL}/api/users/public/creator/${username}`;
+        const apiUrl = `${BASE_URL}/users/public/creator/${username}`;
         console.log('Fetching from:', apiUrl);
         const contentRes = await fetchWithRetry(apiUrl).catch(() => null);
         

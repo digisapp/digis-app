@@ -241,7 +241,7 @@ const ExplorePage = ({
       }
 
       const response = await fetchWithRetry(
-        `${backendUrl}/api/users/creators?${params.toString()}`,
+        `${backendUrl}/users/creators?${params.toString()}`,
         {
           method: 'GET',
           headers,
@@ -355,7 +355,7 @@ const ExplorePage = ({
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL ||
         (window.location.hostname === 'localhost' ? 'http://localhost:3005' : `http://${window.location.hostname}:3005`);
-      const response = await fetch(`${backendUrl}/api/streaming/public/streams/live`);
+      const response = await fetch(`${backendUrl}/streaming/public/streams/live`);
       
       if (response.ok) {
         const data = await response.json();

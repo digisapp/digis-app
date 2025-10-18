@@ -22,7 +22,7 @@ const LiveTipsOverlay = ({ channel }) => {
 
         // Initialize Ably client with authUrl (handles token refresh automatically)
         ablyClientRef.current = new Ably.Realtime({
-          authUrl: `${backend}/api/ably-auth`,
+          authUrl: `${backend}/ably-auth`,
           authMethod: 'POST',
           authHeaders: {
             'Content-Type': 'application/json',

@@ -67,7 +67,7 @@ const MobileVideoStream = ({
       const BASE = import.meta.env.VITE_BACKEND_URL;
       const auth = await getAuthToken();
 
-      const data = await fetchJSON(`${BASE}/api/agora/refresh-token`, {
+      const data = await fetchJSON(`${BASE}/agora/refresh-token`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${auth}` },
         body: {
@@ -105,7 +105,7 @@ const MobileVideoStream = ({
       const BASE = import.meta.env.VITE_BACKEND_URL;
       const auth = await getAuthToken();
 
-      const data = await fetchJSON(`${BASE}/api/streams/validate-access`, {
+      const data = await fetchJSON(`${BASE}/streams/validate-access`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${auth}` },
         body: { channel, creatorId: creator.id }

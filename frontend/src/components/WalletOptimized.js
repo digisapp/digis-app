@@ -317,7 +317,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
     if (!isCreator) return;
     try {
       const token = await getAuthToken();
-      const r = await fetch(`${BACKEND}/api/creator-payouts/intent`, {
+      const r = await fetch(`${BACKEND}/creator-payouts/intent`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const j = await r.json();
@@ -439,7 +439,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
     try {
       setIntentLoading(true);
       const token = await getAuthToken();
-      const r = await fetch(`${BACKEND}/api/creator-payouts/intent`, {
+      const r = await fetch(`${BACKEND}/creator-payouts/intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       });
@@ -461,7 +461,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
     try {
       setIntentLoading(true);
       const token = await getAuthToken();
-      const r = await fetch(`${BACKEND}/api/creator-payouts/intent`, {
+      const r = await fetch(`${BACKEND}/creator-payouts/intent`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -483,7 +483,7 @@ const WalletOptimized = ({ user, tokenBalance, onTokenUpdate, onViewProfile, onT
   const openStripeAccountLink = async () => {
     try {
       const token = await getAuthToken();
-      const r = await fetch(`${BACKEND}/api/stripe/account-link`, {
+      const r = await fetch(`${BACKEND}/stripe/account-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({

@@ -1214,7 +1214,7 @@ const VideoCall = forwardRef(({
       try {
         // Best-effort analytics on unload using centralized beacon helper
         const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-        fireBeacon(`${backendUrl}/api/telemetry`, {
+        fireBeacon(`${backendUrl}/telemetry`, {
           event: 'call_end',
           reason: persisted ? 'pagehide_bfcache' : 'pagehide',
           duration: callDuration,

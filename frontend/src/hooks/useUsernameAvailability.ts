@@ -93,7 +93,7 @@ export function useUsernameAvailability(raw: string, debounceMs = 350) {
       try {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         const res = await fetch(
-          `${backendUrl}/api/public/usernames/availability?username=${encodeURIComponent(value)}`,
+          `${backendUrl}/public/usernames/availability?username=${encodeURIComponent(value)}`,
           {
             signal: controller.current?.signal,
             credentials: 'include'

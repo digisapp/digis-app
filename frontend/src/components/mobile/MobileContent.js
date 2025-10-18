@@ -42,7 +42,7 @@ const MobileContent = ({ user, onNavigate }) => {
     try {
       setLoading(true);
       const identifier = user.username || user.supabase_id;
-      const response = await axios.get(`${backendUrl}/api/content/creator/${identifier}`);
+      const response = await axios.get(`${backendUrl}/content/creator/${identifier}`);
 
       if (response.data) {
         const photos = (response.data.pictures || []).map(p => ({
@@ -136,7 +136,7 @@ const MobileContent = ({ user, onNavigate }) => {
 
       const token = localStorage.getItem('token');
 
-      const response = await axios.post(`${backendUrl}/api/content/upload`, formData, {
+      const response = await axios.post(`${backendUrl}/content/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`
@@ -168,7 +168,7 @@ const MobileContent = ({ user, onNavigate }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${backendUrl}/api/content/${id}`, {
+      await axios.delete(`${backendUrl}/content/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

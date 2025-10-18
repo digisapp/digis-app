@@ -374,7 +374,7 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
         const BASE = import.meta.env.VITE_BACKEND_URL;
         const auth = await getAuthToken();
 
-        const { token } = await fetchJSON(`${BASE}/api/agora/refresh-token`, {
+        const { token } = await fetchJSON(`${BASE}/agora/refresh-token`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${auth}` },
           body: { channel }
@@ -492,7 +492,7 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
           const BASE = import.meta.env.VITE_BACKEND_URL;
           const auth = await getAuthToken();
 
-          const { token } = await fetchJSON(`${BASE}/api/agora/refresh-token`, {
+          const { token } = await fetchJSON(`${BASE}/agora/refresh-token`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${auth}` },
             body: { channel }
@@ -519,7 +519,7 @@ const EnhancedMobileLiveStream = ({ user, onEnd, streamConfig = {}, channel, isC
       const auth = await getAuthToken();
       console.log('[handleStartStream] Got auth token, backend URL:', BASE);
 
-      const { token, appId, uid } = await fetchJSON(`${BASE}/api/agora/token`, {
+      const { token, appId, uid } = await fetchJSON(`${BASE}/agora/token`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${auth}` },
         body: { channelName: channel }

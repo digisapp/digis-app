@@ -67,7 +67,7 @@ const CreatorDirectory = memo(({
     async (creatorUsername) => {
       const token = await getAuthToken();
       const response = await fetchWithRetry(
-        `${backendUrl}/api/users/sessions/call-request`,
+        `${backendUrl}/users/sessions/call-request`,
         {
           method: 'POST',
           headers: {

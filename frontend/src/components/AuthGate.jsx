@@ -47,7 +47,7 @@ export default function AuthGate({ children, fallback = null }) {
           try {
             // Fetch profile with no-store to dodge SW/browser cache
             const backendUrl = import.meta.env.VITE_BACKEND_URL;
-            const res = await fetch(`${backendUrl}/api/users/me`, {
+            const res = await fetch(`${backendUrl}/users/me`, {
               headers: {
                 'Authorization': `Bearer ${session.access_token}`,
                 'Cache-Control': 'no-store'

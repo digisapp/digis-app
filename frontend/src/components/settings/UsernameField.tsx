@@ -35,7 +35,7 @@ export default function UsernameField({ initial = '', onSaved, className = '' }:
       const authToken = await getAuthToken();
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
-      const res = await fetch(`${backendUrl}/api/users/me/username`, {
+      const res = await fetch(`${backendUrl}/users/me/username`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

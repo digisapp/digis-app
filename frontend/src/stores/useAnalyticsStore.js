@@ -178,8 +178,8 @@ export const useAnalyticsStore = create(
             const timeRange = state.timeRange;
             
             const url = streamId 
-              ? `${backendUrl}/api/streams/${streamId}/analytics?timeRange=${timeRange}`
-              : `${backendUrl}/api/analytics/global?timeRange=${timeRange}`;
+              ? `${backendUrl}/streams/${streamId}/analytics?timeRange=${timeRange}`
+              : `${backendUrl}/analytics/global?timeRange=${timeRange}`;
             
             const response = await fetch(url, {
               headers: {

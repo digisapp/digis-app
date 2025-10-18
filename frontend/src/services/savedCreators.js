@@ -16,7 +16,7 @@ export const savedCreatorsAPI = {
       const token = await getAuthToken();
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${API_URL}/api/saved-creators`, {
+      const response = await fetch(`${API_URL}/saved-creators`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -39,7 +39,7 @@ export const savedCreatorsAPI = {
       const token = await getAuthToken();
       if (!token) return false;
 
-      const response = await fetch(`${API_URL}/api/saved-creators/check/${creatorId}`, {
+      const response = await fetch(`${API_URL}/saved-creators/check/${creatorId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -62,7 +62,7 @@ export const savedCreatorsAPI = {
       const token = await getAuthToken();
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${API_URL}/api/saved-creators`, {
+      const response = await fetch(`${API_URL}/saved-creators`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -96,7 +96,7 @@ export const savedCreatorsAPI = {
       const token = await getAuthToken();
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${API_URL}/api/saved-creators/${creatorId}`, {
+      const response = await fetch(`${API_URL}/saved-creators/${creatorId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -128,7 +128,7 @@ export const savedCreatorsAPI = {
       const token = await getAuthToken();
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${API_URL}/api/saved-creators/${creatorId}`, {
+      const response = await fetch(`${API_URL}/saved-creators/${creatorId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -153,7 +153,7 @@ export const savedCreatorsAPI = {
       const token = await getAuthToken();
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${API_URL}/api/saved-creators/notifications-enabled`, {
+      const response = await fetch(`${API_URL}/saved-creators/notifications-enabled`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
