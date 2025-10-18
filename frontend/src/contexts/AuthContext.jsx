@@ -1,14 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '../utils/supabase-auth';
 import { subscribeToAuthChanges } from '../utils/auth-helpers';
-import { syncUserRole, clearRoleCache } from '../utils/roleVerification';
+import { syncUserRole, clearRoleCache, startRoleWatcherOnce, installAuthWatcher } from '../utils/roleVerification';
 import { loadProfileCache, saveProfileCache, clearProfileCache } from '../utils/profileCache';
+import { clearRoleHints } from '../utils/normalizeSession';
 import useAuthStore from '../stores/useAuthStore';
 import { authLogger } from '../utils/logger';
 import { isRole } from '../utils/routeHelpers';
 import { addBreadcrumb, setTag } from '../lib/sentry.client';
 import toast from 'react-hot-toast';
 import { fetchWithTimeout, safeFetch } from '../utils/fetchWithTimeout';
+import { syncAccountOnce, resetSyncState } from '../utils/authSync';
 
 /**
  * AuthContext - Single Source of Truth for Authentication
@@ -528,6 +530,12 @@ export const AuthProvider = ({ children }) => {
       lastSyncUserAttempt.current = 0;
       syncUserBackoffIndex.current = 0;
 
+      // Clear role hints
+      clearRoleHints();
+
+      // Reset auth sync state
+      resetSyncState();
+
       // Clear service worker caches (if enabled)
       if ('caches' in window) {
         caches.keys().then(keys => {
@@ -580,6 +588,9 @@ export const AuthProvider = ({ children }) => {
     }
   }, [teardownOnLogout]);
 
+  // Sequence guard for preventing stale auth responses
+  const seqRef = useRef(0);
+
   /**
    * Initialize authentication on mount
    */
@@ -588,11 +599,15 @@ export const AuthProvider = ({ children }) => {
     let timeoutId;
 
     const initAuth = async () => {
+      // Increment sequence for this auth attempt
+      const mySequence = ++seqRef.current;
+      console.log(`[AuthContext] Starting auth init #${mySequence}`);
+
       // CRITICAL: Hard timeout fallback to prevent infinite loading on slow devices
       // Increased for pooler latency: 25s mobile, 20s desktop (was 10s/5s)
       const MAX_BOOT_MS = (typeof window !== 'undefined' && window.innerWidth < 768) ? 25000 : 20000;
       const bootTimeout = setTimeout(() => {
-        if (mounted) {
+        if (mounted && mySequence === seqRef.current) {
           console.warn(`⚠️ Hard auth timeout reached after ${MAX_BOOT_MS / 1000}s - forcing load complete`);
           // Graceful degradation: let UI render with best info we have
           if (!roleResolved) {
@@ -606,46 +621,52 @@ export const AuthProvider = ({ children }) => {
       const authStoreState = useAuthStore?.getState?.();
       if (authStoreState?.authStatus === 'ready' && authStoreState?.user) {
         console.log('✅ AppBootstrap already authenticated, syncing...');
-        setUser({
-          id: authStoreState.user.id,
-          email: authStoreState.user.email
-        });
 
-        // Fetch full profile using canonical session endpoint
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && mounted) {
-          const result = await fetchCanonicalSession(session);
+        // Use singleton orchestrator for consistent sync
+        const normalized = await syncAccountOnce('bootstrap-appstore');
 
-          if (result.ok && result.data?.user) {
-            const userData = result.data.user;
+        // Check sequence - abort if stale
+        if (mySequence !== seqRef.current) {
+          console.log(`[AuthContext] Init #${mySequence} stale after AppBootstrap sync, aborting`);
+          return;
+        }
 
-            // Clear signedOutAt flag on successful login
-            try {
-              sessionStorage.removeItem('signedOutAt');
-            } catch (e) {
-              // Ignore storage errors
-            }
-
-            // Mark canonical profile with __isCanonical to distinguish from cache
-            setProfile({ ...userData, __isCanonical: true });
-            saveProfileCache(userData, session);
-            if (userData.token_balance !== undefined) {
-              setTokenBalance(userData.token_balance);
-            }
-            setRoleResolved(true); // Mark role as resolved
-            setAuthLoading(false);
-            clearTimeout(bootTimeout);
-            return;
-          } else {
-            console.warn('⚠️ AppBootstrap session fetch failed (non-blocking):', {
-              status: result.status,
-              error: result.error
-            });
-            // Fail open - don't block the app, mark role resolved to unblock ProtectedRoute
-            setRoleResolved(true);
-            setAuthLoading(false);
-            clearTimeout(bootTimeout);
+        if (normalized && mounted) {
+          // Clear signedOutAt flag on successful login
+          try {
+            sessionStorage.removeItem('signedOutAt');
+          } catch (e) {
+            // Ignore storage errors
           }
+
+          // Set user from normalized session
+          setUser({
+            id: normalized.user.id,
+            email: normalized.user.email
+          });
+
+          // Build profile from normalized data
+          const profileData = {
+            ...normalized.user,
+            is_creator: normalized.isCreator,
+            is_admin: normalized.isAdmin,
+            role: normalized.role,
+            __isCanonical: true
+          };
+
+          setProfile(profileData);
+
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            saveProfileCache(profileData, session);
+          }
+
+          setRoleResolved(true);
+          setAuthLoading(false);
+          clearTimeout(bootTimeout);
+          return;
+        } else {
+          console.warn('⚠️ AppBootstrap sync failed, continuing with standard flow');
         }
       }
 
@@ -696,38 +717,55 @@ export const AuthProvider = ({ children }) => {
           // Circuit breaker: Skip if in backoff period
           if (!shouldAttemptSyncUser()) {
             console.log('⏸️ Using cached profile (circuit breaker active)');
-            // If we have *any* cached profile or user, consider the role resolved for this session
-            setRoleResolved(Boolean(cachedProfile) || Boolean(user));
+            // Set user from session so they can at least sign out
+            setUser(session.user);
+            // If we have a cached profile, use it
+            if (cachedProfile) {
+              setProfile(cachedProfile);
+              setTokenBalance(cachedProfile.token_balance || 0);
+            }
+            // Mark as resolved if we have either cached profile or session user
+            setRoleResolved(Boolean(cachedProfile) || Boolean(session.user));
             setAuthLoading(false);
             clearTimeout(bootTimeout);
             return;
           }
 
-          // Fetch canonical session from backend - fail open with timeout
-          const result = await fetchCanonicalSession(session);
+          // Use singleton orchestrator for auth sync
+          const normalized = await syncAccountOnce('bootstrap-main');
 
-          if (result.ok && result.data?.user) {
-            const userData = result.data.user;
+          // Check sequence - abort if stale
+          if (mySequence !== seqRef.current) {
+            console.log(`[AuthContext] Init #${mySequence} stale after sync, aborting`);
+            return;
+          }
 
-            console.log('✅ Canonical session loaded:', {
-              is_creator: userData.is_creator,
-              is_admin: userData.is_admin
+          if (normalized && mounted) {
+            console.log('✅ Auth sync succeeded:', {
+              is_creator: normalized.isCreator,
+              is_admin: normalized.isAdmin,
+              role: normalized.role
             });
 
             // Circuit breaker: Reset on success
             recordSyncUserSuccess();
 
             setUser(session.user);
-            // Mark canonical profile with __isCanonical to distinguish from cache
-            setProfile({ ...userData, __isCanonical: true });
-            saveProfileCache(userData, session);
 
-            if (userData.token_balance !== undefined) {
-              setTokenBalance(userData.token_balance);
-            }
+            // Build profile from normalized data
+            const profileData = {
+              ...normalized.user,
+              is_creator: normalized.isCreator,
+              is_admin: normalized.isAdmin,
+              role: normalized.role,
+              __isCanonical: true
+            };
+
+            setProfile(profileData);
+            saveProfileCache(profileData, session);
 
             setError('');
-            setRoleResolved(true); // Mark role as resolved
+            setRoleResolved(true);
             setAuthLoading(false);
             clearTimeout(timeoutId);
             clearTimeout(bootTimeout);
@@ -738,99 +776,56 @@ export const AuthProvider = ({ children }) => {
             // Circuit breaker: Record failure
             recordSyncUserFailure();
 
-            console.warn('⚠️ Session fetch failed (non-blocking):', {
-              status: result.status,
-              error: result.error
-            });
+            console.warn('⚠️ Auth sync failed - using fallback strategy');
+
+            // Import role hint utilities
+            const { getLastKnownRole, getLastKnownUserId } = await import('../utils/normalizeSession');
+            const lastRole = getLastKnownRole();
+            const lastUserId = getLastKnownUserId();
 
             // Backend failed - use cached profile if available
-            const cachedProfile = loadProfileCache();
-
             if (cachedProfile && mounted) {
               console.log('✅ Using cached profile as fallback');
               setUser(session.user);
               setProfile(cachedProfile);
               setTokenBalance(cachedProfile.token_balance || 0);
               setError('');
-              setRoleResolved(true); // Only resolve if we have cache
+              setRoleResolved(true);
+              setAuthLoading(false);
+              clearTimeout(timeoutId);
+              clearTimeout(bootTimeout);
+            } else if (lastUserId && lastRole) {
+              // No cache but we have persisted hints - use them to prevent downgrade
+              console.warn('⚠️ Using persisted role hints as last resort');
+              setUser(session.user);
+              setProfile({
+                id: lastUserId,
+                supabase_id: session.user.id,
+                is_creator: lastRole === 'creator' || lastRole === 'admin',
+                is_admin: lastRole === 'admin',
+                role: lastRole,
+                email: session.user.email,
+                username: session.user.email?.split('@')[0],
+                __fromPersisted: true
+              });
+              setRoleResolved(true);
               setAuthLoading(false);
               clearTimeout(timeoutId);
               clearTimeout(bootTimeout);
             } else {
-              // CRITICAL: No cache and backend failed
-              // Try fetching profile from /api/users/profile as last resort
-              console.warn('⚠️ No cached profile - attempting fallback to /api/users/profile');
-
-              try {
-                const userId = session.user.id;
-                const token = session.access_token;
-
-                const profileResponse = await fetch(
-                  `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${userId}`,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                    },
-                    timeout: 8000 // 8 second timeout
-                  }
-                );
-
-                if (profileResponse.ok) {
-                  const profileData = await profileResponse.json();
-                  console.log('✅ Fallback profile fetched:', profileData.username, {
-                    is_creator: profileData.is_creator,
-                    is_admin: profileData.is_admin
-                  });
-
-                  setUser(session.user);
-                  setProfile({ ...profileData, __isCanonical: true });
-                  saveProfileCache(profileData, session);
-                  if (profileData.token_balance !== undefined) {
-                    setTokenBalance(profileData.token_balance);
-                  }
-                  setError('');
-                  setRoleResolved(true);
-                  setAuthLoading(false);
-                  clearTimeout(timeoutId);
-                  clearTimeout(bootTimeout);
-                } else {
-                  throw new Error(`Profile fetch failed: ${profileResponse.status}`);
-                }
-              } catch (fallbackError) {
-                console.error('❌ Fallback profile fetch also failed:', fallbackError.message);
-
-                // CRITICAL: Don't set profile = null if we already have one (prevents role downgrade)
-                // This handles the case where a late/failed session fetch tries to clobber a good profile
-                if (!profile) {
-                  // Only show error if we truly have no profile at all
-                  setError('Unable to load your profile. Please refresh the page or sign in again.');
-
-                  // IMPORTANT: Don't resolve role without profile data
-                  // This prevents defaulting to "fan" when we haven't fetched creator status yet
-                  setRoleResolved(false);
-                } else {
-                  // Keep existing profile and mark as resolved
-                  console.warn('⚠️ Keeping existing profile to prevent role downgrade');
-                  setRoleResolved(true);
-                }
-
-                setUser(session.user); // Keep session so they can sign out
-
-                // Stop loading so error message shows (or app continues with cached data)
-                setAuthLoading(false);
-                clearTimeout(timeoutId);
-                clearTimeout(bootTimeout);
-
-                // Auto-retry after 5 seconds if we don't have a profile yet
-                if (!profile) {
-                  setTimeout(async () => {
-                    if (shouldAttemptSyncUser() && mounted) {
-                      console.log('🔄 Auto-retrying profile fetch after failure...');
-                      window.location.reload(); // Simple reload to retry
-                    }
-                  }, 5000);
-                }
+              // CRITICAL: No cache, no hints - but don't downgrade existing profile
+              if (!profile) {
+                setError('Unable to load your profile. Please refresh the page or sign in again.');
+                setRoleResolved(true);
+              } else {
+                console.warn('⚠️ Keeping existing profile to prevent role downgrade');
+                setRoleResolved(true);
               }
+
+              setUser(session.user);
+              setAuthLoading(false);
+              clearTimeout(timeoutId);
+              clearTimeout(bootTimeout);
             }
           }
         }
@@ -856,20 +851,44 @@ export const AuthProvider = ({ children }) => {
       const unsubscribe = subscribeToAuthChanges(async (event, session) => {
         if (!mounted) return;
 
+        // Increment sequence for this auth change
+        const changeSequence = ++seqRef.current;
+        console.log(`[AuthContext] Auth state change #${changeSequence}: ${event}`);
+
         try {
           if (session?.user) {
-            setUser(session.user);
-            setError('');
+            // Use singleton orchestrator for consistent sync
+            const normalized = await syncAccountOnce(`auth-change-${event}`);
 
-            // Verify role
-            const verifiedRole = await syncUserRole();
-            if (verifiedRole) {
-              console.log('✅ Role verified:', verifiedRole.primaryRole);
+            // Check sequence - abort if stale
+            if (changeSequence !== seqRef.current) {
+              console.log(`[AuthContext] Change #${changeSequence} stale, aborting`);
+              return;
             }
 
-            // Fetch profile and balance
-            setTimeout(() => fetchUserProfile(session.user), 100);
-            setTimeout(() => fetchTokenBalance(session.user), 200);
+            if (normalized && mounted) {
+              setUser(session.user);
+
+              const profileData = {
+                ...normalized.user,
+                is_creator: normalized.isCreator,
+                is_admin: normalized.isAdmin,
+                role: normalized.role,
+                __isCanonical: true
+              };
+
+              setProfile(profileData);
+              saveProfileCache(profileData, session);
+              setError('');
+              setRoleResolved(true);
+
+              // Fetch token balance
+              setTimeout(() => fetchTokenBalance(session.user), 200);
+            } else {
+              // Sync failed - keep existing profile to prevent downgrade
+              console.warn('⚠️ Auth change sync failed, keeping existing profile');
+              setUser(session.user);
+            }
           } else {
             // Signed out - guard against double redirects
             if (event === 'SIGNED_OUT' && !hasRedirectedOnSignOut.current) {
@@ -885,12 +904,13 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             setProfile(null);
             setTokenBalance(0);
+            setRoleResolved(false);
             clearRoleCache();
             clearProfileCache();
           }
         } catch (error) {
           console.error('Auth state change error:', error);
-          setError('Authentication error');
+          // Don't set error - this prevents error messages on transient failures
         } finally {
           if (mounted) {
             setAuthLoading(false);
@@ -1046,19 +1066,22 @@ export const AuthProvider = ({ children }) => {
     const handleCircuitEvent = (event) => {
       const { state } = event.detail;
 
-      if (state === 'backoff' && !circuitBreakerToastShown.current) {
-        circuitBreakerToastShown.current = true;
-        // Non-blocking, auto-dismiss toast
-        toast('We\'re syncing your account. You can keep browsing.', {
-          duration: 4000,
-          icon: '🔄',
-          position: 'bottom-center',
-          style: {
-            background: '#6366f1',
-            color: '#fff',
-            fontSize: '14px'
-          }
-        });
+      if (state === 'backoff') {
+        // Set flag BEFORE showing toast to prevent race condition
+        if (!circuitBreakerToastShown.current) {
+          circuitBreakerToastShown.current = true;
+          // Non-blocking, auto-dismiss toast
+          toast('We\'re syncing your account. You can keep browsing.', {
+            duration: 4000,
+            icon: '🔄',
+            position: 'bottom-center',
+            style: {
+              background: '#6366f1',
+              color: '#fff',
+              fontSize: '14px'
+            }
+          });
+        }
       } else if (state === 'ok') {
         // Reset flag so toast can show again in future outages
         circuitBreakerToastShown.current = false;

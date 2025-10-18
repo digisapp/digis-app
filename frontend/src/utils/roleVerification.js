@@ -26,6 +26,9 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 /**
  * Verify user role with backend using session endpoint
  * This is the single source of truth for user roles
+ *
+ * NOTE: This function uses the same /auth/session endpoint as authSync.js
+ * to ensure consistency. No separate /auth/verify-role endpoint is needed.
  */
 export async function verifyUserRole(forceRefresh = false) {
   try {
@@ -33,6 +36,7 @@ export async function verifyUserRole(forceRefresh = false) {
     if (!forceRefresh && verifiedRoleCache && cacheTimestamp) {
       const cacheAge = Date.now() - cacheTimestamp;
       if (cacheAge < CACHE_DURATION) {
+        console.log('[RoleVerification] Using cached role');
         return verifiedRoleCache;
       }
     }
@@ -46,6 +50,7 @@ export async function verifyUserRole(forceRefresh = false) {
     }
 
     // Use /auth/session as single source of truth (prevents inconsistency)
+    // This matches authSync.js for consistency
     try {
       const data = await apiClient.get('/auth/session', {
         withAuth: true
@@ -227,13 +232,43 @@ export function withRoleProtection(Component, requiredRole) {
   };
 }
 
-// Auto-sync role on auth state changes
-if (typeof window !== 'undefined' && supabase?.auth) {
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-      syncUserRole();
-    } else if (event === 'SIGNED_OUT') {
-      clearRoleCache();
-    }
+/**
+ * Singleton Auth Watcher
+ * Prevents duplicate Supabase auth subscriptions
+ */
+let _roleWatcherSubscribed = false;
+
+/**
+ * Start the role watcher exactly once
+ * Subsequent calls return a no-op unsubscribe function
+ *
+ * @param {Function} startFn - Function that installs the auth listener and returns unsubscribe
+ * @returns {Function} Unsubscribe function
+ */
+export function startRoleWatcherOnce(startFn) {
+  if (_roleWatcherSubscribed) {
+    console.log('[RoleWatcher] Already subscribed, skipping');
+    return () => {}; // no-op unsubscribe
+  }
+
+  console.log('[RoleWatcher] Installing singleton auth watcher');
+  _roleWatcherSubscribed = true;
+  return startFn();
+}
+
+/**
+ * Install auth state change watcher
+ * This should only be called via startRoleWatcherOnce from AuthProvider
+ *
+ * @param {Object} supabase - Supabase client
+ * @param {Function} onAuthEvent - Callback for auth events
+ * @returns {Object} Subscription object with unsubscribe method
+ */
+export function installAuthWatcher(supabase, onAuthEvent) {
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    console.log(`[RoleWatcher] Auth event: ${event}`);
+    onAuthEvent(event, session);
   });
+
+  return data.subscription;
 }
