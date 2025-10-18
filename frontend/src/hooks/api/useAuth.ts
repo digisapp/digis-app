@@ -45,7 +45,7 @@ export const useLogin = () => {
       const token = data.session?.access_token;
       
       // Fetch user profile
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -87,7 +87,7 @@ export const useSignup = () => {
       const token = data.session?.access_token;
       
       // Create profile in backend
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export const useCurrentUser = () => {
       if (!session) return null;
 
       const token = session.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -187,7 +187,7 @@ export const useTokenBalance = () => {
       const token = await getAuthToken();
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/balance`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/balance`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       

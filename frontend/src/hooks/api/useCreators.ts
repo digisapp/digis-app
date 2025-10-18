@@ -43,7 +43,7 @@ export const useCreators = (filters?: CreatorFilters) => {
       }
 
       const token = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/creators?${params}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/creators?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       
@@ -63,7 +63,7 @@ export const useCreatorProfile = (username: string) => {
   return useQuery({
     queryKey: ['creator', username],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/public/creator/${username}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/public/creator/${username}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch creator profile');
@@ -82,7 +82,7 @@ export const useFeaturedCreators = () => {
   return useQuery({
     queryKey: ['creators', 'featured'],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/featured-creators`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/featured-creators`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch featured creators');
@@ -145,7 +145,7 @@ export const useFollowing = () => {
       const token = session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/following`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/following`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -165,7 +165,7 @@ export const useSearchCreators = (searchTerm: string, enabled = true) => {
   return useQuery({
     queryKey: ['creators', 'search', searchTerm],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/search-creators?q=${encodeURIComponent(searchTerm)}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/search-creators?q=${encodeURIComponent(searchTerm)}`);
       
       if (!response.ok) {
         throw new Error('Failed to search creators');
@@ -184,7 +184,7 @@ export const useOnlineCreatorsCount = () => {
   return useQuery({
     queryKey: ['creators', 'online', 'count'],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/online-creators-count`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/online-creators-count`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch online creators count');
@@ -211,7 +211,7 @@ export const useTipCreator = () => {
       const token = session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tokens/tip/${creatorId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/tip/${creatorId}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
