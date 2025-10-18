@@ -1482,6 +1482,14 @@ router.get('/debug-db', async (req, res) => {
 // Debug endpoint - check users table schema
 router.get('/debug-schema', async (req, res) => {
   try {
+    // Get all tables in public schema
+    const tablesResult = await db(req).query(`
+      SELECT tablename
+      FROM pg_tables
+      WHERE schemaname = 'public'
+      ORDER BY tablename;
+    `);
+
     // Get users table columns
     const columnsResult = await db(req).query(`
       SELECT
@@ -1521,13 +1529,30 @@ router.get('/debug-schema', async (req, res) => {
       .filter(r => r.is_nullable === 'NO')
       .map(r => r.column_name);
 
+    // Get creator-related data columns
+    const creatorDataColumns = columnNames.filter(col =>
+      col.includes('rate') ||
+      col.includes('price') ||
+      col.includes('token') ||
+      col.includes('bio') ||
+      col.includes('about') ||
+      col.includes('avatar') ||
+      col.includes('photo') ||
+      col.includes('image') ||
+      col.includes('banner') ||
+      col.includes('gallery')
+    );
+
     res.json({
       success: true,
+      allTables: tablesResult.rows.map(r => r.tablename),
       columns: columnsResult.rows,
       primaryKey: pkResult.rows.map(r => r.attname),
       criticalColumns,
       notNullColumns,
-      totalColumns: columnsResult.rows.length
+      creatorDataColumns,
+      totalColumns: columnsResult.rows.length,
+      totalTables: tablesResult.rows.length
     });
   } catch (error) {
     res.status(500).json({
