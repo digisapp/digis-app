@@ -181,25 +181,31 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     const upsertUserQuery = `
       INSERT INTO users (
         supabase_id,
-        firebase_uid,
         email,
         username,
         display_name,
         email_verified,
         is_creator,
         last_active,
+        video_rate_cents,
+        voice_rate_cents,
+        stream_rate_cents,
+        message_price_cents,
         created_at,
         updated_at
       )
       VALUES (
         $1::uuid,
-        $1::text,
         $2,
         $3,
         COALESCE($4, $3),
         true,
         $5,
         NOW(),
+        COALESCE($6, 10000),
+        COALESCE($7, 5000),
+        COALESCE($8, 1000),
+        COALESCE($9, 500),
         NOW(),
         NOW()
       )
@@ -208,14 +214,14 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         email_verified = true,
         last_active = NOW(),
         updated_at = NOW()
-      ON CONFLICT (firebase_uid) DO UPDATE SET
-        supabase_id = EXCLUDED.supabase_id,
-        email = EXCLUDED.email,
-        email_verified = true,
-        last_active = NOW(),
-        updated_at = NOW()
       RETURNING supabase_id
     `;
+
+    // Default pricing in cents (100 tokens/min for video, 50 for voice, etc.)
+    const defaultVideoRateCents = 10000; // $100 = 100 tokens/min
+    const defaultVoiceRateCents = 5000;  // $50 = 50 tokens/min
+    const defaultStreamRateCents = 1000; // $10 = 10 tokens/min
+    const defaultMessagePriceCents = 500; // $5 = 5 tokens/msg
 
     try {
       await db(req).query(upsertUserQuery, [
@@ -223,7 +229,11 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         email,
         safeUsername,
         metadata?.username || safeUsername,
-        isCreatorForUpsert
+        isCreatorForUpsert,
+        defaultVideoRateCents,
+        defaultVoiceRateCents,
+        defaultStreamRateCents,
+        defaultMessagePriceCents
       ]);
     } catch (dbError) {
       console.error('❌ sync-user DB upsert user failed', {
