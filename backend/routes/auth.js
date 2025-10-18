@@ -170,9 +170,11 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     // ROBUST UPSERT: Provide safe defaults for ALL NOT NULL fields to prevent 23502 errors
 
     // Safe account type and creator status fallbacks
-    const accountTypeForUpsert = metadata?.account_type || 'fan';
-    const isCreatorForUpsert = accountTypeForUpsert === 'creator';
-    const roleForUpsert = isCreatorForUpsert ? 'creator' : 'fan';
+    // Support: 'admin', 'creator', 'fan'
+    const accountTypeForUpsert = metadata?.account_type || metadata?.role || 'fan';
+    const isAdminForUpsert = accountTypeForUpsert === 'admin';
+    const isCreatorForUpsert = accountTypeForUpsert === 'creator' || isAdminForUpsert; // Admins are also creators
+    const roleForUpsert = isAdminForUpsert ? 'admin' : (isCreatorForUpsert ? 'creator' : 'fan');
 
     // Safe username fallback: metadata.username > email local-part > user_{id_prefix}
     const safeUsername = metadata?.username ||
@@ -187,6 +189,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         display_name,
         email_verified,
         is_creator,
+        is_super_admin,
         role,
         last_active,
         video_rate_cents,
@@ -204,11 +207,12 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         true,
         $5,
         $6,
+        $7,
         NOW(),
-        COALESCE($7, 10000),
-        COALESCE($8, 5000),
-        COALESCE($9, 1000),
-        COALESCE($10, 500),
+        COALESCE($8, 10000),
+        COALESCE($9, 5000),
+        COALESCE($10, 1000),
+        COALESCE($11, 500),
         NOW(),
         NOW()
       )
@@ -218,10 +222,11 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         display_name = COALESCE(EXCLUDED.display_name, users.display_name),
         email_verified = true,
         is_creator = EXCLUDED.is_creator,
+        is_super_admin = EXCLUDED.is_super_admin,
         role = EXCLUDED.role,
         last_active = NOW(),
         updated_at = NOW()
-      RETURNING supabase_id, username, email, is_creator, role
+      RETURNING supabase_id, username, email, is_creator, is_super_admin, role
     `;
 
     // Default pricing in cents (100 tokens/min for video, 50 for voice, etc.)
@@ -237,6 +242,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         safeUsername,
         metadata?.username || safeUsername,
         isCreatorForUpsert,
+        isAdminForUpsert,
         roleForUpsert,
         defaultVideoRateCents,
         defaultVoiceRateCents,
@@ -249,6 +255,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         supabaseId,
         username: upsertResult.rows[0]?.username,
         is_creator: upsertResult.rows[0]?.is_creator,
+        is_super_admin: upsertResult.rows[0]?.is_super_admin,
         role: upsertResult.rows[0]?.role
       });
     } catch (dbError) {
