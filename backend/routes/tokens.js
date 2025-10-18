@@ -26,9 +26,11 @@ const TOKEN_PRICES = {
   100000: 632.49
 };
 
+// Ably real-time adapter for balance updates
+const { publishToChannel } = require('../utils/ably-adapter');
+
 // Rate limiting for purchases
 const purchaseLimiter = require('express-rate-limit')({
-const { publishToChannel } = require('../utils/ably-adapter');
   windowMs: 60 * 1000, // 1 minute
   max: PURCHASE_RATE_LIMIT,
   message: {
