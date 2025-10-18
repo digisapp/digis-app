@@ -181,6 +181,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     const upsertUserQuery = `
       INSERT INTO users (
         supabase_id,
+        firebase_uid,
         email,
         username,
         display_name,
@@ -192,6 +193,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       )
       VALUES (
         $1::uuid,
+        $1::text,
         $2,
         $3,
         COALESCE($4, $3),
@@ -202,6 +204,12 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         NOW()
       )
       ON CONFLICT (supabase_id) DO UPDATE SET
+        email = EXCLUDED.email,
+        email_verified = true,
+        last_active = NOW(),
+        updated_at = NOW()
+      ON CONFLICT (firebase_uid) DO UPDATE SET
+        supabase_id = EXCLUDED.supabase_id,
         email = EXCLUDED.email,
         email_verified = true,
         last_active = NOW(),
