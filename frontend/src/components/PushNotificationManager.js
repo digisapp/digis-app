@@ -64,7 +64,7 @@ const PushNotificationManager = () => {
 
       // Get VAPID public key from backend
       const authToken = await getAuthToken();
-      const response = await fetch(`${ENV.BACKEND_URL}/api/notifications/vapid-key`, {
+      const response = await fetch(`${ENV.BACKEND_URL}/notifications/vapid-key`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
@@ -86,7 +86,7 @@ const PushNotificationManager = () => {
       });
 
       // Send subscription to backend
-      const subscribeResponse = await fetch(`${ENV.BACKEND_URL}/api/notifications/subscribe`, {
+      const subscribeResponse = await fetch(`${ENV.BACKEND_URL}/notifications/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ const PushNotificationManager = () => {
 
       // Notify backend
       const authToken = await getAuthToken();
-      await fetch(`${ENV.BACKEND_URL}/api/notifications/unsubscribe`, {
+      await fetch(`${ENV.BACKEND_URL}/notifications/unsubscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,7 +142,7 @@ const PushNotificationManager = () => {
   const testPushNotification = async () => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`${ENV.BACKEND_URL}/api/notifications/test-push`, {
+      const response = await fetch(`${ENV.BACKEND_URL}/notifications/test-push`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`
