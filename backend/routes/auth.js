@@ -167,6 +167,15 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     });
 
     // IDEMPOTENT: Ensure user exists (create or update)
+    // ROBUST UPSERT: Provide safe defaults for ALL NOT NULL fields to prevent 23502 errors
+    const accountType = metadata?.account_type || 'fan';
+    const isCreator = accountType === 'creator';
+
+    // Safe username fallback: metadata.username > email local-part > user_{id_prefix}
+    const safeUsername = metadata?.username ||
+                         email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '') ||
+                         `user_${supabaseId.slice(0, 8)}`;
+
     const upsertUserQuery = `
       INSERT INTO users (
         id,
@@ -175,6 +184,8 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         username,
         display_name,
         email_verified,
+        is_creator,
+        role,
         last_active,
         created_at,
         updated_at
@@ -183,9 +194,11 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         $1::uuid,
         $1::uuid,
         $2,
-        COALESCE($3, split_part($2, '@', 1)),
-        COALESCE($4, split_part($2, '@', 1)),
+        $3,
+        COALESCE($4, $3),
         true,
+        $5,
+        $6,
         NOW(),
         NOW(),
         NOW()
@@ -202,8 +215,10 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       await db(req).query(upsertUserQuery, [
         supabaseId,
         email,
-        metadata?.username,
-        metadata?.username
+        safeUsername,
+        metadata?.username || safeUsername,
+        isCreator,
+        isCreator ? 'creator' : 'fan'
       ]);
     } catch (dbError) {
       console.error('❌ sync-user DB upsert user failed', {

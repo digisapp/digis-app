@@ -260,6 +260,7 @@ try {
   const usernamesRoutes = require('../routes/usernames');
   const clientLogRoutes = require('../routes/client-log');
   const healthRoutes = require('../routes/health');
+  const realtimeRoutes = require('../routes/realtime');
 
   // Pro monetization routes (100% creator earnings)
   const proStreamsRoutes = require('../routes/streams');
@@ -401,6 +402,7 @@ try {
   app.use('/api/client-log', clientLogRoutes); // Client-side error logging (no auth during investigation)
   app.use('/api/fans', rateLimiters.api || ((req, res, next) => next()), fansRoutes);
   app.use('/api/calls', rateLimiters.api || ((req, res, next) => next()), callsRoutes);
+  app.use('/api/realtime', rateLimiters.api || ((req, res, next) => next()), realtimeRoutes); // Ably token signing
   app.use('/api/streams', rateLimiters.api || ((req, res, next) => next()), proStreamsRoutes); // Pro monetization streams
   app.use('/api/billing', rateLimiters.api || ((req, res, next) => next()), proBillingRoutes); // Pro monetization billing
   app.use('/api', rateLimiters.public || ((req, res, next) => next()), publicCreatorsRoutes); // Public creator profiles
