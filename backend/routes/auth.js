@@ -237,7 +237,8 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
 
     let userResult = null;
     try {
-      userResult = await db(req).query(upsertUserQuery, [
+      // Use pool directly (service role) to bypass RLS for initial user creation
+      userResult = await pool.query(upsertUserQuery, [
         supabaseId,
         email,
         safeUsername,
@@ -315,7 +316,8 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     `;
 
     try {
-      await db(req).query(upsertTokenBalanceQuery, [supabaseId]);
+      // Use pool directly (service role) to bypass RLS for initial token balance creation
+      await pool.query(upsertTokenBalanceQuery, [supabaseId]);
     } catch (dbError) {
       console.error('❌ sync-user DB upsert token balance failed', {
         rid,
@@ -333,7 +335,8 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         WHERE supabase_id = $1::uuid
         LIMIT 1
       `;
-      existingUser = await db(req).query(checkQuery, [supabaseId]);
+      // Use pool for fetching user too (service role)
+      existingUser = await pool.query(checkQuery, [supabaseId]);
     } catch (dbError) {
       console.error('❌ sync-user DB fetch user failed', {
         rid,
@@ -361,7 +364,8 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
           WHERE supabase_id = $1
           RETURNING supabase_id
         `;
-        await db(req).query(updateQuery, [supabaseId]);
+        // Use pool (service role) for update too
+        await pool.query(updateQuery, [supabaseId]);
       } catch (dbError) {
         console.error('❌ sync-user DB update user failed', {
           rid,
