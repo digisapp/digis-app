@@ -275,6 +275,32 @@ try {
   // TODO: Remove /api/* mounts once all clients use /api/v1/*
   app.use('/api', v1Routes); // Dual-mount for transition period
 
+  // TEMP HOTFIX: Accept accidental /api/v1/api/* paths (double /api)
+  // Frontend was incorrectly adding /api to VITE_BACKEND_URL that already had /api/v1
+  // This hotfix allows those calls to work while frontend caches clear
+  // TODO: Remove once all clients are using corrected frontend build
+  app.use('/api/v1/api', v1Routes); // TEMP: fixes double /api path
+
+  // TEMP: Runtime route introspection (for debugging mount issues)
+  app.get('/api/v1/_introspect', (req, res) => {
+    const list = [];
+    const scan = (stack, base = '') => {
+      stack.forEach((l) => {
+        if (l.route && l.route.path) {
+          const methods = Object.keys(l.route.methods).filter(Boolean);
+          list.push({ path: base + l.route.path, methods });
+        } else if (l.name === 'router' && l.handle && l.handle.stack) {
+          const mountPath = l.regexp?.fast_star
+            ? '*'
+            : (l.regexp?.fast_slash ? '/' : (l.regexp?.toString().match(/\\\/([^\\]+)\\\//)?.[1] ? `/${l.regexp.toString().match(/\\\/([^\\]+)\\\//)[1]}` : ''));
+          scan(l.handle.stack, base + (mountPath || ''));
+        }
+      });
+    };
+    scan(app._router.stack, '');
+    res.json({ ok: true, count: list.length, routes: list });
+  });
+
   // Use enhanced auth with JWT refresh tokens
   const authEnhancedRoutes = require('../routes/auth-enhanced');
 
@@ -291,6 +317,9 @@ try {
   app.get('/api/v1/ably-auth', ablyAuth); // Versioned
   app.post('/api/ably-auth', ablyAuth); // Back-compat
   app.get('/api/ably-auth', ablyAuth); // Back-compat
+  // TEMP HOTFIX: Accept /api/v1/api/ably-auth too (double /api)
+  app.post('/api/v1/api/ably-auth', ablyAuth);
+  app.get('/api/v1/api/ably-auth', ablyAuth);
 
   // Inngest trigger endpoint (for QStash cron) - MUST be before general handler
   const inngestTrigger = require('./inngest-trigger');
