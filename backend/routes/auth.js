@@ -167,164 +167,156 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     });
 
     // IDEMPOTENT: Ensure user exists (create or update)
-    // ROBUST UPSERT: Provide safe defaults for ALL NOT NULL fields to prevent 23502 errors
+    // EMAIL-LINKING: If email exists, link it to the new supabase_id instead of failing
 
     // Safe account type and creator status fallbacks
-    // Support: 'admin', 'creator', 'fan'
     const accountTypeForUpsert = metadata?.account_type || metadata?.role || 'fan';
     const isAdminForUpsert = accountTypeForUpsert === 'admin';
-    const isCreatorForUpsert = accountTypeForUpsert === 'creator' || isAdminForUpsert; // Admins are also creators
+    const isCreatorForUpsert = accountTypeForUpsert === 'creator' || isAdminForUpsert;
     const roleForUpsert = isAdminForUpsert ? 'admin' : (isCreatorForUpsert ? 'creator' : 'fan');
 
-    // Safe username fallback: metadata.username > email local-part > user_{id_prefix}
+    // Safe username fallback
     const safeUsername = metadata?.username ||
                          email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '') ||
                          `user_${supabaseId.slice(0, 8)}`;
 
-    const upsertUserQuery = `
-      INSERT INTO users (
-        supabase_id,
-        email,
-        username,
-        display_name,
-        email_verified,
-        is_creator,
-        is_super_admin,
-        role,
-        last_active,
-        video_rate_cents,
-        voice_rate_cents,
-        stream_rate_cents,
-        message_price_cents,
-        created_at,
-        updated_at
-      )
-      VALUES (
-        $1::uuid,
-        $2,
-        $3,
-        COALESCE($4, $3),
-        true,
-        $5,
-        $6,
-        $7,
-        NOW(),
-        COALESCE($8, 10000),
-        COALESCE($9, 5000),
-        COALESCE($10, 1000),
-        COALESCE($11, 500),
-        NOW(),
-        NOW()
-      )
-      ON CONFLICT (supabase_id) DO UPDATE SET
-        email = EXCLUDED.email,
-        username = COALESCE(EXCLUDED.username, users.username),
-        display_name = COALESCE(EXCLUDED.display_name, users.display_name),
-        email_verified = true,
-        is_creator = EXCLUDED.is_creator,
-        is_super_admin = EXCLUDED.is_super_admin,
-        role = EXCLUDED.role,
-        last_active = NOW(),
-        updated_at = NOW()
-      RETURNING supabase_id, username, email, is_creator, is_super_admin, role
-    `;
+    // Default pricing in cents
+    const vr = 10000; // $100 = 100 tokens/min for video
+    const ar = 5000;  // $50 = 50 tokens/min for voice
+    const sr = 1000;  // $10 = 10 tokens/min for stream
+    const mp = 500;   // $5 = 5 tokens/msg
 
-    // Default pricing in cents (100 tokens/min for video, 50 for voice, etc.)
-    const defaultVideoRateCents = 10000; // $100 = 100 tokens/min
-    const defaultVoiceRateCents = 5000;  // $50 = 50 tokens/min
-    const defaultStreamRateCents = 1000; // $10 = 10 tokens/min
-    const defaultMessagePriceCents = 500; // $5 = 5 tokens/msg
-
-    let userResult = null;
     try {
-      // Use pool directly (service role) to bypass RLS for initial user creation
-      userResult = await pool.query(upsertUserQuery, [
-        supabaseId,
-        email,
-        safeUsername,
-        metadata?.username || safeUsername,
-        isCreatorForUpsert,
-        isAdminForUpsert,
-        roleForUpsert,
-        defaultVideoRateCents,
-        defaultVoiceRateCents,
-        defaultStreamRateCents,
-        defaultMessagePriceCents
-      ]);
+      // Use pool (service role) to bypass RLS
+      await pool.query('BEGIN');
 
-      console.log('✅ sync-user upsert successful', {
+      // 1) Check if user exists by supabase_id
+      const rowById = await pool.query(
+        `SELECT id, supabase_id FROM users WHERE supabase_id = $1 LIMIT 1`,
+        [supabaseId]
+      );
+
+      if (rowById.rows.length) {
+        // User exists by supabase_id - UPDATE
+        console.log('✅ User found by supabase_id, updating', { rid, supabaseId });
+        await pool.query(`
+          UPDATE users SET
+            email = COALESCE($2, email),
+            username = COALESCE($3, username),
+            role = $4,
+            is_creator = $5,
+            is_super_admin = $6,
+            video_rate_cents = $7,
+            voice_rate_cents = $8,
+            stream_rate_cents = $9,
+            message_price_cents = $10,
+            email_verified = true,
+            last_active = NOW(),
+            updated_at = NOW()
+          WHERE supabase_id = $1
+        `, [supabaseId, email || null, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp]);
+
+      } else if (email) {
+        // 2) Check if user exists by email
+        const rowByEmail = await pool.query(
+          `SELECT id, supabase_id FROM users WHERE LOWER(email) = $1 LIMIT 1`,
+          [email.toLowerCase()]
+        );
+
+        if (rowByEmail.rows.length) {
+          // EMAIL-LINKING: Link existing email account to new supabase_id
+          console.log('✅ User found by email, linking to supabase_id', { rid, email, supabaseId, existingId: rowByEmail.rows[0].id });
+          await pool.query(`
+            UPDATE users SET
+              supabase_id = $1,
+              username = COALESCE($2, username),
+              role = $3,
+              is_creator = $4,
+              is_super_admin = $5,
+              video_rate_cents = $6,
+              voice_rate_cents = $7,
+              stream_rate_cents = $8,
+              message_price_cents = $9,
+              email_verified = true,
+              last_active = NOW(),
+              updated_at = NOW()
+            WHERE id = $10
+          `, [supabaseId, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp, rowByEmail.rows[0].id]);
+
+        } else {
+          // 3) Fresh insert - user doesn't exist
+          console.log('✅ New user, inserting', { rid, email, supabaseId });
+          await pool.query(`
+            INSERT INTO users (
+              supabase_id, email, username, role, is_creator, is_super_admin,
+              video_rate_cents, voice_rate_cents, stream_rate_cents, message_price_cents,
+              email_verified, last_active, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW(), NOW())
+          `, [supabaseId, email || null, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp]);
+        }
+      } else {
+        // No email - create with placeholder
+        console.log('✅ New user without email, inserting with placeholder', { rid, supabaseId });
+        await pool.query(`
+          INSERT INTO users (
+            supabase_id, email, username, role, is_creator, is_super_admin,
+            video_rate_cents, voice_rate_cents, stream_rate_cents, message_price_cents,
+            email_verified, last_active, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW(), NOW())
+        `, [supabaseId, `${supabaseId}@placeholder.local`, safeUsername || null, roleForUpsert, isCreatorForUpsert, isAdminForUpsert, vr, ar, sr, mp]);
+      }
+
+      console.log('✅ sync-user upsert/link complete', {
         rid,
         supabaseId,
-        username: userResult.rows[0]?.username,
-        is_creator: userResult.rows[0]?.is_creator,
-        is_super_admin: userResult.rows[0]?.is_super_admin,
-        role: userResult.rows[0]?.role
+        email,
+        role: roleForUpsert,
+        is_creator: isCreatorForUpsert
       });
+
     } catch (dbError) {
-      // 23505 = unique constraint violation (duplicate)
-      // This can happen if:
-      // 1. supabase_id conflict (handled by ON CONFLICT)
-      // 2. email conflict (user with same email already exists)
-      // 3. username conflict (username already taken)
-      // TREAT ALL DUPLICATES AS SUCCESS - user already exists
-      if (dbError.code === '23505') {
-        console.log('✅ User already exists (duplicate constraint), treating as success', {
-          rid,
-          supabaseId,
-          email,
-          constraint: dbError.constraint,
-          detail: dbError.detail
-        });
-        // Continue to fetch existing user - this is success, not an error
-      } else if (dbError.code === '22P02') {
-        return fail(400, {
-          error: 'INVALID_UUID',
-          message: 'Invalid user ID format',
-          code: dbError.code
-        });
-      } else {
-        // For other errors, return generic failure
-        console.error('❌ sync-user DB upsert failed', {
-          rid,
-          code: dbError.code,
-          message: dbError.message,
-          detail: dbError.detail,
-          constraint: dbError.constraint
-        });
-        return fail(500, {
-          error: 'INTERNAL',
-          message: dbError.message || 'Failed to create or update user in database',
-          code: dbError.code,
-          detail: process.env.NODE_ENV === 'development' ? dbError.detail : undefined
-        });
-      }
+      await pool.query('ROLLBACK');
+      console.error('❌ sync-user DB operation failed', {
+        rid,
+        code: dbError.code,
+        message: dbError.message,
+        detail: dbError.detail,
+        constraint: dbError.constraint
+      });
+
+      return fail(500, {
+        error: 'INTERNAL',
+        message: dbError.message || 'Failed to create or update user in database',
+        code: dbError.code,
+        detail: process.env.NODE_ENV === 'development' ? dbError.detail : undefined
+      });
     }
 
-    // IDEMPOTENT: Ensure token balance exists
-    const upsertTokenBalanceQuery = `
-      INSERT INTO token_balances (
-        user_id,
-        balance,
-        total_earned,
-        total_spent,
-        total_purchased,
-        created_at,
-        updated_at
-      )
-      VALUES ($1::uuid, 0, 0, 0, 0, NOW(), NOW())
-      ON CONFLICT (user_id) DO NOTHING
-    `;
-
+    // IDEMPOTENT: Ensure token balance exists using SECURITY DEFINER function
+    // This bypasses RLS without needing an INSERT policy
     try {
-      // Use pool directly (service role) to bypass RLS for initial token balance creation
-      await pool.query(upsertTokenBalanceQuery, [supabaseId]);
+      await pool.query(`SELECT public.ensure_token_balance($1)`, [supabaseId]);
+      console.log('✅ Token balance ensured', { rid, supabaseId });
     } catch (dbError) {
-      console.error('❌ sync-user DB upsert token balance failed', {
+      console.error('❌ sync-user token balance failed', {
         rid,
         code: dbError.code,
         message: dbError.message
       });
       // Non-fatal: token balance can be created later
+    }
+
+    // Commit the transaction
+    try {
+      await pool.query('COMMIT');
+    } catch (commitError) {
+      await pool.query('ROLLBACK');
+      console.error('❌ sync-user commit failed', { rid, error: commitError.message });
+      return fail(500, {
+        error: 'INTERNAL',
+        message: 'Transaction commit failed',
+        code: commitError.code
+      });
     }
 
     // Now fetch the complete profile
@@ -1428,6 +1420,7 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
+    res.set('Vary', 'Authorization'); // Ensure CDN respects per-user caching
 
     // Return session format expected by frontend useAuthStore
     return res.json({
