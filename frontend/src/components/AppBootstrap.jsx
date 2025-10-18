@@ -44,9 +44,20 @@ export default function AppBootstrap({ children }) {
 
         if (session?.access_token) {
           console.log('🔐 [Bootstrap] Calling bootstrap with token...');
-          // Bootstrap with token
-          await bootstrap(session.access_token);
-          console.log('🔐 [Bootstrap] Bootstrap complete');
+          // Bootstrap with token (with 10s timeout to prevent infinite loading)
+          try {
+            await Promise.race([
+              bootstrap(session.access_token),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Bootstrap timeout after 10s')), 10000)
+              )
+            ]);
+            console.log('🔐 [Bootstrap] Bootstrap complete');
+          } catch (bootstrapError) {
+            console.error('🔐 [Bootstrap] Bootstrap failed:', bootstrapError);
+            // Fall back to guest mode if bootstrap fails
+            useAuthStore.getState().setAuthError(bootstrapError.message);
+          }
         } else {
           // No session - set to fan/guest
           console.log('🔐 [Bootstrap] No session, setting as guest');
