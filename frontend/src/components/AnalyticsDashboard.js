@@ -91,7 +91,7 @@ const AnalyticsDashboard = ({ user, className = '' }) => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/analytics/creator/${user.id}?period=${selectedPeriod}`, {
+      const response = await fetch(`/analytics/creator/${user.id}?period=${selectedPeriod}`, {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }

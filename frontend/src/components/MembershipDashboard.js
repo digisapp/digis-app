@@ -30,7 +30,7 @@ const MembershipDashboard = ({ userId, isCreator }) => {
   const fetchCreatorTiers = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/membership-tiers/creator/${userId}/tiers`);
+      const response = await api.get(`/membership-tiers/creator/${userId}/tiers`);
       
       if (response.data.success) {
         setTiers(response.data.tiers);

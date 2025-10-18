@@ -176,19 +176,19 @@ export const useApi = () => {
 export const api = {
   creators: {
     list: (category = 'all', page = 1) => 
-      `/api/creators?category=${category}&page=${page}`,
-    get: (id) => `/api/creators/${id}`,
+      `/creators?category=${category}&page=${page}`,
+    get: (id) => `/creators/${id}`,
     featured: () => '/api/creators/featured',
   },
   messages: {
     list: () => '/api/messages',
-    get: (id) => `/api/messages/${id}`,
+    get: (id) => `/messages/${id}`,
     send: () => '/api/messages',
-    markRead: (id) => `/api/messages/${id}/read`,
+    markRead: (id) => `/messages/${id}/read`,
   },
   wallet: {
     balance: () => '/api/wallet/balance',
-    transactions: (page = 1) => `/api/wallet/transactions?page=${page}`,
+    transactions: (page = 1) => `/wallet/transactions?page=${page}`,
     purchase: () => '/api/tokens/purchase',
   },
   user: {
@@ -198,12 +198,12 @@ export const api = {
   },
   streaming: {
     live: () => '/api/streaming/live',
-    join: (id) => `/api/streaming/${id}/join`,
-    leave: (id) => `/api/streaming/${id}/leave`,
+    join: (id) => `/streaming/${id}/join`,
+    leave: (id) => `/streaming/${id}/leave`,
   },
   notifications: {
     list: () => '/api/notifications',
-    markRead: (id) => `/api/notifications/${id}/read`,
+    markRead: (id) => `/notifications/${id}/read`,
     markAllRead: () => '/api/notifications/read-all',
   },
 };

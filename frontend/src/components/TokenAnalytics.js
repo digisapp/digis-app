@@ -39,8 +39,8 @@ const TokenAnalytics = ({ user, isCreator }) => {
     try {
       const authToken = await getAuthToken();
       const endpoint = isCreator 
-        ? `/api/tokens/analytics/creator?range=${timeRange}`
-        : `/api/tokens/analytics/fan?range=${timeRange}`;
+        ? `/tokens/analytics/creator?range=${timeRange}`
+        : `/tokens/analytics/fan?range=${timeRange}`;
         
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}${endpoint}`, {
         headers: {

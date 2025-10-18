@@ -25,7 +25,7 @@ const StreamAutoEndSettings = ({ creatorId, streamId = null }) => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/creators/${creatorId}/stream-settings`);
+      const response = await api.get(`/creators/${creatorId}/stream-settings`);
       if (response.data) {
         setSettings({
           autoEndEnabled: response.data.stream_auto_end_enabled ?? true,
@@ -45,7 +45,7 @@ const StreamAutoEndSettings = ({ creatorId, streamId = null }) => {
       setSaving(true);
       
       // Update creator preferences
-      await api.put(`/api/creators/${creatorId}/stream-settings`, {
+      await api.put(`/creators/${creatorId}/stream-settings`, {
         stream_auto_end_enabled: settings.autoEndEnabled,
         stream_auto_end_minutes: settings.autoEndMinutes,
         stream_warning_minutes: settings.warningMinutes
@@ -53,7 +53,7 @@ const StreamAutoEndSettings = ({ creatorId, streamId = null }) => {
 
       // If currently streaming, update stream settings
       if (streamId) {
-        await api.put(`/api/streaming/settings/${streamId}`, {
+        await api.put(`/streaming/settings/${streamId}`, {
           autoEndEnabled: settings.autoEndEnabled,
           autoEndMinutes: settings.autoEndMinutes
         });

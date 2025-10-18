@@ -57,7 +57,7 @@ export default function IncomingCallModal({ invite, onClose, onAccepted }) {
     setAccepting(true);
 
     try {
-      const res = await authedFetch(`/api/calls/${invite.callId}/accept`, {
+      const res = await authedFetch(`/calls/${invite.callId}/accept`, {
         method: 'POST'
       });
 
@@ -96,7 +96,7 @@ export default function IncomingCallModal({ invite, onClose, onAccepted }) {
     setDeclining(true);
 
     try {
-      await authedFetch(`/api/calls/${invite.callId}/decline`, {
+      await authedFetch(`/calls/${invite.callId}/decline`, {
         method: 'POST'
       });
 

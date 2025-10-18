@@ -239,7 +239,7 @@ export const api = {
   // User endpoints
   users: {
     getProfile: (userId: string) => 
-      apiClient.get<User>(`/api/users/${userId}`, {
+      apiClient.get<User>(`/users/${userId}`, {
         cache: {
           ttl: 5 * 60 * 1000, // 5 minutes
           key: (_config) => `user-profile-${userId}`,
@@ -247,39 +247,39 @@ export const api = {
       }),
     
     updateProfile: (userId: string, data: Partial<User>) =>
-      apiClient.put<User>(`/api/users/${userId}`, data),
+      apiClient.put<User>(`/users/${userId}`, data),
     
     getCreators: (params?: { page?: number; limit?: number }) =>
-      apiClient.get<{ creators: Creator[]; total: number }>('/api/users/creators', { params }),
+      apiClient.get<{ creators: Creator[]; total: number }>('/users/creators', { params }),
   },
   
   // Session endpoints
   sessions: {
     create: (data: CreateSessionRequest) =>
-      apiClient.post<Session>('/api/sessions', data),
+      apiClient.post<Session>('/sessions', data),
     
     join: (sessionId: string) =>
-      apiClient.post<SessionToken>(`/api/sessions/${sessionId}/join`),
+      apiClient.post<SessionToken>(`/sessions/${sessionId}/join`),
     
     end: (sessionId: string) =>
-      apiClient.post(`/api/sessions/${sessionId}/end`),
+      apiClient.post(`/sessions/${sessionId}/end`),
   },
   
   // Token endpoints
   tokens: {
     getBalance: () =>
-      apiClient.get<{ balance: number }>('/api/tokens/balance'),
+      apiClient.get<{ balance: number }>('/tokens/balance'),
     
     purchase: (data: TokenPurchaseRequest) =>
       apiClient.withRetry(() => 
-        apiClient.post<TokenPurchaseResponse>('/api/tokens/purchase', data)
+        apiClient.post<TokenPurchaseResponse>('/tokens/purchase', data)
       ),
   },
   
   // Agora endpoints
   agora: {
     getToken: (channel: string, uid: string, role: 'host' | 'audience') =>
-      apiClient.get<{ token: string }>('/api/agora/token', {
+      apiClient.get<{ token: string }>('/agora/token', {
         params: { channel, uid, role },
       }),
   },

@@ -69,25 +69,25 @@ const CreatorAnalytics = ({
         tipStatsResponse,
         pollStatsResponse
       ] = await Promise.all([
-        fetch(`/api/subscriptions/analytics?period=${selectedPeriod}`, {
+        fetch(`/subscriptions/analytics?period=${selectedPeriod}`, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           }
         }),
-        fetch(`/api/gifts/stats?period=${selectedPeriod}`, {
+        fetch(`/gifts/stats?period=${selectedPeriod}`, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           }
         }),
-        fetch(`/api/tips/stats?period=${selectedPeriod}`, {
+        fetch(`/tips/stats?period=${selectedPeriod}`, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           }
         }),
-        fetch(`/api/polls/user/stats?period=${selectedPeriod}`, {
+        fetch(`/polls/user/stats?period=${selectedPeriod}`, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'

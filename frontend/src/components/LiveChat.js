@@ -108,7 +108,7 @@ const LiveChat = ({
   const fetchUserSubscription = useCallback(async (userId) => {
     try {
       const authToken = await getAuthToken();
-      const response = await fetch(`/api/subscriptions/status/${userId}`, {
+      const response = await fetch(`/subscriptions/status/${userId}`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'

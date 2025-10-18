@@ -26,7 +26,7 @@ const TopSupportersPanel = ({ creatorId, className = '' }) => {
   const fetchTopSupporters = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/loyalty/creator/${creatorId}/top-supporters`);
+      const response = await api.get(`/loyalty/creator/${creatorId}/top-supporters`);
       setSupporters(response.data.topSupporters);
     } catch (error) {
       console.error('Error fetching top supporters:', error);

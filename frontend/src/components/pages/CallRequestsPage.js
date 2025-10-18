@@ -234,8 +234,8 @@ const CallRequestsPage = ({ user }) => {
       const authToken = await getAuthToken();
       
       const endpoint = request.request_type === 'session_invite'
-        ? `/api/sessions/invites/${request.id}/accept`
-        : `/api/sessions/requests/${request.id}/accept`;
+        ? `/sessions/invites/${request.id}/accept`
+        : `/sessions/requests/${request.id}/accept`;
       
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}${endpoint}`,
@@ -270,8 +270,8 @@ const CallRequestsPage = ({ user }) => {
       const authToken = await getAuthToken();
       
       const endpoint = request.request_type === 'session_invite'
-        ? `/api/sessions/invites/${request.id}/decline`
-        : `/api/sessions/requests/${request.id}/decline`;
+        ? `/sessions/invites/${request.id}/decline`
+        : `/sessions/requests/${request.id}/decline`;
       
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}${endpoint}`,

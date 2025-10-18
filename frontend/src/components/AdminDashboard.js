@@ -41,7 +41,7 @@ const AdminDashboard = memo(({ user, className = '' }) => {
   const fetchApplications = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetchWithRetry(`/api/admin/creator-applications?status=${selectedTab}&limit=50`, {
+      const response = await fetchWithRetry(`/admin/creator-applications?status=${selectedTab}&limit=50`, {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
@@ -157,7 +157,7 @@ const AdminDashboard = memo(({ user, className = '' }) => {
 
   const handleApproveApplication = async (applicationId, reviewNotes = '') => {
     try {
-      const response = await fetchWithRetry(`/api/admin/creator-applications/${applicationId}/approve`, {
+      const response = await fetchWithRetry(`/admin/creator-applications/${applicationId}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +178,7 @@ const AdminDashboard = memo(({ user, className = '' }) => {
 
   const handleRejectApplication = async (applicationId, reason, reviewNotes = '') => {
     try {
-      const response = await fetchWithRetry(`/api/admin/creator-applications/${applicationId}/reject`, {
+      const response = await fetchWithRetry(`/admin/creator-applications/${applicationId}/reject`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -199,7 +199,7 @@ const AdminDashboard = memo(({ user, className = '' }) => {
 
   const handleQueueApplication = async (applicationId, notes = '') => {
     try {
-      const response = await fetchWithRetry(`/api/admin/creator-applications/${applicationId}/queue`, {
+      const response = await fetchWithRetry(`/admin/creator-applications/${applicationId}/queue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

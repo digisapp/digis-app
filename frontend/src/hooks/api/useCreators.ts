@@ -106,8 +106,8 @@ export const useFollowCreator = () => {
       if (!token) throw new Error('Not authenticated');
 
       const endpoint = action === 'follow' 
-        ? `/api/users/follow/${creatorId}`
-        : `/api/users/unfollow/${creatorId}`;
+        ? `/users/follow/${creatorId}`
+        : `/users/unfollow/${creatorId}`;
 
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}${endpoint}`, {
         method: 'POST',

@@ -53,7 +53,7 @@ const CollaborationCard = ({ collaboration, userId, isCreator, onStatusUpdate })
   const handleResponse = async (response) => {
     try {
       setActionLoading(response);
-      const result = await api.post(`/api/collaborations/${collaboration.id}/respond`, {
+      const result = await api.post(`/collaborations/${collaboration.id}/respond`, {
         response
       });
       
@@ -70,7 +70,7 @@ const CollaborationCard = ({ collaboration, userId, isCreator, onStatusUpdate })
   const handleStartSession = async () => {
     try {
       setActionLoading('start');
-      const result = await api.post(`/api/collaborations/${collaboration.id}/start`);
+      const result = await api.post(`/collaborations/${collaboration.id}/start`);
       
       if (result.data.success) {
         onStatusUpdate();
@@ -86,7 +86,7 @@ const CollaborationCard = ({ collaboration, userId, isCreator, onStatusUpdate })
   const handleEndSession = async () => {
     try {
       setActionLoading('end');
-      const result = await api.post(`/api/collaborations/${collaboration.id}/end`);
+      const result = await api.post(`/collaborations/${collaboration.id}/end`);
       
       if (result.data.success) {
         onStatusUpdate();
@@ -103,7 +103,7 @@ const CollaborationCard = ({ collaboration, userId, isCreator, onStatusUpdate })
     
     try {
       setActionLoading('cancel');
-      const result = await api.post(`/api/collaborations/${collaboration.id}/cancel`, {
+      const result = await api.post(`/collaborations/${collaboration.id}/cancel`, {
         reason
       });
       

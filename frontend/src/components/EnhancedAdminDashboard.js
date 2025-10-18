@@ -124,7 +124,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
         dateRange: filters.dateRange
       });
 
-      const response = await fetchWithRetry(`/api/admin/creator-applications?${queryParams}`, {
+      const response = await fetchWithRetry(`/admin/creator-applications?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
@@ -202,7 +202,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
   const handleExportData = async (format = 'csv') => {
     setExportLoading(true);
     try {
-      const response = await fetchWithRetry(`/api/admin/export/${format}`, {
+      const response = await fetchWithRetry(`/admin/export/${format}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -799,7 +799,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
 
   const handleApproveApplication = async (applicationId, reviewNotes = '') => {
     try {
-      await fetchWithRetry(`/api/admin/creator-applications/${applicationId}/approve`, {
+      await fetchWithRetry(`/admin/creator-applications/${applicationId}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -823,7 +823,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
 
   const handleRejectApplication = async (applicationId, reason = '') => {
     try {
-      await fetchWithRetry(`/api/admin/creator-applications/${applicationId}/reject`, {
+      await fetchWithRetry(`/admin/creator-applications/${applicationId}/reject`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -847,7 +847,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
 
   const handleQueueApplication = async (applicationId, notes = '') => {
     try {
-      await fetchWithRetry(`/api/admin/creator-applications/${applicationId}/queue`, {
+      await fetchWithRetry(`/admin/creator-applications/${applicationId}/queue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

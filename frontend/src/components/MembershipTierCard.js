@@ -13,7 +13,7 @@ const MembershipTierCard = ({ tier, isCreator, onEdit, onUpdate }) => {
   const handleJoinTier = async () => {
     try {
       setLoading(true);
-      const response = await api.post(`/api/membership-tiers/join/${tier.id}`, {
+      const response = await api.post(`/membership-tiers/join/${tier.id}`, {
         paymentMethod: 'tokens'
       });
       
@@ -33,7 +33,7 @@ const MembershipTierCard = ({ tier, isCreator, onEdit, onUpdate }) => {
   const handleUpgrade = async () => {
     try {
       setLoading(true);
-      const response = await api.post(`/api/membership-tiers/upgrade/${tier.id}`, {
+      const response = await api.post(`/membership-tiers/upgrade/${tier.id}`, {
         paymentMethod: 'tokens'
       });
       
@@ -54,7 +54,7 @@ const MembershipTierCard = ({ tier, isCreator, onEdit, onUpdate }) => {
     
     try {
       setLoading(true);
-      const response = await api.post(`/api/membership-tiers/cancel/${tier.id}`, {
+      const response = await api.post(`/membership-tiers/cancel/${tier.id}`, {
         reason
       });
       

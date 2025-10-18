@@ -375,7 +375,7 @@ class OfflineQueueService {
     processMessage: async (data) => {
       // Import apiClient dynamically to avoid circular dependency
       const { apiClient } = await import('../utils/apiClient');
-      return await apiClient.post('/api/messages/send', data);
+      return await apiClient.post('/messages/send', data);
     },
 
     processUpload: async (data) => {

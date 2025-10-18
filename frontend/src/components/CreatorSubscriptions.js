@@ -60,7 +60,7 @@ const CreatorSubscriptions = ({
     if (!creator?.id) return;
 
     try {
-      const response = await fetch(`/api/subscriptions/status/${creator.id}`, {
+      const response = await fetch(`/subscriptions/status/${creator.id}`, {
         headers: {
           'Authorization': `Bearer ${user.accessToken}`,
           'Content-Type': 'application/json'

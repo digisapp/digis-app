@@ -91,7 +91,7 @@ const MembershipTierForm = ({ tier, onSuccess, onCancel }) => {
       };
       
       const endpoint = tier 
-        ? `/api/membership-tiers/tiers/${tier.id}`
+        ? `/membership-tiers/tiers/${tier.id}`
         : '/api/membership-tiers/tiers';
       
       const method = tier ? 'put' : 'post';

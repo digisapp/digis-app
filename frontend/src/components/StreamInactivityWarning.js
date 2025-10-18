@@ -52,10 +52,10 @@ const StreamInactivityWarning = ({ streamId, onKeepAlive }) => {
   const handleKeepAlive = async () => {
     try {
       // Send heartbeat to keep stream alive
-      await api.post(`/api/streaming/heartbeat/${streamId}`);
+      await api.post(`/streaming/heartbeat/${streamId}`);
       
       // Log activity
-      await api.post(`/api/streaming/activity/${streamId}`, {
+      await api.post(`/streaming/activity/${streamId}`, {
         activityType: 'creator_action',
         details: { action: 'keep_alive' }
       });

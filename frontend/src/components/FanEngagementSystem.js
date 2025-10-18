@@ -101,8 +101,8 @@ const FanEngagementSystem = ({ user, isCreator = false, targetCreatorId = null }
 
     try {
       const endpoint = isCreator 
-        ? `/api/users/fan-engagement-overview`
-        : `/api/users/fan-engagement${targetCreatorId ? `/${targetCreatorId}` : ''}`;
+        ? `/users/fan-engagement-overview`
+        : `/users/fan-engagement${targetCreatorId ? `/${targetCreatorId}` : ''}`;
         
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}${endpoint}`, {
         headers: {

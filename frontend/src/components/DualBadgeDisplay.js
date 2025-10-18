@@ -21,7 +21,7 @@ const DualBadgeDisplay = ({
 
   const fetchBadges = async () => {
     try {
-      const response = await apiClient.get(`/api/loyalty/badges/${userId}`, {
+      const response = await apiClient.get(`/loyalty/badges/${userId}`, {
         params: { creatorId }
       });
       setBadges(response.data.badges);

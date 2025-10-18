@@ -19,7 +19,7 @@ export async function uploadAvatar(file, onProgress) {
     });
 
     const result = await uploadService.uploadFile(file, {
-      endpoint: '/api/uploads/avatar',
+      endpoint: '/uploads/avatar',
       type: 'image',
       compress: false, // Already processed on client
       onProgress
@@ -52,7 +52,7 @@ export async function uploadCard(file, onProgress) {
     });
 
     const result = await uploadService.uploadFile(file, {
-      endpoint: '/api/uploads/card',
+      endpoint: '/uploads/card',
       type: 'image',
       compress: false, // Already processed on client
       onProgress

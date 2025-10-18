@@ -131,13 +131,13 @@ export const api = {
   // Auth endpoints with store sync
   auth: {
     syncUser: async (data) => {
-      const response = await apiClient.post('/api/auth/sync-user', data);
+      const response = await apiClient.post('/auth/sync-user', data);
       syncUserData(response.data);
       return response;
     },
     
     getProfile: async () => {
-      const response = await apiClient.get('/api/auth/profile');
+      const response = await apiClient.get('/auth/profile');
       if (response.data) {
         const store = useHybridStore.getState();
         store.setProfile(response.data);
@@ -146,7 +146,7 @@ export const api = {
     },
     
     updateProfile: async (data) => {
-      const response = await apiClient.put('/api/auth/profile', data);
+      const response = await apiClient.put('/auth/profile', data);
       if (response.data) {
         const store = useHybridStore.getState();
         store.setProfile(response.data);
@@ -154,24 +154,24 @@ export const api = {
       return response;
     },
     
-    applyCreator: (data) => apiClient.post('/api/auth/apply-creator', data),
-    checkUsername: (username) => apiClient.get(`/api/auth/check-username/${username}`),
-    deleteAccount: (data) => apiClient.delete('/api/auth/account', { data }),
+    applyCreator: (data) => apiClient.post('/auth/apply-creator', data),
+    checkUsername: (username) => apiClient.get(`/auth/check-username/${username}`),
+    deleteAccount: (data) => apiClient.delete('/auth/account', { data }),
     
     logout: async () => {
       const store = useHybridStore.getState();
       store.logout();
-      return apiClient.post('/api/auth/logout');
+      return apiClient.post('/auth/logout');
     }
   },
 
   // User endpoints
   users: {
-    search: (query) => apiClient.get(`/api/users/search?q=${query}`),
-    getById: (id) => apiClient.get(`/api/users/${id}`),
-    update: (id, data) => apiClient.put(`/api/users/${id}`, data),
+    search: (query) => apiClient.get(`/users/search?q=${query}`),
+    getById: (id) => apiClient.get(`/users/${id}`),
+    update: (id, data) => apiClient.put(`/users/${id}`, data),
     follow: async (creatorId) => {
-      const response = await apiClient.post(`/api/users/${creatorId}/follow`);
+      const response = await apiClient.post(`/users/${creatorId}/follow`);
       // Could add follow notification to store
       const store = useHybridStore.getState();
       store.addNotification({
@@ -182,18 +182,18 @@ export const api = {
       });
       return response;
     },
-    unfollow: (creatorId) => apiClient.delete(`/api/users/${creatorId}/follow`),
-    getFollowers: (userId) => apiClient.get(`/api/users/${userId}/followers`),
-    getFollowing: (userId) => apiClient.get(`/api/users/${userId}/following`),
-    getCreators: (params) => apiClient.get('/api/users/creators', { params }),
-    getCreatorByUsername: (username) => apiClient.get(`/api/public/creators/${username}`),
-    updateAvailability: (data) => apiClient.put('/api/users/availability', data),
+    unfollow: (creatorId) => apiClient.delete(`/users/${creatorId}/follow`),
+    getFollowers: (userId) => apiClient.get(`/users/${userId}/followers`),
+    getFollowing: (userId) => apiClient.get(`/users/${userId}/following`),
+    getCreators: (params) => apiClient.get('/users/creators', { params }),
+    getCreatorByUsername: (username) => apiClient.get(`/public/creators/${username}`),
+    updateAvailability: (data) => apiClient.put('/users/availability', data),
   },
 
   // Token endpoints with automatic balance sync
   tokens: {
     getBalance: async () => {
-      const response = await apiClient.get('/api/tokens/balance');
+      const response = await apiClient.get('/tokens/balance');
       if (response.data?.balance !== undefined) {
         const store = useHybridStore.getState();
         store.setTokenBalance(response.data.balance);
@@ -202,7 +202,7 @@ export const api = {
     },
     
     purchase: async (data) => {
-      const response = await apiClient.post('/api/tokens/purchase', data);
+      const response = await apiClient.post('/tokens/purchase', data);
       if (response.data?.newBalance !== undefined) {
         const store = useHybridStore.getState();
         store.setTokenBalance(response.data.newBalance);
@@ -217,7 +217,7 @@ export const api = {
     },
     
     transfer: async (data) => {
-      const response = await apiClient.post('/api/tokens/transfer', data);
+      const response = await apiClient.post('/tokens/transfer', data);
       if (response.data?.newBalance !== undefined) {
         const store = useHybridStore.getState();
         store.updateTokenBalance(-data.amount);
@@ -225,15 +225,15 @@ export const api = {
       return response;
     },
     
-    getHistory: (params) => apiClient.get('/api/tokens/history', { params }),
-    createPaymentIntent: (data) => apiClient.post('/api/tokens/create-payment-intent', data),
+    getHistory: (params) => apiClient.get('/tokens/history', { params }),
+    createPaymentIntent: (data) => apiClient.post('/tokens/create-payment-intent', data),
   },
 
   // Messages with chat store integration
   messages: {
-    getConversations: () => apiClient.get('/api/messages/conversations'),
+    getConversations: () => apiClient.get('/messages/conversations'),
     getMessages: async (conversationId) => {
-      const response = await apiClient.get(`/api/messages/${conversationId}`);
+      const response = await apiClient.get(`/messages/${conversationId}`);
       if (response.data?.messages) {
         const store = useHybridStore.getState();
         store.setMessages(conversationId, response.data.messages);
@@ -242,7 +242,7 @@ export const api = {
     },
     
     sendMessage: async (data) => {
-      const response = await apiClient.post('/api/messages', data);
+      const response = await apiClient.post('/messages', data);
       if (response.data?.message) {
         const store = useHybridStore.getState();
         store.addMessage(data.conversationId, response.data.message);
@@ -251,22 +251,22 @@ export const api = {
     },
     
     markAsRead: async (conversationId) => {
-      const response = await apiClient.put(`/api/messages/${conversationId}/read`);
+      const response = await apiClient.put(`/messages/${conversationId}/read`);
       const store = useHybridStore.getState();
       store.clearUnread(conversationId);
       return response;
     },
     
-    deleteMessage: (messageId) => apiClient.delete(`/api/messages/${messageId}`),
+    deleteMessage: (messageId) => apiClient.delete(`/messages/${messageId}`),
   },
 
   // Streaming with store integration
   streaming: {
     getToken: (channelName, role) => 
-      apiClient.get('/api/agora/rtc-token', { params: { channelName, role } }),
+      apiClient.get('/agora/rtc-token', { params: { channelName, role } }),
     
     startStream: async (data) => {
-      const response = await apiClient.post('/api/streaming/start', data);
+      const response = await apiClient.post('/streaming/start', data);
       if (response.data?.stream) {
         const store = useHybridStore.getState();
         store.startStream(response.data.stream);
@@ -275,14 +275,14 @@ export const api = {
     },
     
     endStream: async (streamId) => {
-      const response = await apiClient.post(`/api/streaming/${streamId}/end`);
+      const response = await apiClient.post(`/streaming/${streamId}/end`);
       const store = useHybridStore.getState();
       store.endStream();
       return response;
     },
     
     joinStream: async (streamId) => {
-      const response = await apiClient.post(`/api/streaming/${streamId}/join`);
+      const response = await apiClient.post(`/streaming/${streamId}/join`);
       if (response.data?.stream) {
         const store = useHybridStore.getState();
         store.joinStream(response.data.stream);
@@ -291,14 +291,14 @@ export const api = {
     },
     
     leaveStream: async (streamId) => {
-      const response = await apiClient.post(`/api/streaming/${streamId}/leave`);
+      const response = await apiClient.post(`/streaming/${streamId}/leave`);
       const store = useHybridStore.getState();
       store.leaveStream();
       return response;
     },
     
     getActiveStreams: async () => {
-      const response = await apiClient.get('/api/streaming/active');
+      const response = await apiClient.get('/streaming/active');
       if (response.data?.streams) {
         const store = useHybridStore.getState();
         store.setActiveStreams(response.data.streams);
@@ -307,13 +307,13 @@ export const api = {
     },
     
     updateViewerCount: (streamId, count) => 
-      apiClient.put(`/api/streaming/${streamId}/viewers`, { count }),
+      apiClient.put(`/streaming/${streamId}/viewers`, { count }),
   },
 
   // Notifications
   notifications: {
     getAll: async () => {
-      const response = await apiClient.get('/api/notifications');
+      const response = await apiClient.get('/notifications');
       if (response.data?.notifications) {
         const store = useHybridStore.getState();
         // Clear existing and add all notifications
@@ -324,21 +324,21 @@ export const api = {
     },
     
     markAsRead: async (notificationId) => {
-      const response = await apiClient.put(`/api/notifications/${notificationId}/read`);
+      const response = await apiClient.put(`/notifications/${notificationId}/read`);
       const store = useHybridStore.getState();
       store.markNotificationRead(notificationId);
       return response;
     },
     
     markAllAsRead: async () => {
-      const response = await apiClient.put('/api/notifications/read-all');
+      const response = await apiClient.put('/notifications/read-all');
       const store = useHybridStore.getState();
       store.markAllNotificationsRead();
       return response;
     },
     
     delete: async (notificationId) => {
-      const response = await apiClient.delete(`/api/notifications/${notificationId}`);
+      const response = await apiClient.delete(`/notifications/${notificationId}`);
       const store = useHybridStore.getState();
       store.removeNotification(notificationId);
       return response;
@@ -348,7 +348,7 @@ export const api = {
   // Video calls
   calls: {
     initiate: async (data) => {
-      const response = await apiClient.post('/api/calls/initiate', data);
+      const response = await apiClient.post('/calls/initiate', data);
       if (response.data?.call) {
         const store = useHybridStore.getState();
         store.setIncomingCall(response.data.call);
@@ -356,53 +356,53 @@ export const api = {
       return response;
     },
     
-    accept: (callId) => apiClient.post(`/api/calls/${callId}/accept`),
-    decline: (callId) => apiClient.post(`/api/calls/${callId}/decline`),
-    end: (callId) => apiClient.post(`/api/calls/${callId}/end`),
-    getToken: (channelName) => apiClient.get(`/api/calls/token/${channelName}`),
+    accept: (callId) => apiClient.post(`/calls/${callId}/accept`),
+    decline: (callId) => apiClient.post(`/calls/${callId}/decline`),
+    end: (callId) => apiClient.post(`/calls/${callId}/end`),
+    getToken: (channelName) => apiClient.get(`/calls/token/${channelName}`),
   },
 
   // Creator specific
   creator: {
-    getDashboard: () => apiClient.get('/api/creator/dashboard'),
-    getAnalytics: (params) => apiClient.get('/api/creator/analytics', { params }),
-    getEarnings: (params) => apiClient.get('/api/creator/earnings', { params }),
-    updateRates: (data) => apiClient.put('/api/creator/rates', data),
-    getSubscribers: (params) => apiClient.get('/api/creator/subscribers', { params }),
-    sendMassMessage: (data) => apiClient.post('/api/creator/mass-message', data),
+    getDashboard: () => apiClient.get('/creator/dashboard'),
+    getAnalytics: (params) => apiClient.get('/creator/analytics', { params }),
+    getEarnings: (params) => apiClient.get('/creator/earnings', { params }),
+    updateRates: (data) => apiClient.put('/creator/rates', data),
+    getSubscribers: (params) => apiClient.get('/creator/subscribers', { params }),
+    sendMassMessage: (data) => apiClient.post('/creator/mass-message', data),
   },
 
   // Admin endpoints
   admin: {
-    getDashboard: () => apiClient.get('/api/admin/dashboard'),
-    getUsers: (params) => apiClient.get('/api/admin/users', { params }),
-    updateUser: (userId, data) => apiClient.put(`/api/admin/users/${userId}`, data),
-    getApplications: (params) => apiClient.get('/api/admin/applications', { params }),
+    getDashboard: () => apiClient.get('/admin/dashboard'),
+    getUsers: (params) => apiClient.get('/admin/users', { params }),
+    updateUser: (userId, data) => apiClient.put(`/admin/users/${userId}`, data),
+    getApplications: (params) => apiClient.get('/admin/applications', { params }),
     reviewApplication: (applicationId, data) => 
-      apiClient.put(`/api/admin/applications/${applicationId}`, data),
-    getReports: (params) => apiClient.get('/api/admin/reports', { params }),
-    resolveReport: (reportId, data) => apiClient.put(`/api/admin/reports/${reportId}`, data),
+      apiClient.put(`/admin/applications/${applicationId}`, data),
+    getReports: (params) => apiClient.get('/admin/reports', { params }),
+    resolveReport: (reportId, data) => apiClient.put(`/admin/reports/${reportId}`, data),
   },
 
   // Content management
   content: {
-    upload: (formData) => apiClient.post('/api/content/upload', formData, {
+    upload: (formData) => apiClient.post('/content/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }),
-    getAll: (params) => apiClient.get('/api/content', { params }),
-    getById: (contentId) => apiClient.get(`/api/content/${contentId}`),
-    update: (contentId, data) => apiClient.put(`/api/content/${contentId}`, data),
-    delete: (contentId) => apiClient.delete(`/api/content/${contentId}`),
-    like: (contentId) => apiClient.post(`/api/content/${contentId}/like`),
-    unlike: (contentId) => apiClient.delete(`/api/content/${contentId}/like`),
+    getAll: (params) => apiClient.get('/content', { params }),
+    getById: (contentId) => apiClient.get(`/content/${contentId}`),
+    update: (contentId, data) => apiClient.put(`/content/${contentId}`, data),
+    delete: (contentId) => apiClient.delete(`/content/${contentId}`),
+    like: (contentId) => apiClient.post(`/content/${contentId}/like`),
+    unlike: (contentId) => apiClient.delete(`/content/${contentId}/like`),
   },
 
   // Payments
   payments: {
-    createCheckout: (data) => apiClient.post('/api/payments/create-checkout', data),
-    confirmPayment: (data) => apiClient.post('/api/payments/confirm', data),
-    getHistory: (params) => apiClient.get('/api/payments/history', { params }),
-    refund: (paymentId, data) => apiClient.post(`/api/payments/${paymentId}/refund`, data),
+    createCheckout: (data) => apiClient.post('/payments/create-checkout', data),
+    confirmPayment: (data) => apiClient.post('/payments/confirm', data),
+    getHistory: (params) => apiClient.get('/payments/history', { params }),
+    refund: (paymentId, data) => apiClient.post(`/payments/${paymentId}/refund`, data),
   },
 };
 

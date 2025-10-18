@@ -180,7 +180,7 @@ class AuthService {
   // Profile management
   async createUserProfile({ uid, email, username, name, role }) {
     try {
-      const response = await apiClient.post('/api/auth/sync-user', {
+      const response = await apiClient.post('/auth/sync-user', {
         uid,
         email,
         username,
@@ -211,7 +211,7 @@ class AuthService {
 
   async syncUserProfile(uid) {
     try {
-      const response = await apiClient.get(`/api/users/${uid}/profile`);
+      const response = await apiClient.get(`/users/${uid}/profile`);
 
       if (!response.ok) {
         const error = await response.json();

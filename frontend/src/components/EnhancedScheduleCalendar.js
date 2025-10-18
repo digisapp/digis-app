@@ -296,7 +296,7 @@ const EnhancedScheduleCalendar = ({
     
     try {
       // In production, make API call to update event
-      // const response = await fetch(`/api/events/${editingEvent.id}`, { 
+      // const response = await fetch(`/events/${editingEvent.id}`, { 
       //   method: 'PUT', 
       //   body: JSON.stringify(editingEvent) 
       // });
@@ -326,7 +326,7 @@ const EnhancedScheduleCalendar = ({
     
     try {
       // In production, make API call to delete event
-      // const response = await fetch(`/api/events/${eventId}`, { method: 'DELETE' });
+      // const response = await fetch(`/events/${eventId}`, { method: 'DELETE' });
       
       // Remove event from local state
       setEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
@@ -344,7 +344,7 @@ const EnhancedScheduleCalendar = ({
   const handleCancelEvent = async (eventId) => {
     try {
       // In production, make API call to cancel event
-      // const response = await fetch(`/api/events/${eventId}/cancel`, { method: 'POST' });
+      // const response = await fetch(`/events/${eventId}/cancel`, { method: 'POST' });
       
       // Update event status in local state
       setEvents(prevEvents => 

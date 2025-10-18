@@ -96,7 +96,7 @@ const LiveShoppingOverlay = ({
 
   const fetchStreamProducts = async () => {
     try {
-      const response = await apiClient.get(`/api/live-shopping/streams/${streamId}/products`);
+      const response = await apiClient.get(`/live-shopping/streams/${streamId}/products`);
       setProducts(response.data.products || []);
       
       const featured = response.data.products?.find(p => p.featured);

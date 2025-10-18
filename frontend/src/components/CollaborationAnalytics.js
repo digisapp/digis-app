@@ -15,7 +15,7 @@ const CollaborationAnalytics = ({ collaborationId, onClose }) => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/collaborations/${collaborationId}/analytics`);
+      const response = await api.get(`/collaborations/${collaborationId}/analytics`);
       
       if (response.data.success) {
         setAnalytics(response.data.analytics);
