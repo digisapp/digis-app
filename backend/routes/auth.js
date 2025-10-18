@@ -235,8 +235,9 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     const defaultStreamRateCents = 1000; // $10 = 10 tokens/min
     const defaultMessagePriceCents = 500; // $5 = 5 tokens/msg
 
+    let userResult = null;
     try {
-      const upsertResult = await db(req).query(upsertUserQuery, [
+      userResult = await db(req).query(upsertUserQuery, [
         supabaseId,
         email,
         safeUsername,
@@ -253,31 +254,23 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       console.log('✅ sync-user upsert successful', {
         rid,
         supabaseId,
-        username: upsertResult.rows[0]?.username,
-        is_creator: upsertResult.rows[0]?.is_creator,
-        is_super_admin: upsertResult.rows[0]?.is_super_admin,
-        role: upsertResult.rows[0]?.role
+        username: userResult.rows[0]?.username,
+        is_creator: userResult.rows[0]?.is_creator,
+        is_super_admin: userResult.rows[0]?.is_super_admin,
+        role: userResult.rows[0]?.role
       });
     } catch (dbError) {
-      console.error('❌ sync-user DB upsert user failed', {
-        rid,
-        code: dbError.code,
-        message: dbError.message,
-        detail: dbError.detail,
-        constraint: dbError.constraint
-      });
-
-      // 23505 = unique constraint violation
+      // 23505 = unique constraint violation (duplicate)
       // This should NOT happen with ON CONFLICT (supabase_id), but if it does,
       // it means a different unique constraint (username/email) is being violated.
-      // Since the user exists, treat this as success and continue.
+      // TREAT DUPLICATE AS SUCCESS - user already exists
       if (dbError.code === '23505') {
-        console.warn('⚠️ User already exists (constraint: ' + (dbError.constraint || 'unknown') + '), continuing...', {
+        console.log('✅ User already exists, treating as success', {
           rid,
           supabaseId,
           constraint: dbError.constraint
         });
-        // User exists - this is OK, continue with token balance upsert below
+        // Continue to token balance - user exists is success, not error
       } else if (dbError.code === '22P02') {
         return fail(400, {
           error: 'INVALID_UUID',
@@ -286,6 +279,12 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         });
       } else {
         // For other errors, return generic failure
+        console.error('❌ sync-user DB upsert failed', {
+          rid,
+          code: dbError.code,
+          message: dbError.message,
+          detail: dbError.detail
+        });
         return fail(500, {
           error: 'DB_UPSERT_FAILED',
           message: 'Failed to create or update user in database',

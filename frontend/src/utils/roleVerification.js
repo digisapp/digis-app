@@ -41,8 +41,9 @@ export async function verifyUserRole(forceRefresh = false) {
     }
 
     // Verify role with backend
+    const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/$/,''); // Remove trailing slash
     const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/auth/verify-role`,
+      `${backendUrl}/api/v1/auth/verify-role`,
       {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -167,8 +168,9 @@ export async function syncUserRole() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/$/,'');
         await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/auth/clear-role-cache`,
+          `${backendUrl}/api/v1/auth/clear-role-cache`,
           {
             method: 'POST',
             headers: {
