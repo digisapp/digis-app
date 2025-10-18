@@ -1365,7 +1365,7 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
 
     if (!supabaseId) {
       return res.status(401).json({
-        ok: false,
+        success: false,
         error: 'Not authenticated'
       });
     }
@@ -1387,7 +1387,7 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({
-        ok: false,
+        success: false,
         error: 'User not found'
       });
     }
@@ -1402,25 +1402,38 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
       db_id: user.db_id
     });
 
-    // Build roles array
-    const roles = [];
-    if (user.is_creator) roles.push('creator');
-    if (user.is_admin) roles.push('admin');
-    // Default to 'fan' if no other roles
-    if (roles.length === 0) roles.push('fan');
+    // Determine primary role (frontend expects single role)
+    let primaryRole = 'fan'; // default
+    if (user.is_admin) {
+      primaryRole = 'admin';
+    } else if (user.is_creator) {
+      primaryRole = 'creator';
+    }
+
+    // Build permissions array
+    const permissions = [];
+    if (user.is_creator) permissions.push('create_content');
+    if (user.is_admin) permissions.push('admin_access');
 
     // Prevent CDN/device caching - force fresh data
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
 
-    // Return canonical session
+    // Return session format expected by frontend useAuthStore
     return res.json({
-      ok: true,
-      user: {
-        supabaseId: user.supabase_id,
-        dbId: user.db_id,
-        roles,
+      success: true,
+      session: {
+        role: primaryRole,
+        user: {
+          id: user.supabase_id,
+          dbId: user.db_id,
+          email: req.user?.email || null,
+          username: req.user?.username || null
+        },
+        permissions,
+        role_version: 1,
+        // Legacy fields for compatibility
         isCreator: user.is_creator,
         isAdmin: user.is_admin
       }
@@ -1429,7 +1442,7 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
   } catch (error) {
     console.error('❌ Error getting session:', error);
     return res.status(500).json({
-      ok: false,
+      success: false,
       error: 'Failed to get session'
     });
   }
