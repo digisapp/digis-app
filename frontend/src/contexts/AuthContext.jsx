@@ -330,15 +330,22 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         const data = await response.json();
 
-        if (!data?.ok || !data?.user) {
+        // Support both old {ok, user} and new {success, session} formats
+        const isOldFormat = data?.ok && data?.user;
+        const isNewFormat = data?.success && data?.session;
+
+        if (!isOldFormat && !isNewFormat) {
           console.error('Invalid session payload:', data);
           return { ok: false, error: 'Invalid payload', data: null };
         }
 
+        // Normalize to extract user data
+        const userData = isNewFormat ? data.session : data.user;
+
         console.log('✅ Canonical session fetched from /api/auth/session:', {
-          isCreator: data.user.isCreator,
-          isAdmin: data.user.isAdmin,
-          roles: data.user.roles
+          isCreator: userData.isCreator,
+          isAdmin: userData.isAdmin,
+          role: userData.role
         });
 
         // Return in safeFetch-compatible format with normalized user data
@@ -346,15 +353,16 @@ export const AuthProvider = ({ children }) => {
           ok: true,
           data: {
             user: {
-              id: data.user.supabaseId,
-              supabase_id: data.user.supabaseId,
-              db_id: data.user.dbId,
-              is_creator: data.user.isCreator,
-              is_admin: data.user.isAdmin,
-              roles: data.user.roles || [],
+              id: userData.user?.id || userData.supabaseId,
+              supabase_id: userData.user?.id || userData.supabaseId,
+              db_id: userData.user?.dbId || userData.dbId,
+              is_creator: userData.isCreator,
+              is_admin: userData.isAdmin,
+              role: userData.role,
+              roles: userData.roles || [userData.role],
               // Add minimal fields expected by downstream code
-              username: session.user.email?.split('@')[0] || 'user',
-              email: session.user.email
+              username: userData.user?.username || session.user.email?.split('@')[0] || 'user',
+              email: userData.user?.email || session.user.email
             }
           },
           status: response.status

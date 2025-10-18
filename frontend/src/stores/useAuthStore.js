@@ -16,6 +16,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { supabase } from '../utils/supabase-auth';
 import {
   normalizeSession,
   getLastKnownRole,
@@ -190,18 +191,34 @@ const useAuthStore = create(
         }
 
         try {
-          // 1) Sync user first (idempotent, tolerate failures)
-          try {
-            await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/sync-user`, {
-              method: 'POST',
-              credentials: 'include',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-          } catch (syncError) {
-            console.warn('🔐 [Auth] Sync-user failed (tolerated):', syncError);
+          // 1) Get user info from token first
+          const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser(token);
+
+          if (userError || !supabaseUser) {
+            console.warn('🔐 [Auth] Could not get user from token:', userError);
+          } else {
+            // 2) Sync user first (idempotent, tolerate failures)
+            try {
+              await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/sync-user`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  supabaseId: supabaseUser.id,
+                  email: supabaseUser.email,
+                  metadata: {
+                    username: supabaseUser.user_metadata?.username,
+                    display_name: supabaseUser.user_metadata?.display_name || supabaseUser.user_metadata?.full_name,
+                    account_type: supabaseUser.user_metadata?.account_type || supabaseUser.user_metadata?.role
+                  }
+                })
+              });
+            } catch (syncError) {
+              console.warn('🔐 [Auth] Sync-user failed (tolerated):', syncError);
+            }
           }
 
           // 2) Fetch session
