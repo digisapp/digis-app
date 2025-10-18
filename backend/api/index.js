@@ -370,6 +370,7 @@ try {
   app.use('/api/conversations', rateLimiters.api || ((req, res, next) => next()), conversationsRoutes);
   app.use('/api/creators', rateLimiters.public || ((req, res, next) => next()), creatorsRoutes);
   app.use('/api/tv-subscription', rateLimiters.api || ((req, res, next) => next()), tvSubscriptionRoutes);
+  app.use('/api/v1/tv-subscription', rateLimiters.api || ((req, res, next) => next()), tvSubscriptionRoutes); // Versioned
   app.use('/api/vod', rateLimiters.api || ((req, res, next) => next()), require('../routes/vod'));
   app.use('/api/shop', rateLimiters.api || ((req, res, next) => next()), require('../routes/shop'));
   app.use('/api/live-shopping', rateLimiters.api || ((req, res, next) => next()), require('../routes/live-shopping'));
@@ -402,6 +403,7 @@ try {
   app.use('/api/streams', rateLimiters.api || ((req, res, next) => next()), proStreamsRoutes); // Pro monetization streams
   app.use('/api/billing', rateLimiters.api || ((req, res, next) => next()), proBillingRoutes); // Pro monetization billing
   app.use('/api', rateLimiters.public || ((req, res, next) => next()), publicCreatorsRoutes); // Public creator profiles
+  app.use('/api/v1', rateLimiters.public || ((req, res, next) => next()), publicCreatorsRoutes); // Public creator profiles (versioned)
   app.use('/api', rateLimiters.api || ((req, res, next) => next()), usernamesRoutes); // Username management
   app.use('/api', metaRoutes); // Deployment metadata endpoint (no auth required)
   app.use('/api', emergencyRoutes); // Emergency reset endpoints (NO AUTH, NO RATE LIMITING)
