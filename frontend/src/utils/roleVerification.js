@@ -43,7 +43,7 @@ export async function verifyUserRole(forceRefresh = false) {
     // Verify role with backend
     const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/$/,''); // Remove trailing slash
     const response = await fetch(
-      `${backendUrl}/api/v1/auth/verify-role`,
+      `${backendUrl}/auth/verify-role`,
       {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -170,7 +170,7 @@ export async function syncUserRole() {
       if (session) {
         const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/$/,'');
         await fetch(
-          `${backendUrl}/api/v1/auth/clear-role-cache`,
+          `${backendUrl}/auth/clear-role-cache`,
           {
             method: 'POST',
             headers: {
