@@ -53,7 +53,7 @@ const MessageComposeModal = ({
 
     try {
       const token = await getAuthToken();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/messages/send`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/messages/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

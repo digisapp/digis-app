@@ -127,7 +127,7 @@ const CallConfirmationModal = ({
     setIsRequesting(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/sessions/request`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/sessions/request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

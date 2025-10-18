@@ -62,7 +62,7 @@ class MobileErrorBoundary extends Component {
 
     // Ship to API for server-side logging (fire-and-forget)
     try {
-      const apiUrl = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3005'}/api/client-log`;
+      const apiUrl = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3005'}/client-log`;
 
       if (navigator.sendBeacon) {
         // Use sendBeacon for reliability (works even if page is closing)
