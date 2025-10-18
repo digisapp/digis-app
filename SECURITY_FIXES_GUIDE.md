@@ -194,3 +194,10 @@ WHERE proname = 'is_username_quarantined';
 2. Verify with queries above
 3. Update dashboard settings for MFA and password protection
 4. Schedule Postgres upgrade during maintenance window
+5. **Optional**: Apply performance optimizations with `012_optimize_high_traffic_rls.sql` (see [PERFORMANCE_OPTIMIZATION_GUIDE.md](./PERFORMANCE_OPTIMIZATION_GUIDE.md))
+
+---
+
+## 🔗 Related Guides
+
+- **[PERFORMANCE_OPTIMIZATION_GUIDE.md](./PERFORMANCE_OPTIMIZATION_GUIDE.md)** - Optimize RLS performance for high-traffic tables (~200 performance warnings)

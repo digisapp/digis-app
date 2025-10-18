@@ -382,7 +382,10 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
             u.is_super_admin,
             u.role,
             u.creator_type,
-            u.price_per_min,
+            u.video_rate_cents,
+            u.voice_rate_cents,
+            u.stream_rate_cents,
+            u.message_price_cents,
             u.verified,
             u.email_verified,
             u.created_at,
@@ -910,7 +913,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
       username,
       bio,
       profile_pic_url,
-      price_per_min
+      video_rate_cents,
+      voice_rate_cents,
+      stream_rate_cents,
+      message_price_cents
     } = req.body;
     
     // Check if user is a fan (not creator)
@@ -987,10 +993,28 @@ router.put('/profile', authenticateToken, async (req, res) => {
       values.push(profile_pic_url);
       paramCount++;
     }
-    
-    if (price_per_min !== undefined && req.user.isCreator) {
-      updates.push(`price_per_min = $${paramCount}`);
-      values.push(price_per_min);
+
+    if (video_rate_cents !== undefined && req.user.isCreator) {
+      updates.push(`video_rate_cents = $${paramCount}`);
+      values.push(video_rate_cents);
+      paramCount++;
+    }
+
+    if (voice_rate_cents !== undefined && req.user.isCreator) {
+      updates.push(`voice_rate_cents = $${paramCount}`);
+      values.push(voice_rate_cents);
+      paramCount++;
+    }
+
+    if (stream_rate_cents !== undefined && req.user.isCreator) {
+      updates.push(`stream_rate_cents = $${paramCount}`);
+      values.push(stream_rate_cents);
+      paramCount++;
+    }
+
+    if (message_price_cents !== undefined && req.user.isCreator) {
+      updates.push(`message_price_cents = $${paramCount}`);
+      values.push(message_price_cents);
       paramCount++;
     }
     

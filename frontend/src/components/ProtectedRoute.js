@@ -2,14 +2,15 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LOGOUT_DEST } from '../constants/auth';
+import AccessDenied from './ui/AccessDenied';
 
 /**
- * Protected Route Component (Simplified, Surgical Fix)
+ * Protected Route Component (Enhanced with Admin Support)
  *
  * CRITICAL: Wait for auth to resolve before any redirects (prevents loops)
  * - Still bootstrapping? Show placeholder (no redirect)
- * - Auth ready + no user? Redirect to login
- * - Auth ready + wrong role? Redirect or show error
+ * - Auth ready + no user? Redirect to login (or admin login for admin routes)
+ * - Auth ready + wrong role? Show AccessDenied page or redirect
  *
  * Props:
  * - requireCreator: boolean - requires creator role
@@ -39,15 +40,34 @@ const ProtectedRoute = ({
 
   // From here, auth is ready — make decisions:
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    // If trying to access admin, redirect to admin login
+    const isAdminRoute = location.pathname.startsWith('/admin');
+    const redirectPath = isAdminRoute ? '/admin/login' : '/';
+    return <Navigate to={redirectPath} replace state={{ from: location }} />;
   }
 
+  // Admin access required but user is not admin
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/" replace />;
+    return (
+      <AccessDenied
+        title="Admin Access Required"
+        message="You don't have administrator privileges."
+        suggestion="This section is restricted to platform administrators only. If you believe you should have access, please contact support."
+        homeUrl={isCreator ? '/dashboard' : '/explore'}
+      />
+    );
   }
 
+  // Creator access required but user is not creator
   if (requireCreator && !isCreator && !isAdmin) {
-    return <Navigate to="/explore" replace />;
+    return (
+      <AccessDenied
+        title="Creator Access Required"
+        message="This feature is only available to creators."
+        suggestion="Apply to become a creator to access this section."
+        homeUrl="/explore"
+      />
+    );
   }
 
   // Use Outlet pattern for nested routes

@@ -293,19 +293,20 @@ router.post('/creator-applications/:applicationId/approve', authenticateToken, r
 
       // Update user to creator status
       await client.query(`
-        UPDATE users SET 
+        UPDATE users SET
           is_creator = true,
-          price_per_min = $1,
-          video_price = $2,
-          voice_price = $3,
-          stream_price = $4,
+          role = 'creator',
+          video_rate_cents = $1,
+          voice_rate_cents = $2,
+          stream_rate_cents = $3,
+          message_price_cents = $4,
           updated_at = NOW()
         WHERE supabase_id = $5
       `, [
-        pricing.videoCall || 30,
-        pricing.videoCall || 30,
-        pricing.voiceCall || 20,
-        pricing.privateStream || 50,
+        (pricing.videoCall || 30) * 100,  // Convert dollars to cents
+        (pricing.voiceCall || 20) * 100,
+        (pricing.privateStream || 50) * 100,
+        500,  // Default $5 for messages
         userId
       ]);
 
@@ -509,19 +510,20 @@ router.post('/creator-applications/bulk-approve', authenticateToken, requireAdmi
 
           // Update user to creator status
           await client.query(`
-            UPDATE users SET 
+            UPDATE users SET
               is_creator = true,
-              price_per_min = $1,
-              video_price = $2,
-              voice_price = $3,
-              stream_price = $4,
+              role = 'creator',
+              video_rate_cents = $1,
+              voice_rate_cents = $2,
+              stream_rate_cents = $3,
+              message_price_cents = $4,
               updated_at = NOW()
             WHERE supabase_id = $5
           `, [
-            pricing.videoCall || 30,
-            pricing.videoCall || 30,
-            pricing.voiceCall || 20,
-            pricing.privateStream || 50,
+            (pricing.videoCall || 30) * 100,  // Convert dollars to cents
+            (pricing.voiceCall || 20) * 100,
+            (pricing.privateStream || 50) * 100,
+            500,  // Default $5 for messages
             userId
           ]);
 

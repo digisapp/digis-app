@@ -39,6 +39,7 @@ const DigitalsPage = lazy(() => import('../components/pages/DigitalsPage'));
 const TermsOfService = lazy(() => import('../components/pages/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('../components/pages/PrivacyPolicy'));
 const FollowersSubscribersPage = lazy(() => import('../components/pages/FollowersSubscribersPage'));
+const AdminLoginPage = lazy(() => import('../components/pages/AdminLoginPage'));
 const NotFound = lazy(() => import('./NotFound'));
 
 // Phase 3: Final 5 screens
@@ -159,6 +160,9 @@ const AppRoutes = () => {
 
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+
+        {/* Admin Login - Public route for admin authentication */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
 
         {/* Legacy redirect: /creator/:username -> /:username */}
         <Route path="/creator/:username" element={<LegacyCreatorRedirect />} />
