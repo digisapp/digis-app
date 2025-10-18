@@ -1,11 +1,15 @@
 /**
  * Role Verification Utility
  * Ensures consistent and secure role management across the application
+ *
+ * IMPORTANT: Uses /auth/session as single source of truth
+ * No separate /auth/verify-role endpoint - reduces API calls and prevents inconsistency
  */
 
 import React from 'react';
 import { supabase } from './supabase-auth';
 import { apiClient } from './apiClient';
+import { normalizeSession, persistRoleHint } from './normalizeSession';
 
 // Role constants
 export const ROLES = {
@@ -20,7 +24,7 @@ let cacheTimestamp = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Verify user role with backend
+ * Verify user role with backend using session endpoint
  * This is the single source of truth for user roles
  */
 export async function verifyUserRole(forceRefresh = false) {
@@ -35,51 +39,80 @@ export async function verifyUserRole(forceRefresh = false) {
 
     // Get current session
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (!session) {
       clearRoleCache();
       return null;
     }
 
-    // Verify role with backend using apiClient (prevents double /api/v1)
+    // Use /auth/session as single source of truth (prevents inconsistency)
     try {
-      const data = await apiClient.get('/auth/verify-role', {
+      const data = await apiClient.get('/auth/session', {
         withAuth: true
       });
-    
-      if (data.success && data.role) {
-        // Cache the verified role
-        verifiedRoleCache = data.role;
-        cacheTimestamp = Date.now();
 
-        // Store in sessionStorage as backup
-        sessionStorage.setItem('verifiedRole', JSON.stringify(data.role));
-        sessionStorage.setItem('roleTimestamp', Date.now().toString());
+      // Normalize the response (handles both formats)
+      const normalized = normalizeSession(data);
 
-        return data.role;
+      if (!normalized) {
+        clearRoleCache();
+        return null;
       }
 
-      clearRoleCache();
-      return null;
+      // Build role object for backward compatibility
+      const roleData = {
+        primaryRole: normalized.role,
+        isCreator: normalized.isCreator,
+        isAdmin: normalized.isAdmin,
+        email: normalized.user.email,
+        username: normalized.user.username
+      };
+
+      // Cache the verified role
+      verifiedRoleCache = roleData;
+      cacheTimestamp = Date.now();
+
+      // Store in sessionStorage as backup
+      sessionStorage.setItem('verifiedRole', JSON.stringify(roleData));
+      sessionStorage.setItem('roleTimestamp', Date.now().toString());
+
+      // Persist to localStorage for race condition protection
+      persistRoleHint(normalized.role, normalized.user.id);
+
+      return roleData;
     } catch (apiError) {
       console.error('Failed to verify role with API:', apiError);
+
+      // Try to get from sessionStorage as fallback
+      const cachedRole = sessionStorage.getItem('verifiedRole');
+      const cachedTimestamp = sessionStorage.getItem('roleTimestamp');
+
+      if (cachedRole && cachedTimestamp) {
+        const age = Date.now() - parseInt(cachedTimestamp);
+        if (age < CACHE_DURATION) {
+          console.warn('Using cached role due to API error');
+          return JSON.parse(cachedRole);
+        }
+      }
+
       clearRoleCache();
       return null;
     }
   } catch (error) {
     console.error('Error verifying user role:', error);
-    
+
     // Try to get from sessionStorage as fallback
     const cachedRole = sessionStorage.getItem('verifiedRole');
     const cachedTimestamp = sessionStorage.getItem('roleTimestamp');
-    
+
     if (cachedRole && cachedTimestamp) {
       const age = Date.now() - parseInt(cachedTimestamp);
       if (age < CACHE_DURATION) {
+        console.warn('Using cached role due to error');
         return JSON.parse(cachedRole);
       }
     }
-    
+
     clearRoleCache();
     return null;
   }
@@ -154,19 +187,13 @@ export async function canAccessRoute(requiredRole) {
  */
 export async function syncUserRole() {
   // Force refresh to get latest role from backend
+  // This calls /auth/session which is already the source of truth
   const role = await verifyUserRole(true);
-  
+
   if (role) {
-    // Notify backend to clear any server-side cache
-    try {
-      await apiClient.post('/auth/clear-role-cache', {}, {
-        withAuth: true
-      });
-    } catch (error) {
-      console.error('Error clearing role cache:', error);
-    }
+    console.log('🔐 [RoleVerification] Synced role:', role.primaryRole);
   }
-  
+
   return role;
 }
 

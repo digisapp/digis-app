@@ -7,10 +7,25 @@
  * - ready: Session loaded, role is authoritative
  *
  * CRITICAL: Never render the app until authStatus === "ready"
+ *
+ * Race Condition Protection:
+ * - Uses sequence numbers to prevent stale responses from overwriting newer ones
+ * - Persists last-known role to localStorage (never downgrades on transient errors)
+ * - Normalizes backend response format (supports both legacy and new formats)
  */
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import {
+  normalizeSession,
+  getLastKnownRole,
+  getLastKnownUserId,
+  persistRoleHint,
+  clearRoleHints
+} from '../utils/normalizeSession';
+
+// Race condition guard: only the latest request can update state
+let requestSeq = 0;
 
 const useAuthStore = create(
   devtools(
@@ -76,6 +91,7 @@ const useAuthStore = create(
        */
       clearSession: () => {
         console.log('🔐 [Auth] Clearing session');
+        clearRoleHints(); // Clear persisted role hints
         set({
           authStatus: 'idle',
           role: null,
@@ -150,16 +166,31 @@ const useAuthStore = create(
       },
 
       /**
-       * Bootstrap auth on app load
+       * Bootstrap auth on app load with race condition protection
        */
       bootstrap: async (token) => {
-        console.log('🔐 [Auth] Bootstrapping...');
+        const mySeq = ++requestSeq;
+        console.log('🔐 [Auth] Bootstrapping... (seq:', mySeq, ')');
         get().setAuthLoading();
 
         try {
+          // 1) Sync user first (idempotent, tolerate failures)
+          try {
+            await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/sync-user`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+          } catch (syncError) {
+            console.warn('🔐 [Auth] Sync-user failed (tolerated):', syncError);
+          }
+
+          // 2) Fetch session
           const url = `${import.meta.env.VITE_BACKEND_URL}/auth/session`;
           console.log('🔐 [Auth] Fetching from:', url);
-          console.log('🔐 [Auth] Token preview:', token?.substring(0, 20) + '...');
 
           const response = await fetch(url, {
             credentials: 'include',
@@ -169,37 +200,75 @@ const useAuthStore = create(
             }
           });
 
-          console.log('🔐 [Auth] Response status:', response.status);
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('🔐 [Auth] Session fetch failed:', {
-              status: response.status,
-              error: errorText
-            });
-            // Not authenticated - default to fan
-            get().setAuthError(`Not authenticated (${response.status})`);
+          // RACE GUARD: Stop if this response is stale
+          if (mySeq !== requestSeq) {
+            console.warn('🔐 [Auth] Stale response detected, ignoring (seq:', mySeq, 'current:', requestSeq, ')');
             return;
           }
 
-          const data = await response.json();
-          console.log('🔐 [Auth] Session data:', data);
+          console.log('🔐 [Auth] Response status:', response.status);
 
-          if (data.success && data.session) {
-            console.log('🔐 [Auth] Setting session with role:', data.session.role);
-            get().setSession({
-              role: data.session.role,
-              user: data.session.user,
-              permissions: data.session.permissions,
-              roleVersion: data.session.role_version
-            });
-          } else {
-            console.error('🔐 [Auth] Invalid session response:', data);
-            get().setAuthError('Invalid session');
+          if (!response.ok) {
+            throw new Error(`Session fetch failed: ${response.status}`);
           }
+
+          const data = await response.json();
+          console.log('🔐 [Auth] Raw session data:', data);
+
+          // 3) Normalize the response (handles both formats)
+          const normalized = normalizeSession(data);
+          if (!normalized) {
+            throw new Error('Invalid session payload');
+          }
+
+          console.log('🔐 [Auth] Normalized session:', normalized);
+
+          // 4) Persist last-known role and user (prevents downgrade on future errors)
+          persistRoleHint(normalized.role, normalized.user.id);
+
+          // 5) Update store with normalized data
+          get().setSession({
+            role: normalized.role,
+            user: normalized.user,
+            permissions: normalized.permissions || [],
+            roleVersion: 1
+          });
+
+          console.log('🔐 [Auth] Bootstrap complete with role:', normalized.role);
         } catch (error) {
+          // RACE GUARD: Stop if this error handler is stale
+          if (mySeq !== requestSeq) {
+            console.warn('🔐 [Auth] Stale error handler, ignoring');
+            return;
+          }
+
           console.error('🔐 [Auth] Bootstrap failed:', error);
-          get().setAuthError(error.message);
+
+          // DON'T DOWNGRADE ROLE ON TRANSIENT ERRORS
+          // Use last-known role from localStorage as fallback
+          const lastRole = getLastKnownRole();
+          const lastUserId = getLastKnownUserId();
+
+          console.warn('🔐 [Auth] Using last-known role:', lastRole);
+
+          get().setAuthError(String(error?.message || error));
+
+          // Still mark as ready with last-known role (prevents infinite loading)
+          set({
+            authStatus: 'ready',
+            role: lastRole,
+            user: lastUserId ? { id: lastUserId } : null,
+            permissions: [],
+            error: String(error?.message || error)
+          });
+
+          // Schedule silent retry (optional, helps recover from transient failures)
+          setTimeout(() => {
+            if (mySeq === requestSeq) {
+              console.log('🔐 [Auth] Retrying bootstrap after error...');
+              get().bootstrap(token);
+            }
+          }, 2500);
         }
       },
 
