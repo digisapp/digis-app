@@ -197,9 +197,12 @@ let rateLimiters = {};
 
 // Load and register routes with error handling
 let routeLoadError = null;
+let v1Mounted = false;
 try {
-  // Load v1 routes
+  // Load v1 routes with explicit logging
+  console.log('[API] 🔄 Loading v1 routes from ../routes/v1...');
   const v1Routes = require('../routes/v1');
+  console.log('[API] ✅ v1 routes module loaded successfully');
   
   // Load individual routes for backward compatibility
   const authRoutes = require('../routes/auth');
@@ -267,7 +270,10 @@ try {
   app.use(metricsCollector.httpMetricsMiddleware());
 
   // Mount v1 routes (versioned API)
+  console.log('[API] 🔄 Mounting v1 routes at /api/v1...');
   app.use('/api/v1', v1Routes);
+  v1Mounted = true;
+  console.log('[API] ✅ Mounted /api/v1 routes successfully');
 
   // DUAL-MOUNT STRATEGY (temporary back-compat during migration)
   // Mount v1 routes at both /api/v1 and /api for backwards compatibility
@@ -413,10 +419,36 @@ try {
   console.log('✅ All routes loaded successfully');
 } catch (routeError) {
   routeLoadError = routeError;
-  console.error('❌ Error loading routes:', routeError.message);
-  console.error('Stack:', routeError.stack);
+  console.error('[API] ❌ Failed to load routes:', {
+    name: routeError?.name,
+    message: routeError?.message,
+    stack: routeError?.stack,
+    code: routeError?.code
+  });
   console.error('Make sure all route files exist in backend/routes/');
-  logger.error('Route loading failed', { error: routeError.message, stack: routeError.stack });
+  logger.error('Route loading failed', {
+    error: routeError.message,
+    stack: routeError.stack,
+    name: routeError.name,
+    code: routeError.code
+  });
+}
+
+// TEMPORARY SAFETY NET: If v1 routes failed to mount, proxy /api/v1/* → /api/*
+if (!v1Mounted && routeLoadError) {
+  console.warn('[API] ⚠️ v1 routes failed to load - setting up fallback proxy');
+  console.warn('[API] ⚠️ Proxying /api/v1/* → /api/* as emergency measure');
+
+  app.use('/api/v1', (req, res, next) => {
+    // Rewrite /api/v1/... → /api/...
+    const originalUrl = req.url;
+    req.url = req.url.replace(/^\/?/, '');      // strip leading slash
+    req.url = req.url.replace(/^v1\/?/, '');    // remove leading v1/
+    console.log(`[Proxy] ${originalUrl} → /api/${req.url}`);
+    next();
+  });
+
+  console.log('[API] ⚠️ Fallback proxy active - users will hit unversioned routes');
 }
 
 // Swagger documentation

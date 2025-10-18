@@ -45,4 +45,15 @@ router.get('/status', (req, res) => {
   });
 });
 
+// Quick introspection endpoint for Vercel debugging
+router.get('/_status', (req, res) => {
+  res.json({
+    ok: true,
+    mounted: true,
+    message: 'v1 router is loaded and mounted',
+    endpoints: ['/auth', '/users', '/tokens', '/payments', '/agora', '/subscriptions', '/creators', '/streaming', '/stream-chat', '/stream-features'],
+    timestamp: new Date().toISOString()
+  });
+});
+
 module.exports = router;
