@@ -501,17 +501,15 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       INSERT INTO users (
         supabase_id,
         email,
-        email_verified,
         username,
         display_name,
+        email_verified,
         is_creator,
-        raw_user_meta_data,
-        date_of_birth,
-        verified,
+        last_active,
         created_at,
         updated_at
       ) VALUES (
-        $1::uuid, $2, true, $3, $3, $4, $5, $6, true, NOW(), NOW()
+        $1::uuid, $2, $3, $3, true, $4, NOW(), NOW(), NOW()
       ) RETURNING *
     `;
 
@@ -519,9 +517,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       supabaseId,
       email,
       username,
-      accountType === 'creator', // Set is_creator based on account_type
-      JSON.stringify(metadata || {}),
-      metadata?.date_of_birth || null
+      accountType === 'creator' // Set is_creator based on account_type
     ]);
     
     // If signing up as creator, create an application
