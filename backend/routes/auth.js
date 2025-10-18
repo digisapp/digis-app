@@ -172,6 +172,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     // Safe account type and creator status fallbacks
     const accountTypeForUpsert = metadata?.account_type || 'fan';
     const isCreatorForUpsert = accountTypeForUpsert === 'creator';
+    const roleForUpsert = isCreatorForUpsert ? 'creator' : 'fan';
 
     // Safe username fallback: metadata.username > email local-part > user_{id_prefix}
     const safeUsername = metadata?.username ||
@@ -186,6 +187,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         display_name,
         email_verified,
         is_creator,
+        role,
         last_active,
         video_rate_cents,
         voice_rate_cents,
@@ -201,20 +203,25 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         COALESCE($4, $3),
         true,
         $5,
+        $6,
         NOW(),
-        COALESCE($6, 10000),
-        COALESCE($7, 5000),
-        COALESCE($8, 1000),
-        COALESCE($9, 500),
+        COALESCE($7, 10000),
+        COALESCE($8, 5000),
+        COALESCE($9, 1000),
+        COALESCE($10, 500),
         NOW(),
         NOW()
       )
       ON CONFLICT (supabase_id) DO UPDATE SET
         email = EXCLUDED.email,
+        username = COALESCE(EXCLUDED.username, users.username),
+        display_name = COALESCE(EXCLUDED.display_name, users.display_name),
         email_verified = true,
+        is_creator = EXCLUDED.is_creator,
+        role = EXCLUDED.role,
         last_active = NOW(),
         updated_at = NOW()
-      RETURNING supabase_id
+      RETURNING supabase_id, username, email, is_creator, role
     `;
 
     // Default pricing in cents (100 tokens/min for video, 50 for voice, etc.)
@@ -224,17 +231,26 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     const defaultMessagePriceCents = 500; // $5 = 5 tokens/msg
 
     try {
-      await db(req).query(upsertUserQuery, [
+      const upsertResult = await db(req).query(upsertUserQuery, [
         supabaseId,
         email,
         safeUsername,
         metadata?.username || safeUsername,
         isCreatorForUpsert,
+        roleForUpsert,
         defaultVideoRateCents,
         defaultVoiceRateCents,
         defaultStreamRateCents,
         defaultMessagePriceCents
       ]);
+
+      console.log('✅ sync-user upsert successful', {
+        rid,
+        supabaseId,
+        username: upsertResult.rows[0]?.username,
+        is_creator: upsertResult.rows[0]?.is_creator,
+        role: upsertResult.rows[0]?.role
+      });
     } catch (dbError) {
       console.error('❌ sync-user DB upsert user failed', {
         rid,
