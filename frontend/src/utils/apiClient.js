@@ -101,9 +101,14 @@ class ApiClient {
 
   // Build full URL
   buildURL(path) {
-    if (path.startsWith('http')) return path;
+    // Warn if absolute URL detected (should use relative paths)
+    if (/^https?:\/\//i.test(path)) {
+      logger.warn('[apiClient] Absolute URL detected; prefer relative paths:', path);
+      return path;
+    }
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `${this.baseURL}${cleanPath}`;
+    const baseURL = this.baseURL.endsWith('/') ? this.baseURL.slice(0, -1) : this.baseURL;
+    return `${baseURL}${cleanPath}`;
   }
 
   // Execute request with retries
