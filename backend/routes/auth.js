@@ -180,7 +180,6 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
 
     const upsertUserQuery = `
       INSERT INTO users (
-        id,
         supabase_id,
         email,
         username,
@@ -193,7 +192,6 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       )
       VALUES (
         $1::uuid,
-        $1::uuid,
         $2,
         $3,
         COALESCE($4, $3),
@@ -203,12 +201,12 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         NOW(),
         NOW()
       )
-      ON CONFLICT (id) DO UPDATE SET
+      ON CONFLICT (supabase_id) DO UPDATE SET
         email = EXCLUDED.email,
         email_verified = true,
         last_active = NOW(),
         updated_at = NOW()
-      RETURNING id
+      RETURNING supabase_id
     `;
 
     try {
@@ -282,7 +280,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     try {
       const checkQuery = `
         SELECT * FROM users
-        WHERE id = $1::uuid
+        WHERE supabase_id = $1::uuid
         LIMIT 1
       `;
       existingUser = await db(req).query(checkQuery, [supabaseId]);
@@ -307,14 +305,13 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         const updateQuery = `
           UPDATE users
           SET
-            supabase_id = $1,
             email_verified = true,
             last_active = NOW(),
             updated_at = NOW()
-          WHERE id = $2
-          RETURNING id
+          WHERE supabase_id = $1
+          RETURNING supabase_id
         `;
-        await db(req).query(updateQuery, [supabaseId, user.id]);
+        await db(req).query(updateQuery, [supabaseId]);
       } catch (dbError) {
         console.error('❌ sync-user DB update user failed', {
           rid,
@@ -352,10 +349,10 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
             COALESCE(tb.total_earned, 0) as total_earned
           FROM users u
           LEFT JOIN token_balances tb ON tb.user_id = u.supabase_id
-          WHERE u.id = $1::uuid
+          WHERE u.supabase_id = $1::uuid
           LIMIT 1
         `;
-        profileResult = await db(req).query(profileQuery, [user.id]);
+        profileResult = await db(req).query(profileQuery, [user.supabase_id]);
       } catch (dbError) {
         console.error('❌ sync-user DB fetch profile failed', {
           rid,
