@@ -499,10 +499,11 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
     
     const insertQuery = `
       INSERT INTO users (
-        id,
+        supabase_id,
         email,
-        email_confirmed_at,
+        email_verified,
         username,
+        display_name,
         is_creator,
         raw_user_meta_data,
         date_of_birth,
@@ -510,10 +511,10 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         created_at,
         updated_at
       ) VALUES (
-        $1::uuid, $2, NOW(), $3, $4, $5, $6, true, NOW(), NOW()
+        $1::uuid, $2, true, $3, $3, $4, $5, $6, true, NOW(), NOW()
       ) RETURNING *
     `;
-    
+
     const newUser = await db(req).query(insertQuery, [
       supabaseId,
       email,
