@@ -555,19 +555,38 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         display_name,
         email_verified,
         is_creator,
+        is_super_admin,
+        role,
+        video_rate_cents,
+        voice_rate_cents,
+        stream_rate_cents,
+        message_price_cents,
         last_active,
         created_at,
         updated_at
       ) VALUES (
-        $1::uuid, $2, $3, $3, true, $4, NOW(), NOW(), NOW()
+        $1::uuid, $2, $3, $3, true, $4, false, $5,
+        COALESCE($6, 10000),
+        COALESCE($7, 5000),
+        COALESCE($8, 1000),
+        COALESCE($9, 500),
+        NOW(), NOW(), NOW()
       ) RETURNING *
     `;
+
+    const isCreatorFallback = accountType === 'creator';
+    const roleFallback = isCreatorFallback ? 'creator' : 'fan';
 
     const newUser = await db(req).query(insertQuery, [
       supabaseId,
       email,
       username,
-      accountType === 'creator' // Set is_creator based on account_type
+      isCreatorFallback,
+      roleFallback,
+      10000, // defaultVideoRateCents
+      5000,  // defaultVoiceRateCents
+      1000,  // defaultStreamRateCents
+      500    // defaultMessagePriceCents
     ]);
     
     // If signing up as creator, create an application
