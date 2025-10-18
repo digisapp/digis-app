@@ -187,7 +187,6 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         display_name,
         email_verified,
         is_creator,
-        role,
         last_active,
         created_at,
         updated_at
@@ -200,7 +199,6 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         COALESCE($4, $3),
         true,
         $5,
-        $6,
         NOW(),
         NOW(),
         NOW()
@@ -219,8 +217,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         email,
         safeUsername,
         metadata?.username || safeUsername,
-        isCreatorForUpsert,
-        isCreatorForUpsert ? 'creator' : 'fan'
+        isCreatorForUpsert
       ]);
     } catch (dbError) {
       console.error('❌ sync-user DB upsert user failed', {
