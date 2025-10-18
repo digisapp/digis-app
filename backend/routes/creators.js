@@ -7,6 +7,13 @@ const router = express.Router();
 // Use shared logger instead of creating a new one (serverless-friendly)
 const logger = sharedLogger;
 
+// Import creator overview routes (aggregated metrics endpoint)
+const creatorsOverviewRoutes = require('./creators-overview');
+
+// Mount creator overview routes (requires authentication)
+// This provides /creators/overview endpoint with aggregated metrics
+router.use('/', authenticateToken, creatorsOverviewRoutes);
+
 // Get all creators (public landing page)
 router.get('/', async (req, res) => {
   try {
