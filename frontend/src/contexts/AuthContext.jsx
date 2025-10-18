@@ -659,6 +659,7 @@ export const AuthProvider = ({ children }) => {
         // If NO session exists, stop loading immediately (public homepage)
         if (!session?.user && mounted) {
           console.log('✅ No session found - showing public homepage');
+          setRoleResolved(true); // Mark as resolved so homepage can render
           setAuthLoading(false);
           clearTimeout(timeoutId);
           clearTimeout(bootTimeout);
