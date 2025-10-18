@@ -18,18 +18,6 @@ export default function AppBootstrap({ children }) {
   const clearSession = useAuthStore((state) => state.clearSession);
   const [initAttempted, setInitAttempted] = useState(false);
 
-  // Check if current route is public (doesn't require auth)
-  const isPublicRoute = () => {
-    const path = window.location.pathname;
-    const publicPaths = [
-      '/admin/login',
-      '/terms',
-      '/privacy',
-      '/'
-    ];
-    return publicPaths.some(publicPath => path === publicPath || path.startsWith(publicPath));
-  };
-
   useEffect(() => {
     if (initAttempted) return;
 
@@ -108,14 +96,7 @@ export default function AppBootstrap({ children }) {
     };
   }, [initAttempted, bootstrap, clearSession]);
 
-  // Skip auth check for public routes (like /admin/login)
-  // This prevents infinite loading on pages that don't need authentication
-  if (isPublicRoute()) {
-    console.log('🔐 [Bootstrap] Public route detected, skipping auth gate');
-    return <>{children}</>;
-  }
-
-  // Show loading state until auth is ready (for protected routes)
+  // Show loading state until auth is ready
   if (authStatus !== 'ready') {
     return <BootstrapLoader />;
   }
