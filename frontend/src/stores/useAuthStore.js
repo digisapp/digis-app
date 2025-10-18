@@ -170,8 +170,24 @@ const useAuthStore = create(
        */
       bootstrap: async (token) => {
         const mySeq = ++requestSeq;
-        console.log('🔐 [Auth] Bootstrapping... (seq:', mySeq, ')');
+        console.log('🔐 [Auth] Bootstrapping... (seq:', mySeq, ', hasToken:', !!token, ')');
         get().setAuthLoading();
+
+        // If no token, use last-known role immediately (no API call needed)
+        if (!token) {
+          console.log('🔐 [Auth] No token, using last-known role from localStorage');
+          const lastRole = getLastKnownRole();
+          const lastUserId = getLastKnownUserId();
+
+          set({
+            authStatus: 'ready',
+            role: lastRole,
+            user: lastUserId ? { id: lastUserId } : null,
+            permissions: [],
+            error: null
+          });
+          return;
+        }
 
         try {
           // 1) Sync user first (idempotent, tolerate failures)

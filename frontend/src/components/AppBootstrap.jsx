@@ -42,20 +42,15 @@ export default function AppBootstrap({ children }) {
 
         if (aborted) return;
 
-        if (session?.access_token) {
-          console.log('🔐 [Bootstrap] Calling bootstrap with token...');
-          // Bootstrap with token
-          await bootstrap(session.access_token);
-          console.log('🔐 [Bootstrap] Bootstrap complete');
-        } else {
-          // No session - set to fan/guest
-          console.log('🔐 [Bootstrap] No session, setting as guest');
-          useAuthStore.getState().setAuthError('Not authenticated');
-        }
+        // Always call bootstrap - it handles both authenticated and unauthenticated cases
+        // When no token, bootstrap will use last-known role from localStorage
+        console.log('🔐 [Bootstrap] Calling bootstrap...');
+        await bootstrap(session?.access_token || null);
+        console.log('🔐 [Bootstrap] Bootstrap complete');
       } catch (error) {
         if (aborted) return;
         console.error('🔐 [Bootstrap] Init failed:', error);
-        useAuthStore.getState().setAuthError(error.message);
+        // Don't call setAuthError - bootstrap already handles errors gracefully
       } finally {
         setInitAttempted(true);
       }
