@@ -308,14 +308,10 @@ try {
     res.json({ ok: true, count: list.length, routes: list });
   });
 
-  // Use enhanced auth with JWT refresh tokens
-  const authEnhancedRoutes = require('../routes/auth-enhanced');
-
   // Apply rate limiters to sensitive routes (disabled in development)
   const authLimiter = process.env.NODE_ENV === 'production' ? (rateLimiters.auth || ((req, res, next) => next())) : ((req, res, next) => next());
   app.use('/api/v1/auth', authLimiter, authRoutes); // Versioned auth
   app.use('/api/auth', authLimiter, authRoutes); // Back-compat auth
-  app.use('/api/auth/v2', authLimiter, authEnhancedRoutes); // New auth endpoints with refresh tokens
 
   // Ably token authentication endpoint (for Vercel real-time)
   // Dual-mount on both paths for compatibility
