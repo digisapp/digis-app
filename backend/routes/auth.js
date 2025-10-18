@@ -261,16 +261,20 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       });
     } catch (dbError) {
       // 23505 = unique constraint violation (duplicate)
-      // This should NOT happen with ON CONFLICT (supabase_id), but if it does,
-      // it means a different unique constraint (username/email) is being violated.
-      // TREAT DUPLICATE AS SUCCESS - user already exists
+      // This can happen if:
+      // 1. supabase_id conflict (handled by ON CONFLICT)
+      // 2. email conflict (user with same email already exists)
+      // 3. username conflict (username already taken)
+      // TREAT ALL DUPLICATES AS SUCCESS - user already exists
       if (dbError.code === '23505') {
-        console.log('✅ User already exists, treating as success', {
+        console.log('✅ User already exists (duplicate constraint), treating as success', {
           rid,
           supabaseId,
-          constraint: dbError.constraint
+          email,
+          constraint: dbError.constraint,
+          detail: dbError.detail
         });
-        // Continue to token balance - user exists is success, not error
+        // Continue to fetch existing user - this is success, not an error
       } else if (dbError.code === '22P02') {
         return fail(400, {
           error: 'INVALID_UUID',
@@ -283,13 +287,14 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
           rid,
           code: dbError.code,
           message: dbError.message,
-          detail: dbError.detail
+          detail: dbError.detail,
+          constraint: dbError.constraint
         });
         return fail(500, {
-          error: 'DB_UPSERT_FAILED',
-          message: 'Failed to create or update user in database',
+          error: 'INTERNAL',
+          message: dbError.message || 'Failed to create or update user in database',
           code: dbError.code,
-          detail: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+          detail: process.env.NODE_ENV === 'development' ? dbError.detail : undefined
         });
       }
     }
