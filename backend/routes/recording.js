@@ -329,29 +329,74 @@ try {
 router.post('/streams/:streamId/save-recording', authenticateToken, async (req, res) => {
   try {
     const { streamId } = req.params;
-    const { title, description, accessType, tokenPrice, thumbnailUrl } = req.body;
+    const {
+      title,
+      description,
+      category,
+      tags,
+      accessType,
+      tokenPrice,
+      earlyBirdPrice,
+      earlyBirdHours,
+      previewDuration,
+      publishType,
+      scheduledDate,
+      visibility,
+      thumbnailUrl,
+      duration,
+      viewerCount,
+      peakViewers,
+      totalRevenue
+    } = req.body;
     const creatorId = req.user.supabase_id;
-    
-    // Get recording info
+
+    // Get recording info from recordings table
     const recordingQuery = await db.query(
-      `SELECT r.* FROM recordings r 
+      `SELECT r.* FROM recordings r
        JOIN streams s ON s.recording_id = r.session_id
        WHERE s.id = $1 AND s.creator_id = $2 AND r.status = 'completed'`,
       [streamId, creatorId]
     );
-    
+
     if (recordingQuery.rows.length === 0) {
       return res.status(404).json({ error: 'Recording not found' });
     }
-    
+
     const recording = recordingQuery.rows[0];
-    
-    // Save to stream_recordings table
+
+    // Prepare metadata object
+    const metadata = {
+      category: category || 'General',
+      tags: tags || [],
+      publishType: publishType || 'immediate',
+      scheduledDate: scheduledDate || null,
+      visibility: visibility || 'public',
+      previewDuration: previewDuration || 0,
+      earlyBirdPrice: earlyBirdPrice || null,
+      earlyBirdHours: earlyBirdHours || null,
+      earlyBirdDeadline: earlyBirdPrice && earlyBirdHours
+        ? new Date(Date.now() + earlyBirdHours * 3600000).toISOString()
+        : null
+    };
+
+    // Prepare recording data (stats)
+    const recordingData = {
+      viewerCount: viewerCount || 0,
+      peakViewers: peakViewers || 0,
+      totalRevenue: totalRevenue || 0,
+      recordedAt: new Date().toISOString()
+    };
+
+    // Determine if should be public based on publish type
+    const isPublic = publishType === 'immediate' && visibility === 'public';
+
+    // Save to stream_recordings table with enhanced metadata
     const saveResult = await db.query(
       `INSERT INTO stream_recordings (
         stream_id, creator_id, title, description, file_url, thumbnail_url,
-        resolution, duration, size, is_public, access_type, token_price, price
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        resolution, duration, size, is_public, access_type, token_price, price,
+        metadata, recording_data
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *`,
       [
         streamId,
@@ -361,33 +406,40 @@ router.post('/streams/:streamId/save-recording', authenticateToken, async (req, 
         recording.file_url,
         thumbnailUrl || null,
         '1440p', // 2K resolution
-        recording.duration,
+        duration || recording.duration,
         recording.file_size,
-        true, // Always public for sale
-        accessType || 'paid', // Default to paid
-        tokenPrice || 10, // Default price 10 tokens
-        (tokenPrice || 10) * 0.05 // Convert tokens to USD
+        isPublic,
+        accessType || 'paid',
+        tokenPrice || 10,
+        (tokenPrice || 10) * 0.05,
+        JSON.stringify(metadata),
+        JSON.stringify(recordingData)
       ]
     );
-    
+
     const savedRecording = saveResult.rows[0];
-    
-    // Emit socket event to notify creator
-// Socket.io removed - using Ably
-//     const io = require('../utils/socket').getIO();
-try {
-  await publishToChannel(`user:${creatorId}`, 'recording_saved', {
-    recordingId: savedRecording.id,
-    title: savedRecording.title,
-    fileUrl: savedRecording.file_url
-  });
-} catch (ablyError) {
-  logger.error('Failed to publish recording_saved to Ably:', ablyError.message);
-}
-    
-    res.json({ 
+
+    // Emit Ably event to notify creator
+    try {
+      await publishToChannel(`user:${creatorId}`, 'recording_saved', {
+        recordingId: savedRecording.id,
+        title: savedRecording.title,
+        fileUrl: savedRecording.file_url,
+        accessType: savedRecording.access_type,
+        tokenPrice: savedRecording.token_price,
+        publishType: metadata.publishType
+      });
+    } catch (ablyError) {
+      console.error('Failed to publish recording_saved to Ably:', ablyError.message);
+    }
+
+    res.json({
       success: true,
-      recording: savedRecording
+      recording: {
+        ...savedRecording,
+        url: savedRecording.file_url,
+        recording_url: savedRecording.file_url
+      }
     });
   } catch (error) {
     console.error('Error saving recording:', error);
@@ -516,20 +568,47 @@ router.get('/my-purchases', authenticateToken, async (req, res) => {
 router.get('/creator/:creatorId/recordings', async (req, res) => {
   try {
     const { creatorId } = req.params;
-    
-    const result = await db.query(
-      `SELECT id, title, description, thumbnail_url, resolution, duration, 
-              access_type, token_price, view_count, created_at
-       FROM stream_recordings 
-       WHERE creator_id = $1 AND is_public = true
-       ORDER BY created_at DESC
-       LIMIT 20`,
-      [creatorId]
-    );
-    
-    res.json({ 
+    const { includePrivate = false } = req.query;
+
+    // Check if requesting user is the creator
+    const isOwner = req.user && req.user.supabase_id === creatorId;
+
+    let query = `
+      SELECT
+        id, stream_id, title, description, thumbnail_url, file_url,
+        resolution, duration, size, is_public, access_type, token_price, price,
+        view_count, purchase_count, metadata, recording_data, created_at, updated_at
+      FROM stream_recordings
+      WHERE creator_id = $1
+    `;
+
+    // Only show public recordings unless owner requests private ones
+    if (!isOwner || !includePrivate) {
+      query += ` AND is_public = true`;
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT 50`;
+
+    const result = await db.query(query, [creatorId]);
+
+    // Parse metadata and recording_data from JSONB
+    const recordings = result.rows.map(row => ({
+      ...row,
+      metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata,
+      recording_data: typeof row.recording_data === 'string' ? JSON.parse(row.recording_data) : row.recording_data,
+      // Include computed fields for easy access
+      category: row.metadata?.category || 'General',
+      tags: row.metadata?.tags || [],
+      visibility: row.metadata?.visibility || 'public',
+      earlyBirdPrice: row.metadata?.earlyBirdPrice || null,
+      earlyBirdDeadline: row.metadata?.earlyBirdDeadline || null,
+      viewerCount: row.recording_data?.viewerCount || 0,
+      peakViewers: row.recording_data?.peakViewers || 0
+    }));
+
+    res.json({
       success: true,
-      recordings: result.rows
+      recordings
     });
   } catch (error) {
     console.error('Error fetching creator recordings:', error);
