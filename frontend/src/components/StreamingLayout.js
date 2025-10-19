@@ -117,9 +117,18 @@ const StreamingLayout = ({
 
     const initializeAnalytics = async () => {
       try {
-        // Join stream room for real-time updates
-        socketService.emit('join-stream', channel);
-        
+        // Subscribe to stream channel for real-time updates (Ably)
+        await socketService.joinStream(channel);
+
+        // Also subscribe to user-specific channel for private show events
+        if (user?.id) {
+          const userChannel = socketService.getChannel(`user:${user.id}`);
+          userChannel.subscribe((message) => {
+            // Emit to local listeners so socketService.on() handlers work
+            socketService.emitToListeners(message.name, message.data);
+          });
+        }
+
         // Initialize analytics if creator
         if (isCreator) {
           socketService.emit('stream-started', {
@@ -129,7 +138,7 @@ const StreamingLayout = ({
             category: streamConfig?.category
           });
         }
-        
+
         // Track viewer join
         socketService.emit('viewer-joined', {
           channel,
