@@ -73,8 +73,11 @@ CREATE INDEX IF NOT EXISTS idx_ppv_messages_created ON ppv_messages(created_at D
 CREATE INDEX IF NOT EXISTS idx_ppv_unlocks_user ON ppv_unlocks(user_id);
 CREATE INDEX IF NOT EXISTS idx_ppv_unlocks_message ON ppv_unlocks(ppv_message_id);
 
+-- Drop function if it exists (in case of re-running migration)
+DROP FUNCTION IF EXISTS unlock_ppv_message(UUID, UUID);
+
 -- Create function to unlock PPV content
-CREATE OR REPLACE FUNCTION unlock_ppv_message(
+CREATE FUNCTION unlock_ppv_message(
   p_user_id UUID,
   p_message_id UUID
 ) RETURNS JSON AS $$
