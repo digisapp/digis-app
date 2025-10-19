@@ -24,7 +24,7 @@ AND interests = '{}';
 
 -- Predefined categories that creators can choose from
 -- Store this as a reference (could be moved to application config)
-COMMENT ON COLUMN users.interests IS 'Creator interests/categories for discovery (max 5). 
-Available options: Gaming, Music, Art, Model, Fitness, Cooking, Dance, Comedy, 
-Education, Lifestyle, Fashion, Tech, Sports, Travel, Photography, Crafts, Beauty, 
-Business, Meditation, ASMR, Advice, Astrology, Tarot, Wellness';
+COMMENT ON COLUMN users.interests IS 'Creator interests/categories for discovery (max 5).
+Available options: Gaming, Music, Art, Model, Fitness, Cooking, Dance, Comedy,
+Education, Lifestyle, Fashion, Tech, Sports, Travel, Photography, Crafts, Beauty,
+Business, Meditation, ASMR, Wellness, Other';

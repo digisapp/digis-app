@@ -102,6 +102,7 @@ router.put('/settings', authenticateToken, [
   body('shopDescription').optional().isString(),
   body('acceptsUsd').optional().isBoolean(),
   body('acceptsTokens').optional().isBoolean(),
+  body('is_enabled').optional().isBoolean(),
   body('policies').optional().isObject()
 ], async (req, res) => {
   try {
@@ -109,10 +110,10 @@ router.put('/settings', authenticateToken, [
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    
+
     const creatorId = req.user.supabase_id || req.user.uid;
-    const { shopDescription, policies } = req.body;
-    
+    const { shopDescription, policies, is_enabled } = req.body;
+
     // Get creator username for shop name
     const creatorInfo = await pool.query(
       'SELECT username FROM users WHERE supabase_id = $1',
@@ -120,19 +121,20 @@ router.put('/settings', authenticateToken, [
     );
     const creatorUsername = creatorInfo.rows[0]?.username || 'Creator';
     const shopName = `${creatorUsername} Shop`;
-    
+
     const result = await pool.query(
-      `UPDATE shop_settings 
-      SET 
+      `UPDATE shop_settings
+      SET
         shop_name = $2,
         shop_description = COALESCE($3, shop_description),
         accepts_usd = true,
         accepts_tokens = true,
-        policies = COALESCE($4, policies),
+        is_enabled = COALESCE($4, is_enabled),
+        policies = COALESCE($5, policies),
         updated_at = CURRENT_TIMESTAMP
       WHERE creator_id = $1
       RETURNING *`,
-      [creatorId, shopName, shopDescription, policies ? JSON.stringify(policies) : null]
+      [creatorId, shopName, shopDescription, is_enabled, policies ? JSON.stringify(policies) : null]
     );
     
     res.json({
@@ -403,7 +405,7 @@ router.get('/orders', authenticateToken, async (req, res) => {
 
 // Update order status (for fulfillment)
 router.put('/orders/:orderId/status', authenticateToken, [
-  body('status').isIn(['processing', 'shipped', 'delivered', 'cancelled'])
+  body('status').isIn(['pending', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'])
 ], async (req, res) => {
   try {
     const creatorId = req.user.supabase_id || req.user.uid;

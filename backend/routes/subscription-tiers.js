@@ -313,12 +313,12 @@ router.delete('/cancel/:creatorId', authenticateToken, async (req, res) => {
 // Get subscription price for frontend
 router.get('/price', authenticateToken, async (req, res) => {
   try {
-    const creatorId = req.user.id;
+    const userId = req.user.supabase_id || req.user.id;
 
-    // Get current price
+    // Get current price from users table
     const result = await db.query(
-      `SELECT subscription_price FROM creators WHERE user_id = $1`,
-      [creatorId]
+      `SELECT subscription_price FROM users WHERE supabase_id = $1 OR id = $1`,
+      [userId]
     );
 
     const price = result.rows[0]?.subscription_price || DEFAULT_PRICE;
@@ -336,23 +336,29 @@ router.get('/price', authenticateToken, async (req, res) => {
 // Update subscription price (simplified endpoint)
 router.put('/price', authenticateToken, async (req, res) => {
   try {
-    const creatorId = req.user.id;
+    const userId = req.user.supabase_id || req.user.id;
     const { price } = req.body;
 
     if (!price || price < MIN_PRICE) {
       return res.status(400).json({ error: `Price must be at least ${MIN_PRICE} tokens` });
     }
 
-    await db.query(
-      `INSERT INTO creators (user_id, subscription_price)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET subscription_price = $2`,
-      [creatorId, price]
+    // Update subscription_price in users table
+    const result = await db.query(
+      `UPDATE users
+       SET subscription_price = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE supabase_id = $2 OR id = $2
+       RETURNING subscription_price`,
+      [price, userId]
     );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     res.json({
       success: true,
-      price
+      price: result.rows[0].subscription_price
     });
   } catch (error) {
     console.error('Error updating price:', error);

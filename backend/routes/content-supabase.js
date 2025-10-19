@@ -539,4 +539,97 @@ router.post('/purchase', authenticateToken, async (req, res) => {
   }
 });
 
+// Track content view
+router.post('/view/:contentId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { contentId } = req.params;
+
+    // Check if user has access (either purchased or is creator)
+    const accessCheck = await pool.query(`
+      SELECT c.creator_id FROM creator_content c
+      WHERE c.id = $1 AND (
+        c.creator_id = $2 OR
+        EXISTS (SELECT 1 FROM content_purchases WHERE content_id = $1 AND user_id = $2)
+      )
+    `, [contentId, userId]);
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Increment view count
+    await pool.query(
+      'UPDATE creator_content SET views = views + 1 WHERE id = $1',
+      [contentId]
+    );
+
+    // Track individual view
+    await pool.query(`
+      INSERT INTO content_views (id, content_id, user_id, viewed_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT DO NOTHING
+    `, [uuidv4(), contentId, userId]);
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error tracking view:', error);
+    res.status(500).json({ error: 'Failed to track view' });
+  }
+});
+
+// Download purchased content
+router.get('/download/:contentId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { contentId } = req.params;
+
+    // Verify purchase and check if downloadable
+    const contentCheck = await pool.query(`
+      SELECT c.content_url, c.title, c.content_type, c.is_downloadable
+      FROM creator_content c
+      JOIN content_purchases cp ON cp.content_id = c.id
+      WHERE c.id = $1 AND cp.user_id = $2
+    `, [contentId, userId]);
+
+    if (contentCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Content not found or not purchased' });
+    }
+
+    const content = contentCheck.rows[0];
+
+    if (!content.is_downloadable) {
+      return res.status(403).json({ error: 'This content is not available for download' });
+    }
+
+    // Get signed URL from Supabase Storage
+    const filePath = content.content_url.split('/').slice(-2).join('/'); // Extract path from full URL
+    const { data, error } = await supabase.storage
+      .from('creator-content')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+    if (error) {
+      console.error('Error creating signed URL:', error);
+      return res.status(500).json({ error: 'Failed to generate download link' });
+    }
+
+    // Track download
+    await pool.query(
+      'UPDATE creator_content SET downloads = downloads + 1 WHERE id = $1',
+      [contentId]
+    );
+
+    res.json({
+      success: true,
+      downloadUrl: data.signedUrl,
+      filename: `${content.title}.${content.content_type === 'video' ? 'mp4' : 'jpg'}`
+    });
+
+  } catch (error) {
+    console.error('Error downloading content:', error);
+    res.status(500).json({ error: 'Failed to download content' });
+  }
+});
+
 module.exports = router;

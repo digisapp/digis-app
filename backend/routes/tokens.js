@@ -16,14 +16,13 @@ const TOKEN_VALUE = 0.05; // $0.05 per token
 const MINIMUM_PAYOUT_TOKENS = 1000; // $50 equivalent
 const PURCHASE_RATE_LIMIT = 5; // Max 5 purchases per minute
 const TOKEN_PRICES = {
-  500: 5.94,
-  1000: 10.33,
-  2000: 18.57,
-  5000: 41.47,
-  10000: 77.16,
-  20000: 144.57,
-  50000: 334.12,
-  100000: 632.49
+  50: 5.00,
+  200: 19.00,
+  433: 39.00,
+  812: 69.00,
+  1488: 119.00,
+  4986: 349.00,
+  8446: 549.00
 };
 
 // Ably real-time adapter for balance updates
@@ -57,15 +56,15 @@ router.get('/test', (req, res) => {
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.supabase_id || req.user.id;
-    
-    // Get token balance from users table
+
+    // Get token balance from token_balances table
     const balanceResult = await pool.query(
-      `SELECT token_balance as balance
-       FROM users
-       WHERE supabase_id = $1`,
+      `SELECT balance
+       FROM token_balances
+       WHERE user_id = $1`,
       [userId]
     );
-    
+
     if (balanceResult.rows.length === 0) {
       return res.json({
         tokens: 0,
@@ -75,9 +74,9 @@ router.get('/', authenticateToken, async (req, res) => {
         total_earned: 0
       });
     }
-    
+
     const balance = balanceResult.rows[0];
-    
+
     res.json({
       tokens: parseFloat(balance.balance || 0),
       balance: parseFloat(balance.balance || 0),
@@ -86,10 +85,10 @@ router.get('/', authenticateToken, async (req, res) => {
       total_spent: parseFloat(balance.total_spent || 0),
       total_earned: parseFloat(balance.total_earned || 0)
     });
-    
+
   } catch (error) {
     logger.error('Error fetching wallet data:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch wallet data',
       timestamp: new Date().toISOString()
     });

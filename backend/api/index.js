@@ -251,7 +251,7 @@ try {
   const monitoringRoutes = require('../routes/monitoring');
   const storageRoutes = require('../routes/storage');
   const creatorDashboardRoutes = require('../routes/creator-dashboard');
-  const digitalsRoutes = require('../routes/digitals');
+  // const digitalsRoutes = require('../routes/digitals'); // Removed: Digitals feature disabled
   const metaRoutes = require('../routes/meta');
   const emergencyRoutes = require('../routes/emergency-reset');
   const fansRoutes = require('../routes/fans');
@@ -395,7 +395,7 @@ try {
     app.use('/api/sentry-test', require('../routes/sentry-test'));
   }
   app.use('/api/creator-dashboard', rateLimiters.analytics || ((req, res, next) => next()), creatorDashboardRoutes);
-  app.use('/api/digitals', rateLimiters.upload || ((req, res, next) => next()), digitalsRoutes);
+  // app.use('/api/digitals', rateLimiters.upload || ((req, res, next) => next()), digitalsRoutes); // Removed: Digitals feature disabled
   app.use('/api/metrics', rateLimiters.analytics || ((req, res, next) => next()), monitoringRoutes);
   app.use('/api/storage', rateLimiters.upload || ((req, res, next) => next()), storageRoutes);
   app.use('/api/uploads', rateLimiters.upload || ((req, res, next) => next()), uploadsRoutes);

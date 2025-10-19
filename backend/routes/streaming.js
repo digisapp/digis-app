@@ -186,6 +186,189 @@ router.get('/active', optionalAuth, async (req, res) => {
   }
 });
 
+// Unified Go Live endpoint - Creates stream and generates Agora token in one call
+router.post('/go-live', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const creatorId = req.user.supabase_id;
+    const {
+      title,
+      category,
+      description = '',
+      tags = [],
+      privacy = 'public',
+      audienceControl = {},
+      streamGoal = {},
+      shoppingEnabled = false,
+      selectedProducts = [],
+      overlaySettings = null
+    } = req.body;
+
+    logger.info('🎬 Go live request', { creatorId, title, category });
+
+    // 1. Verify user is a creator
+    const creatorCheck = await client.query(
+      'SELECT is_creator, username FROM users WHERE supabase_id = $1',
+      [creatorId]
+    );
+
+    if (creatorCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!creatorCheck.rows[0].is_creator) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Only creators can go live' });
+    }
+
+    // 2. Validate required fields
+    if (!title || !title.trim()) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Stream title is required' });
+    }
+
+    if (!category) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Category is required' });
+    }
+
+    // 3. Check if creator is already live
+    const existingStream = await client.query(
+      `SELECT id FROM streams
+       WHERE creator_id = $1 AND status = 'live'`,
+      [creatorId]
+    );
+
+    if (existingStream.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        error: 'You are already live',
+        streamId: existingStream.rows[0].id
+      });
+    }
+
+    // 4. Generate unique channel name
+    const crypto = require('crypto');
+    const channel = `stream_${crypto.randomBytes(9).toString('base64url')}`;
+
+    // 5. Create stream record
+    const streamResult = await client.query(
+      `INSERT INTO streams (
+        creator_id,
+        channel,
+        title,
+        description,
+        category,
+        status,
+        started_at,
+        tags,
+        is_free,
+        stream_settings
+      ) VALUES ($1, $2, $3, $4, $5, 'live', NOW(), $6, $7, $8)
+      RETURNING *`,
+      [
+        creatorId,
+        channel,
+        title.trim(),
+        description.trim(),
+        category,
+        JSON.stringify(tags),
+        (audienceControl.joinPrice || 0) === 0, // is_free if no join price
+        JSON.stringify({
+          privacy,
+          audienceControl,
+          streamGoal,
+          shoppingEnabled,
+          selectedProducts,
+          overlaySettings
+        })
+      ]
+    );
+
+    const stream = streamResult.rows[0];
+
+    // 6. Generate Agora token
+    const { RtcTokenBuilder, RtcRole } = require('agora-token');
+    const appID = process.env.AGORA_APP_ID;
+    const appCertificate = process.env.AGORA_APP_CERTIFICATE;
+
+    if (!appID || !appCertificate) {
+      await client.query('ROLLBACK');
+      logger.error('❌ Agora credentials missing');
+      return res.status(500).json({ error: 'Streaming service not configured' });
+    }
+
+    // Generate UID from creator ID (convert UUID to numeric)
+    const uid = parseInt(creatorId.replace(/-/g, '').substring(0, 10), 16);
+    const expireTime = 7200; // 2 hours
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpiredTs = currentTimestamp + expireTime;
+
+    const token = RtcTokenBuilder.buildTokenWithUid(
+      appID,
+      appCertificate,
+      channel,
+      uid,
+      RtcRole.PUBLISHER, // Creator is always publisher/host
+      privilegeExpiredTs
+    );
+
+    // 7. Notify followers (async - don't wait)
+    if (privacy === 'public') {
+      publishToChannel('stream-notifications', {
+        type: 'stream_started',
+        creatorId,
+        streamId: stream.id,
+        title,
+        category,
+        username: creatorCheck.rows[0].username
+      }).catch(err => logger.error('Failed to notify followers:', err));
+    }
+
+    await client.query('COMMIT');
+
+    logger.info('✅ Stream created successfully', {
+      streamId: stream.id,
+      channel,
+      creatorId
+    });
+
+    res.json({
+      success: true,
+      stream: {
+        id: stream.id,
+        channel,
+        title: stream.title,
+        category: stream.category,
+        status: stream.status,
+        startedAt: stream.started_at
+      },
+      agora: {
+        appId: appID,
+        token,
+        channel,
+        uid,
+        role: 'host',
+        expiresAt: new Date(privilegeExpiredTs * 1000).toISOString()
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('❌ Go live error:', error);
+    res.status(500).json({
+      error: 'Failed to start stream',
+      message: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // Start stream recording
 router.post('/start-recording', authenticateToken, async (req, res) => {
   try {

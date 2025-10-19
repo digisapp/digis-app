@@ -22,7 +22,7 @@ const { config } = require('../config/payout-config');
  */
 router.post('/intent', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id; // From authenticateToken middleware
+    const userId = req.user.supabase_id || req.user.id; // From authenticateToken middleware
 
     // Compute effective cycle date (accounts for cutoff time)
     // If clicking after cutoff on a run day, targets next cycle
@@ -96,7 +96,7 @@ router.post('/intent', authenticateToken, async (req, res) => {
  */
 router.delete('/intent', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.supabase_id || req.user.id;
     const { cycle_date } = req.query;
 
     // Default to next cycle if not specified
@@ -154,7 +154,7 @@ router.delete('/intent', authenticateToken, async (req, res) => {
  */
 router.get('/intent', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.supabase_id || req.user.id;
 
     // Get next cycle date
     const nextCycle = nextCycleDate();

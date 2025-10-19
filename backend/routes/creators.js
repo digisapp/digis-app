@@ -818,7 +818,7 @@ router.get('/followers', authenticateToken, async (req, res) => {
 
     // Get followers with user details
     // IMPORTANT: Exclude the creator from their own followers list
-    // Note: follower_id uses supabase_id, creator_id uses database id
+    // Note: follower_id/supabase_follower_id uses supabase_id, creator_id uses database id
     const query = `
       SELECT
         u.id,
@@ -829,9 +829,9 @@ router.get('/followers', authenticateToken, async (req, res) => {
         u.is_creator as "isVerified",
         f.created_at as "followedAt"
       FROM followers f
-      JOIN users u ON u.supabase_id = f.follower_id
+      JOIN users u ON u.supabase_id = COALESCE(f.supabase_follower_id, f.follower_id)
       WHERE f.creator_id = $1
-        AND f.follower_id != $2
+        AND COALESCE(f.supabase_follower_id, f.follower_id) != $2
       ORDER BY f.created_at DESC
     `;
 
@@ -874,7 +874,7 @@ router.get('/subscribers', authenticateToken, async (req, res) => {
 
     // Get active subscribers with tier info
     // IMPORTANT: Exclude the creator from their own subscribers list
-    // Note: user_id uses supabase_id, creator_id uses database id
+    // Note: subscriber_id/supabase_subscriber_id uses supabase_id, creator_id uses database id
     const query = `
       SELECT
         u.id,
@@ -883,15 +883,16 @@ router.get('/subscribers', authenticateToken, async (req, res) => {
         u.display_name,
         u.profile_pic_url as avatar,
         u.is_creator as "isVerified",
-        s.created_at as "subscribedAt",
-        s.price as "monthlyRevenue"
-      FROM subscriptions s
-      JOIN users u ON u.supabase_id = s.user_id
-      WHERE s.creator_id = $1
-        AND s.user_id != $2
-        AND s.status = 'active'
-        AND (s.expires_at IS NULL OR s.expires_at > NOW())
-      ORDER BY s.created_at DESC
+        cs.created_at as "subscribedAt",
+        cs.monthly_price as "monthlyRevenue",
+        cs.tier_name as tier
+      FROM creator_subscriptions cs
+      JOIN users u ON u.supabase_id = COALESCE(cs.supabase_subscriber_id, cs.subscriber_id)
+      WHERE cs.creator_id = $1
+        AND COALESCE(cs.supabase_subscriber_id, cs.subscriber_id) != $2
+        AND cs.status = 'active'
+        AND (cs.current_period_end IS NULL OR cs.current_period_end > NOW())
+      ORDER BY cs.created_at DESC
     `;
 
     const result = await pool.query(query, [creatorDbId, supabaseId]);
@@ -935,7 +936,10 @@ router.get('/stats', authenticateToken, async (req, res) => {
     let followersCount = 0;
     try {
       const followersResult = await pool.query(
-        'SELECT COUNT(*) as count FROM followers WHERE creator_id = $1 AND follower_id != $2',
+        `SELECT COUNT(*) as count
+         FROM followers
+         WHERE creator_id = $1
+           AND COALESCE(supabase_follower_id, follower_id) != $2`,
         [creatorDbId, supabaseId]
       );
       followersCount = parseInt(followersResult.rows[0]?.count) || 0;
@@ -949,17 +953,17 @@ router.get('/stats', authenticateToken, async (req, res) => {
     try {
       const subscribersResult = await pool.query(
         `SELECT COUNT(*) as count
-         FROM subscriptions
+         FROM creator_subscriptions
          WHERE creator_id = $1
-           AND user_id != $2
+           AND COALESCE(supabase_subscriber_id, subscriber_id) != $2
            AND status = 'active'
-           AND (expires_at IS NULL OR expires_at > NOW())`,
+           AND (current_period_end IS NULL OR current_period_end > NOW())`,
         [creatorDbId, supabaseId]
       );
       subscribersCount = parseInt(subscribersResult.rows[0]?.count) || 0;
     } catch (error) {
       if (error.code !== '42P01') throw error; // Re-throw if not "table doesn't exist" error
-      logger.warn('Subscriptions table does not exist');
+      logger.warn('Creator subscriptions table does not exist');
     }
 
     res.json({

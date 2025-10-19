@@ -1204,18 +1204,25 @@ router.get('/at-risk-fans/:creatorId', authenticateToken, async (req, res) => {
 router.get('/creator/:userId/overview', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.params;
-    
+    const { period = '7d' } = req.query;
+
     // Get creator stats
     const statsQuery = await pool.query(`
-      SELECT 
+      SELECT
         u.id,
+        u.supabase_id,
         u.username,
         u.is_creator,
         u.total_earnings,
         u.total_sessions,
-        (SELECT COUNT(*) FROM followers WHERE creator_id::text = u.id::text) as followers_count,
-        (SELECT COUNT(*) FROM sessions WHERE creator_id::text = u.id::text AND DATE(start_time) = CURRENT_DATE) as today_sessions,
-        (SELECT COALESCE(SUM(total_cost_cents::numeric / 100), 0) FROM sessions WHERE creator_id::text = u.id::text AND DATE(start_time) = CURRENT_DATE) as today_earnings
+        (SELECT COUNT(*) FROM followers WHERE creator_id = u.supabase_id) as followers_count,
+        (SELECT COUNT(*) FROM followers WHERE creator_id = u.supabase_id AND created_at >= NOW() - INTERVAL '30 days') as new_followers_month,
+        (SELECT COUNT(*) FROM sessions WHERE creator_id = u.supabase_id AND DATE(start_time) = CURRENT_DATE) as today_sessions,
+        (SELECT COALESCE(SUM(amount), 0) FROM token_transactions WHERE creator_id = u.supabase_id AND DATE(created_at) = CURRENT_DATE AND transaction_type = 'earn') as today_earnings,
+        (SELECT COALESCE(SUM(amount), 0) FROM token_transactions WHERE creator_id = u.supabase_id AND DATE(created_at) >= DATE_TRUNC('month', CURRENT_DATE) AND transaction_type = 'earn') as month_earnings,
+        (SELECT COUNT(*) FROM token_transactions WHERE creator_id = u.supabase_id AND DATE(created_at) = CURRENT_DATE AND transaction_type = 'tip') as today_tips,
+        (SELECT COUNT(DISTINCT sender_id) FROM messages WHERE receiver_id = u.supabase_id AND read = false) as unread_messages,
+        (SELECT COUNT(*) FROM session_invites WHERE creator_id = u.supabase_id AND status = 'pending') as pending_requests
       FROM users u
       WHERE u.supabase_id = $1
     `, [userId]);
@@ -1228,27 +1235,77 @@ router.get('/creator/:userId/overview', authenticateToken, async (req, res) => {
 
     // Get weekly earnings trend
     const weeklyEarnings = await pool.query(`
-      SELECT 
-        DATE(start_time) as date,
-        SUM(total_cost_cents::numeric / 100) as earnings
-      FROM sessions
-      WHERE creator_id::text = $1::text 
-        AND start_time >= NOW() - INTERVAL '7 days'
-        AND status = 'ended'
-      GROUP BY DATE(start_time)
+      SELECT
+        DATE(created_at) as date,
+        COALESCE(SUM(amount), 0) as earnings
+      FROM token_transactions
+      WHERE creator_id = $1
+        AND created_at >= NOW() - INTERVAL '7 days'
+        AND transaction_type = 'earn'
+      GROUP BY DATE(created_at)
       ORDER BY date ASC
-    `, [stats.id]);
+    `, [userId]);
+
+    // Get previous period followers for trend calculation
+    const prevFollowers = await pool.query(`
+      SELECT COUNT(*) as prev_count
+      FROM followers
+      WHERE creator_id = $1
+        AND created_at < NOW() - INTERVAL '30 days'
+    `, [userId]);
+
+    const followersTrend = stats.new_followers_month || 0;
+    const followersTotal = parseInt(stats.followers_count) || 0;
 
     res.json({
       success: true,
-      overview: {
-        totalEarnings: parseFloat(stats.total_earnings) || 0,
-        totalSessions: parseInt(stats.total_sessions) || 0,
-        followersCount: parseInt(stats.followers_count) || 0,
-        todayEarnings: parseFloat(stats.today_earnings) || 0,
-        todaySessions: parseInt(stats.today_sessions) || 0,
-        weeklyTrend: weeklyEarnings.rows
-      }
+      revenue: {
+        total: parseFloat(stats.today_earnings) || 0,
+        previous: 0,
+        trend: 0
+      },
+      followers: {
+        total: followersTotal,
+        previous: parseInt(prevFollowers.rows[0]?.prev_count) || 0,
+        trend: followersTrend
+      },
+      engagement: {
+        rate: 0,
+        previous: 0,
+        trend: 0,
+        videoCalls: 0,
+        messages: 0,
+        tips: parseInt(stats.today_tips) || 0,
+        gifts: 0
+      },
+      sessions: {
+        avgDuration: 0,
+        previousAvg: 0,
+        trend: 0
+      },
+      today: {
+        earnings: parseFloat(stats.today_earnings) || 0,
+        tips: parseInt(stats.today_tips) || 0
+      },
+      monthly: {
+        earnings: parseFloat(stats.month_earnings) || 0
+      },
+      pending: {
+        requests: parseInt(stats.pending_requests) || 0
+      },
+      active: {
+        streams: 0
+      },
+      unread: {
+        messages: parseInt(stats.unread_messages) || 0
+      },
+      vips: {
+        count: 0
+      },
+      revenueHistory: weeklyEarnings.rows.map(row => ({
+        date: row.date,
+        amount: parseFloat(row.earnings) || 0
+      }))
     });
 
   } catch (error) {
@@ -1261,48 +1318,37 @@ router.get('/creator/:userId/overview', authenticateToken, async (req, res) => {
 router.get('/creator/:userId/top-fans', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.params;
-    
-    // Get creator ID first
-    const creatorQuery = await pool.query(
-      'SELECT id FROM users WHERE supabase_id = $1',
-      [userId]
-    );
 
-    if (creatorQuery.rows.length === 0) {
-      return res.status(404).json({ error: 'Creator not found' });
-    }
-
-    const creatorId = creatorQuery.rows[0].id;
-
-    // Get top fans by spending
+    // Get top fans by token spending this month
     const topFansQuery = await pool.query(`
-      SELECT 
-        u.id,
+      SELECT
+        u.supabase_id as id,
         u.username,
+        u.display_name as name,
         u.profile_pic_url,
-        COUNT(s.id) as session_count,
-        SUM(s.total_cost_cents::numeric / 100) as total_spent,
-        MAX(s.start_time) as last_session,
-        AVG(s.duration_minutes) as avg_duration
-      FROM sessions s
-      JOIN users u ON s.fan_id = u.id
-      WHERE s.creator_id = $1 
-        AND s.status = 'ended'
-      GROUP BY u.id, u.username, u.profile_pic_url
+        COALESCE(SUM(tt.amount), 0) as total_spent,
+        COUNT(DISTINCT tt.id) as transaction_count,
+        MAX(tt.created_at) as last_transaction
+      FROM token_transactions tt
+      JOIN users u ON tt.fan_id = u.supabase_id
+      WHERE tt.creator_id = $1
+        AND tt.transaction_type IN ('session', 'tip', 'message')
+        AND tt.created_at >= DATE_TRUNC('month', CURRENT_DATE)
+      GROUP BY u.supabase_id, u.username, u.display_name, u.profile_pic_url
       ORDER BY total_spent DESC
       LIMIT 10
-    `, [creatorId]);
+    `, [userId]);
 
     res.json({
       success: true,
-      topFans: topFansQuery.rows.map(fan => ({
+      fans: topFansQuery.rows.map(fan => ({
         id: fan.id,
         username: fan.username,
+        name: fan.name || fan.username,
         profilePic: fan.profile_pic_url,
-        sessionCount: parseInt(fan.session_count),
         totalSpent: parseFloat(fan.total_spent) || 0,
-        lastSession: fan.last_session,
-        avgDuration: parseFloat(fan.avg_duration) || 0
+        transactionCount: parseInt(fan.transaction_count) || 0,
+        lastTransaction: fan.last_transaction
       }))
     });
 

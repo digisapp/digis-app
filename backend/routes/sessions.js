@@ -1131,47 +1131,150 @@ router.get('/history', authenticateToken, async (req, res) => {
 // Get upcoming sessions for dashboard
 router.get('/upcoming', authenticateToken, async (req, res) => {
   const userId = req.user.supabase_id;
-  
+
   try {
+    // Check if user is a creator
+    const userResult = await db.query(
+      'SELECT is_creator, role FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+    const isCreator = userResult.rows[0]?.is_creator || userResult.rows[0]?.role === 'creator';
+
+    // Fetch all upcoming events from multiple sources
     const query = `
-      SELECT 
-        si.id,
-        si.type,
-        si.status,
-        si.scheduled_date,
-        si.scheduled_time,
-        si.duration_minutes,
-        si.rate_per_min,
-        si.total_cost,
-        si.message,
-        si.created_at,
-        CASE 
-          WHEN si.creator_id = $1 THEN u_fan.username
-          ELSE u_creator.username
-        END as other_user_username,
-        CASE 
-          WHEN si.creator_id = $1 THEN u_fan.profile_pic_url
-          ELSE u_creator.profile_pic_url
-        END as other_user_profile_pic,
-        CASE 
-          WHEN si.creator_id = $1 THEN 'creator'
-          ELSE 'fan'
-        END as user_role
-      FROM session_invites si
-      LEFT JOIN users u_creator ON si.creator_id = u_creator.supabase_id
-      LEFT JOIN users u_fan ON si.fan_id = u_fan.supabase_id
-      WHERE (si.creator_id = $1 OR si.fan_id = $1)
-        AND si.status IN ('accepted', 'confirmed')
-        AND si.scheduled_date >= CURRENT_DATE
-      ORDER BY si.scheduled_date, si.scheduled_time
+      SELECT * FROM (
+        -- Session invites
+        SELECT
+          si.id,
+          si.type,
+          si.status,
+          si.scheduled_date as date,
+          si.scheduled_time as time,
+          si.duration_minutes as duration,
+          si.rate_per_min,
+          si.total_cost,
+          CASE
+            WHEN si.creator_id = $1 THEN u_fan.username
+            ELSE u_creator.username
+          END as fan_username,
+          CASE
+            WHEN si.creator_id = $1 THEN u_fan.username
+            ELSE u_creator.username
+          END as username,
+          CASE
+            WHEN si.creator_id = $1 THEN u_fan.profile_pic_url
+            ELSE u_creator.profile_pic_url
+          END as profile_pic,
+          'session_invite' as source
+        FROM session_invites si
+        LEFT JOIN users u_creator ON si.creator_id = u_creator.supabase_id
+        LEFT JOIN users u_fan ON si.fan_id = u_fan.supabase_id
+        WHERE (si.creator_id = $1 OR si.fan_id = $1)
+          AND si.status IN ('accepted', 'confirmed')
+          AND si.scheduled_date >= CURRENT_DATE
+
+        UNION ALL
+
+        -- Calendar events
+        SELECT
+          ce.id,
+          ce.event_type as type,
+          ce.status,
+          ce.scheduled_date as date,
+          ce.scheduled_time as time,
+          ce.duration_minutes as duration,
+          NULL as rate_per_min,
+          NULL as total_cost,
+          CASE
+            WHEN ce.creator_id = $1 THEN u_fan.username
+            ELSE u_creator.username
+          END as fan_username,
+          CASE
+            WHEN ce.creator_id = $1 THEN u_fan.username
+            ELSE u_creator.username
+          END as username,
+          CASE
+            WHEN ce.creator_id = $1 THEN u_fan.profile_pic_url
+            ELSE u_creator.profile_pic_url
+          END as profile_pic,
+          'calendar_event' as source
+        FROM calendar_events ce
+        LEFT JOIN users u_creator ON ce.creator_id = u_creator.supabase_id
+        LEFT JOIN users u_fan ON ce.fan_id = u_fan.supabase_id
+        WHERE (ce.creator_id = $1 OR ce.fan_id = $1)
+          AND ce.status != 'cancelled'
+          AND ce.scheduled_date >= CURRENT_DATE
+
+        UNION ALL
+
+        -- Enrolled classes
+        SELECT
+          c.id,
+          'class' as type,
+          'enrolled' as status,
+          c.start_time::date as date,
+          c.start_time::time as time,
+          c.duration_minutes as duration,
+          NULL as rate_per_min,
+          c.token_price as total_cost,
+          NULL as fan_username,
+          u.username,
+          u.profile_pic_url as profile_pic,
+          'enrolled_class' as source
+        FROM class_participants cp
+        JOIN classes c ON cp.class_id = c.id
+        JOIN users u ON c.creator_id = u.supabase_id
+        WHERE cp.user_id = $1
+          AND c.start_time >= NOW()
+          AND c.is_live = false
+      ) combined
+      WHERE date >= CURRENT_DATE
+      ORDER BY date, time
       LIMIT 10
     `;
-    
+
     const result = await db.query(query, [userId]);
-    
+    let sessions = result.rows;
+
+    // If user is a creator, also fetch classes they're hosting
+    if (isCreator) {
+      const hostingQuery = `
+        SELECT
+          c.id,
+          'class' as type,
+          'hosting' as status,
+          c.start_time::date as date,
+          c.start_time::time as time,
+          c.duration_minutes as duration,
+          NULL as rate_per_min,
+          c.token_price as total_cost,
+          NULL as fan_username,
+          NULL as username,
+          NULL as profile_pic,
+          'hosting_class' as source,
+          (SELECT COUNT(*) FROM class_participants WHERE class_id = c.id) as enrolled_count,
+          c.max_participants
+        FROM classes c
+        WHERE c.creator_id = $1
+          AND c.start_time >= NOW()
+          AND c.is_live = false
+        ORDER BY c.start_time
+        LIMIT 5
+      `;
+
+      const hostingResult = await db.query(hostingQuery, [userId]);
+
+      // Merge and sort all events
+      sessions = [...sessions, ...hostingResult.rows].sort((a, b) => {
+        const dateA = new Date(`${a.date} ${a.time}`);
+        const dateB = new Date(`${b.date} ${b.time}`);
+        return dateA - dateB;
+      }).slice(0, 10);
+    }
+
     res.json({
       success: true,
-      sessions: result.rows
+      sessions
     });
   } catch (error) {
     logger.error('Error fetching upcoming sessions:', error);

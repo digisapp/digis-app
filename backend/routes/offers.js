@@ -10,14 +10,14 @@ router.get('/creator/:creatorId', async (req, res) => {
     const { creatorId } = req.params;
     
     const query = `
-      SELECT 
+      SELECT
         o.*,
         u.username as creator_username,
         u.profile_pic_url as creator_profile_pic,
         COUNT(DISTINCT op.id) as total_purchases,
         COUNT(DISTINCT CASE WHEN op.status = 'completed' THEN op.id END) as completed_purchases
       FROM creator_offers o
-      JOIN users u ON o.creator_id = u.id
+      JOIN users u ON o.creator_id = u.supabase_id
       LEFT JOIN offer_purchases op ON o.id = op.offer_id
       WHERE o.creator_id = $1 AND o.active = true
       GROUP BY o.id, u.username, u.profile_pic_url
@@ -60,15 +60,15 @@ router.get('/creator/:creatorId/active', async (req, res) => {
     const { creatorId } = req.params;
     
     const query = `
-      SELECT 
+      SELECT
         co.*,
         u.username,
         u.profile_pic_url,
         u.display_name
       FROM creator_offers co
       JOIN users u ON co.creator_id = u.supabase_id
-      WHERE co.creator_id = $1 
-        AND co.is_active = true
+      WHERE co.creator_id = $1
+        AND co.active = true
       ORDER BY co.created_at DESC
     `;
     
@@ -91,23 +91,23 @@ router.get('/creator/:creatorId/active', async (req, res) => {
 router.get('/my-offers', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.supabase_id || req.user.id || req.user.uid;
-    
+
     if (!userId) {
       return res.status(400).json({
         error: 'User ID not found',
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Check if user is a creator
-    const userQuery = 'SELECT id, supabase_id, is_creator FROM users WHERE supabase_id = $1 OR id::text = $2';
-    const userResult = await pool.query(userQuery, [userId, userId]);
-    
+    const userQuery = 'SELECT supabase_id, is_creator FROM users WHERE supabase_id = $1';
+    const userResult = await pool.query(userQuery, [userId]);
+
     if (userResult.rows.length === 0 || !userResult.rows[0].is_creator) {
       return res.status(403).json({ error: 'Only creators can manage offers' });
     }
-    
-    const creatorId = userResult.rows[0].id;
+
+    const creatorId = userResult.rows[0].supabase_id;
     
     const query = `
       SELECT 
@@ -158,22 +158,22 @@ router.post('/create', authenticateToken, createOffer);
 
 async function createOffer(req, res) {
   try {
-    const creatorId = req.user.id;
+    const creatorId = req.user.supabase_id || req.user.id || req.user.uid;
     const { title, description, category, priceTokens, deliveryTime, maxQuantity } = req.body;
-    
+
     // Validate input
     if (!title || !priceTokens) {
       return res.status(400).json({ error: 'Title and price are required' });
     }
-    
+
     if (priceTokens < 1 || priceTokens > 1000000) {
       return res.status(400).json({ error: 'Price must be between 1 and 1,000,000 tokens' });
     }
-    
+
     // Check if user is a creator
-    const userQuery = 'SELECT is_creator FROM users WHERE id = $1';
+    const userQuery = 'SELECT is_creator FROM users WHERE supabase_id = $1';
     const userResult = await pool.query(userQuery, [creatorId]);
-    
+
     if (userResult.rows.length === 0 || !userResult.rows[0].is_creator) {
       return res.status(403).json({ error: 'Only creators can create offers' });
     }
@@ -231,18 +231,18 @@ async function createOffer(req, res) {
 // Update an offer
 router.put('/:offerId', authenticateToken, async (req, res) => {
   try {
-    const creatorId = req.user.id;
+    const creatorId = req.user.supabase_id || req.user.id || req.user.uid;
     const { offerId } = req.params;
     const { title, description, category, priceTokens, deliveryTime, maxQuantity, active } = req.body;
-    
+
     // Check ownership
     const ownerQuery = 'SELECT creator_id FROM creator_offers WHERE id = $1';
     const ownerResult = await pool.query(ownerQuery, [offerId]);
-    
+
     if (ownerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Offer not found' });
     }
-    
+
     if (ownerResult.rows[0].creator_id !== creatorId) {
       return res.status(403).json({ error: 'You can only update your own offers' });
     }
@@ -321,7 +321,7 @@ router.put('/:offerId', authenticateToken, async (req, res) => {
 // Delete an offer
 router.delete('/:offerId', authenticateToken, async (req, res) => {
   try {
-    const creatorId = req.user.id;
+    const creatorId = req.user.supabase_id || req.user.id || req.user.uid;
     const { offerId } = req.params;
     
     // Check ownership and if there are pending purchases
@@ -366,11 +366,11 @@ router.delete('/:offerId', authenticateToken, async (req, res) => {
 // Purchase an offer
 router.post('/:offerId/purchase', authenticateToken, async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
-    const buyerId = req.user.id;
+
+    const buyerId = req.user.supabase_id || req.user.id || req.user.uid;
     const { offerId } = req.params;
     const { notes } = req.body;
     
@@ -493,13 +493,13 @@ router.post('/:offerId/purchase', authenticateToken, async (req, res) => {
 // Get purchase history for a user
 router.get('/purchases', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.supabase_id || req.user.id || req.user.uid;
     const { role } = req.query; // 'buyer' or 'creator'
     
     let query;
     if (role === 'creator') {
       query = `
-        SELECT 
+        SELECT
           op.*,
           o.title as offer_title,
           o.description as offer_description,
@@ -508,14 +508,14 @@ router.get('/purchases', authenticateToken, async (req, res) => {
           u.profile_pic_url as buyer_profile_pic
         FROM offer_purchases op
         JOIN creator_offers o ON op.offer_id = o.id
-        JOIN users u ON op.buyer_id::text = u.id::text
+        JOIN users u ON op.buyer_id = u.supabase_id
         WHERE op.creator_id = $1
         ORDER BY op.created_at DESC
         LIMIT 50
       `;
     } else {
       query = `
-        SELECT 
+        SELECT
           op.*,
           o.title as offer_title,
           o.description as offer_description,
@@ -525,7 +525,7 @@ router.get('/purchases', authenticateToken, async (req, res) => {
           u.profile_pic_url as creator_profile_pic
         FROM offer_purchases op
         JOIN creator_offers o ON op.offer_id = o.id
-        JOIN users u ON op.creator_id = u.id
+        JOIN users u ON op.creator_id = u.supabase_id
         WHERE op.buyer_id = $1
         ORDER BY op.created_at DESC
         LIMIT 50
@@ -569,7 +569,7 @@ router.get('/purchases', authenticateToken, async (req, res) => {
 // Update purchase status (for creators)
 router.put('/purchase/:purchaseId/status', authenticateToken, async (req, res) => {
   try {
-    const creatorId = req.user.id;
+    const creatorId = req.user.supabase_id || req.user.id || req.user.uid;
     const { purchaseId } = req.params;
     const { status } = req.body;
     

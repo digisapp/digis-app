@@ -11,12 +11,12 @@ router.get('/streams/:streamId/products', async (req, res) => {
   
   try {
     const result = await pool.query(`
-      SELECT 
+      SELECT
         sp.*,
         si.name,
         si.description,
-        si.price,
-        si.image_url,
+        si.price_tokens as price,
+        si.images->0 as image_url,
         si.stock_quantity,
         si.category,
         fs.sale_price,
@@ -26,8 +26,8 @@ router.get('/streams/:streamId/products', async (req, res) => {
         fs.max_quantity as flash_max
       FROM stream_products sp
       JOIN shop_items si ON sp.product_id = si.id
-      LEFT JOIN flash_sales fs ON fs.stream_id = sp.stream_id 
-        AND fs.product_id = sp.product_id 
+      LEFT JOIN flash_sales fs ON fs.stream_id = sp.stream_id
+        AND fs.product_id = sp.product_id
         AND fs.ends_at > NOW()
       WHERE sp.stream_id = $1
       ORDER BY sp.featured DESC, sp.display_order ASC
@@ -254,17 +254,17 @@ router.post('/flash-sales', authenticateToken, async (req, res) => {
   try {
     // Verify ownership and get product details
     const verifyQuery = await pool.query(`
-      SELECT s.creator_id, si.price, si.name
+      SELECT s.creator_id, si.price_tokens, si.name
       FROM streams s
       JOIN shop_items si ON si.creator_id = s.creator_id
       WHERE s.id = $1 AND si.id = $2 AND s.creator_id = $3
     `, [streamId, productId, userId]);
-    
+
     if (verifyQuery.rows.length === 0) {
       return res.status(403).json({ error: 'Unauthorized or product not found' });
     }
-    
-    const { price: originalPrice, name: productName } = verifyQuery.rows[0];
+
+    const { price_tokens: originalPrice, name: productName } = verifyQuery.rows[0];
     const salePrice = Math.floor(originalPrice * (1 - discountPercentage / 100));
     const endsAt = new Date(Date.now() + durationMinutes * 60000);
     
@@ -363,44 +363,47 @@ router.post('/live-purchases', authenticateToken, async (req, res) => {
     }
     
     // Calculate price
-    let pricePerItem = product.price;
+    let pricePerItem = product.price_tokens;
     let purchaseType = 'standard';
     let discountApplied = 0;
-    
+
     if (product.sale_price && product.flash_ends_at) {
       pricePerItem = product.sale_price;
       purchaseType = 'flash_sale';
       discountApplied = product.discount_percentage;
     } else if (product.discount_percentage > 0) {
-      pricePerItem = Math.floor(product.price * (1 - product.discount_percentage / 100));
+      pricePerItem = Math.floor(product.price_tokens * (1 - product.discount_percentage / 100));
       discountApplied = product.discount_percentage;
     }
-    
+
     const totalPrice = pricePerItem * quantity;
-    
+
     // Check buyer's token balance
     const balanceQuery = await client.query(
-      'SELECT token_balance FROM users WHERE id = $1',
+      'SELECT balance FROM token_balances WHERE user_id = $1',
       [buyerId]
     );
-    
-    if (balanceQuery.rows[0].token_balance < totalPrice) {
+
+    if (!balanceQuery.rows[0] || balanceQuery.rows[0].balance < totalPrice) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Insufficient tokens' });
     }
-    
+
     // Deduct tokens from buyer
     await client.query(
-      'UPDATE users SET token_balance = token_balance - $1 WHERE id = $2',
+      'UPDATE token_balances SET balance = balance - $1 WHERE user_id = $2',
       [totalPrice, buyerId]
     );
-    
+
     // Add tokens to creator (minus platform fee)
     const platformFee = Math.floor(totalPrice * 0.2); // 20% platform fee
     const creatorEarnings = totalPrice - platformFee;
-    
+
     await client.query(
-      'UPDATE users SET token_balance = token_balance + $1 WHERE id = $2',
+      `INSERT INTO token_balances (user_id, balance)
+       VALUES ($2, $1)
+       ON CONFLICT (user_id)
+       DO UPDATE SET balance = token_balances.balance + $1`,
       [creatorEarnings, product.creator_id]
     );
     
@@ -458,7 +461,7 @@ router.post('/live-purchases', authenticateToken, async (req, res) => {
     
     // Get buyer info for notification
     const buyerInfo = await pool.query(
-      'SELECT username, display_name FROM users WHERE id = $1',
+      'SELECT username, display_name FROM users WHERE supabase_id = $1',
       [buyerId]
     );
     
@@ -514,15 +517,15 @@ router.get('/streams/:streamId/purchases', async (req, res) => {
   
   try {
     const result = await pool.query(`
-      SELECT 
+      SELECT
         lp.*,
         u.username as buyer_username,
         u.display_name as buyer_name,
         u.profile_pic_url as buyer_avatar,
         si.name as product_name,
-        si.image_url as product_image
+        si.images->0 as product_image
       FROM live_purchases lp
-      JOIN users u ON lp.buyer_id = u.id
+      JOIN users u ON lp.buyer_id = u.supabase_id
       JOIN shop_items si ON lp.product_id = si.id
       WHERE lp.stream_id = $1
       ORDER BY lp.purchased_at DESC
@@ -680,16 +683,16 @@ router.get('/streams/:streamId/shopping-analytics', authenticateToken, async (re
       
       // Top selling products
       pool.query(`
-        SELECT 
+        SELECT
           si.name,
-          si.image_url,
+          si.images->0 as image_url,
           COUNT(*) as sales_count,
           SUM(lp.quantity) as total_quantity,
           SUM(lp.price_tokens) as total_revenue
         FROM live_purchases lp
         JOIN shop_items si ON lp.product_id = si.id
         WHERE lp.stream_id = $1
-        GROUP BY si.id, si.name, si.image_url
+        GROUP BY si.id, si.name, si.images
         ORDER BY total_revenue DESC
         LIMIT 5
       `, [streamId]),
