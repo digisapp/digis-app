@@ -77,7 +77,7 @@ const PricingRatesModal = ({ isOpen, onClose, isCreator }) => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/creators/rates`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         headers: {
           'Authorization': `Bearer ${session?.access_token}`
         }
@@ -85,7 +85,15 @@ const PricingRatesModal = ({ isOpen, onClose, isCreator }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setRates(data.rates || rates);
+        // Map database columns to frontend state
+        setRates({
+          videoCall: data.video_price || 150,
+          voiceCall: data.voice_price || 50,
+          textMessage: data.text_message_price || 50,
+          imageMessage: data.image_message_price || 100,
+          audioMessage: data.voice_memo_price || 150,
+          videoMessage: data.video_message_price || 200
+        });
       }
     } catch (error) {
       console.error('Error fetching rates:', error);
@@ -122,7 +130,7 @@ const PricingRatesModal = ({ isOpen, onClose, isCreator }) => {
         
         // Also update the profile endpoint to ensure consistency
         const profileResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
-          method: 'PATCH',
+          method: 'PUT',
           headers: {
             'Authorization': `Bearer ${session?.access_token}`,
             'Content-Type': 'application/json'
@@ -130,7 +138,11 @@ const PricingRatesModal = ({ isOpen, onClose, isCreator }) => {
           body: JSON.stringify({
             video_price: rates.videoCall,
             voice_price: rates.voiceCall,
-            message_price: rates.textMessage
+            message_price: rates.textMessage, // Legacy field
+            text_message_price: rates.textMessage,
+            image_message_price: rates.imageMessage,
+            voice_memo_price: rates.audioMessage,
+            video_message_price: rates.videoMessage
           })
         });
         
