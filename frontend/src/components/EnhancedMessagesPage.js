@@ -39,6 +39,7 @@ import MessageTemplatesModal from './MessageTemplatesModal';
 import MentionNotification from './MentionNotification';
 import BroadcastMessageModal from './BroadcastMessageModal';
 import RealTimeNotificationsHybrid from './RealTimeNotificationsHybrid';
+import PPVPricingModal from './messages/PPVPricingModal';
 import { getAuthToken } from '../utils/supabase-auth';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 
@@ -92,11 +93,17 @@ const EnhancedMessagesPage = ({
     video: 5
   });
   const [showRates, setShowRates] = useState(false);
-  
+
+  // PPV (Pay-Per-View) messaging
+  const [showPPVModal, setShowPPVModal] = useState(false);
+  const [ppvFile, setPPVFile] = useState(null);
+  const [ppvFileType, setPPVFileType] = useState(null);
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const ppvFileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
   // WebSocket integration for real-time messaging
@@ -662,6 +669,89 @@ const EnhancedMessagesPage = ({
     } catch (error) {
       console.error('Error uploading file:', error);
       toast.error('Failed to upload file. Please try again.');
+    }
+  };
+
+  // Handle PPV file selection (creators only)
+  const handlePPVFileSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedConversation) return;
+
+    // Determine file type
+    let fileType = 'file';
+    if (file.type.startsWith('image/')) fileType = 'image';
+    else if (file.type.startsWith('video/')) fileType = 'video';
+    else if (file.type.startsWith('audio/')) fileType = 'audio';
+
+    setPPVFile(file);
+    setPPVFileType(fileType);
+    setShowPPVModal(true);
+
+    // Clear input
+    event.target.value = null;
+  };
+
+  // Send PPV message
+  const sendPPVMessage = async (ppvData) => {
+    if (!selectedConversation || !ppvData.file) return;
+
+    setSendingMessage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', ppvData.file);
+      formData.append('receiver_id', selectedConversation.participant.id);
+      formData.append('conversation_id', selectedConversation.id);
+      formData.append('price', ppvData.price);
+      formData.append('description', ppvData.description || '');
+      formData.append('is_exclusive', ppvData.isExclusive || false);
+      formData.append('expires_in', ppvData.expiresIn || 'never');
+      formData.append('message_text', `Sent locked ${ppvData.fileType}`);
+
+      const token = await getAuthToken();
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/ppv-messages/send`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`PPV ${ppvData.fileType} sent! (${ppvData.price} tokens)`);
+
+        // Refresh messages to show the new PPV message
+        await fetchMessages(selectedConversation.id);
+
+        // Update conversation's last message
+        setConversations(prev => prev.map(c =>
+          c.id === selectedConversation.id
+            ? {
+                ...c,
+                lastMessage: {
+                  content: `Sent locked ${ppvData.fileType}`,
+                  timestamp: new Date(),
+                  isRead: true,
+                  sender: user?.uid
+                }
+              }
+            : c
+        ));
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to send PPV message');
+      }
+    } catch (error) {
+      console.error('Error sending PPV message:', error);
+      toast.error(error.message || 'Failed to send PPV message');
+    } finally {
+      setSendingMessage(false);
+      setPPVFile(null);
+      setPPVFileType(null);
     }
   };
 
@@ -1386,24 +1476,47 @@ const EnhancedMessagesPage = ({
                     }
                   }}
                 />
-                <button 
+                {/* PPV File Input (Creators Only) */}
+                {isCreator && (
+                  <input
+                    ref={ppvFileInputRef}
+                    type="file"
+                    accept="image/*,video/*,audio/*"
+                    className="hidden"
+                    onChange={handlePPVFileSelect}
+                  />
+                )}
+                <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" 
-                  title="Attach file" 
+                  className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  title="Attach file"
                   aria-label="Attach file"
                   disabled={sendingMessage}
                 >
                   <PaperClipIcon className="w-5 h-5" />
                 </button>
-                <button 
+                <button
                   onClick={() => imageInputRef.current?.click()}
-                  className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" 
-                  title="Send image" 
+                  className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  title="Send image"
                   aria-label="Send image"
                   disabled={sendingMessage}
                 >
                   <PhotoIcon className="w-5 h-5" />
                 </button>
+
+                {/* PPV Button (Creators Only) */}
+                {isCreator && (
+                  <button
+                    onClick={() => ppvFileInputRef.current?.click()}
+                    className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 rounded-lg transition-all shadow-sm"
+                    title="Send PPV content (Pay-Per-View)"
+                    aria-label="Send PPV content"
+                    disabled={sendingMessage}
+                  >
+                    <PlusIcon className="w-5 h-5" />
+                  </button>
+                )}
                 
                 <input
                   ref={inputRef}
@@ -1501,6 +1614,21 @@ const EnhancedMessagesPage = ({
           fanId={selectedFanId}
           fanData={selectedFanData}
           isCreatorView={true}
+        />
+      )}
+
+      {/* PPV Pricing Modal (Creators Only) */}
+      {isCreator && (
+        <PPVPricingModal
+          isOpen={showPPVModal}
+          onClose={() => {
+            setShowPPVModal(false);
+            setPPVFile(null);
+            setPPVFileType(null);
+          }}
+          onConfirm={sendPPVMessage}
+          file={ppvFile}
+          fileType={ppvFileType}
         />
       )}
     </div>

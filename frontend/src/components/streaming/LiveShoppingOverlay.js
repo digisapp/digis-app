@@ -40,6 +40,8 @@ const LiveShoppingOverlay = ({
   // Floating products removed per user request
   // const [floatingProducts, setFloatingProducts] = useState([]);
   const [showFloatingBuyButtons, setShowFloatingBuyButtons] = useState(true);
+  const [purchaseCelebration, setPurchaseCelebration] = useState(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Fetch products for the stream
   useEffect(() => {
@@ -84,7 +86,7 @@ const LiveShoppingOverlay = ({
     const timer = setInterval(() => {
       const now = Date.now();
       const endsAt = new Date(flashSale.endsAt).getTime();
-      
+
       if (now >= endsAt) {
         setFlashSale(null);
         toast('Flash sale ended!', { icon: '⏰' });
@@ -93,6 +95,17 @@ const LiveShoppingOverlay = ({
 
     return () => clearInterval(timer);
   }, [flashSale]);
+
+  // Auto-hide celebration after 5 seconds
+  useEffect(() => {
+    if (purchaseCelebration) {
+      const timer = setTimeout(() => {
+        setPurchaseCelebration(null);
+        setShowConfetti(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [purchaseCelebration]);
 
   const fetchStreamProducts = async () => {
     try {
@@ -146,7 +159,11 @@ const LiveShoppingOverlay = ({
 
   const handleProductPurchased = (data) => {
     setRecentPurchases(prev => [data, ...prev].slice(0, 5));
-    
+
+    // Trigger celebration animation
+    setPurchaseCelebration(data);
+    setShowConfetti(true);
+
     // Show purchase notification
     toast.custom((t) => (
       <motion.div
@@ -220,22 +237,70 @@ const LiveShoppingOverlay = ({
   const purchaseProduct = async (product, quantity = 1) => {
     setLoading(true);
     try {
-      const response = await api.post('/live-shopping/live-purchases', {
+      const response = await apiClient.post('/live-shopping/live-purchases', {
         streamId,
         productId: product.product_id,
         quantity
       });
-      
+
       if (response.data.success) {
         toast.success(`Purchased ${product.name}!`);
         removeFromCart(product.product_id);
-        
+
         if (onPurchase) {
           onPurchase(response.data);
         }
       }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Purchase failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Quick purchase - bypass cart, instant buy
+  const quickPurchase = async (product) => {
+    if (!user) {
+      toast.error('Please log in to purchase');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiClient.post('/live-shopping/live-purchases', {
+        streamId,
+        productId: product.product_id,
+        quantity: 1
+      });
+
+      if (response.data.success) {
+        // Trigger local celebration
+        setPurchaseCelebration({
+          buyer: user.username || user.display_name,
+          productName: product.name,
+          timestamp: Date.now()
+        });
+        setShowConfetti(true);
+
+        // Success message with token balance
+        toast.success(
+          <div>
+            <p className="font-bold">🎉 {product.name} purchased!</p>
+            <p className="text-xs">New balance: {response.data.newBalance} tokens</p>
+          </div>,
+          { duration: 4000 }
+        );
+
+        // Refresh products to show updated stock
+        fetchStreamProducts();
+
+        if (onPurchase) {
+          onPurchase(response.data);
+        }
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || 'Purchase failed';
+      toast.error(errorMsg, { duration: 4000 });
     } finally {
       setLoading(false);
     }
@@ -276,6 +341,91 @@ const LiveShoppingOverlay = ({
 
   return (
     <>
+      {/* Purchase Celebration Animation */}
+      <AnimatePresence>
+        {purchaseCelebration && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+          >
+            {/* Confetti Effect */}
+            {showConfetti && (
+              <div className="absolute inset-0">
+                {[...Array(50)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{
+                      x: '50vw',
+                      y: '50vh',
+                      scale: 0,
+                      rotate: 0
+                    }}
+                    animate={{
+                      x: `${Math.random() * 100}vw`,
+                      y: `${Math.random() * 100}vh`,
+                      scale: [0, 1, 0.5],
+                      rotate: Math.random() * 360
+                    }}
+                    transition={{
+                      duration: 2,
+                      delay: i * 0.02,
+                      ease: "easeOut"
+                    }}
+                    className="absolute w-3 h-3 rounded-full"
+                    style={{
+                      backgroundColor: ['#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#3b82f6'][i % 5]
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Celebration Message */}
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={{ scale: 0, rotate: 180 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              className="relative z-10 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-12 py-8 rounded-3xl shadow-2xl text-center"
+            >
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  rotate: [0, 10, -10, 0]
+                }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 1
+                }}
+                className="text-6xl mb-4"
+              >
+                🎉
+              </motion.div>
+              <h2 className="text-4xl font-extrabold mb-2">
+                {purchaseCelebration.buyer}
+              </h2>
+              <p className="text-2xl font-semibold">
+                just bought
+              </p>
+              <p className="text-3xl font-bold mt-2">
+                {purchaseCelebration.productName}!
+              </p>
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ repeat: Infinity, duration: 0.8 }}
+                className="mt-4 flex items-center justify-center gap-2"
+              >
+                <SparklesIcon className="w-8 h-8" />
+                <span className="text-xl">Amazing purchase!</span>
+                <SparklesIcon className="w-8 h-8" />
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Floating Buy Now Buttons - Removed per user request */}
 
       {/* Toggle Floating Buttons Visibility (Creator Only) */}
@@ -428,9 +578,11 @@ const LiveShoppingOverlay = ({
                     key={product.product_id}
                     product={product}
                     onAddToCart={addToCart}
+                    onBuyNow={quickPurchase}
                     isFlashSale={flashSale?.productId === product.product_id}
                     socket={socket}
                     streamId={streamId}
+                    loading={loading}
                   />
                 ))}
               </div>
@@ -523,7 +675,7 @@ const LiveShoppingOverlay = ({
 };
 
 // Product Card Component
-const ProductCard = ({ product, onAddToCart, isFlashSale, socket, streamId }) => {
+const ProductCard = ({ product, onAddToCart, onBuyNow, isFlashSale, socket, streamId, loading }) => {
   const [liked, setLiked] = useState(false);
   
   const handleView = () => {
@@ -596,15 +748,29 @@ const ProductCard = ({ product, onAddToCart, isFlashSale, socket, streamId }) =>
                 <HeartIcon className="w-5 h-5 text-gray-400" />
               )}
             </button>
-            
+
+            {/* One-Click Buy Now Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onBuyNow(product);
+              }}
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            >
+              {loading ? 'Processing...' : '⚡ Buy Now'}
+            </button>
+
+            {/* Add to Cart - Secondary Action */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onAddToCart(product);
               }}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              title="Add to Cart"
             >
-              Add to Cart
+              <ShoppingCartIcon className="w-5 h-5" />
             </button>
           </div>
         </div>

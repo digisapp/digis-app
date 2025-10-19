@@ -195,23 +195,27 @@ const MyCollections = ({ user, isCreator = false }) => {
       });
 
       if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const data = await response.json();
+
+        // Use the signed URL from backend to download
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `${content.title}.${content.fileExtension || 'mp4'}`;
+        a.href = data.downloadUrl;
+        a.download = data.filename || `${content.title}.${content.fileExtension || 'mp4'}`;
+        a.target = '_blank';
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
-        toast.success('Download completed!');
-        
+
+        toast.success('Download started!');
+
         // Update local state
-        const updatedContent = collections.map(c => 
+        const updatedContent = collections.map(c =>
           c.id === content.id ? { ...c, downloaded: true } : c
         );
         setCollections(updatedContent);
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Download failed');
       }
     } catch (error) {
       console.error('Error downloading content:', error);

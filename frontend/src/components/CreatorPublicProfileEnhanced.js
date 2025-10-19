@@ -186,7 +186,6 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
   const [pictures, setPictures] = useState([]);
   const [videos, setVideos] = useState([]);
   const [recordings, setRecordings] = useState([]);
-  const [digitals, setDigitals] = useState([]);
   const [selectedPicture, setSelectedPicture] = useState(0);
   const [purchasedContent, setPurchasedContent] = useState(new Set());
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -971,29 +970,6 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
     setShowVoiceCallModal(false);
   };
 
-  const handlePurchaseDigital = (digital) => {
-    runAuthGatedAction(async () => {
-      await handleInteraction('digital_purchase', { creator, digital });
-
-      try {
-        const response = await api.post('/api/digitals/purchase', {
-          digitalId: digital.id,
-          price: digital.price
-        });
-
-        if (response.data.success) {
-          setPurchasedContent(prev => new Set([...prev, digital.id]));
-          setDigitals(prev => prev.map(d => d.id === digital.id ? {...d, isPurchased: true} : d));
-          toast.success('Digital content purchased successfully!');
-        }
-      } catch (error) {
-        console.error('Error purchasing digital:', error);
-        toast.error('Failed to purchase digital content');
-      }
-    });
-  };
-
-
   const handleSendMessage = () => {
     runAuthGatedAction(async () => {
       await handleInteraction('message', creator);
@@ -1683,8 +1659,6 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                     displayContent = videos.map(v => ({ ...v, type: 'video' }));
                   } else if (selectedContentType === 'streams') {
                     displayContent = recordings.map(r => ({ ...r, type: 'stream' }));
-                  } else if (selectedContentType === 'digitals') {
-                    displayContent = digitals.map(d => ({ ...d, type: 'digital' }));
                   }
 
                   // Limit displayed items for performance
@@ -1708,8 +1682,6 @@ const CreatorPublicProfile = memo(({ user, onAuthRequired, username: propUsernam
                             handlePurchaseVideo(item);
                           } else if (item.type === 'stream') {
                             handlePurchaseRecording(item);
-                          } else if (item.type === 'digital') {
-                            handlePurchaseDigital(item);
                           }
                         } else {
                           handleInteraction('view_content', { creator, item });

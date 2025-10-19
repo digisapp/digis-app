@@ -82,14 +82,12 @@ const MobileCreatorProfile = ({
   const [photos, setPhotos] = useState([]);
   const [videos, setVideos] = useState([]);
   const [recordings, setRecordings] = useState([]);
-  const [digitals, setDigitals] = useState([]);
   const [shopProducts, setShopProducts] = useState([]);
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState({
     photos: true,
     videos: true,
     recordings: true,
-    digitals: true,
     shop: true,
     offers: true
   });
@@ -304,7 +302,6 @@ const MobileCreatorProfile = ({
           photosRes,
           videosRes,
           recordingsRes,
-          digitalsRes,
           shopRes,
           offersRes,
           ticketedShowsRes
@@ -312,7 +309,6 @@ const MobileCreatorProfile = ({
           fetch(`${import.meta.env.VITE_BACKEND_URL}/content/creator/${creatorId}?type=photo`, { headers }),
           fetch(`${import.meta.env.VITE_BACKEND_URL}/content/creator/${creatorId}?type=video`, { headers }),
           fetch(`${import.meta.env.VITE_BACKEND_URL}/streams/recordings/${creatorId}`, { headers }),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/digitals/creator/${creatorId}`, { headers }),
           fetch(`${import.meta.env.VITE_BACKEND_URL}/shop/items?creator_id=${creatorId}`, { headers }),
           fetch(`${import.meta.env.VITE_BACKEND_URL}/offers/creator/${creatorId}`, { headers }),
           fetch(`${import.meta.env.VITE_BACKEND_URL}/ticketed-shows/creator/${creatorId}`, { headers })
@@ -338,13 +334,6 @@ const MobileCreatorProfile = ({
           setRecordings(data.recordings || data.items || []);
         }
         setLoading(prev => ({ ...prev, recordings: false }));
-
-        // Process digitals
-        if (digitalsRes.status === 'fulfilled' && digitalsRes.value.ok) {
-          const data = await digitalsRes.value.json();
-          setDigitals(data.digitals || data.items || []);
-        }
-        setLoading(prev => ({ ...prev, digitals: false }));
 
         // Process shop products
         if (shopRes.status === 'fulfilled' && shopRes.value.ok) {
@@ -373,7 +362,6 @@ const MobileCreatorProfile = ({
           photos: false,
           videos: false,
           recordings: false,
-          digitals: false,
           shop: false,
           offers: false
         });
@@ -438,7 +426,6 @@ const MobileCreatorProfile = ({
     { id: 'streams', label: 'Streams', icon: PlayCircleIcon },
     { id: 'offers', label: 'Offers', icon: SparklesIcon },
     { id: 'shop', label: 'Shop', icon: ShoppingBagIcon },
-    { id: 'digitals', label: 'Digitals', icon: DocumentIcon },
     { id: 'about', label: 'About', icon: UserGroupIcon }
   ], []);
 
@@ -1367,79 +1354,6 @@ const MobileCreatorProfile = ({
     );
   };
 
-  // Digitals Tab - Studio Model Section (2-column grid, clean layout)
-  const renderDigitalsTab = () => {
-    if (loading.digitals) {
-      return (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent" />
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-4 px-4">
-        {user?.id === creatorId && (
-          <div className="flex justify-end mb-4">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                triggerHaptic('medium');
-                // Open upload modal
-                console.log('Upload new digitals');
-              }}
-              className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2"
-            >
-              <PhotoIcon className="w-4 h-4" />
-              Upload
-            </motion.button>
-          </div>
-        )}
-
-        {digitals.length === 0 ? (
-          <div className="text-center py-12">
-            <DocumentIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">No studio digitals yet</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {digitals.map((item) => (
-          <motion.div
-            key={item.id}
-            className="relative rounded-xl overflow-hidden bg-gray-100 aspect-[3/4]"
-            whileTap={{ scale: 0.98 }}
-            onClick={() => {
-              triggerHaptic('light');
-              console.log('View digital:', item);
-            }}
-              >
-                <img
-                  src={item.thumbnail_url || item.thumbnail || '/api/placeholder/300/400'}
-                  alt={`Studio digital by ${creatorData.displayName}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-
-                {/* Metadata overlay */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                  <p className="text-white text-xs font-medium">{item.title || item.name}</p>
-                  <p className="text-white/70 text-xs mt-1">
-                    Uploaded {new Date(item.created_at || item.uploadedAt || Date.now()).toLocaleDateString()}
-                  </p>
-                </div>
-
-                {/* Professional badge */}
-                <div className="absolute top-2 right-2 bg-blue-500/90 text-white px-2 py-1 rounded text-xs font-bold">
-                  PRO
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const renderAboutTab = () => (
     <div className="space-y-6 px-4">
       {/* Bio */}
@@ -2063,7 +1977,6 @@ const MobileCreatorProfile = ({
             {activeTab === 'streams' && <div key="streams">{renderStreamsTab()}</div>}
             {activeTab === 'offers' && <div key="offers">{renderOffersTab()}</div>}
             {activeTab === 'shop' && <div key="shop">{renderShopTab()}</div>}
-            {activeTab === 'digitals' && <div key="digitals">{renderDigitalsTab()}</div>}
             {activeTab === 'about' && <div key="about">{renderAboutTab()}</div>}
           </AnimatePresence>
         </div>

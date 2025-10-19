@@ -476,7 +476,13 @@ const ImprovedTokenPurchase = ({
         tabIndex={-1}
       >
         {/* Header */}
-        <div className="flex items-center justify-end mb-8">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <SparklesIcon className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+              Token Menu
+            </h2>
+          </div>
           {onClose && (
             <button
               onClick={onClose}

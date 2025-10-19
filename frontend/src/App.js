@@ -31,7 +31,6 @@ const Settings = lazy(() => import('./components/Settings'));
 // Lazy load creator features
 const CreatorPublicProfileEnhanced = lazy(() => import('./components/CreatorPublicProfileEnhanced'));
 const PublicCreatorShop = lazy(() => import('./components/PublicCreatorShop'));
-const DigitalsPage = lazy(() => import('./components/pages/DigitalsPage'));
 const CreatorApplication = lazy(() => import('./components/CreatorApplication'));
 const CreatorKYCVerification = lazy(() => import('./components/CreatorKYCVerification'));
 const PendingCreatorBanner = lazy(() => import('./components/PendingCreatorBanner'));
@@ -469,28 +468,72 @@ const App = () => {
     });
   }, [openModal, fetchTokenBalance]);
 
-  // Unified Go Live handler
+  // Unified Go Live handler - calls backend to create stream
   const openGoLive = useCallback(() => {
     console.log('🎬 Opening Go Live setup');
     console.log('📱 isMobile value:', isMobile);
 
+    // Handler that calls backend API to start stream
+    const handleGoLive = async (config) => {
+      try {
+        console.log('🔴 Calling backend to start stream with config:', config);
+
+        // Get auth token
+        const { supabase } = await import('./utils/supabaseClient');
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          toast.error('Please sign in to go live');
+          return;
+        }
+
+        // Call unified backend endpoint
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/go-live`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify(config)
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to start stream');
+        }
+
+        const data = await response.json();
+        console.log('✅ Stream created successfully:', data);
+
+        // Store stream data for streaming view
+        setStreamConfig({
+          ...config,
+          streamData: data.stream,
+          agoraData: data.agora
+        });
+
+        // Navigate to streaming view
+        setCurrentView('streaming');
+        toast.success('Going live! 🎉');
+
+      } catch (error) {
+        console.error('❌ Failed to go live:', error);
+        toast.error(error.message || 'Failed to start stream. Please try again.');
+      }
+    };
+
     if (isMobile) {
       console.log('📱 Mobile detected - opening mobile live stream modal');
       openModal(MODALS.MOBILE_LIVE_STREAM, {
-        streamConfig
+        onGoLive: handleGoLive
       });
     } else {
       console.log('🖥️ Desktop detected - opening desktop go live setup modal');
       openModal(MODALS.GO_LIVE_SETUP, {
-        onGoLive: (config) => {
-          console.log('Starting stream with config:', config);
-          setStreamConfig(config);
-          setCurrentView('streaming');
-          toast.success('Going live! 🎉');
-        }
+        onGoLive: handleGoLive
       });
     }
-  }, [isMobile, openModal, streamConfig, setCurrentView]);
+  }, [isMobile, openModal, setStreamConfig, setCurrentView]);
 
   // Handle video call
   const handleStartVideoCall = (creator) => {
@@ -639,17 +682,15 @@ const App = () => {
     }
   };
 
-  // Handle auth
+  // Handle auth - Navigate to auth page with mode parameter
   const handleSignIn = () => {
-    console.log('🔵 handleSignIn called - setting showAuth to true');
-    setAuthMode('signin');
-    setShowAuth(true);
+    console.log('🔵 handleSignIn called - navigating to /auth?mode=signin');
+    navigate('/auth?mode=signin');
   };
 
   const handleSignUp = () => {
-    console.log('🔵 handleSignUp called - setting showAuth to true');
-    setAuthMode('signup');
-    setShowAuth(true);
+    console.log('🔵 handleSignUp called - navigating to /auth?mode=signup');
+    navigate('/auth?mode=signup');
   };
 
   const handleBackToLanding = () => {
@@ -843,8 +884,7 @@ const App = () => {
                            pathname !== '/terms' &&
                            pathname !== '/privacy' &&
                            !pathname.startsWith('/creator/') &&
-                           !pathname.includes('/shop') &&
-                           !pathname.includes('/digitals');
+                           !pathname.includes('/shop');
 
     console.log('🔍 Checking route:', { pathname, isUsernameRoute, match: pathname.match(/^\/[^\/]+$/) });
 
@@ -978,7 +1018,6 @@ const App = () => {
           </Suspense>
         } />
         <Route path="/:username/shop" element={<PublicCreatorShop />} />
-        <Route path="/:username/digitals" element={<DigitalsPage />} />
         {/* Direct username route - must be last before catch-all */}
         <Route path="/:username" element={
           <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>}>

@@ -277,6 +277,30 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
 
   const handleGoLive = async () => {
     log('Attempting to go live', { channel, hasVideo: !!localVideoTrack.current, hasAudio: !!localAudioTrack.current });
+
+    // Validate tracks before proceeding
+    if (!localVideoTrack.current || !localAudioTrack.current) {
+      toast.error('Camera and microphone required to go live');
+      return;
+    }
+
+    // Acquire global stream lock FIRST (before calling API)
+    const lockAcquired = startStream({
+      channel,
+      uid: user?.id,
+      mode: 'live',
+      client: null,
+      audioTrack: localAudioTrack.current,
+      videoTrack: localVideoTrack.current
+    });
+
+    if (!lockAcquired) {
+      log('Failed to acquire stream lock - another stream may be active');
+      toast.error('Another stream is already active');
+      return;
+    }
+
+    log('Global stream lock acquired');
     setLoading(true);
 
     try {
@@ -311,24 +335,10 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
       log('Calling onGoLive with config', { title: streamConfig.title, category: streamConfig.category });
       await onGoLive(streamConfig);
 
-      // Set global stream lock ONLY after successful go live
-      const lockAcquired = startStream({
-        channel,
-        uid: user?.id,
-        mode: 'live',
-        client: null,
-        audioTrack: localAudioTrack.current,
-        videoTrack: localVideoTrack.current
-      });
+      log('✅ Stream started successfully - now LIVE');
 
-      if (lockAcquired) {
-        log('Global stream lock acquired - now LIVE');
-      } else {
-        log('Failed to acquire stream lock');
-        throw new Error('Could not acquire stream lock');
-      }
     } catch (error) {
-      log('Go live error:', error);
+      log('❌ Go live error:', error);
       toast.error(error.message || 'Failed to start live stream');
       setLoading(false);
       // Release lock on failure

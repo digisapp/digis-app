@@ -40,7 +40,6 @@ const StreamingLayout = lazy(() => import('../components/StreamingLayout'));
 const StreamingDashboard = lazy(() => import('../components/StreamingDashboard'));
 const CreatorPublicProfileEnhanced = lazy(() => import('../components/CreatorPublicProfileEnhanced'));
 const PublicCreatorShop = lazy(() => import('../components/PublicCreatorShop'));
-const DigitalsPage = lazy(() => import('../components/pages/DigitalsPage'));
 const TermsOfService = lazy(() => import('../components/pages/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('../components/pages/PrivacyPolicy'));
 const FollowersSubscribersPage = lazy(() => import('../components/pages/FollowersSubscribersPage'));
@@ -114,26 +113,68 @@ const AppRoutes = () => {
     }
   }, [isMobile, navigate]);
 
-  // Unified Go Live handler for mobile creators
+  // Unified Go Live handler - calls backend to create stream
   const handleShowGoLive = useCallback(() => {
-    console.log('🎬 AppRoutes: Opening Go Live setup for mobile');
+    console.log('🎬 AppRoutes: Opening Go Live setup');
+
+    // Handler that calls backend API to start stream
+    const handleGoLive = async (config) => {
+      try {
+        console.log('🔴 Calling backend to start stream with config:', config);
+
+        // Get auth token
+        const { supabase } = await import('../utils/supabaseClient');
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          toast.error('Please sign in to go live');
+          return;
+        }
+
+        // Call unified backend endpoint
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/go-live`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify(config)
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to start stream');
+        }
+
+        const data = await response.json();
+        console.log('✅ Stream created successfully:', data);
+
+        // Store stream data in sessionStorage for streaming page
+        sessionStorage.setItem('activeStream', JSON.stringify({
+          ...data.stream,
+          agora: data.agora,
+          config: config
+        }));
+
+        // Navigate to streaming page
+        navigate('/streaming');
+        toast.success('Going live! 🎉');
+
+      } catch (error) {
+        console.error('❌ Failed to go live:', error);
+        toast.error(error.message || 'Failed to start stream. Please try again.');
+      }
+    };
+
     if (isMobile) {
       console.log('📱 Mobile detected - opening mobile live stream modal');
       openModal(MODALS.MOBILE_LIVE_STREAM, {
-        onGoLive: (config) => {
-          console.log('🔴 Starting mobile stream with config:', config);
-          navigate('/streaming');
-          toast.success('Going live! 🎉');
-        }
+        onGoLive: handleGoLive
       });
     } else {
       console.log('🖥️ Desktop detected - opening desktop go live setup modal');
       openModal(MODALS.GO_LIVE_SETUP, {
-        onGoLive: (config) => {
-          console.log('🔴 Starting desktop stream with config:', config);
-          navigate('/streaming');
-          toast.success('Going live! 🎉');
-        }
+        onGoLive: handleGoLive
       });
     }
   }, [isMobile, openModal, navigate]);
@@ -187,7 +228,6 @@ const AppRoutes = () => {
 
         {/* Creator Public Profiles - Public pages pass currentUser for soft auth */}
         <Route path="/:username/shop" element={<PublicCreatorShop user={currentUser} />} />
-        <Route path="/:username/digitals" element={<DigitalsPage user={currentUser} />} />
 
         {/* Protected Routes - Require Authentication */}
         <Route path="/explore" element={

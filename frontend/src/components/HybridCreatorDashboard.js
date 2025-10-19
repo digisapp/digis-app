@@ -971,7 +971,7 @@ const HybridCreatorDashboard = memo(({
                   <div className="space-y-4">
                     <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl">
                       <p className="text-3xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                        {formatTime(nextCall.scheduled_time || nextCall.time)}
+                        {formatTime(nextCall.time || nextCall.scheduled_time)}
                       </p>
                       <div className="flex items-center gap-2 mt-3">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
@@ -987,7 +987,7 @@ const HybridCreatorDashboard = memo(({
                           {nextCall.type === 'video' ? 'Video Call' : 'Voice Call'}
                         </span>
                         <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {nextCall.duration || 30} min
+                          {nextCall.duration || nextCall.duration_minutes || 30} min
                         </span>
                       </div>
                     </div>
@@ -1028,7 +1028,7 @@ const HybridCreatorDashboard = memo(({
                         size="sm"
                         className={`flex-1 ${
                           (() => {
-                            const sessionTime = new Date(nextCall.scheduled_time || nextCall.time);
+                            const sessionTime = new Date(`${nextCall.date || nextCall.scheduled_date} ${nextCall.time || nextCall.scheduled_time}`);
                             const now = new Date();
                             const minutesUntil = Math.floor((sessionTime - now) / 60000);
                             return minutesUntil <= 5 && minutesUntil >= 0;
@@ -1037,7 +1037,7 @@ const HybridCreatorDashboard = memo(({
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                         }`}
                         onClick={() => {
-                          const sessionTime = new Date(nextCall.scheduled_time || nextCall.time);
+                          const sessionTime = new Date(`${nextCall.date || nextCall.scheduled_date} ${nextCall.time || nextCall.scheduled_time}`);
                           const now = new Date();
                           const minutesUntil = Math.floor((sessionTime - now) / 60000);
 
@@ -1054,7 +1054,7 @@ const HybridCreatorDashboard = memo(({
                           }
                         }}
                         disabled={(() => {
-                          const sessionTime = new Date(nextCall.scheduled_time || nextCall.time);
+                          const sessionTime = new Date(`${nextCall.date || nextCall.scheduled_date} ${nextCall.time || nextCall.scheduled_time}`);
                           const now = new Date();
                           const minutesUntil = Math.floor((sessionTime - now) / 60000);
                           return minutesUntil > 5 || minutesUntil < 0;
@@ -1142,7 +1142,11 @@ const HybridCreatorDashboard = memo(({
             {upcomingSessions.length > 0 ? (
               <div className="space-y-3">
                 {/* Show next 2 events */}
-                {upcomingSessions.slice(0, 2).map((session, index) => (
+                {upcomingSessions.slice(0, 2).map((session, index) => {
+                  const eventDate = session.date || session.scheduled_date;
+                  const eventTime = session.time || session.scheduled_time;
+
+                  return (
                   <div
                     key={session.id || index}
                     className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800"
@@ -1156,6 +1160,8 @@ const HybridCreatorDashboard = memo(({
                             <PhoneIcon className="w-4 h-4 text-green-600" />
                           ) : session.type === 'stream' ? (
                             <PlayIcon className="w-4 h-4 text-pink-600" />
+                          ) : session.type === 'class' ? (
+                            <UserGroupIcon className="w-4 h-4 text-amber-600" />
                           ) : (
                             <CalendarIcon className="w-4 h-4 text-gray-600" />
                           )}
@@ -1163,24 +1169,25 @@ const HybridCreatorDashboard = memo(({
                             {session.type === 'video' ? 'Video Call' :
                              session.type === 'voice' ? 'Voice Call' :
                              session.type === 'stream' ? 'Live Stream' :
+                             session.type === 'class' ? (session.status === 'hosting' ? 'Class (Hosting)' : 'Class') :
                              session.type || 'Event'}
                           </span>
                         </div>
 
                         {/* Time and Date */}
                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          {formatTime(session.scheduled_time || session.time)}
+                          {formatTime(eventTime)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(session.scheduled_time || session.time).toLocaleDateString('en-US', {
+                          {new Date(eventDate).toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric'
                           })}
                         </p>
 
-                        {/* Participant info if available */}
-                        {(session.fan_username || session.username) && (
+                        {/* Participant info for regular sessions */}
+                        {(session.fan_username || session.username) && session.type !== 'class' && (
                           <div className="flex items-center gap-2 mt-2">
                             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-bold">
                               {(session.fan_username || session.username || 'U').charAt(0).toUpperCase()}
@@ -1190,15 +1197,25 @@ const HybridCreatorDashboard = memo(({
                             </span>
                           </div>
                         )}
+
+                        {/* Enrollment count for hosting classes */}
+                        {session.type === 'class' && session.status === 'hosting' && (
+                          <div className="mt-2">
+                            <span className="text-xs text-amber-600 dark:text-amber-400">
+                              {session.enrolled_count || 0}/{session.max_participants || '∞'} enrolled
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Duration badge */}
                       <span className="text-xs px-2 py-1 bg-white dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-400">
-                        {session.duration || 30}m
+                        {session.duration || session.duration_minutes || 30}m
                       </span>
                     </div>
                   </div>
-                ))}
+                );
+                })}
 
                 {/* If only 1 event, show placeholder for second */}
                 {upcomingSessions.length === 1 && (

@@ -467,6 +467,7 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
   };
 
   const handleGoLive = async () => {
+    // Validate stream information
     if (!streamTitle.trim()) {
       toast.error('Please enter a stream title');
       return;
@@ -480,7 +481,35 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
     // If using native stream, switch to Agora tracks
     if (window.currentStream && agoraRTC) {
       toast.loading('Switching to streaming mode...');
-      await createAgoraTracks();
+      try {
+        await createAgoraTracks();
+      } catch (error) {
+        console.error('Failed to create Agora tracks:', error);
+        toast.error('Failed to initialize streaming. Please try again.');
+        return;
+      }
+    }
+
+    // Validate that we have both video and audio tracks
+    if (!localTracks.video && !window.currentStream?.getVideoTracks()?.length) {
+      toast.error('Camera is required to go live. Please enable your camera.');
+      return;
+    }
+
+    if (!localTracks.audio && !window.currentStream?.getAudioTracks()?.length) {
+      toast.error('Microphone is required to go live. Please enable your microphone.');
+      return;
+    }
+
+    // Validate that tracks are enabled
+    if (!isVideoEnabled) {
+      toast.error('Please enable your camera before going live');
+      return;
+    }
+
+    if (!isAudioEnabled) {
+      toast.error('Please enable your microphone before going live');
+      return;
     }
 
     setLoading(true);

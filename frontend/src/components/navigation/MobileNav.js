@@ -342,11 +342,12 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
             className="fixed z-[102] w-72 max-w-[calc(100vw-2rem)]"
             style={{
               bottom: 'calc(72px + env(safe-area-inset-bottom, 0px) + 8px)',
-              right: '1rem',
-              left: 'auto',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              right: 'auto',
               top: 'auto',
               padding: 0,
-              transformOrigin: 'bottom right'
+              transformOrigin: 'bottom center'
             }}
             as={motion.div}
             initial={{ opacity: 0, y: 20, scale: 0.95 }}

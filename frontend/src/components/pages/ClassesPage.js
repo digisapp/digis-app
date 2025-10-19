@@ -497,7 +497,7 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header - Clean style for desktop */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 content-below-nav">
-        <Container className="py-6 md:py-8">
+        <Container className="py-3 md:py-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap flex-1">
               {/* Search bar - Now visible on mobile */}

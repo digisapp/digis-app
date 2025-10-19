@@ -106,6 +106,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
     { id: 'all', label: 'All', icon: SparklesIcon },
     { id: 'music', label: 'Music', icon: MusicalNoteIcon },
     { id: 'gaming', label: 'Gaming', icon: VideoCameraIcon },
+    { id: 'model', label: 'Model', icon: SparklesIcon },
     { id: 'news', label: 'News', icon: GlobeAltIcon },
     { id: 'sports', label: 'Sports', icon: FlagIcon },
     { id: 'learning', label: 'Learning', icon: AcademicCapIcon },

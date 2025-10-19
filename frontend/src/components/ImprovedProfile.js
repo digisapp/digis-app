@@ -866,10 +866,14 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                                     { value: 'Tech', icon: '💻', label: 'Tech' },
                                     { value: 'Sports', icon: '⚽', label: 'Sports' },
                                     { value: 'Travel', icon: '✈️', label: 'Travel' },
+                                    { value: 'Photography', icon: '📷', label: 'Photography' },
+                                    { value: 'Crafts', icon: '✂️', label: 'Crafts' },
                                     { value: 'Beauty', icon: '💄', label: 'Beauty' },
                                     { value: 'Business', icon: '💼', label: 'Business' },
+                                    { value: 'Meditation', icon: '🕉️', label: 'Meditation' },
+                                    { value: 'ASMR', icon: '🎧', label: 'ASMR' },
                                     { value: 'Wellness', icon: '🧘', label: 'Wellness' },
-                                    { value: 'ASMR', icon: '🎧', label: 'ASMR' }
+                                    { value: 'Other', icon: '🌟', label: 'Other' }
                                   ].find(c => c.value === interest);
                                   return (
                                     <span
@@ -929,10 +933,14 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                                 { value: 'Tech', icon: '💻', label: 'Tech' },
                                 { value: 'Sports', icon: '⚽', label: 'Sports' },
                                 { value: 'Travel', icon: '✈️', label: 'Travel' },
+                                { value: 'Photography', icon: '📷', label: 'Photography' },
+                                { value: 'Crafts', icon: '✂️', label: 'Crafts' },
                                 { value: 'Beauty', icon: '💄', label: 'Beauty' },
                                 { value: 'Business', icon: '💼', label: 'Business' },
+                                { value: 'Meditation', icon: '🕉️', label: 'Meditation' },
+                                { value: 'ASMR', icon: '🎧', label: 'ASMR' },
                                 { value: 'Wellness', icon: '🧘', label: 'Wellness' },
-                                { value: 'ASMR', icon: '🎧', label: 'ASMR' }
+                                { value: 'Other', icon: '🌟', label: 'Other' }
                               ].filter(category => !interests.includes(category.value))
                               .map(category => (
                                 <option key={category.value} value={category.value}>

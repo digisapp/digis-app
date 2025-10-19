@@ -222,17 +222,17 @@ const SchedulePage = ({ user, isCreator = false }) => {
 
   const handleDeleteEvent = async (eventId) => {
     if (!window.confirm('Are you sure you want to cancel this event?')) return;
-    
+
     try {
       const authToken = await getAuthToken();
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/schedule/event/${eventId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/schedule/calendar-events/${eventId}`,
         {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
-      
+
       if (response.ok) {
         toast.success('Event cancelled successfully');
         fetchScheduleData();

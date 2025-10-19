@@ -65,10 +65,11 @@ const ShopManagementPage = ({ user }) => {
   const [productForm, setProductForm] = useState({
     name: '',
     description: '',
-    price_tokens: '',
+    priceUsd: '',
     category: 'digital',
-    image_url: '',
+    images: [],
     stock_quantity: null,
+    is_digital: false,
     is_active: true
   });
   const [selectedImage, setSelectedImage] = useState(null);
@@ -245,30 +246,31 @@ const ShopManagementPage = ({ user }) => {
       toast.error('Product name is required');
       return;
     }
-    if (!productForm.price || productForm.price <= 0) {
-      toast.error('Please enter a valid price');
+    if (!productForm.priceUsd || productForm.priceUsd < 10) {
+      toast.error('Minimum price is $10 USD');
       return;
     }
-    if (!productForm.image_url && !selectedImage) {
+    if (productForm.images.length === 0 && !selectedImage) {
       toast.error('Please add a product image');
       return;
     }
-    
+
     try {
       setUploadingImage(true);
       const authToken = await getAuthToken();
-      
-      let imageUrl = productForm.image_url;
-      
+
+      let images = productForm.images || [];
+
       // Upload image if selected
       if (selectedImage) {
-        imageUrl = await uploadImageToSupabase(selectedImage);
+        const imageUrl = await uploadImageToSupabase(selectedImage);
+        images = [imageUrl, ...images];
       }
-      
-      const endpoint = editingProduct 
+
+      const endpoint = editingProduct
         ? `${import.meta.env.VITE_BACKEND_URL}/shop/items/${editingProduct.id}`
         : `${import.meta.env.VITE_BACKEND_URL}/shop/items`;
-      
+
       const response = await fetchWithRetry(endpoint, {
         method: editingProduct ? 'PUT' : 'POST',
         headers: {
@@ -276,9 +278,14 @@ const ShopManagementPage = ({ user }) => {
           Authorization: `Bearer ${authToken}`
         },
         body: JSON.stringify({
-          ...productForm,
-          image_url: imageUrl,
-          price_tokens: productForm.price
+          name: productForm.name,
+          description: productForm.description,
+          priceUsd: parseFloat(productForm.priceUsd),
+          category: productForm.category,
+          images: images,
+          stockQuantity: productForm.stock_quantity,
+          isDigital: productForm.is_digital,
+          isActive: productForm.is_active
         })
       });
 
@@ -289,10 +296,11 @@ const ShopManagementPage = ({ user }) => {
         setProductForm({
           name: '',
           description: '',
-          price: '',
+          priceUsd: '',
           category: 'digital',
-          image_url: '',
+          images: [],
           stock_quantity: null,
+          is_digital: false,
           is_active: true
         });
         setSelectedImage(null);
@@ -570,10 +578,11 @@ const ShopManagementPage = ({ user }) => {
                     setProductForm({
                       name: '',
                       description: '',
-                      price: '',
+                      priceUsd: '',
                       category: 'digital',
-                      image_url: '',
+                      images: [],
                       stock_quantity: null,
+                      is_digital: false,
                       is_active: true
                     });
                     setShowAddProduct(true);
@@ -639,9 +648,16 @@ const ShopManagementPage = ({ user }) => {
                         </div>
                       </div>
                       <div className="flex items-center justify-between mt-4">
-                        <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
-                          {product.price} tokens
-                        </span>
+                        <div>
+                          <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                            ${product.price_usd}
+                          </span>
+                          {product.price_tokens && (
+                            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                              ({product.price_tokens} tokens)
+                            </span>
+                          )}
+                        </div>
                         <div className="flex gap-1">
                           <button
                             onClick={() => {
@@ -664,13 +680,14 @@ const ShopManagementPage = ({ user }) => {
                               setProductForm({
                                 name: product.name,
                                 description: product.description || '',
-                                price: product.price || product.price_tokens || '',
+                                priceUsd: product.price_usd || '',
                                 category: product.category || 'digital',
-                                image_url: product.image_url || '',
+                                images: product.images || [],
                                 stock_quantity: product.stock_quantity,
+                                is_digital: product.is_digital || false,
                                 is_active: product.is_active !== undefined ? product.is_active : true
                               });
-                              setImagePreview(product.image_url || null);
+                              setImagePreview(product.images?.[0] || null);
                               setSelectedImage(null);
                               setShowAddProduct(true);
                             }}
@@ -1206,10 +1223,10 @@ const ShopManagementPage = ({ user }) => {
                       
                       {/* Image Preview Area */}
                       <div className="relative">
-                        {(imagePreview || productForm.image_url) ? (
+                        {(imagePreview || (productForm.images && productForm.images.length > 0)) ? (
                           <div className="relative group">
                             <img
-                              src={imagePreview || productForm.image_url}
+                              src={imagePreview || productForm.images[0]}
                               alt="Product preview"
                               className="w-full h-64 object-cover rounded-xl border-2 border-gray-200 dark:border-gray-600"
                             />
@@ -1246,23 +1263,6 @@ const ShopManagementPage = ({ user }) => {
                         />
                       </div>
                       
-                      {/* Alternative: Image URL Input */}
-                      <div className="mt-4">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={productForm.image_url}
-                            onChange={(e) => {
-                              setProductForm({ ...productForm, image_url: e.target.value });
-                              setImagePreview(null);
-                              setSelectedImage(null);
-                            }}
-                            className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
-                            placeholder="Or paste image URL"
-                          />
-                          <PhotoIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                        </div>
-                      </div>
                     </div>
 
                     {/* Stock Quantity */}
@@ -1355,19 +1355,23 @@ const ShopManagementPage = ({ user }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Price (Tokens) <span className="text-red-500">*</span>
+                          Price (USD) <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-gray-500">$</span>
                           <input
                             type="number"
-                            value={productForm.price}
-                            onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                            className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            placeholder="0"
-                            min="1"
+                            step="0.01"
+                            value={productForm.priceUsd}
+                            onChange={(e) => setProductForm({ ...productForm, priceUsd: e.target.value })}
+                            className="w-full px-4 py-2 pl-7 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            placeholder="10.00"
+                            min="10"
                           />
-                          <SparklesIcon className="absolute left-3 top-2.5 w-5 h-5 text-purple-500" />
                         </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Minimum $10 USD (auto-converts to {productForm.priceUsd ? Math.round(productForm.priceUsd * 10) : 0} tokens)
+                        </p>
                       </div>
 
                       <div>
@@ -1434,7 +1438,7 @@ const ShopManagementPage = ({ user }) => {
                     )}
 
                     {/* Success Preview */}
-                    {productForm.name && productForm.price && (productForm.image_url || imagePreview) && (
+                    {productForm.name && productForm.priceUsd && ((productForm.images && productForm.images.length > 0) || imagePreview) && (
                       <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4">
                         <div className="flex items-start gap-3">
                           <CheckCircleIcon className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
