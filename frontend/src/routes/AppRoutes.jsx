@@ -11,6 +11,9 @@ import useRouteObservability from '../hooks/useRouteMonitoring';
 import { defaultPathFor, isRoleReady } from '../utils/routeHelpers';
 import toast from 'react-hot-toast';
 
+// Critical imports - NOT lazy loaded for immediate access
+import AdminLoginPage from '../components/pages/AdminLoginPage';
+
 /**
  * Lazy-loaded pages - moved from App.js
  * Route files own their imports, not App.js
@@ -39,7 +42,6 @@ const DigitalsPage = lazy(() => import('../components/pages/DigitalsPage'));
 const TermsOfService = lazy(() => import('../components/pages/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('../components/pages/PrivacyPolicy'));
 const FollowersSubscribersPage = lazy(() => import('../components/pages/FollowersSubscribersPage'));
-const AdminLoginPage = lazy(() => import('../components/pages/AdminLoginPage'));
 const NotFound = lazy(() => import('./NotFound'));
 
 // Phase 3: Final 5 screens
