@@ -106,7 +106,7 @@ router.post('/send',
       `INSERT INTO tips (tip_id, tipper_id, creator_id, amount, message, session_id, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())
        RETURNING *`,
-      [tipId, tipperId, creatorId, amount, message, sessionId]
+      [tipId, tipperId, creatorId, amount, message, context.sessionId || context.callId || context.streamId || null]
     );
 
     // Record token transaction for tipper (use standardized user_id column)
@@ -164,22 +164,11 @@ router.post('/send',
           tipperId: tipperDbId,
           tipperUsername: tipperInfo.username,
           amount,
-          message
+          message,
+          context: context || {}
         })
       ]
     );
-
-    // Record in tips table if it exists (Pro Monetization)
-    try {
-      await client.query(
-        `INSERT INTO tips (from_user_id, to_creator_id, amount_tokens, message, context_type, context_id)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [fromUserId, creatorInfo.supabase_id, amount, message, context.type || null, context.id || null]
-      );
-    } catch (e) {
-      // Table might not exist yet, continue
-      console.log('Tips table not available yet:', e.message);
-    }
 
     // Update stream stats if applicable
     if (context.streamId) {

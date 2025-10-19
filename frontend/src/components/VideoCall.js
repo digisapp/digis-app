@@ -4,6 +4,7 @@ import { supabase, getAuthToken } from '../utils/supabase-auth.js';
 import { fetchWithRetry, fetchJSONWithRetry } from '../utils/fetchWithRetry.js';
 import toast from 'react-hot-toast';
 import VirtualGifts from './VirtualGifts';
+import TipButton from './payments/TipButton';
 import AdaptiveQualityController from '../utils/AdaptiveQualityController';
 import ConnectionResilience from '../utils/ConnectionResilience';
 import FallbackManager from '../utils/FallbackManager';
@@ -36,7 +37,8 @@ const VideoCall = forwardRef(({
   coHosts = [],
   hasAccess = true, // New prop for ticketed show access control
   initialOverlaySettings = null, // New prop for logo overlay
-  callId = null // New prop for server-authoritative billing
+  callId = null, // New prop for server-authoritative billing
+  creatorId = null // New prop for tips - ID of the creator being called
 }, ref) => {
   const client = useRef(null);
   const localVideo = useRef(null);
@@ -3061,6 +3063,34 @@ const VideoCall = forwardRef(({
         onToggle={() => setShowConnectionStatus(!showConnectionStatus)}
         className="fixed bottom-4 right-4 max-w-sm z-50"
       />
+
+      {/* Tip Button - Show for fans calling creators */}
+      {!isHost && creatorId && user?.id !== creatorId && !isStreaming && (
+        <div style={{
+          position: 'fixed',
+          bottom: '100px',
+          right: '20px',
+          zIndex: 1000
+        }}>
+          <TipButton
+            toCreatorId={creatorId}
+            context={{
+              callId: callId || channel,
+              sessionId: channel,
+              type: 'video_call'
+            }}
+            onTipped={(tip) => {
+              toast.success(`Tip of ${tip.amountTokens} tokens sent!`, {
+                icon: '💰'
+              });
+              if (onTokenUpdate) {
+                onTokenUpdate(tip.new_balance);
+              }
+            }}
+            className="shadow-2xl"
+          />
+        </div>
+      )}
 
       {/* Beauty Filters Modal */}
       <BeautyFilters

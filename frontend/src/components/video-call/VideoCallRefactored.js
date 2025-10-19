@@ -3,7 +3,7 @@
  * @module VideoCallRefactored
  */
 
-import React, { useEffect, useRef, Suspense, lazy, forwardRef } from 'react';
+import React, { useEffect, useRef, useState, Suspense, lazy, forwardRef } from 'react';
 import { VideoCallProvider } from './contexts/VideoCallContext';
 import useAgoraClient from './hooks/useAgoraClient';
 import useCallBilling from './hooks/useCallBilling';
@@ -14,6 +14,7 @@ import VideoCallControls from './components/VideoCallControls';
 import VideoCallEnded from './components/VideoCallEnded';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import ErrorBoundary from '../ui/ErrorBoundary';
+import TipButton from '../payments/TipButton';
 import toast from 'react-hot-toast';
 
 // Lazy load heavy components
@@ -31,30 +32,31 @@ const VideoCallRefactored = forwardRef(({
   channel,
   token: initialToken,
   uid,
-  
+
   // User props
   user,
   isHost = false,
   isCreator = false,
-  
+  creatorId, // ID of the creator being called (for tips)
+
   // Call type props
   isStreaming = false,
   isVoiceOnly = false,
   useMultiVideoGrid = false,
-  
+
   // Token/billing props
   tokenBalance = 0,
   onTokenUpdate,
   onTokenDeduction,
-  
+
   // Callbacks
   onSessionEnd,
   onTokenExpired,
   onLocalTracksCreated,
-  
+
   // Access control
   hasAccess = true,
-  
+
   // Co-host support
   coHosts = [],
   activeCoHosts = []
@@ -262,6 +264,29 @@ const VideoCallRefactored = forwardRef(({
               isCreator={isCreator}
             />
           </div>
+
+          {/* Tip Button - Show for fans calling creators */}
+          {!isCreator && creatorId && user?.id !== creatorId && (
+            <div className="absolute bottom-24 right-4 z-50">
+              <TipButton
+                toCreatorId={creatorId}
+                context={{
+                  callId: channel,
+                  sessionId: channel,
+                  type: 'video_call'
+                }}
+                onTipped={(tip) => {
+                  toast.success(`Tip of ${tip.amountTokens} tokens sent!`, {
+                    icon: '💰'
+                  });
+                  if (onTokenUpdate) {
+                    onTokenUpdate(tip.new_balance);
+                  }
+                }}
+                className="shadow-2xl"
+              />
+            </div>
+          )}
 
           {/* Lazy loaded UI panels */}
           <Suspense fallback={<LoadingSpinner />}>
