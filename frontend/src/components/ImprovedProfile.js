@@ -544,7 +544,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
       console.log('📤 Profile data:', profileData);
 
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
-        method: 'POST',
+        method: 'PUT',  // ← Changed from POST to PUT to match backend
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
