@@ -25,10 +25,6 @@ const swaggerSpecs = require('../config/swagger');
 // Remove sensitive console.logs - using secure logger instead
 logger.info('Starting Digis backend server...');
 
-// Log feature flags on startup
-const { logFeatureStatus } = require('../utils/featureFlags');
-logFeatureStatus();
-
 // Load environment variables with comprehensive validation
 try {
   // On Vercel/serverless, env vars are injected automatically - skip dotenv loading
@@ -58,6 +54,10 @@ try {
   logger.error('Environment configuration error:', { error: envError.message });
   process.exit(1);
 }
+
+// Log feature flags on startup (after dotenv loads)
+const { logFeatureStatus } = require('../utils/featureFlags');
+logFeatureStatus();
 
 // Load PostgreSQL JWT middleware for RLS support
 const { withPgAndJwt } = require('../middleware/pg-with-jwt');
@@ -255,6 +255,7 @@ try {
   const emergencyRoutes = require('../routes/emergency-reset');
   const fansRoutes = require('../routes/fans');
   const callsRoutes = require('../routes/calls');
+  const cronRoutes = require('../routes/cron');
   const uploadsRoutes = require('../routes/uploads');
   const publicCreatorsRoutes = require('../routes/public-creators');
   const usernamesRoutes = require('../routes/usernames');
@@ -399,6 +400,7 @@ try {
   app.use('/api/client-log', clientLogRoutes); // Client-side error logging (no auth during investigation)
   app.use('/api/fans', rateLimiters.api || ((req, res, next) => next()), fansRoutes);
   app.use('/api/calls', rateLimiters.api || ((req, res, next) => next()), callsRoutes);
+  app.use('/api/cron', cronRoutes); // Cron jobs (protected by secret token, no rate limiting)
   app.use('/api/realtime', rateLimiters.api || ((req, res, next) => next()), realtimeRoutes); // Ably token signing
   app.use('/api/streams', rateLimiters.api || ((req, res, next) => next()), proStreamsRoutes); // Pro monetization streams
   app.use('/api/billing', rateLimiters.api || ((req, res, next) => next()), proBillingRoutes); // Pro monetization billing

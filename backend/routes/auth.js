@@ -1666,7 +1666,6 @@ router.get('/debug-schema', async (req, res) => {
     const criticalColumns = {
       id: columnNames.includes('id'),
       supabase_id: columnNames.includes('supabase_id'),
-      firebase_uid: columnNames.includes('firebase_uid'),
       email: columnNames.includes('email'),
       username: columnNames.includes('username'),
       display_name: columnNames.includes('display_name'),

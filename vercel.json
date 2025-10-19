@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "buildCommand": "cd backend && npm install",
+  "devCommand": "cd backend && npm run dev",
+  "installCommand": "cd backend && npm install",
+  "functions": {
+    "api/**/*.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/bill-active-calls",
+      "schedule": "* * * * *",
+      "description": "Bill active calls every minute"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "CRON_SECRET": "@cron-secret"
+  }
+}

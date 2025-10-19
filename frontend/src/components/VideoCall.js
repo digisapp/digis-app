@@ -15,6 +15,7 @@ import StreamOverlayManager, { StreamOverlay } from './StreamOverlayManager';
 import { UserGroupIcon, VideoCameraIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { fireBeacon } from '../utils/beacon';
 import { analytics } from '../lib/analytics';
+import socketService from '../services/socketServiceWrapper';
 
 const VideoCall = forwardRef(({
   channel,
@@ -34,7 +35,8 @@ const VideoCall = forwardRef(({
   onLocalTracksCreated,
   coHosts = [],
   hasAccess = true, // New prop for ticketed show access control
-  initialOverlaySettings = null // New prop for logo overlay
+  initialOverlaySettings = null, // New prop for logo overlay
+  callId = null // New prop for server-authoritative billing
 }, ref) => {
   const client = useRef(null);
   const localVideo = useRef(null);
@@ -105,6 +107,9 @@ const VideoCall = forwardRef(({
   const durationInterval = useRef(null);
   const tokenRefreshTimer = useRef(null);
   const costCalculationInterval = useRef(null);
+  const heartbeatInterval = useRef(null);
+  const balanceWarningShown = useRef(false); // Track if 80% warning shown
+  const callIdRef = useRef(null); // Store call ID for heartbeat
 
   // Feature flag: Emergency disable for call leave guards (set VITE_CALL_GUARDS=false to disable)
   const GUARDS_ENABLED = import.meta.env.VITE_CALL_GUARDS !== 'false';
@@ -239,6 +244,20 @@ const VideoCall = forwardRef(({
         const cost = elapsedMinutes * tokensPerMin;
         setSessionCost(cost);
 
+        // 80% balance warning
+        if (!balanceWarningShown.current && tokenBalance > 0) {
+          const percentUsed = cost / tokenBalance;
+          if (percentUsed >= 0.8) {
+            balanceWarningShown.current = true;
+            const remainingTokens = Math.max(0, tokenBalance - cost);
+            const remainingMinutes = Math.floor(remainingTokens / tokensPerMin);
+            toast.warning(
+              `⚠️ Low balance warning: You have approximately ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''} remaining (${remainingTokens} tokens). Please add tokens to continue.`,
+              { duration: 8000, icon: '⚠️' }
+            );
+          }
+        }
+
         // Trigger callback if provided
         if (onTokenDeduction && elapsedMinutes > 0 && elapsedSeconds % 60 === 0) {
           onTokenDeduction(tokensPerMin);
@@ -248,6 +267,55 @@ const VideoCall = forwardRef(({
       console.error('❌ Failed to setup cost calculation:', error);
     }
   }, [channel, isHost, isStreaming, callDuration, onTokenDeduction]);
+
+  // Start heartbeat to keep call alive and sync billing status
+  const startHeartbeat = useCallback(async () => {
+    if (isHost || isStreaming || !callIdRef.current) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token;
+
+      if (!authToken) {
+        console.warn('No auth token for heartbeat');
+        return;
+      }
+
+      console.log('💓 Starting heartbeat for call:', callIdRef.current);
+
+      // Send heartbeat every 12 seconds
+      heartbeatInterval.current = setInterval(async () => {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_BACKEND_URL}/calls/${callIdRef.current}/heartbeat`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('💓 Heartbeat sent:', {
+              elapsedSeconds: data.billing?.elapsedSeconds,
+              currentMinute: data.billing?.currentMinute,
+              lastBilledMinute: data.billing?.lastBilledMinute,
+              nextBillingIn: data.billing?.nextBillingIn
+            });
+          } else {
+            console.error('❌ Heartbeat failed:', response.status);
+          }
+        } catch (error) {
+          console.error('💥 Heartbeat error:', error);
+        }
+      }, 12000); // Every 12 seconds
+    } catch (error) {
+      console.error('❌ Failed to start heartbeat:', error);
+    }
+  }, [isHost, isStreaming]);
 
   // Setup event handlers with token expiration handling
   const setupEventHandlers = useCallback(() => {
@@ -747,6 +815,62 @@ const VideoCall = forwardRef(({
         hasAccess
       });
 
+      // MINIMUM BALANCE CHECK (fans only) - Prevent starting call with insufficient tokens
+      if (!isHost && !isStreaming) {
+        // Get creator's rate to calculate minimum needed
+        const { data: { session } } = await supabase.auth.getSession();
+        const authToken = session?.access_token;
+
+        if (authToken) {
+          try {
+            // Extract creator ID from channel
+            const channelParts = channel.split('-');
+            if (channelParts.length >= 2) {
+              const creatorId = channelParts[1];
+              const creatorData = await fetchJSONWithRetry(
+                `${import.meta.env.VITE_BACKEND_URL}/users/profile?uid=${creatorId}`,
+                {
+                  headers: { Authorization: `Bearer ${authToken}` }
+                },
+                2
+              );
+
+              const pricePerMin = creatorData.price_per_min || 5;
+              const tokensPerMin = Math.ceil(pricePerMin / 0.05);
+
+              // Check if fan has at least 1 minute worth of tokens
+              if (tokenBalance < tokensPerMin) {
+                const needed = tokensPerMin - tokenBalance;
+                toast.error(
+                  `Insufficient tokens to start call. You need at least ${tokensPerMin} tokens (1 minute). You're short ${needed} tokens.`,
+                  {
+                    duration: 8000,
+                    icon: '⚠️'
+                  }
+                );
+
+                // Prevent joining
+                throw new Error(`INSUFFICIENT_BALANCE: Need ${tokensPerMin} tokens, have ${tokenBalance}`);
+              }
+
+              console.log('✅ Balance check passed:', {
+                tokensPerMin,
+                currentBalance: tokenBalance,
+                canAfford: `${Math.floor(tokenBalance / tokensPerMin)} minutes`
+              });
+            }
+          } catch (balanceCheckError) {
+            console.error('Balance check error:', balanceCheckError);
+            // If it's our insufficient balance error, re-throw it
+            if (balanceCheckError.message?.startsWith('INSUFFICIENT_BALANCE')) {
+              throw balanceCheckError;
+            }
+            // Otherwise, warn but allow (network issues shouldn't block calls)
+            console.warn('Skipping balance check due to error:', balanceCheckError.message);
+          }
+        }
+      }
+
       // Check access for ticketed shows
       if (!hasAccess && !isHost) {
         // Join as audience without video subscription
@@ -796,6 +920,9 @@ const VideoCall = forwardRef(({
       if (!isHost) {
         await fetchTokenBalance();
         startCostCalculation();
+
+        // Start heartbeat to keep call alive and get billing updates
+        startHeartbeat();
       }
 
       // Initialize quality controller after connection
@@ -836,6 +963,11 @@ const VideoCall = forwardRef(({
       if (costCalculationInterval.current) {
         clearInterval(costCalculationInterval.current);
         costCalculationInterval.current = null;
+      }
+
+      if (heartbeatInterval.current) {
+        clearInterval(heartbeatInterval.current);
+        heartbeatInterval.current = null;
       }
 
       // Clean up local tracks
@@ -1164,6 +1296,67 @@ const VideoCall = forwardRef(({
       }
     });
   }, [remoteUsers]);
+
+  // Set callIdRef when callId prop is provided
+  useEffect(() => {
+    if (callId) {
+      callIdRef.current = callId;
+      console.log('📞 Call ID set:', callId);
+    }
+  }, [callId]);
+
+  // Set up Ably listener for insufficient funds event
+  useEffect(() => {
+    if (!channel || isHost || isStreaming) return;
+
+    const handleInsufficientFunds = async (data) => {
+      console.log('💸 Insufficient funds event received:', data);
+
+      // Stop heartbeat immediately
+      if (heartbeatInterval.current) {
+        clearInterval(heartbeatInterval.current);
+        heartbeatInterval.current = null;
+      }
+
+      // Show error to user
+      toast.error(
+        '❌ Call ended: Insufficient tokens. Your balance ran out during the call.',
+        { duration: 10000 }
+      );
+
+      // Clean up and end call
+      await cleanup();
+
+      // Notify parent
+      if (onSessionEnd) {
+        onSessionEnd({
+          reason: 'insufficient_funds',
+          message: 'Call ended due to insufficient tokens'
+        });
+      }
+    };
+
+    // Subscribe to the call channel for insufficient_funds events
+    // Channel format: call:{channel} where {channel} is the Agora channel name
+    const channelName = `call:${channel}`;
+
+    let unsubscribe = () => {};
+
+    if (socketService.isConnected) {
+      const ablyChannel = socketService.getChannel?.(channelName);
+      if (ablyChannel) {
+        ablyChannel.subscribe('call:insufficient_funds', handleInsufficientFunds);
+        console.log(`📡 Subscribed to ${channelName} for insufficient_funds events`);
+
+        unsubscribe = () => {
+          ablyChannel.unsubscribe('call:insufficient_funds', handleInsufficientFunds);
+          console.log(`📡 Unsubscribed from ${channelName}`);
+        };
+      }
+    }
+
+    return unsubscribe;
+  }, [channel, isHost, isStreaming, onSessionEnd]);
 
   // Update resilience system when tracks change
   useEffect(() => {

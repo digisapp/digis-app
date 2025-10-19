@@ -15,11 +15,13 @@ import {
   CogIcon,
   CheckCircleIcon,
   SparklesIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 import { VideoCameraIcon as VideoCameraSolid, MicrophoneIcon as MicrophoneSolid } from '@heroicons/react/24/solid';
 import useMobileAgora from '../../hooks/useMobileAgora';
 import { useMobileStream } from '../../contexts/MobileStreamContext';
+import SimpleProductSelector from '../streaming/SimpleProductSelector';
 
 /**
  * MobileGoLive - Production-ready mobile live streaming with wizard flow
@@ -53,6 +55,7 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
   const [loading, setLoading] = useState(false);
   const localVideoEl = useRef(null);
   const initRef = useRef(false); // Guard against double init
+  const logoFileInputRef = useRef(null);
 
   // Stream settings
   const [streamTitle, setStreamTitle] = useState('');
@@ -65,6 +68,7 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
   const [privatePrice, setPrivatePrice] = useState(0);
   const [enableShopping, setEnableShopping] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [overlayLogo, setOverlayLogo] = useState(null);
   const [streamGoals, setStreamGoals] = useState({
     level1: { amount: 5000, description: 'Level 1' },
     level2: { amount: 10000, description: 'Level 2' },
@@ -129,6 +133,34 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
       resetError();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle iPhone orientation changes (portrait ↔ landscape)
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      log('📱 Orientation changed, reinitializing camera for new aspect ratio');
+
+      // Only reinitialize if we have active tracks
+      if (localVideoTrack.current || localAudioTrack.current) {
+        // Clean up current tracks
+        cleanupAll().then(() => {
+          // Reinitialize after a short delay to allow orientation to settle
+          setTimeout(() => {
+            log('Reinitializing camera with new orientation');
+            initializeCamera();
+          }, 500);
+        });
+      }
+    };
+
+    // Listen for both orientationchange (mobile) and resize (all devices)
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener('resize', handleOrientationChange);
+
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      window.removeEventListener('resize', handleOrientationChange);
+    };
+  }, [localVideoTrack, localAudioTrack]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle page visibility changes (iOS backgrounding)
   useEffect(() => {
@@ -211,12 +243,14 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
   };
 
   const handleAddTag = () => {
-    if (currentTag.trim() && streamTags.length < 3) {
+    if (currentTag.trim() && streamTags.length < 5) {
       const tag = currentTag.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
       if (!streamTags.includes(tag)) {
         setStreamTags([...streamTags, tag]);
         setCurrentTag('');
       }
+    } else if (streamTags.length >= 5) {
+      toast.error('Maximum 5 tags allowed');
     }
   };
 
@@ -263,6 +297,12 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
         shoppingEnabled: enableShopping,
         selectedProducts: selectedProducts,
         streamGoal: streamGoals,
+        overlaySettings: overlayLogo ? {
+          image: overlayLogo,
+          position: 'top-left',
+          size: 'small',
+          opacity: 0.8
+        } : null,
         // Include Agora track refs for parent component
         localAudioTrack: localAudioTrack.current,
         localVideoTrack: localVideoTrack.current
@@ -506,7 +546,7 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <HashtagIcon className="w-4 h-4 inline mr-1" />
-                  Tags (max 3)
+                  Tags (max 5)
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -520,7 +560,7 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
                   />
                   <button
                     onClick={handleAddTag}
-                    disabled={!currentTag.trim() || streamTags.length >= 3}
+                    disabled={!currentTag.trim() || streamTags.length >= 5}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors"
                   >
                     Add
@@ -659,20 +699,95 @@ const MobileGoLive = ({ onGoLive, onCancel, user, appId, channel, token }) => {
                 </div>
               </div>
 
-              {/* Shopping Toggle */}
+              {/* Logo Upload */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <PhotoIcon className="w-4 h-4 inline mr-1" />
+                  Stream Logo (Top-Left Corner)
+                </label>
+                <div className="flex items-center gap-2">
+                  {overlayLogo ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <img
+                        src={overlayLogo}
+                        alt="Logo"
+                        className="h-12 w-auto object-contain bg-white rounded-lg p-1 border border-blue-200"
+                      />
+                      <span className="text-xs text-gray-600 truncate flex-1">Logo uploaded</span>
+                      <button
+                        onClick={() => setOverlayLogo(null)}
+                        className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => logoFileInputRef.current?.click()}
+                      className="flex-1 px-3 py-2 bg-white hover:bg-blue-100 text-gray-700 border border-blue-200 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <ArrowUpTrayIcon className="w-4 h-4" />
+                      <span className="text-sm">Upload Logo</span>
+                    </button>
+                  )}
+                  <input
+                    ref={logoFileInputRef}
+                    type="file"
+                    accept="image/png,image/jpg,image/jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 2 * 1024 * 1024) {
+                          toast.error('Logo must be less than 2MB');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setOverlayLogo(reader.result);
+                          toast.success('Logo uploaded!');
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Logo appears in top-left corner. Max 2MB.
+                </p>
+              </div>
+
+              {/* Shopping - Collapsible with Product Selection */}
               <div className="bg-pink-50 p-4 rounded-lg">
-                <label className="flex items-center justify-between cursor-pointer">
+                <button
+                  onClick={() => setEnableShopping(!enableShopping)}
+                  className="w-full flex items-center justify-between cursor-pointer"
+                >
                   <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
                     <ShoppingBagIcon className="w-4 h-4" />
-                    Enable Live Shopping
+                    Live Shopping
+                    {selectedProducts.length > 0 && (
+                      <span className="bg-purple-600 text-white text-xs px-2 py-0.5 rounded-full">
+                        {selectedProducts.length} selected
+                      </span>
+                    )}
                   </span>
-                  <input
-                    type="checkbox"
-                    checked={enableShopping}
-                    onChange={(e) => setEnableShopping(e.target.checked)}
-                    className="rounded text-purple-600 focus:ring-purple-500"
-                  />
-                </label>
+                  <span className="text-xs text-gray-500">
+                    {enableShopping ? 'Collapse' : 'Expand'}
+                  </span>
+                </button>
+
+                {enableShopping && (
+                  <div className="mt-3 pt-3 border-t border-pink-200">
+                    <p className="text-xs text-gray-600 mb-2">
+                      Select products to showcase during your stream
+                    </p>
+                    <SimpleProductSelector
+                      selectedProducts={selectedProducts}
+                      onProductsChange={setSelectedProducts}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>

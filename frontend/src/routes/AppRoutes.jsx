@@ -314,13 +314,13 @@ const AppRoutes = () => {
         {/* Call Routes */}
         <Route path="/call/video" element={
           <ProtectedRoute>
-            <VideoCall user={currentUser} audioOnly={false} />
+            <VideoCall user={currentUser} isVoiceOnly={false} />
           </ProtectedRoute>
         } />
 
         <Route path="/call/voice" element={
           <ProtectedRoute>
-            <VideoCall user={currentUser} audioOnly={true} />
+            <VideoCall user={currentUser} isVoiceOnly={true} />
           </ProtectedRoute>
         } />
 

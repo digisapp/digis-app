@@ -214,6 +214,7 @@ router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req,
       [creatorId]
     );
     const ratePerMinute = rateResult.rows[0]?.price_per_min || 1.00;
+    const tokensPerMinute = Math.ceil(ratePerMinute / 0.05); // Convert $ to tokens (0.05 per token)
 
     // Generate unique channel name
     const channel = `call_${creatorId.substring(0, 8)}_${fanId.substring(0, 8)}_${Date.now()}`;
@@ -222,16 +223,17 @@ router.post('/initiate', requireFeature('CALLS'), authenticateToken, async (req,
     const creatorUid = generateStableAgoraUid(creatorId);
     const fanUid = generateStableAgoraUid(fanId);
 
-    // Create call record
+    // Create call record with billing fields
     const callResult = await pool.query(
       `INSERT INTO calls (
         creator_id, fan_id, call_type, channel,
         agora_channel, creator_uid, fan_uid,
-        rate_per_minute, state
+        rate_per_minute, rate_tokens_per_min,
+        last_billed_minute, state, last_heartbeat_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'ringing')
-      RETURNING id, created_at`,
-      [creatorId, fanId, callType, channel, channel, creatorUid, fanUid, ratePerMinute]
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, 'ringing', NOW())
+      RETURNING id, created_at, billing_group_id`,
+      [creatorId, fanId, callType, channel, channel, creatorUid, fanUid, ratePerMinute, tokensPerMinute]
     );
 
     const callId = callResult.rows[0].id;
@@ -371,11 +373,14 @@ router.post('/:callId/accept', requireFeature('CALLS'), authenticateToken, async
       privilegeExpiredTs
     );
 
-    // Update call state and tokens
+    // Update call state and tokens (started_at triggers billing)
     await pool.query(
       `UPDATE calls
        SET state = 'connected',
+           status = 'active',
            connected_at = NOW(),
+           started_at = NOW(),
+           last_heartbeat_at = NOW(),
            creator_token = $1,
            fan_token = $2,
            agora_app_id = $3,
@@ -436,6 +441,66 @@ router.post('/:callId/accept', requireFeature('CALLS'), authenticateToken, async
     logger.error('Error accepting call:', error);
     res.status(500).json({
       error: 'Failed to accept call',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// POST /api/calls/:callId/heartbeat - Client sends heartbeat to prevent timeout
+router.post('/:callId/heartbeat', authenticateToken, async (req, res) => {
+  const { callId } = req.params;
+  const userId = req.user.supabase_id;
+
+  try {
+    // Update heartbeat timestamp
+    const result = await pool.query(
+      `UPDATE calls
+       SET last_heartbeat_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1
+         AND (creator_id = $2 OR fan_id = $2)
+         AND status = 'active'
+       RETURNING
+         id,
+         started_at,
+         last_billed_minute,
+         rate_tokens_per_min`,
+      [callId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Call not found or not active',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const call = result.rows[0];
+
+    // Calculate current elapsed time and billing status
+    const elapsedSeconds = call.started_at
+      ? Math.floor((Date.now() - new Date(call.started_at).getTime()) / 1000)
+      : 0;
+    const currentMinute = Math.floor(elapsedSeconds / 60) + 1;
+    const nextBillingIn = 60 - (elapsedSeconds % 60);
+
+    res.json({
+      success: true,
+      callId,
+      heartbeatReceived: new Date().toISOString(),
+      billing: {
+        elapsedSeconds,
+        currentMinute,
+        lastBilledMinute: call.last_billed_minute,
+        tokensPerMinute: call.rate_tokens_per_min,
+        nextBillingIn
+      }
+    });
+  } catch (error) {
+    logger.error('Error processing heartbeat:', error);
+    res.status(500).json({
+      error: 'Failed to process heartbeat',
       details: error.message,
       timestamp: new Date().toISOString()
     });
@@ -530,16 +595,18 @@ router.post('/:callId/decline', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/calls/:callId/end - End an active call
+// POST /api/calls/:callId/end - End an active call (with server-authoritative billing)
 router.post('/:callId/end', authenticateToken, async (req, res) => {
   const { callId } = req.params;
   const userId = req.user.supabase_id;
+  const { billFinalPartialMinute } = require('../utils/callBilling');
 
   try {
     // Get call details
     const callResult = await pool.query(
       `SELECT
-        id, creator_id, fan_id, state, connected_at, rate_per_minute
+        id, creator_id, fan_id, state, status, started_at,
+        last_billed_minute, rate_tokens_per_min, rate_per_minute
       FROM calls
       WHERE id = $1 AND (creator_id = $2 OR fan_id = $2)`,
       [callId, userId]
@@ -554,90 +621,82 @@ router.post('/:callId/end', authenticateToken, async (req, res) => {
 
     const call = callResult.rows[0];
 
-    if (call.state !== 'connected') {
+    // Allow ending if already ended (idempotent)
+    if (call.status === 'ended' || call.state === 'ended') {
+      // Get existing call summary
+      const summary = await pool.query(
+        `SELECT duration_seconds, total_cost FROM calls WHERE id = $1`,
+        [callId]
+      );
+
+      if (summary.rows.length > 0) {
+        const durationMinutes = Math.ceil(summary.rows[0].duration_seconds / 60);
+        return res.json({
+          success: true,
+          callId,
+          alreadyEnded: true,
+          durationSeconds: summary.rows[0].duration_seconds,
+          durationMinutes,
+          totalCost: parseFloat(summary.rows[0].total_cost || 0),
+          endedBy: userId
+        });
+      }
+    }
+
+    if (call.state !== 'connected' && call.status !== 'active') {
       return res.status(400).json({
         error: 'Call is not active',
         currentState: call.state,
+        currentStatus: call.status,
         timestamp: new Date().toISOString()
       });
     }
 
-    // Calculate duration and cost
-    const connectedAt = new Date(call.connected_at);
+    // Calculate duration
+    const startedAt = call.started_at ? new Date(call.started_at) : new Date();
     const endedAt = new Date();
-    const durationSeconds = Math.floor((endedAt - connectedAt) / 1000);
-    const durationMinutes = Math.ceil(durationSeconds / 60); // Round up to nearest minute
-    const totalCost = (durationMinutes * parseFloat(call.rate_per_minute)).toFixed(2);
+    const durationSeconds = Math.floor((endedAt - startedAt) / 1000);
+    const durationMinutes = Math.ceil(durationSeconds / 60);
 
-    // Update call state
+    // Mark call as ended FIRST (prevents double-ending)
     await pool.query(
       `UPDATE calls
        SET state = 'ended',
+           status = 'ended',
            ended_at = NOW(),
            ended_by = $1,
            end_reason = 'completed',
            duration_seconds = $2,
-           total_cost = $3,
            updated_at = NOW()
-       WHERE id = $4`,
-      [userId, durationSeconds, totalCost, callId]
+       WHERE id = $3 AND status = 'active'`,
+      [userId, durationSeconds, callId]
     );
 
-    // Deduct tokens from fan's balance
-    await pool.query(
-      `UPDATE token_balances
-       SET balance = balance - $1,
-           total_spent = total_spent + $1,
-           last_transaction_at = NOW()
-       WHERE user_id = $2`,
-      [totalCost, call.fan_id]
-    );
-
-    // Add tokens to creator's earnings
-    await pool.query(
-      `UPDATE token_balances
-       SET balance = balance + $1,
-           total_earned = total_earned + $1,
-           last_transaction_at = NOW()
-       WHERE user_id = $2`,
-      [totalCost, call.creator_id]
-    );
-
-    // Log transaction for fan
-    await pool.query(
-      `INSERT INTO token_transactions (
-        transaction_id, user_id, type, amount,
-        balance_before, balance_after, description
-      )
-      SELECT
-        $1, $2, 'spend', $3,
-        balance + $3, balance,
-        'Call with creator'
-      FROM token_balances WHERE user_id = $2`,
-      [`txn_call_${callId}_fan`, call.fan_id, totalCost]
-    );
-
-    // Log transaction for creator
-    await pool.query(
-      `INSERT INTO token_transactions (
-        transaction_id, user_id, type, amount,
-        balance_before, balance_after, description
-      )
-      SELECT
-        $1, $2, 'earn', $3,
-        balance - $3, balance,
-        'Earned from call'
-      FROM token_balances WHERE user_id = $2`,
-      [`txn_call_${callId}_creator`, call.creator_id, totalCost]
-    );
+    // Bill final partial minute (if any)
+    // This handles the last minute that may not be fully billed yet
+    const finalBillResult = await billFinalPartialMinute(callId);
 
     logger.info('Call ended:', {
       callId,
       endedBy: userId,
       durationSeconds,
       durationMinutes,
-      totalCost
+      lastBilledMinute: call.last_billed_minute,
+      finalBillResult
     });
+
+    // Calculate total cost from all billed minutes
+    const totalBilledMinutes = finalBillResult.success && !finalBillResult.noBillingNeeded
+      ? call.last_billed_minute + 1
+      : call.last_billed_minute;
+
+    const totalCost = totalBilledMinutes * (call.rate_tokens_per_min || 0);
+
+    // Update total cost in call record
+    await pool.query(
+      `UPDATE calls SET total_cost = $1 WHERE id = $2`,
+      [totalCost, callId]
+    );
 
     res.json({
       success: true,
