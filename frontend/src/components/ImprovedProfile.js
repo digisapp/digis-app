@@ -1104,15 +1104,59 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                         </button>
                       </div>
 
+                      {/* Save Profile Button - Moved ABOVE Sign Out */}
+                      <div className="pt-6">
+                        {/* Success/Error Messages */}
+                        {success && (
+                          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-800">
+                            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            {success}
+                          </div>
+                        )}
+                        {error && (
+                          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-800">
+                            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                            {error}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={saveProfile}
+                          disabled={saving}
+                          className="w-full px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                        >
+                          {saving ? (
+                            <>
+                              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Save Profile
+                            </>
+                          )}
+                        </button>
+                      </div>
+
                       {/* Sign Out */}
-                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
                         <button
                           onClick={() => {
                             supabase.auth.signOut();
                             // Navigate to home page
                             window.location.href = '/';
                           }}
-                          className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all flex items-center gap-2 w-full justify-center"
+                          className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all flex items-center gap-2 w-full justify-center"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -1121,22 +1165,6 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                         </button>
                       </div>
                     </div>
-                  </motion.div>
-
-                  {/* Save Button */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="flex justify-end"
-                  >
-                    <button
-                      onClick={saveProfile}
-                      disabled={saving}
-                      className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                    >
-                      {saving ? 'Saving...' : 'Save Profile'}
-                    </button>
                   </motion.div>
                 </div>
               </motion.div>
