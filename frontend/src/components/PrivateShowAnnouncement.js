@@ -41,6 +41,7 @@ const PrivateShowAnnouncement = ({
   const [currentPrice, setCurrentPrice] = useState(0);
   const [isBuyingTicket, setIsBuyingTicket] = useState(false);
   const [analytics, setAnalytics] = useState(null);
+  const [ticketHoldersList, setTicketHoldersList] = useState([]);
 
   // Load active show details
   useEffect(() => {
@@ -49,16 +50,21 @@ const PrivateShowAnnouncement = ({
     }
   }, [streamId]);
 
-  // Countdown timer
+  // Countdown timer with time left tracking
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState(null);
+
   useEffect(() => {
     if (activeShow?.start_time && activeShow.status === 'announced') {
       const interval = setInterval(() => {
         const timeLeft = new Date(activeShow.start_time) - new Date();
+        const secondsLeft = Math.floor(timeLeft / 1000);
+        setTimeLeftSeconds(secondsLeft);
+
         if (timeLeft > 0) {
           const hours = Math.floor(timeLeft / 3600000);
           const minutes = Math.floor((timeLeft % 3600000) / 60000);
           const seconds = Math.floor((timeLeft % 60000) / 1000);
-          
+
           if (hours > 0) {
             setCountdown(`${hours}h ${minutes}m ${seconds}s`);
           } else if (minutes > 0) {
@@ -68,10 +74,11 @@ const PrivateShowAnnouncement = ({
           }
         } else {
           setCountdown('Starting soon!');
+          setTimeLeftSeconds(0);
           clearInterval(interval);
         }
       }, 1000);
-      
+
       return () => clearInterval(interval);
     }
   }, [activeShow]);
@@ -137,10 +144,15 @@ const PrivateShowAnnouncement = ({
           }
         }
       );
-      
+
       const data = await response.json();
       if (data.success) {
         setAnalytics(data.analytics);
+
+        // Extract ticket holders from analytics
+        if (data.analytics?.buyers) {
+          setTicketHoldersList(data.analytics.buyers.slice(0, 10));
+        }
       }
     } catch (error) {
       console.error('Error loading analytics:', error);
@@ -273,11 +285,72 @@ const PrivateShowAnnouncement = ({
     }
   };
 
+  // Celebration animation function
+  const celebratePurchase = () => {
+    // Custom confetti-like celebration using Framer Motion
+    const celebrationToast = toast.custom((t) => (
+      <motion.div
+        initial={{ scale: 0, rotate: -180 }}
+        animate={{ scale: 1, rotate: 0 }}
+        exit={{ scale: 0, rotate: 180 }}
+        transition={{ type: "spring", duration: 0.6 }}
+        className="bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white p-6 rounded-2xl shadow-2xl max-w-sm"
+      >
+        <div className="flex items-center gap-4">
+          <motion.div
+            animate={{
+              scale: [1, 1.2, 1],
+              rotate: [0, 10, -10, 0]
+            }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="text-5xl"
+          >
+            🎫
+          </motion.div>
+          <div>
+            <div className="text-2xl font-bold mb-1">Ticket Secured!</div>
+            <div className="text-sm opacity-90">You're in! Enjoy the exclusive show!</div>
+          </div>
+        </div>
+        <motion.div
+          className="absolute -top-2 -right-2"
+          animate={{
+            scale: [0, 1.5, 0],
+            rotate: [0, 180, 360]
+          }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          <SparklesIcon className="w-8 h-8 text-yellow-300" />
+        </motion.div>
+      </motion.div>
+    ), {
+      duration: 5000,
+      position: 'top-center'
+    });
+
+    // Add floating emojis animation
+    const emojis = ['🎉', '🎊', '✨', '🎆', '🎈'];
+    emojis.forEach((emoji, index) => {
+      setTimeout(() => {
+        toast(emoji, {
+          icon: null,
+          duration: 2000,
+          position: 'bottom-center',
+          style: {
+            background: 'transparent',
+            boxShadow: 'none',
+            fontSize: '2rem'
+          }
+        });
+      }, index * 200);
+    });
+  };
+
   const handleBuyTicket = async () => {
     if (!activeShow || hasTicket) return;
-    
+
     setIsBuyingTicket(true);
-    
+
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
@@ -293,18 +366,55 @@ const PrivateShowAnnouncement = ({
           })
         }
       );
-      
+
       const data = await response.json();
       if (data.success) {
         setHasTicket(true);
         setTicketsSold(ticketsSold + 1);
-        toast.success('Ticket purchased! Enjoy the show! 🎫');
+
+        // Trigger celebration animation!
+        celebratePurchase();
       } else {
         throw new Error(data.error);
       }
     } catch (error) {
       if (error.message.includes('Insufficient tokens')) {
-        toast.error('Not enough tokens! Please purchase more tokens.');
+        // Better error handling with action button
+        toast((t) => (
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <CurrencyDollarIcon className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 dark:text-white">Not Enough Tokens!</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  You need {activeShow.token_price} tokens for this ticket
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  window.location.href = '/tokens/purchase';
+                }}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all"
+              >
+                Buy Tokens
+              </button>
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ), {
+          duration: 10000,
+          position: 'top-center'
+        });
       } else {
         toast.error(error.message || 'Failed to buy ticket');
       }
@@ -358,6 +468,33 @@ const PrivateShowAnnouncement = ({
                 <p className="text-xs text-gray-400">Price/Ticket</p>
               </div>
             </div>
+
+            {/* Ticket Holders List */}
+            {ticketHoldersList.length > 0 && (
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-400 flex items-center gap-2">
+                    <UsersIcon className="w-4 h-4" />
+                    Ticket Holders
+                  </span>
+                  <span className="text-xs text-purple-400">{ticketHoldersList.length}+ attending</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {ticketHoldersList.slice(0, 10).map((holder, index) => (
+                    <Tooltip key={index} content={`Purchased at ${new Date(holder.purchase_time).toLocaleTimeString()}`}>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-gray-700 flex items-center justify-center text-white text-xs font-bold">
+                        {index + 1}
+                      </div>
+                    </Tooltip>
+                  ))}
+                  {ticketsSold > 10 && (
+                    <div className="w-8 h-8 rounded-full bg-purple-600 border-2 border-gray-700 flex items-center justify-center text-white text-xs font-bold">
+                      +{ticketsSold - 10}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Start Button */}
             {activeShow.status === 'announced' && (
@@ -623,13 +760,44 @@ const PrivateShowAnnouncement = ({
           )}
         </div>
 
+        {/* Urgency Timer - Show when < 5 minutes */}
+        {timeLeftSeconds !== null && timeLeftSeconds > 0 && timeLeftSeconds < 300 && activeShow.status === 'announced' && !hasTicket && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-3 p-3 bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/50 rounded-lg"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ repeat: Infinity, duration: 1 }}
+                >
+                  <ClockIcon className="w-5 h-5 text-red-400" />
+                </motion.div>
+                <div>
+                  <p className="text-red-400 font-bold text-sm">Starting Soon!</p>
+                  <p className="text-xs text-gray-300">Last chance to get your ticket</p>
+                </div>
+              </div>
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ repeat: Infinity, duration: 0.8 }}
+                className="text-2xl font-bold text-red-400"
+              >
+                {countdown}
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Show Stats */}
         <div className="flex items-center gap-4 mb-3 text-sm">
           <div className="flex items-center gap-1 text-gray-300">
             <UsersIcon className="w-4 h-4" />
             <span>{ticketsSold} attending</span>
           </div>
-          {countdown && activeShow.status === 'announced' && (
+          {countdown && activeShow.status === 'announced' && timeLeftSeconds >= 300 && (
             <div className="flex items-center gap-1 text-yellow-400">
               <ClockIcon className="w-4 h-4" />
               <span>{countdown}</span>

@@ -87,6 +87,8 @@ const StreamingLayout = ({
   const [privateShowActive, setPrivateShowActive] = useState(false);
   const [hasTicket, setHasTicket] = useState(false);
   const [currentShow, setCurrentShow] = useState(null);
+  const [ticketHolders, setTicketHolders] = useState([]); // Track VIP ticket holders
+  const [recentTicketPurchases, setRecentTicketPurchases] = useState([]); // For live ticker
   const videoCallRef = useRef(null);
 
 
@@ -280,6 +282,19 @@ const StreamingLayout = ({
       if (privateShowActive) {
         setVideoVisible(true);
       }
+
+      // Add to ticket holders list
+      if (data.viewerId) {
+        setTicketHolders(prev => [...new Set([...prev, data.viewerId])]);
+      }
+
+      // Add to recent purchases for ticker
+      if (data.viewerName) {
+        setRecentTicketPurchases(prev => [
+          { name: data.viewerName, timestamp: Date.now() },
+          ...prev.slice(0, 19) // Keep last 20
+        ]);
+      }
     });
     
     socketService.on('private_show_ended', (data) => {
@@ -300,6 +315,25 @@ const StreamingLayout = ({
         });
       }
     });
+
+    // Ticket sold notification for creators
+    socketService.on('ticket_sold', (data) => {
+      if (isCreator && data.showId) {
+        // Play cash register sound
+        soundManager.playTipSound(data.price || 500);
+
+        // Show celebration toast
+        toast.success(`🎫 New ticket sold! +${data.price} tokens`, {
+          duration: 4000,
+          icon: '💰',
+          style: {
+            background: 'linear-gradient(to right, #10b981, #059669)',
+            color: 'white',
+            fontWeight: 'bold'
+          }
+        });
+      }
+    });
     
     return () => {
       socketService.off('private_mode_started');
@@ -307,6 +341,7 @@ const StreamingLayout = ({
       socketService.off('ticket_purchased');
       socketService.off('private_show_ended');
       socketService.off('ticketed_show_announced');
+      socketService.off('ticket_sold');
     };
   }, [channel, hasTicket, isCreator, privateShowActive]);
 
@@ -822,6 +857,38 @@ const StreamingLayout = ({
             />
           </div>
 
+          {/* Live Ticket Sales Ticker - During Private Shows */}
+          {privateShowActive && recentTicketPurchases.length > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 z-25 overflow-hidden bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-green-500/20 border-t border-green-500/30">
+              <motion.div
+                className="flex items-center gap-8 py-2 whitespace-nowrap"
+                animate={{ x: ['0%', '-50%'] }}
+                transition={{
+                  duration: 20,
+                  repeat: Infinity,
+                  ease: 'linear'
+                }}
+              >
+                {/* Duplicate for seamless loop */}
+                {[...recentTicketPurchases, ...recentTicketPurchases].map((purchase, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 text-green-400 font-semibold text-sm"
+                  >
+                    <motion.span
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    >
+                      🎫
+                    </motion.span>
+                    <span>{purchase.name} just bought a ticket!</span>
+                    <span className="text-green-300">•</span>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+          )}
+
           {/* Private Show Controls moved outside video area */}
         </>
       )}
@@ -900,6 +967,7 @@ const StreamingLayout = ({
                 isHost={isHost}
                 onSendGift={handleGiftSent}
                 onSendTip={handleTipSent}
+                ticketHolders={ticketHolders}
                 className="h-full"
               />
             </motion.div>

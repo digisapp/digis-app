@@ -23,14 +23,15 @@ import Tooltip from './ui/Tooltip';
 import toast from 'react-hot-toast';
 import socketService from '../services/socketServiceWrapper';
 
-const LiveChatEnhanced = ({ 
-  user, 
-  channel, 
-  isCreator = false, 
+const LiveChatEnhanced = ({
+  user,
+  channel,
+  isCreator = false,
   isHost = false,
   onSendGift,
   onSendTip,
-  className = '' 
+  ticketHolders = [], // Array of user IDs with tickets
+  className = ''
 }) => {
   const { animations } = useTheme();
   const [messages, setMessages] = useState([]);
@@ -618,13 +619,23 @@ const LiveChatEnhanced = ({
               : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
           }`}>
             {!isOwnMessage && (
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="font-semibold text-sm">{message.userName}</span>
                 {message.userRole === 'creator' && (
-                  <span className="px-2 py-0.5 bg-yellow-500 text-black text-xs rounded-full">Creator</span>
+                  <span className="px-2 py-0.5 bg-yellow-500 text-black text-xs rounded-full font-bold">Creator</span>
                 )}
                 {message.userRole === 'host' && (
-                  <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">Host</span>
+                  <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full font-bold">Host</span>
+                )}
+                {/* Ticket Holder VIP Badge */}
+                {ticketHolders.includes(message.userId || message.from) && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1"
+                  >
+                    🎫 VIP
+                  </motion.span>
                 )}
               </div>
             )}
