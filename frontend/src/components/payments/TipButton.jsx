@@ -1,14 +1,14 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Coins, X, Send } from 'lucide-react';
-import { AppContext } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import BuyTokensSheet from './BuyTokensSheet';
 
 const QUICK_TIP_AMOUNTS = [10, 25, 50, 100, 250, 500];
 
 const TipButton = ({ toCreatorId, context = {}, onTipped, className = '' }) => {
-  const { user, setUser } = useContext(AppContext);
+  const { currentUser, tokenBalance, updateTokenBalance } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const [message, setMessage] = useState('');
@@ -17,7 +17,7 @@ const TipButton = ({ toCreatorId, context = {}, onTipped, className = '' }) => {
   const [success, setSuccess] = useState(false);
   const [showBuyTokens, setShowBuyTokens] = useState(false);
 
-  const userBalance = user?.tokenBalance || 0;
+  const userBalance = tokenBalance || 0;
 
   const handleTip = async (amount) => {
     if (!amount || amount <= 0) {
@@ -43,11 +43,8 @@ const TipButton = ({ toCreatorId, context = {}, onTipped, className = '' }) => {
       });
 
       // Update user balance
-      if (setUser && response.data.new_balance !== undefined) {
-        setUser(prev => ({
-          ...prev,
-          tokenBalance: response.data.new_balance
-        }));
+      if (response.data.new_balance !== undefined) {
+        updateTokenBalance(response.data.new_balance);
       }
 
       // Show success animation
