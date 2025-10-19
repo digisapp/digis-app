@@ -202,18 +202,18 @@ router.post('/send', authenticateToken, validateMessage, handleValidationErrors,
 
       // Get recipient's rates if they're a creator
       const ratesQuery = `
-        SELECT 
+        SELECT
           is_creator,
           text_message_price,
           image_message_price,
           audio_message_price,
           video_message_price
-        FROM users 
+        FROM users
         WHERE supabase_id = $1
       `;
-      
+
       const ratesResult = await client.query(ratesQuery, [recipientId]);
-      
+
       let cost = 0;
       if (ratesResult.rows.length > 0 && ratesResult.rows[0].is_creator) {
         const rates = ratesResult.rows[0];

@@ -218,6 +218,7 @@ try {
   const questionRoutes = require('../routes/questions');
   const messageRoutes = require('../routes/messages');
   const chatRoutes = require('../routes/chat');
+  const ppvMessagesRoutes = require('../routes/ppv-messages');
   const notificationRoutes = require('../routes/notifications');
   const privacyRoutes = require('../routes/privacy');
   const webhookRoutes = require('../routes/webhook');
@@ -346,6 +347,7 @@ try {
   app.use('/api/questions', rateLimiters.api || ((req, res, next) => next()), questionRoutes);
   app.use('/api/messages', rateLimiters.api || ((req, res, next) => next()), messageRoutes);
   app.use('/api/chat', rateLimiters.streaming || ((req, res, next) => next()), chatRoutes);
+  app.use('/api/ppv-messages', rateLimiters.api || ((req, res, next) => next()), ppvMessagesRoutes);
   app.use('/api/notifications', rateLimiters.api || ((req, res, next) => next()), notificationRoutes);
   app.use('/api/badges', rateLimiters.api || ((req, res, next) => next()), require('../routes/badges'));
   app.use('/api/loyalty', rateLimiters.api || ((req, res, next) => next()), require('../routes/loyalty'));
