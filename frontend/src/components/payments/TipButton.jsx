@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Coins, X, Send } from 'lucide-react';
-import { AppContext } from '../../context/AppContext';
+import { AppContext } from '../../contexts/AppContext';
 import api from '../../services/api';
 import BuyTokensSheet from './BuyTokensSheet';
 
