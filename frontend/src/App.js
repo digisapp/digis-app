@@ -177,7 +177,8 @@ const App = () => {
     fetchTokenBalance: authFetchTokenBalance,
     updateTokenBalance: authUpdateTokenBalance,
     setUser: authSetUser,
-    setProfile: authSetProfile
+    setProfile: authSetProfile,
+    error: authError  // Extract error from AuthContext
   } = useAuth();
 
   const navigate = useNavigate();
@@ -1054,11 +1055,11 @@ const App = () => {
 
       {/* Old header removed - Navigation component handles this now */}
 
-      {/* Error Display */}
-      {error && (
+      {/* Error Display - show both local and AuthContext errors */}
+      {(error || authError) && (
         <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
           <div className="text-red-700 dark:text-red-400">
-            <strong>⚠️ Error:</strong> {error}
+            <strong>⚠️ Error:</strong> {error || authError}
           </div>
           <button
             onClick={clearError}

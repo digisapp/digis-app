@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import HybridCreatorDashboard from '../HybridCreatorDashboard';
 import MobileCreatorDashboard from '../mobile/MobileCreatorDashboard';
 import MobileFanDashboard from '../mobile/MobileFanDashboard';
+import EnhancedAdminDashboard from '../EnhancedAdminDashboard';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { BREAKPOINTS } from '../../constants/breakpoints';
 
@@ -10,6 +11,7 @@ import { BREAKPOINTS } from '../../constants/breakpoints';
  * DashboardRouter - Smart routing component for user dashboards
  *
  * Routes users to appropriate dashboard based on role:
+ * - Admins → EnhancedAdminDashboard
  * - Creators (Desktop) → HybridCreatorDashboard
  * - Creators (Mobile) → MobileCreatorDashboard
  * - Fans → Redirects to /explore
@@ -41,8 +43,15 @@ const DashboardRouter = ({
   const isMobile = useMediaQuery(BREAKPOINTS.MOBILE_QUERY);
 
   // Debug logging
-  console.log('🔀 DashboardRouter - isCreator:', isCreator, 'roleResolved:', roleResolved, 'user:', user?.email, 'isMobile:', isMobile);
+  console.log('🔀 DashboardRouter - isAdmin:', isAdmin, 'isCreator:', isCreator, 'roleResolved:', roleResolved, 'user:', user?.email, 'isMobile:', isMobile);
 
+  // Priority 1: Admin users get admin dashboard
+  if (isAdmin) {
+    console.log('👑 Admin status confirmed - showing admin dashboard');
+    return <EnhancedAdminDashboard user={user} />;
+  }
+
+  // Priority 2: Creator users get creator dashboard
   // SINGLE SOURCE OF TRUTH: Use isCreator prop from AuthContext only
   // No fallback to user.is_creator, user.role, or localStorage
   if (isCreator) {
