@@ -174,6 +174,15 @@ const ProfileDropdown = ({
     }
   }, [isOpen]);
 
+  // Close dropdown when navigating to a new page
+  useEffect(() => {
+    // Automatically close the dropdown when currentPath changes
+    if (isOpen) {
+      console.log('[ProfileDropdown] Path changed, auto-closing dropdown');
+      setIsOpen(false);
+    }
+  }, [currentPath]);
+
   const navigationItems = [
     // Main Navigation - For All Users
     {
