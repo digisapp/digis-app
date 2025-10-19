@@ -485,6 +485,109 @@ router.put('/invites/:inviteId', authenticateToken, async (req, res) => {
   }
 });
 
+// Accept invite (creator accepting fan's request)
+router.post('/invites/:inviteId/accept', authenticateToken, async (req, res) => {
+  const { inviteId } = req.params;
+  const creatorId = req.user.supabase_id;
+
+  try {
+    // Get invite details
+    const inviteResult = await db.query(
+      'SELECT * FROM session_invites WHERE id = $1 AND creator_id = $2 AND status = $3',
+      [inviteId, creatorId, 'pending']
+    );
+
+    if (inviteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Invite not found or already processed' });
+    }
+
+    const invite = inviteResult.rows[0];
+
+    // Update invite status
+    await db.query(
+      `UPDATE session_invites
+       SET status = $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      ['accepted', inviteId]
+    );
+
+    // Send notification to fan
+    await sendNotification(invite.fan_id, {
+      type: 'session_invite_accepted',
+      title: 'Call Request Accepted!',
+      message: `${req.user.username} accepted your call request`,
+      data: {
+        inviteId,
+        creatorId,
+        creatorUsername: req.user.username
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Invite accepted successfully'
+    });
+
+  } catch (error) {
+    logger.error('Error accepting invite:', error);
+    res.status(500).json({ error: 'Failed to accept invite' });
+  }
+});
+
+// Decline invite (creator declining fan's request)
+router.post('/invites/:inviteId/decline', authenticateToken, async (req, res) => {
+  const { inviteId } = req.params;
+  const creatorId = req.user.supabase_id;
+  const { reason } = req.body;
+
+  try {
+    // Get invite details
+    const inviteResult = await db.query(
+      'SELECT * FROM session_invites WHERE id = $1 AND creator_id = $2 AND status = $3',
+      [inviteId, creatorId, 'pending']
+    );
+
+    if (inviteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Invite not found or already processed' });
+    }
+
+    const invite = inviteResult.rows[0];
+
+    // Update invite status
+    await db.query(
+      `UPDATE session_invites
+       SET status = $1,
+           updated_at = NOW(),
+           decline_reason = $2
+       WHERE id = $3`,
+      ['declined', reason || null, inviteId]
+    );
+
+    // Send notification to fan
+    await sendNotification(invite.fan_id, {
+      type: 'session_invite_declined',
+      title: 'Call Request Declined',
+      message: `${req.user.username} declined your call request${reason ? `: ${reason}` : ''}`,
+      data: {
+        inviteId,
+        creatorId,
+        creatorUsername: req.user.username,
+        reason
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Invite declined successfully'
+    });
+
+  } catch (error) {
+    logger.error('Error declining invite:', error);
+    res.status(500).json({ error: 'Failed to decline invite' });
+  }
+});
+
 // Get user's schedule (both as creator and fan)
 router.get('/schedule', authenticateToken, async (req, res) => {
   const userId = req.user.supabase_id;

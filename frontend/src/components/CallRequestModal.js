@@ -68,36 +68,65 @@ const CallRequestModal = ({
       const token = await getAuthToken();
       if (!token) {
         customToast.error('Authentication required');
+        setSending(false);
         return;
       }
 
-      // API call would go here
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Send call request/invite to creator
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/sessions/create-invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fan_id: creatorData.id || creatorData.supabase_id,
+          creator_username: creatorData.username,
+          type: requestType, // 'video' or 'voice'
+          duration_minutes: duration,
+          rate_per_min: requestType === 'video'
+            ? (creatorData.video_price || 8)
+            : (creatorData.voice_price || 6),
+          scheduled_date: preferredDate,
+          scheduled_time: preferredTime,
+          message: message || `${requestType === 'video' ? 'Video' : 'Voice'} call request`,
+          scheduled: true
+        })
+      });
 
-      customToast.success(
-        `${requestType === 'video' ? 'Video' : 'Voice'} call request sent to ${creatorData.displayName}!`,
-        { icon: '📤' }
-      );
+      if (response.ok) {
+        const data = await response.json();
 
-      if (onRequestSent) {
-        onRequestSent({
-          type: requestType,
-          creator: creatorData,
-          preferredDate,
-          preferredTime,
-          alternateDate,
-          alternateTime,
-          duration,
-          message,
-          urgency,
-          cost: calculateCost()
-        });
+        customToast.success(
+          `${requestType === 'video' ? 'Video' : 'Voice'} call request sent to ${creatorData.displayName}!`,
+          { icon: '📤' }
+        );
+
+        if (onRequestSent) {
+          onRequestSent({
+            type: requestType,
+            creator: creatorData,
+            preferredDate,
+            preferredTime,
+            alternateDate,
+            alternateTime,
+            duration,
+            message,
+            urgency,
+            cost: calculateCost(),
+            inviteId: data.invite?.id
+          });
+        }
+
+        onClose();
+        resetForm();
+      } else {
+        const error = await response.json();
+        customToast.error(error.error || 'Failed to send request');
       }
-
-      onClose();
-      resetForm();
     } catch (error) {
-      customToast.error('Failed to send request');
+      console.error('Error sending call request:', error);
+      customToast.error('Failed to send request. Please try again.');
     } finally {
       setSending(false);
     }
