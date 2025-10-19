@@ -134,16 +134,24 @@ async function buildLimiters() {
     // Login attempts (strict)
     login: await createLimiter({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 10, // 10 login attempts per 15 minutes
+      max: process.env.NODE_ENV === 'production' ? 10 : 1000, // 10 in prod, 1000 in dev
       message: 'Too many login attempts. Please try again later.',
-      skipSuccessfulRequests: true // Don't count successful logins
+      skipSuccessfulRequests: true, // Don't count successful logins
+      // Skip in development
+      skip: (req) => {
+        return process.env.NODE_ENV !== 'production' || process.env.NODE_ENV === 'development';
+      }
     }),
 
     // Registration (moderate)
     register: await createLimiter({
       windowMs: 60 * 60 * 1000, // 1 hour
-      max: 10, // 10 registration attempts per hour
-      message: 'Too many registration attempts. Please try again later.'
+      max: process.env.NODE_ENV === 'production' ? 10 : 1000, // 10 in prod, 1000 in dev
+      message: 'Too many registration attempts. Please try again later.',
+      // Skip in development
+      skip: (req) => {
+        return process.env.NODE_ENV !== 'production' || process.env.NODE_ENV === 'development';
+      }
     }),
 
     // Token verification (lenient - used frequently)
