@@ -167,7 +167,6 @@ const ExplorePage = ({
     { id: 'Meditation', label: 'Meditation', icon: () => <span>🧘</span> },
     { id: 'ASMR', label: 'ASMR', icon: () => <span>🎧</span> },
     { id: 'Wellness', label: 'Wellness', icon: () => <span>🌿</span> },
-    { id: 'comedy', label: 'Comedy', icon: () => <span>😂</span> },
     { id: 'other', label: 'Other', icon: () => <span>🌟</span> }
   ];
   

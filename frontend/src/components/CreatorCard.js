@@ -358,7 +358,7 @@ const CreatorCard = ({
   }
 
   if (!isVisible && isLazyLoaded) {
-    return <div ref={cardRef} className="animate-pulse bg-gray-200 rounded-2xl" style={{ paddingBottom: getAspectRatioPadding() }} />;
+    return <div ref={cardRef} className="animate-pulse bg-gray-200 rounded-[2rem]" style={{ paddingBottom: getAspectRatioPadding() }} />;
   }
 
   return (
@@ -392,7 +392,7 @@ const CreatorCard = ({
         }
       }}
       className={`
-        relative cursor-pointer overflow-hidden rounded-2xl bg-white
+        relative cursor-pointer overflow-hidden rounded-[2rem] bg-white
         shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all will-change-transform
         hover:shadow-[0_20px_40px_rgba(0,0,0,0.15)]
         focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2
@@ -491,7 +491,7 @@ const CreatorCard = ({
         ) : null}
 
         {/* Glass Morphism Bottom Card - Better Hierarchy */}
-        <div className="absolute inset-x-3 bottom-3 rounded-xl border border-white/10
+        <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10
                       bg-black/40 backdrop-blur-xl p-3 z-20">
           {/* Two-line name lockup */}
           <div className="mb-2">
@@ -524,7 +524,7 @@ const CreatorCard = ({
               disabled={disabled}
               aria-label="Start video call"
               title="Video Call"
-              className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
+              className="min-h-[44px] rounded-2xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
                        disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
@@ -542,7 +542,7 @@ const CreatorCard = ({
               disabled={disabled}
               aria-label="Send message"
               title="Message"
-              className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
+              className="min-h-[44px] rounded-2xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
                        disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
@@ -560,7 +560,7 @@ const CreatorCard = ({
               disabled={disabled}
               aria-label="Send gift"
               title="Send Gift"
-              className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
+              className="min-h-[44px] rounded-2xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
                        disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
@@ -688,7 +688,7 @@ const CreatorCard = ({
         ) : null}
 
         {/* Glass Morphism Bottom Card - Better Hierarchy */}
-        <div className="absolute inset-x-3 bottom-3 rounded-xl border border-white/10
+        <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10
                       bg-black/40 backdrop-blur-xl p-3 z-20">
           {/* Two-line name lockup */}
           <div className="mb-2">
@@ -721,7 +721,7 @@ const CreatorCard = ({
               disabled={disabled}
               aria-label="Start video call"
               title="Video Call"
-              className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
+              className="min-h-[44px] rounded-2xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
                        disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
@@ -739,7 +739,7 @@ const CreatorCard = ({
               disabled={disabled}
               aria-label="Send message"
               title="Message"
-              className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
+              className="min-h-[44px] rounded-2xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
                        disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
@@ -757,7 +757,7 @@ const CreatorCard = ({
               disabled={disabled}
               aria-label="Send gift"
               title="Send Gift"
-              className="min-h-[44px] rounded-xl border border-white/20 bg-white/20 backdrop-blur-md
+              className="min-h-[44px] rounded-2xl border border-white/20 bg-white/20 backdrop-blur-md
                        p-2.5 transition-all hover:bg-white/30 hover:scale-105 active:scale-95
                        disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
                        focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
