@@ -2,13 +2,13 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handleAuthCallback } from '../utils/supabase-auth';
 import api from '../services/api-hybrid';
-import { AppContext } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const AuthCallback = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { setUser, setIsAuthenticated } = React.useContext(AppContext);
+  const { setUser, setProfile } = useAuth();
 
   const handleCallback = useCallback(async () => {
     try {
@@ -32,9 +32,9 @@ const AuthCallback = () => {
 
       const userData = response.data.user;
 
-      // Update app context
-      setUser(userData);
-      setIsAuthenticated(true);
+      // Update app context (isAuthenticated is computed automatically from user state)
+      setUser(session.user);
+      setProfile(userData);
 
       // Store auth info
       localStorage.setItem('isAuthenticated', 'true');
@@ -59,7 +59,7 @@ const AuthCallback = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate, setUser, setIsAuthenticated]);
+  }, [navigate, setUser, setProfile]);
 
   useEffect(() => {
     handleCallback();
