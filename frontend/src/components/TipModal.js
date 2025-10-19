@@ -185,7 +185,7 @@ const TipModal = ({
                       height={32}
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/profile/${creator.username}`);
+                        navigate(`/${creator.username}`);
                         onClose();
                       }}
                     />

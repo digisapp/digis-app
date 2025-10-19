@@ -88,8 +88,8 @@ const EnhancedCreatorCard = ({
     if (isDashboard && onEditProfile) {
       onEditProfile('profile');
     } else if (!isDashboard) {
-      // Navigate to creator's profile page
-      navigate(`/profile/${creator.username}`);
+      // Navigate to creator's profile page using vanity URL
+      navigate(`/${creator.username}`);
     }
   };
 

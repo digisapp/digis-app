@@ -269,8 +269,8 @@ const MobileExplore = ({ user, onNavigate, onCreatorSelect }) => {
     if ('vibrate' in navigator) {
       navigator.vibrate(10);
     }
-    // Navigate to creator's public profile page using react-router
-    navigate(`/profile/${creator.username}`);
+    // Navigate to creator's public profile page using vanity URL
+    navigate(`/${creator.username}`);
   };
 
   // Pull to refresh handler

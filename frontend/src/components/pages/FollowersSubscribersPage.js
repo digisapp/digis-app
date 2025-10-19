@@ -156,7 +156,7 @@ const FollowersSubscribersPage = ({ user, isCreator, initialTab }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-200 cursor-pointer"
-      onClick={() => navigate(`/profile/${userData.username}`)}
+      onClick={() => navigate(`/${userData.username}`)}
     >
       <div className="flex items-center gap-3">
         <div className="relative">

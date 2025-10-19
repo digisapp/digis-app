@@ -108,11 +108,11 @@ const MessageArea = ({
   const handleProfileClick = useCallback((userId, username, isCreator) => {
     if (!userId && !username) return;
     
-    // Navigate to appropriate profile page
-    if (isCreator) {
-      navigate(`/${username || userId}`);
+    // Navigate to user's profile page using vanity URL
+    if (username) {
+      navigate(`/${username}`);
     } else {
-      navigate(`/profile/${username || userId}`);
+      console.warn('Cannot navigate to profile: username not available');
     }
   }, [navigate]);
   

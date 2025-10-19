@@ -37,10 +37,12 @@ const MessageItem = ({
     const sender = message.sender || message.sender_details;
     if (sender) {
       // Navigate to appropriate profile page
-      if (sender.is_creator || message.sender_is_creator) {
-        navigate(`/${sender.username || sender.id || message.sender_id}`);
+      // Navigate to sender's profile using vanity URL
+      const username = sender.username;
+      if (username) {
+        navigate(`/${username}`);
       } else {
-        navigate(`/profile/${sender.username || sender.id || message.sender_id}`);
+        console.warn('Cannot navigate to profile: username not available');
       }
     }
   };

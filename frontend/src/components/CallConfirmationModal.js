@@ -227,7 +227,7 @@ const CallConfirmationModal = ({
                       className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-500/30 cursor-pointer hover:ring-4 hover:ring-purple-500/50 transition-all"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/profile/${creator.username}`);
+                        navigate(`/${creator.username}`);
                         onClose();
                       }}
                     />

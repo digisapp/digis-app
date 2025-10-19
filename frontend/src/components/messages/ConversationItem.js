@@ -32,10 +32,11 @@ const ConversationItem = ({
     const participant = conversation.participant;
     if (participant) {
       // Navigate to appropriate profile page
-      if (participant.is_creator || participant.isCreator) {
-        navigate(`/${participant.username || participant.id}`);
+      // Navigate to participant's profile using vanity URL
+      if (participant.username) {
+        navigate(`/${participant.username}`);
       } else {
-        navigate(`/profile/${participant.username || participant.id}`);
+        console.warn('Cannot navigate to profile: username not available');
       }
     }
   };
