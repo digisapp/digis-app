@@ -12,14 +12,26 @@ const logger = sharedLogger;
 router.get('/enrolled', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.supabase_id;
-    
-    const result = await pool.query(
-      'SELECT class_id FROM class_enrollments WHERE user_id = $1',
+
+    // Get user's numeric ID from supabase_id
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
       [userId]
     );
-    
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
+    const result = await pool.query(
+      'SELECT class_id FROM class_participants WHERE user_id = $1',
+      [userDbId]
+    );
+
     const enrolledClassIds = result.rows.map(row => row.class_id);
-    
+
     res.json({ enrolledClassIds });
     logger.info(`Fetched enrolled classes for user ${userId}`, { count: enrolledClassIds.length });
     
@@ -35,7 +47,7 @@ router.get('/', async (req, res) => {
     const { startDate, endDate, category, search, creatorId } = req.query;
     
     let query = `
-      SELECT 
+      SELECT
         c.*,
         u.username as creator_username,
         u.display_name as creator_display_name,
@@ -43,12 +55,12 @@ router.get('/', async (req, res) => {
         u.total_earnings,
         COALESCE(AVG(cr.rating), 0) as creator_rating,
         COUNT(DISTINCT cr.id) as review_count,
-        COUNT(DISTINCT ce.user_id) as current_participants
+        COUNT(DISTINCT cp.user_id) as current_participants
       FROM classes c
       JOIN users u ON c.creator_id = u.id
       LEFT JOIN class_reviews cr ON c.creator_id = cr.creator_id
-      LEFT JOIN class_enrollments ce ON c.id = ce.class_id
-      WHERE c.created_at >= $1 AND c.created_at <= $2
+      LEFT JOIN class_participants cp ON c.id = cp.class_id
+      WHERE c.start_time >= $1 AND c.start_time <= $2
     `;
     
     const params = [startDate || new Date().toISOString(), endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()];
@@ -72,7 +84,7 @@ router.get('/', async (req, res) => {
     
     query += `
       GROUP BY c.id, u.username, u.display_name, u.profile_pic_url, u.total_earnings
-      ORDER BY c.created_at ASC
+      ORDER BY c.start_time ASC
     `;
     
     const result = await pool.query(query, params);
@@ -435,13 +447,24 @@ router.get('/:classId/participants', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.supabase_id;
     const { classId } = req.params;
-    
+
+    // Get user's numeric ID
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
     // Verify user is the creator of this class
     const classResult = await pool.query(`
       SELECT c.* FROM classes c
-      JOIN users u ON c.creator_id = u.id
-      WHERE c.id = $1 AND u.id = $2
-    `, [classId, userId]);
+      WHERE c.id = $1 AND c.creator_id = $2
+    `, [classId, userDbId]);
     
     if (!classResult.rows[0]) {
       return res.status(403).json({ error: 'Access denied' });
@@ -478,13 +501,24 @@ router.put('/:classId', authenticateToken, async (req, res) => {
       tokenPrice,
       tags
     } = req.body;
-    
+
+    // Get user's numeric ID
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
     // Verify user is the creator of this class
     const classResult = await pool.query(`
       SELECT c.* FROM classes c
-      JOIN users u ON c.creator_id = u.id
-      WHERE c.id = $1 AND u.id = $2
-    `, [classId, userId]);
+      WHERE c.id = $1 AND c.creator_id = $2
+    `, [classId, userDbId]);
     
     if (!classResult.rows[0]) {
       return res.status(403).json({ error: 'Access denied' });
@@ -532,19 +566,31 @@ router.put('/:classId', authenticateToken, async (req, res) => {
 // Delete class (creators only)
 router.delete('/:classId', authenticateToken, async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const userId = req.user.supabase_id;
     const { classId } = req.params;
-    
+
+    // Get user's numeric ID
+    const userResult = await client.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
     // Verify user is the creator of this class
     const classResult = await client.query(`
       SELECT c.* FROM classes c
-      JOIN users u ON c.creator_id = u.id
-      WHERE c.id = $1 AND u.id = $2
-    `, [classId, userId]);
+      WHERE c.id = $1 AND c.creator_id = $2
+    `, [classId, userDbId]);
     
     if (!classResult.rows[0]) {
       await client.query('ROLLBACK');
@@ -690,20 +736,32 @@ router.get('/:classId/reviews', async (req, res) => {
 router.get('/enrolled/:userId', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
+    // Get user's numeric ID from supabase_id
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
     const enrolledClasses = await pool.query(`
-      SELECT 
+      SELECT
         c.*,
         u.username as creator_name,
         u.profile_pic_url as creator_avatar,
-        ce.created_at as enrolled_at,
-        ce.status as enrollment_status
-      FROM class_enrollments ce
-      JOIN classes c ON ce.class_id = c.id
+        cp.joined_at as enrolled_at,
+        cp.status as enrollment_status
+      FROM class_participants cp
+      JOIN classes c ON cp.class_id = c.id
       JOIN users u ON c.creator_id = u.id
-      WHERE ce.user_id = $1
-      ORDER BY c.created_at ASC
-    `, [userId]);
+      WHERE cp.user_id = $1
+      ORDER BY c.start_time ASC
+    `, [userDbId]);
     
     res.json({ 
       success: true,
@@ -720,17 +778,29 @@ router.get('/enrolled/:userId', authenticateToken, async (req, res) => {
 router.get('/hosting/:creatorId', authenticateToken, async (req, res) => {
   try {
     const { creatorId } = req.params;
-    
+
+    // Get creator's numeric ID from supabase_id
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [creatorId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'Creator not found' });
+    }
+
+    const creatorDbId = userResult.rows[0].id;
+
     const hostedClasses = await pool.query(`
-      SELECT 
+      SELECT
         c.*,
-        COUNT(ce.id) as enrolled_count
+        COUNT(cp.id) as enrolled_count
       FROM classes c
-      LEFT JOIN class_enrollments ce ON c.id = ce.class_id
+      LEFT JOIN class_participants cp ON c.id = cp.class_id
       WHERE c.creator_id = $1
       GROUP BY c.id
-      ORDER BY c.created_at ASC
-    `, [creatorId]);
+      ORDER BY c.start_time ASC
+    `, [creatorDbId]);
     
     res.json({ 
       success: true,
