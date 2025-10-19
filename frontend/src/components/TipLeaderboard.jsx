@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrophyIcon, SparklesIcon, FireIcon, CrownIcon } from '@heroicons/react/24/solid';
+import { TrophyIcon, SparklesIcon, FireIcon } from '@heroicons/react/24/solid';
+import { Crown } from 'lucide-react';
 import { getAuthToken } from '../utils/auth-helpers';
 
 const TipLeaderboard = ({
@@ -200,7 +201,7 @@ const TipLeaderboard = ({
                       animate={{ rotate: [0, 15, -15, 0] }}
                       transition={{ duration: 2, repeat: Infinity }}
                     >
-                      <CrownIcon className="w-4 h-4 text-yellow-400" />
+                      <Crown className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                     </motion.div>
                   )}
                 </div>
