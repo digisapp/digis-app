@@ -1,6 +1,6 @@
 // src/index.js
-// Import console override first to suppress all console outputs in production
-import './utils/console-override.js';
+// TEMPORARILY DISABLED: Import console override first to suppress all console outputs in production
+// import './utils/console-override.js';
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';

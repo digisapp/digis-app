@@ -178,8 +178,22 @@ const App = () => {
     updateTokenBalance: authUpdateTokenBalance,
     setUser: authSetUser,
     setProfile: authSetProfile,
+    setAuthLoading: authSetAuthLoading,
     error: authError  // Extract error from AuthContext
   } = useAuth();
+
+  // SAFETY: Hard timeout to prevent infinite loading screen
+  useEffect(() => {
+    const MAX_LOADING_TIME = 30000; // 30 seconds max
+    const timeoutId = setTimeout(() => {
+      if (authLoading) {
+        console.error('🚨 HARD TIMEOUT: Auth loading took >30s, forcing load complete');
+        authSetAuthLoading(false);
+      }
+    }, MAX_LOADING_TIME);
+
+    return () => clearTimeout(timeoutId);
+  }, [authLoading, authSetAuthLoading]);
 
   const navigate = useNavigate();
   const location = useLocation();
