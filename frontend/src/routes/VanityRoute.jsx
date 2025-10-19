@@ -28,8 +28,7 @@ const RESERVED_HANDLES = new Set([
   'posts', 'feed', 'stream', 'streams', 'photo', 'photos', 'gallery', 'media', 'content',
   'privacy', 'terms', 'tos', 'legal', 'dmca', 'copyright', 'help', 'support',
   'faq', 'about', 'contact', 'press', 'blog', 'news',
-  // 'admin' removed - can be used as username
-  'staff', 'moderator', 'mod', 'internal', 'system', 'api',
+  'admin', 'staff', 'moderator', 'mod', 'internal', 'system', 'api',
   'webhook', 'webhooks', 'cron', 'uploads', 'static', 'assets', 'public',
   'cdn', 'img', 'images', 'js', 'css', 'fonts', 'favicon.ico', 'robots.txt',
   'sitemap.xml', 'manifest.json', '.well-known', 'tv', 'premium', 'vip',
