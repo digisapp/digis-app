@@ -8,6 +8,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { initSentry } from './utils/sentry';
 import { initializeTheme } from './utils/theme-init';
 import { initServiceWorkerHotfix } from './utils/runtime-sw-hotfix';
+import { autoCleanupStaleServiceWorkers } from './utils/clearServiceWorker';
 import './index.css';
 import './styles/utilities.css';
 import './styles/enhanced-landing.css';
@@ -15,10 +16,13 @@ import './styles/mobile-enhancements.css';
 import './styles/mobile-experience-enhanced.css';
 import './styles/mobile-viewport-fix.css';
 import App from './App';
-import ErrorBoundary from './components/ui/ErrorBoundary';
+import AppShell from './components/AppShell';
 
 // Initialize Service Worker hotfix FIRST to clear stale caches
 initServiceWorkerHotfix();
+
+// Auto-cleanup any stale service workers (prevents chunk 404 errors)
+autoCleanupStaleServiceWorkers();
 
 // Initialize Sentry for error tracking
 initSentry();
@@ -52,13 +56,13 @@ if (!rootElement) {
 // Creating React root
 const root = ReactDOM.createRoot(rootElement);
 
-// Rendering app
+// Rendering app with AppShell (fail-safe error + loading handling)
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-      <ErrorBoundary>
+      <AppShell>
         <App />
-      </ErrorBoundary>
+      </AppShell>
     </BrowserRouter>
   </React.StrictMode>
 );

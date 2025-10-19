@@ -11,18 +11,18 @@ import useRouteObservability from '../hooks/useRouteMonitoring';
 import { defaultPathFor, isRoleReady } from '../utils/routeHelpers';
 import toast from 'react-hot-toast';
 
-// Critical imports - NOT lazy loaded for immediate access
+// Critical imports - NOT lazy loaded for immediate access (prevents Suspense hang)
 import AdminLoginPage from '../components/pages/AdminLoginPage';
 import PublicOrRedirectAdmin from './guards/PublicOrRedirectAdmin';
 import AdminGuard from './guards/AdminGuard';
+import HomePage from '../components/HomePage';
+import ExplorePage from '../components/pages/ExplorePage';
+import DashboardRouter from '../components/pages/DashboardRouter';
 
 /**
  * Lazy-loaded pages - moved from App.js
  * Route files own their imports, not App.js
  */
-const HomePage = lazy(() => import('../components/HomePage'));
-const ExplorePage = lazy(() => import('../components/pages/ExplorePage'));
-const DashboardRouter = lazy(() => import('../components/pages/DashboardRouter'));
 const MessagesPage = lazy(() => import('../components/pages/MessagesPage'));
 const WalletPage = lazy(() => import('../components/pages/WalletPage'));
 const CallRequestsPage = lazy(() => import('../components/pages/CallRequestsPage'));
