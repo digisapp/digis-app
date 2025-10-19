@@ -91,7 +91,6 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
   const [recentlyWatched, setRecentlyWatched] = useState([]);
   const [trendingStreams, setTrendingStreams] = useState([]);
   const [savedFilters, setSavedFilters] = useState(null);
-  const [featuredCreators, setFeaturedCreators] = useState([]);
   const [viewerCounts, setViewerCounts] = useState({});
   const [upcomingStreams, setUpcomingStreams] = useState([]);
   const [replays, setReplays] = useState([]);
@@ -144,13 +143,12 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
     fetchReplays();
     loadSavedPreferences();
     loadRecentlyWatched();
-    fetchFeaturedCreators();
-    
+
     // Set up real-time viewer count updates
     const interval = setInterval(() => {
       updateViewerCounts();
     }, 10000); // Update every 10 seconds
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -333,21 +331,6 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
     } else {
       const error = await response.json();
       throw new Error(error.error || 'Failed to subscribe');
-    }
-  };
-
-  const fetchFeaturedCreators = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/public/creators/featured`);
-      if (response.ok) {
-        const data = await response.json();
-        setFeaturedCreators(data.creators || []);
-      } else {
-        setFeaturedCreators([]);
-      }
-    } catch (error) {
-      console.error('Error fetching featured creators:', error);
-      setFeaturedCreators([]);
     }
   };
 

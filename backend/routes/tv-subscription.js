@@ -137,7 +137,7 @@ router.post('/start-trial', authenticateToken, async (req, res) => {
     const subscriptionResult = await client.query(insertQuery, [userId, endDate]);
 
     // Mark trial as used
-    await client.query('UPDATE users SET tv_trial_used = true WHERE id = $1', [userId]);
+    await client.query('UPDATE users SET tv_trial_used = true WHERE supabase_id = $1', [userId]);
 
     await client.query('COMMIT');
 
