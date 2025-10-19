@@ -405,7 +405,7 @@ const HybridCreatorDashboard = memo(({
               headers: { Authorization: `Bearer ${authToken}` }
             }
           );
-          
+
           if (itemsResponse.ok) {
             const itemsData = await itemsResponse.json();
             const products = (itemsData.items || []).map(item => ({
@@ -428,27 +428,39 @@ const HybridCreatorDashboard = memo(({
               headers: { Authorization: `Bearer ${authToken}` }
             }
           );
-          
+
           if (analyticsResponse.ok) {
             const analyticsData = await analyticsResponse.json();
             setShopStats(analyticsData.analytics || {});
           }
         } catch (error) {
+          // Silently handle 404 - endpoint not implemented yet
+          if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
+            setShopProducts([]);
+            return;
+          }
           console.error('Failed to fetch shop data:', error);
         }
       }, 100); // Small delay to let critical content load first
       
       // Fetch subscription tiers
-      const tiersResponse = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/subscription-tiers/creator/${user?.id}`,
-        {
-          headers: { Authorization: `Bearer ${authToken}` }
+      try {
+        const tiersResponse = await fetchWithRetry(
+          `${import.meta.env.VITE_BACKEND_URL}/subscription-tiers/creator/${user?.id}`,
+          {
+            headers: { Authorization: `Bearer ${authToken}` }
+          }
+        );
+
+        if (tiersResponse.ok) {
+          const tiersData = await tiersResponse.json();
+          setSubscriptionTiers(tiersData.tiers || []);
         }
-      );
-      
-      if (tiersResponse.ok) {
-        const tiersData = await tiersResponse.json();
-        setSubscriptionTiers(tiersData.tiers || []);
+      } catch (tiersError) {
+        // Silently handle 404 - endpoint not implemented yet
+        if (tiersError.message?.includes('404') || tiersError.message?.includes('NOT_FOUND')) {
+          setSubscriptionTiers([]);
+        }
       }
       
       // Fetch content (photos, videos, audios)
@@ -526,12 +538,17 @@ const HybridCreatorDashboard = memo(({
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         setOffers(data.offers || []);
       }
     } catch (error) {
+      // Silently handle 404 - endpoint not implemented yet
+      if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
+        setOffers([]);
+        return;
+      }
       console.error('Error fetching offers:', error);
     }
   };
@@ -631,10 +648,10 @@ const HybridCreatorDashboard = memo(({
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
-        
+
         // Set analytics data
         setAnalytics({
           revenue: {
@@ -658,7 +675,7 @@ const HybridCreatorDashboard = memo(({
             trend: data.sessions?.trend || 0
           }
         });
-        
+
         // Set chart data
         setRevenueChartData(data.revenueHistory || []);
         setEngagementData([
@@ -667,7 +684,7 @@ const HybridCreatorDashboard = memo(({
           { name: 'Tips', value: data.engagement?.tips || 0, color: '#10b981' },
           { name: 'Gifts', value: data.engagement?.gifts || 0, color: '#ec4899' }
         ]);
-        
+
         // Set quick stats
         setQuickStats({
           todayEarnings: data.today?.earnings || 0,
@@ -680,6 +697,10 @@ const HybridCreatorDashboard = memo(({
         });
       }
     } catch (error) {
+      // Silently handle 404 - endpoint not implemented yet
+      if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
+        return;
+      }
       console.error('Error fetching analytics:', error);
     }
   };
@@ -693,12 +714,17 @@ const HybridCreatorDashboard = memo(({
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         setTopFans(data.fans || []);
       }
     } catch (error) {
+      // Silently handle 404 - endpoint not implemented yet
+      if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
+        setTopFans([]);
+        return;
+      }
       console.error('Error fetching top fans:', error);
     }
   };
