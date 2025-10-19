@@ -140,7 +140,14 @@ export async function syncAccountOnce(reason = 'manual') {
       }
 
       // 3) Canonical session from backend (single source of truth)
+      console.log(`[AuthSync] Fetching canonical session from /auth/session...`);
       const sessionData = await api.get('/auth/session', { withAuth: true });
+      console.log(`[AuthSync] Session data received:`, {
+        isCreator: sessionData?.session?.isCreator || sessionData?.user?.isCreator,
+        isAdmin: sessionData?.session?.isAdmin || sessionData?.user?.isAdmin,
+        role: sessionData?.session?.role || sessionData?.user?.role,
+        username: sessionData?.session?.user?.username || sessionData?.user?.username
+      });
 
       // Check sequence again - abort if stale
       if (mySequence !== syncSequence) {
@@ -152,15 +159,24 @@ export async function syncAccountOnce(reason = 'manual') {
       const normalized = normalizeSession(sessionData);
 
       if (!normalized) {
+        console.error('[AuthSync] ❌ Failed to normalize session data');
         throw new Error('Invalid session payload');
       }
+
+      console.log(`[AuthSync] ✅ Normalized session:`, {
+        role: normalized.role,
+        isCreator: normalized.isCreator,
+        isAdmin: normalized.isAdmin,
+        username: normalized.user?.username,
+        email: normalized.user?.email
+      });
 
       // 5) Persist role hint to prevent downgrade on transient errors
       persistRoleHint(normalized.role, normalized.user.id);
 
       // Success - reset retry count
       retryCount = 0;
-      console.log(`[AuthSync] Sync #${mySequence} succeeded, role: ${normalized.role}`);
+      console.log(`[AuthSync] ✅ Sync #${mySequence} succeeded, role: ${normalized.role}`);
 
       return normalized;
 

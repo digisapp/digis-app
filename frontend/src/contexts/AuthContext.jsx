@@ -761,6 +761,14 @@ export const AuthProvider = ({ children }) => {
               __isCanonical: true
             };
 
+            console.log('🔵 Setting profile in AuthContext:', {
+              username: profileData.username,
+              email: profileData.email,
+              is_creator: profileData.is_creator,
+              is_admin: profileData.is_admin,
+              role: profileData.role
+            });
+
             setProfile(profileData);
             saveProfileCache(profileData, session);
 
