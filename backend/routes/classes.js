@@ -813,4 +813,438 @@ router.get('/hosting/:creatorId', authenticateToken, async (req, res) => {
   }
 });
 
+// Start a class stream (creates streaming session linked to class)
+router.post('/:classId/start-stream', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { classId } = req.params;
+
+    // Get user's numeric ID
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
+    // Verify user is the creator of this class
+    const classResult = await pool.query(
+      `SELECT c.*, u.username, u.display_name
+       FROM classes c
+       JOIN users u ON c.creator_id = u.id
+       WHERE c.id = $1 AND c.creator_id = $2`,
+      [classId, userDbId]
+    );
+
+    if (!classResult.rows[0]) {
+      return res.status(403).json({ error: 'Only the class creator can start the stream' });
+    }
+
+    const classData = classResult.rows[0];
+
+    // Mark class as live
+    await pool.query(
+      'UPDATE classes SET is_live = true WHERE id = $1',
+      [classId]
+    );
+
+    // Return class data for stream initialization
+    res.json({
+      success: true,
+      class: {
+        id: classData.id,
+        title: classData.title,
+        description: classData.description,
+        category: classData.category,
+        duration: classData.duration_minutes,
+        creatorUsername: classData.username,
+        creatorDisplayName: classData.display_name || classData.username
+      }
+    });
+
+    logger.info(`Class stream started: ${classId}`, { creatorId: userDbId });
+
+  } catch (error) {
+    logger.error('Error starting class stream:', error);
+    res.status(500).json({ error: 'Failed to start class stream' });
+  }
+});
+
+// Mark class as ended
+router.post('/:classId/end-stream', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { classId } = req.params;
+    const { recordingUrl } = req.body;
+
+    // Get user's numeric ID
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
+    // Verify user is the creator
+    const classResult = await pool.query(
+      'SELECT * FROM classes WHERE id = $1 AND creator_id = $2',
+      [classId, userDbId]
+    );
+
+    if (!classResult.rows[0]) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Mark class as not live and save recording URL
+    await pool.query(
+      'UPDATE classes SET is_live = false, recording_url = $1 WHERE id = $2',
+      [recordingUrl, classId]
+    );
+
+    res.json({ success: true });
+    logger.info(`Class stream ended: ${classId}`);
+
+  } catch (error) {
+    logger.error('Error ending class stream:', error);
+    res.status(500).json({ error: 'Failed to end class stream' });
+  }
+});
+
+// Grant replay access to all enrolled participants
+router.post('/:classId/grant-replay-access', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { classId } = req.params;
+    const { recordingId } = req.body;
+
+    // Get user's numeric ID
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
+    // Verify user is the creator
+    const classResult = await pool.query(
+      'SELECT * FROM classes WHERE id = $1 AND creator_id = $2',
+      [classId, userDbId]
+    );
+
+    if (!classResult.rows[0]) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get all enrolled participants
+    const participants = await pool.query(
+      'SELECT user_id FROM class_participants WHERE class_id = $1',
+      [classId]
+    );
+
+    // Grant free access to recording for each participant
+    // This assumes there's a recording_access table
+    for (const participant of participants.rows) {
+      await pool.query(
+        `INSERT INTO recording_access (recording_id, user_id, granted_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (recording_id, user_id) DO NOTHING`,
+        [recordingId, participant.user_id]
+      );
+    }
+
+    res.json({
+      success: true,
+      participantsGranted: participants.rows.length
+    });
+
+    logger.info(`Replay access granted for class ${classId}`, {
+      recordingId,
+      count: participants.rows.length
+    });
+
+  } catch (error) {
+    logger.error('Error granting replay access:', error);
+    res.status(500).json({ error: 'Failed to grant replay access' });
+  }
+});
+
+// Mark attendance when user joins class stream
+router.post('/:classId/mark-attendance', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { classId } = req.params;
+
+    // Get user's numeric ID
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
+    // Check if user is enrolled
+    const enrollment = await pool.query(
+      'SELECT * FROM class_participants WHERE class_id = $1 AND user_id = $2',
+      [classId, userDbId]
+    );
+
+    if (!enrollment.rows[0]) {
+      return res.status(403).json({ error: 'Not enrolled in this class' });
+    }
+
+    // Mark as attended
+    await pool.query(
+      `UPDATE class_participants
+       SET attended = true, attended_at = NOW()
+       WHERE class_id = $1 AND user_id = $2`,
+      [classId, userDbId]
+    );
+
+    res.json({ success: true });
+    logger.info(`Attendance marked for class ${classId}`, { userId: userDbId });
+
+  } catch (error) {
+    logger.error('Error marking attendance:', error);
+    res.status(500).json({ error: 'Failed to mark attendance' });
+  }
+});
+
+// Create recurring classes
+router.post('/recurring', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const userId = req.user.supabase_id;
+    const {
+      title,
+      description,
+      category,
+      startTime,
+      duration,
+      maxParticipants,
+      tokenPrice,
+      tags,
+      requirements,
+      whatToExpect,
+      coverImage,
+      recurrence, // 'weekly' or 'monthly'
+      occurrences // number of classes to create
+    } = req.body;
+
+    // Verify user is a creator
+    const userResult = await client.query(
+      'SELECT id, is_creator FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0] || !userResult.rows[0].is_creator) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Only creators can schedule classes' });
+    }
+
+    const creatorId = userResult.rows[0].id;
+    const createdClasses = [];
+
+    // Create multiple classes based on recurrence pattern
+    for (let i = 0; i < occurrences; i++) {
+      const classStartTime = new Date(startTime);
+
+      if (recurrence === 'weekly') {
+        classStartTime.setDate(classStartTime.getDate() + (i * 7));
+      } else if (recurrence === 'monthly') {
+        classStartTime.setMonth(classStartTime.getMonth() + i);
+      }
+
+      const result = await client.query(
+        `INSERT INTO classes (
+          creator_id, title, description, category, start_time,
+          duration_minutes, max_participants, token_price, tags,
+          requirements, what_to_expect, cover_image_url, created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+        RETURNING *`,
+        [
+          creatorId, title, description, category, classStartTime.toISOString(),
+          duration, maxParticipants, tokenPrice, JSON.stringify(tags),
+          requirements || '', whatToExpect || '', coverImage || null
+        ]
+      );
+
+      createdClasses.push(result.rows[0]);
+
+      // Add to calendar
+      try {
+        const scheduledDate = classStartTime.toISOString().split('T')[0];
+        const scheduledTime = classStartTime.toTimeString().split(' ')[0].substring(0, 5);
+
+        await client.query(
+          `INSERT INTO calendar_events (
+            creator_id, event_type, title, description,
+            scheduled_date, scheduled_time, duration_minutes,
+            status, reference_id, reference_type
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            creatorId, 'class', title, description,
+            scheduledDate, scheduledTime, duration,
+            'scheduled', result.rows[0].id, 'class'
+          ]
+        );
+      } catch (calendarError) {
+        logger.error('Error syncing recurring class to calendar:', calendarError);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      success: true,
+      classes: createdClasses.map(c => ({
+        id: c.id,
+        title: c.title,
+        startTime: c.start_time,
+        duration: c.duration_minutes
+      })),
+      count: createdClasses.length
+    });
+
+    logger.info(`Created ${createdClasses.length} recurring classes`, {
+      creatorId,
+      recurrence
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('Error creating recurring classes:', error);
+    res.status(500).json({ error: 'Failed to create recurring classes' });
+  } finally {
+    client.release();
+  }
+});
+
+// Get class materials
+router.get('/:classId/materials', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { classId } = req.params;
+
+    // Get user's numeric ID
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
+    // Check if user is creator or enrolled participant
+    const accessCheck = await pool.query(
+      `SELECT
+        CASE
+          WHEN c.creator_id = $2 THEN true
+          WHEN EXISTS (
+            SELECT 1 FROM class_participants
+            WHERE class_id = $1 AND user_id = $2
+          ) THEN true
+          ELSE false
+        END as has_access
+       FROM classes c
+       WHERE c.id = $1`,
+      [classId, userDbId]
+    );
+
+    if (!accessCheck.rows[0] || !accessCheck.rows[0].has_access) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get materials
+    const materials = await pool.query(
+      `SELECT id, title, description, file_url, file_type, material_type, created_at
+       FROM class_materials
+       WHERE class_id = $1
+       ORDER BY material_type, created_at ASC`,
+      [classId]
+    );
+
+    res.json({ materials: materials.rows });
+
+  } catch (error) {
+    logger.error('Error fetching class materials:', error);
+    res.status(500).json({ error: 'Failed to fetch materials' });
+  }
+});
+
+// Upload class material
+router.post('/:classId/materials', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { classId } = req.params;
+    const { title, description, fileUrl, fileType, materialType } = req.body;
+    // materialType: 'pre-class' or 'post-class'
+
+    // Get user's numeric ID
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE supabase_id = $1',
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userDbId = userResult.rows[0].id;
+
+    // Verify user is the creator
+    const classResult = await pool.query(
+      'SELECT * FROM classes WHERE id = $1 AND creator_id = $2',
+      [classId, userDbId]
+    );
+
+    if (!classResult.rows[0]) {
+      return res.status(403).json({ error: 'Only the creator can upload materials' });
+    }
+
+    // Insert material
+    const result = await pool.query(
+      `INSERT INTO class_materials (
+        class_id, title, description, file_url, file_type, material_type, created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      RETURNING *`,
+      [classId, title, description, fileUrl, fileType, materialType]
+    );
+
+    res.status(201).json({
+      success: true,
+      material: result.rows[0]
+    });
+
+    logger.info(`Material uploaded for class ${classId}`, { materialType });
+
+  } catch (error) {
+    logger.error('Error uploading class material:', error);
+    res.status(500).json({ error: 'Failed to upload material' });
+  }
+});
+
 module.exports = router;

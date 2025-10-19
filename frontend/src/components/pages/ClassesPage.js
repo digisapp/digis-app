@@ -195,6 +195,53 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
     }
   };
 
+  const handleStartClass = async (classItem) => {
+    if (!user) {
+      toast.error('Please sign in to start your class');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token;
+
+      // Call backend to mark class as live and get stream info
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/${classItem.id}/start-stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Starting "${classItem.title}"!`, {
+          icon: '🎥'
+        });
+
+        // Navigate to streaming page with class context
+        // Store class info in sessionStorage for the streaming page
+        sessionStorage.setItem('activeClassStream', JSON.stringify({
+          classId: classItem.id,
+          title: classItem.title,
+          description: classItem.description,
+          category: classItem.category,
+          duration: classItem.duration
+        }));
+
+        // Navigate to streaming page
+        window.location.href = `/streaming?classId=${classItem.id}`;
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to start class');
+      }
+    } catch (error) {
+      console.error('Error starting class:', error);
+      toast.error('Failed to start class. Please try again.');
+    }
+  };
+
   const handleShowReviews = (classItem) => {
     setSelectedClassForReviews(classItem);
     setShowReviews(true);
@@ -400,7 +447,7 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
 
             {/* Action Buttons */}
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={() => {
                   setSelectedClassForDetails(classItem);
                   setShowDetailsModal(true);
@@ -409,8 +456,18 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
               >
                 View Details
               </button>
-              {!isEnrolled && (
-                <button 
+
+              {/* Start Class button for creators */}
+              {user && classItem.creator.id === user.id ? (
+                <button
+                  onClick={() => handleStartClass(classItem)}
+                  className="flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                >
+                  <VideoCameraIcon className="w-4 h-4" />
+                  <span>Start Class</span>
+                </button>
+              ) : !isEnrolled ? (
+                <button
                   onClick={() => handleJoinClass(classItem)}
                   disabled={classItem.currentParticipants >= classItem.maxParticipants}
                   className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors duration-200 flex items-center justify-center gap-2 group ${
@@ -429,7 +486,7 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
                     </motion.span>
                   )}
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
