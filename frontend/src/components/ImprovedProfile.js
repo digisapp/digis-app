@@ -518,13 +518,19 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         username: username.trim(),
         display_name: displayName,
         bio: bio.trim(),
-        profile_pic_url: pic,
-        banner_url: bannerUrl,
         is_creator: isCreator,
         social_links: socialLinks,
         state: state.trim(),
         country: country.trim()
       };
+
+      // Only include URLs if they have valid values (not empty strings)
+      if (pic && pic.trim()) {
+        profileData.profile_pic_url = pic;
+      }
+      if (bannerUrl && bannerUrl.trim()) {
+        profileData.banner_url = bannerUrl;
+      }
 
       // Add creator-specific fields
       if (isCreator) {

@@ -496,7 +496,7 @@ const HybridCreatorDashboard = memo(({
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         setDigitals(data.digitals || []);
@@ -506,6 +506,13 @@ const HybridCreatorDashboard = memo(({
         }));
       }
     } catch (error) {
+      // Silently handle 404 - endpoint not implemented yet
+      if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
+        console.log('ℹ️ Digitals endpoint not available yet, skipping...');
+        setDigitals([]);
+        setContentData(prev => ({ ...prev, digitals: [] }));
+        return;
+      }
       console.error('Error fetching digitals:', error);
     }
   };
