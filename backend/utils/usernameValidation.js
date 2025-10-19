@@ -116,19 +116,19 @@ const validateUsername = (username) => {
 const checkUsernameAvailability = async (username, db, excludeUserId = null) => {
   try {
     const normalizedUsername = username.toLowerCase().trim();
-    
-    // Build query
-    let query = 'SELECT uid FROM users WHERE LOWER(username) = $1';
+
+    // Build query - check against supabase_id (UUID), not uid (serial ID)
+    let query = 'SELECT supabase_id FROM users WHERE LOWER(username) = $1';
     const params = [normalizedUsername];
-    
-    // Exclude current user if updating
+
+    // Exclude current user if updating (using supabase_id UUID)
     if (excludeUserId) {
-      query += ' AND uid != $2';
+      query += ' AND supabase_id != $2::uuid';
       params.push(excludeUserId);
     }
-    
+
     const result = await db.query(query, params);
-    
+
     return {
       available: result.rows.length === 0,
       exists: result.rows.length > 0
