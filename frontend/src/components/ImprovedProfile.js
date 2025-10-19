@@ -540,6 +540,9 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         profileData.voice_memo_price = parseFloat(voiceMemoPrice);
       }
 
+      console.log('📤 Sending profile update to:', `${import.meta.env.VITE_BACKEND_URL}/users/profile`);
+      console.log('📤 Profile data:', profileData);
+
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/profile`, {
         method: 'POST',
         headers: {
@@ -549,17 +552,26 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         body: JSON.stringify(profileData)
       });
 
+      console.log('📥 Response status:', response.status, response.statusText);
+
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Profile saved successfully:', data);
         setSuccess('Profile updated successfully!');
         setTimeout(() => setSuccess(''), 3000);
         await loadProfile(); // Reload to get updated data
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to save profile');
+        console.error('❌ Profile save failed:', response.status, errorData);
+        setError(errorData.error || errorData.message || `Failed to save profile (${response.status})`);
       }
     } catch (error) {
       console.error('❌ Error saving profile:', error);
-      setError('Failed to save profile. Please try again.');
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+      setError(`Failed to save profile: ${error.message}`);
     } finally {
       setSaving(false);
     }
