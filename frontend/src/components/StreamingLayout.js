@@ -23,6 +23,9 @@ import TipButton from './payments/TipButton';
 import StreamingGiftDisplay from './StreamingGiftDisplay';
 // import InteractivePolls from './InteractivePolls'; // Removed - file deleted
 import CreatorSubscriptions from './CreatorSubscriptions';
+import LivestreamGoalMeter from './LivestreamGoalMeter';
+import TipLeaderboard from './TipLeaderboard';
+import LiveStreamAnalytics from './LiveStreamAnalytics';
 import EnhancedStreamingOverlay from './EnhancedStreamingOverlay';
 import CoHostManager from './CoHostManager';
 import StreamParticipantManager from './StreamParticipantManager';
@@ -773,7 +776,43 @@ const StreamingLayout = ({
             maxCoHosts={3}
             className="absolute top-20 right-4 z-40"
           />
-          
+
+          {/* Live Stream Goal Meter - Top Center */}
+          {streamGoal.isVisible && (
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 w-full max-w-md px-4">
+              <LivestreamGoalMeter
+                currentAmount={streamGoal.currentAmount}
+                goalAmount={streamGoal.goalAmount}
+                isCreator={isCreator}
+                streamId={channel}
+                user={user}
+                onGoalUpdate={async (newAmount) => {
+                  setStreamGoal(prev => ({ ...prev, goalAmount: newAmount }));
+                  // TODO: Save to backend via API
+                }}
+              />
+            </div>
+          )}
+
+          {/* Live Analytics - Top Right for Creators */}
+          {isCreator && (
+            <div className="absolute top-4 right-4 z-30">
+              <LiveStreamAnalytics
+                streamStats={streamStats}
+                isCreator={isCreator}
+              />
+            </div>
+          )}
+
+          {/* Tip Leaderboard - Bottom Left for All */}
+          <div className="absolute bottom-20 left-4 z-30 w-72 hidden sm:block">
+            <TipLeaderboard
+              creatorId={targetCreator?.id || targetCreator?.supabase_id}
+              streamId={channel}
+              maxEntries={5}
+            />
+          </div>
+
           {/* Private Show Controls moved outside video area */}
         </>
       )}
