@@ -19,6 +19,7 @@ import VideoCall from './VideoCall';
 import LiveChat from './LiveChat';
 import LiveChatEnhanced from './LiveChatEnhanced';
 import VirtualGifts from './VirtualGifts';
+import TipButton from './payments/TipButton';
 import StreamingGiftDisplay from './StreamingGiftDisplay';
 // import InteractivePolls from './InteractivePolls'; // Removed - file deleted
 import CreatorSubscriptions from './CreatorSubscriptions';
@@ -964,6 +965,32 @@ const StreamingLayout = ({
             onShowStarted={(showId) => {
               toast.success('Private show started! Non-ticket holders will have video hidden.');
             }}
+          />
+        </div>
+      )}
+
+      {/* Floating Tip Button for Viewers - Desktop & Mobile */}
+      {!isCreator && targetCreator && user?.id !== targetCreator?.id && (
+        <div className="fixed bottom-20 sm:bottom-24 right-4 sm:right-12 z-40">
+          <TipButton
+            toCreatorId={targetCreator.id || targetCreator.supabase_id}
+            context={{
+              streamId: channel,
+              channel: channel,
+              type: 'live_stream'
+            }}
+            onTipped={(tip) => {
+              toast.success(`Tip of ${tip.amountTokens} tokens sent!`, {
+                icon: '💰',
+                duration: 3000
+              });
+              // Update stream stats
+              handleTipSent({
+                amount: tip.amountTokens,
+                senderName: user?.displayName || user?.email?.split('@')[0]
+              });
+            }}
+            className="shadow-2xl hover:scale-105 transition-transform"
           />
         </div>
       )}

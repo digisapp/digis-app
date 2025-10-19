@@ -283,9 +283,9 @@ const VirtualGifts = ({
     try {
       const authToken = await getAuthToken();
       const tokenAmount = Math.ceil(amount / 0.05); // Convert USD to tokens ($0.05 per token)
-      
+
       const response = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/stream-features/tip`,
+        `${import.meta.env.VITE_BACKEND_URL}/tips/send`,
         {
           method: 'POST',
           headers: {
@@ -293,39 +293,37 @@ const VirtualGifts = ({
             Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
-            channel,
-            creatorId: targetCreator?.id || targetCreator?.supabase_id,
-            amount: tokenAmount,
-            message: giftMessage
+            toCreatorId: targetCreator?.id || targetCreator?.supabase_id,
+            amountTokens: tokenAmount,
+            message: giftMessage,
+            context: {
+              streamId: channel,
+              channel: channel,
+              type: 'live_stream'
+            }
           }),
         }
       );
 
       if (response.ok) {
         const data = await response.json();
-        
-        // Update token balance
-        setUserTokens(prev => prev - tokenAmount);
-        
-        // Emit socket event for real-time notification
-        socketService.emit('tip_sent', {
-          channel,
-          amount,
-          tokenAmount,
-          message: giftMessage,
-          sender: {
-            id: user.id,
-            name: user.displayName || user.email?.split('@')[0],
-            avatar: user.photoURL
-          },
-          recipient: targetCreator
-        });
-        
+
+        // Update token balance from response
+        if (data.new_balance !== undefined) {
+          setUserTokens(data.new_balance);
+        } else {
+          setUserTokens(prev => prev - tokenAmount);
+        }
+
+        // Socket event is already handled by backend via Ably broadcast
+        // No need to emit separately
+
         // Notify parent component
-        onSendTip?.({ 
-          amount, 
-          tokenAmount,
+        onSendTip?.({
+          amount,
+          amountTokens: tokenAmount,
           message: giftMessage,
+          senderName: user.displayName || user.email?.split('@')[0],
           sender: {
             id: user.id,
             name: user.displayName || user.email?.split('@')[0],
