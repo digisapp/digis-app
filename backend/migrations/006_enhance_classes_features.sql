@@ -5,8 +5,8 @@ ADD COLUMN IF NOT EXISTS attended_at TIMESTAMP WITH TIME ZONE;
 
 -- Create class_materials table for pre/post class resources
 CREATE TABLE IF NOT EXISTS class_materials (
-  id SERIAL PRIMARY KEY,
-  class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   description TEXT,
   file_url TEXT NOT NULL,
@@ -17,9 +17,9 @@ CREATE TABLE IF NOT EXISTS class_materials (
 
 -- Create recording_access table for granting replay access
 CREATE TABLE IF NOT EXISTS recording_access (
-  id SERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   recording_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   granted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(recording_id, user_id)
 );

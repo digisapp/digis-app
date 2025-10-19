@@ -147,6 +147,82 @@ const StreamingLayout = ({
           userId: user?.id,
           timestamp: Date.now()
         });
+
+        // CLASS PAYMENT: Check if this is a class stream and charge the user
+        if (!isCreator && user?.id) {
+          const activeClassStream = sessionStorage.getItem('activeClassStream');
+          if (activeClassStream) {
+            try {
+              const classData = JSON.parse(activeClassStream);
+              const authToken = await getAuthToken();
+
+              // Call mark-attendance endpoint (this is where payment happens!)
+              const response = await fetch(
+                `${import.meta.env.VITE_BACKEND_URL}/classes/${classData.classId}/mark-attendance`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                  }
+                }
+              );
+
+              const result = await response.json();
+
+              if (response.ok) {
+                if (result.alreadyPaid) {
+                  // User already paid for this class
+                  toast.success('Welcome back! You already paid for this class. 🎓', {
+                    icon: '✅',
+                    duration: 4000
+                  });
+                } else {
+                  // Payment successful
+                  toast.success(
+                    `Payment successful! ${result.tokensPaid} tokens charged. Enjoy the class! 🎓`,
+                    {
+                      icon: '💎',
+                      duration: 5000
+                    }
+                  );
+
+                  // Call onTokenDeduction to update user balance in parent component
+                  if (onTokenDeduction) {
+                    onTokenDeduction(result.tokensPaid);
+                  }
+                }
+              } else {
+                // Payment failed
+                if (result.error === 'Insufficient token balance') {
+                  toast.error(
+                    `Insufficient tokens! You need ${result.required} tokens but only have ${result.current}. Please purchase ${result.needed} more tokens.`,
+                    {
+                      icon: '💎',
+                      duration: 8000
+                    }
+                  );
+
+                  // Redirect to token purchase page after 3 seconds
+                  setTimeout(() => {
+                    window.location.href = '/tokens';
+                  }, 3000);
+                } else {
+                  toast.error(result.error || 'Failed to process payment', {
+                    icon: '❌',
+                    duration: 5000
+                  });
+                }
+              }
+            } catch (error) {
+              console.error('Error processing class payment:', error);
+              toast.error('Failed to process class payment. Please contact support.', {
+                icon: '❌',
+                duration: 5000
+              });
+            }
+          }
+        }
       } catch (error) {
         console.error('Error initializing analytics:', error);
       }

@@ -1,7 +1,12 @@
+-- Drop existing classes table if it exists (it was created with wrong schema)
+DROP TABLE IF EXISTS class_reviews CASCADE;
+DROP TABLE IF EXISTS class_participants CASCADE;
+DROP TABLE IF EXISTS classes CASCADE;
+
 -- Create classes table for live streaming classes
-CREATE TABLE IF NOT EXISTS classes (
-  id SERIAL PRIMARY KEY,
-  creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+CREATE TABLE classes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   description TEXT,
   category VARCHAR(50) NOT NULL,
@@ -20,10 +25,10 @@ CREATE TABLE IF NOT EXISTS classes (
 );
 
 -- Create class participants table
-CREATE TABLE IF NOT EXISTS class_participants (
-  id SERIAL PRIMARY KEY,
-  class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+CREATE TABLE class_participants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   status VARCHAR(20) NOT NULL DEFAULT 'joined', -- joined, left, kicked
   joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   left_at TIMESTAMP WITH TIME ZONE,
@@ -31,11 +36,11 @@ CREATE TABLE IF NOT EXISTS class_participants (
 );
 
 -- Create class reviews table
-CREATE TABLE IF NOT EXISTS class_reviews (
-  id SERIAL PRIMARY KEY,
-  class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+CREATE TABLE class_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
   review TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
