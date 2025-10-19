@@ -142,9 +142,13 @@ const ProfileDropdown = ({
           followersCount: data.followersCount || 0,
           subscribersCount: data.subscribersCount || 0
         });
+      } else if (response.status === 404 || response.status === 500) {
+        // Silently handle 404/500 - endpoint not implemented yet
+        setStats({ followersCount: 0, subscribersCount: 0 });
       }
     } catch (error) {
-      console.error('Error fetching creator stats:', error);
+      // Silently handle errors - endpoint not implemented yet
+      setStats({ followersCount: 0, subscribersCount: 0 });
     }
   };
 
