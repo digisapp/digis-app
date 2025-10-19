@@ -978,4 +978,47 @@ router.get('/stats', authenticateToken, async (req, res) => {
   }
 });
 
+// Get creator application status for current user
+router.get('/application/status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+
+    // Check if there's a creator application for this user
+    const applicationQuery = await pool.query(
+      `SELECT id, status, created_at, reviewed_at, review_notes
+       FROM creator_applications
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (applicationQuery.rows.length === 0) {
+      return res.json({
+        application: null,
+        message: 'No application found'
+      });
+    }
+
+    const application = applicationQuery.rows[0];
+
+    res.json({
+      application: {
+        id: application.id,
+        status: application.status,
+        created_at: application.created_at,
+        reviewed_at: application.reviewed_at,
+        review_notes: application.review_notes
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error checking application status:', error);
+    res.status(500).json({
+      error: 'Failed to check application status',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

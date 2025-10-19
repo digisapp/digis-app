@@ -215,20 +215,25 @@ const Auth = ({ mode: initialMode = 'signin', onModeSwitch, onLogin }) => {
           if (user.email_confirmed_at || user.confirmed_at) {
             await handleSuccessfulAuth(user);
           } else {
-            // Email confirmation required - show message and redirect to appropriate page
+            // Email confirmation required - show message and redirect to explore
             if (accountType === 'creator') {
-              setSuccessMessage('Creator application submitted! Redirecting to waiting room...');
-              toast.success('Creator application submitted! You will receive an email once your application is reviewed.');
+              setSuccessMessage('Creator application submitted! Redirecting...');
+              toast.success('🎨 Application submitted! Browse as a fan while we review. You\'ll be notified once approved!', {
+                duration: 5000,
+                icon: '✨'
+              });
 
-              // Redirect to creator pending page after 2 seconds
+              // Redirect to explore - they'll see pending banner there
               setTimeout(() => {
-                window.location.href = '/creator/pending';
+                window.location.href = '/explore';
               }, 2000);
             } else {
               setSuccessMessage('Welcome to Digis! Redirecting...');
-              toast.success('Welcome! Please check your email to verify your account.');
+              toast.success('Welcome! Start exploring creators now!', {
+                duration: 4000
+              });
 
-              // Redirect fans to explore page after 2 seconds
+              // Redirect fans to explore page
               setTimeout(() => {
                 window.location.href = '/explore';
               }, 2000);

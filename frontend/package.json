@@ -53,6 +53,7 @@
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-avatar-editor": "^13.0.2",
+    "react-confetti": "^6.4.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.3.8",
     "react-easy-crop": "^5.5.0",

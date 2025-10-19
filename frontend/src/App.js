@@ -34,6 +34,7 @@ const PublicCreatorShop = lazy(() => import('./components/PublicCreatorShop'));
 const DigitalsPage = lazy(() => import('./components/pages/DigitalsPage'));
 const CreatorApplication = lazy(() => import('./components/CreatorApplication'));
 const CreatorKYCVerification = lazy(() => import('./components/CreatorKYCVerification'));
+const PendingCreatorBanner = lazy(() => import('./components/PendingCreatorBanner'));
 
 // Lazy load streaming components
 const StreamingLoadingSkeleton = lazy(() => import('./components/StreamingLoadingSkeleton'));
@@ -1083,6 +1084,11 @@ const App = () => {
           </button>
         </div>
       )}
+
+      {/* Pending Creator Banner - Shows for users with pending creator applications */}
+      <Suspense fallback={null}>
+        <PendingCreatorBanner user={user} />
+      </Suspense>
 
       {/* Main Content */}
       <PullToRefresh
