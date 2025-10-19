@@ -13,6 +13,8 @@ import toast from 'react-hot-toast';
 
 // Critical imports - NOT lazy loaded for immediate access
 import AdminLoginPage from '../components/pages/AdminLoginPage';
+import PublicOrRedirectAdmin from './guards/PublicOrRedirectAdmin';
+import AdminGuard from './guards/AdminGuard';
 
 /**
  * Lazy-loaded pages - moved from App.js
@@ -163,8 +165,14 @@ const AppRoutes = () => {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
 
-        {/* Admin Login - Public route for admin authentication */}
-        <Route path="/admin/login" element={<AdminLoginPage />} />
+        {/* IMPORTANT: Admin routes MUST be before /:username vanity route */}
+
+        {/* Admin Login - Public route with smart redirect */}
+        <Route path="/admin/login" element={
+          <PublicOrRedirectAdmin>
+            <AdminLoginPage />
+          </PublicOrRedirectAdmin>
+        } />
 
         {/* Legacy redirect: /creator/:username -> /:username */}
         <Route path="/creator/:username" element={<LegacyCreatorRedirect />} />
@@ -286,11 +294,11 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Admin Routes */}
+        {/* Admin Dashboard - Protected with AdminGuard */}
         <Route path="/admin/dashboard" element={
-          <ProtectedRoute requireAdmin>
+          <AdminGuard>
             <EnhancedAdminDashboard user={currentUser} />
-          </ProtectedRoute>
+          </AdminGuard>
         } />
 
         {/* Note: /admin (without subpath) can be a creator username */}

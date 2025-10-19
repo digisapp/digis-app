@@ -17,7 +17,7 @@ import {
  * Provides a secure, professional entry point for administrators
  */
 const AdminLoginPage = () => {
-  const { user, isAdmin, roleResolved, authLoading } = useAuth();
+  const { authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -27,19 +27,7 @@ const AdminLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Redirect if already admin
-  useEffect(() => {
-    if (!authLoading && user && roleResolved) {
-      if (isAdmin) {
-        // Already logged in as admin, redirect to admin dashboard
-        const from = location.state?.from?.pathname || '/admin/dashboard';
-        navigate(from, { replace: true });
-      } else if (user) {
-        // Logged in but not admin - show error
-        setError('Your account does not have administrator privileges.');
-      }
-    }
-  }, [user, isAdmin, roleResolved, authLoading, navigate, location]);
+  // No redirect logic here - PublicOrRedirectAdmin guard handles it
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,9 +49,13 @@ const AdminLoginPage = () => {
         throw new Error('Login failed - no user data returned');
       }
 
-      // Check if user is admin (will be verified by backend)
-      // The useEffect above will handle redirect once role is resolved
-      toast.success('Verifying admin access...');
+      // Success - navigate to admin dashboard
+      // The AdminGuard will verify admin role
+      toast.success('Logged in! Redirecting...');
+
+      // Navigate to the page they were trying to access, or dashboard
+      const from = location.state?.from?.pathname || '/admin/dashboard';
+      navigate(from, { replace: true });
 
     } catch (err) {
       console.error('Admin login error:', err);
@@ -213,6 +205,13 @@ const AdminLoginPage = () => {
               )}
             </button>
           </form>
+
+          {/* Auth checking message */}
+          {authLoading && !loading && (
+            <div className="mt-4 text-center">
+              <p className="text-sm text-purple-200">Checking session...</p>
+            </div>
+          )}
 
           {/* Security Notice */}
           <div className="mt-6 pt-6 border-t border-white/10">
