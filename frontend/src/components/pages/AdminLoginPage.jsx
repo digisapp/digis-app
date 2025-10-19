@@ -31,8 +31,8 @@ const AdminLoginPage = () => {
   useEffect(() => {
     if (!authLoading && user && roleResolved) {
       if (isAdmin) {
-        // Already logged in as admin, redirect to dashboard
-        const from = location.state?.from?.pathname || '/admin';
+        // Already logged in as admin, redirect to admin dashboard
+        const from = location.state?.from?.pathname || '/admin/dashboard';
         navigate(from, { replace: true });
       } else if (user) {
         // Logged in but not admin - show error

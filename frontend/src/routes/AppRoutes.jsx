@@ -285,11 +285,13 @@ const AppRoutes = () => {
         } />
 
         {/* Admin Routes */}
-        <Route path="/admin" element={
+        <Route path="/admin/dashboard" element={
           <ProtectedRoute requireAdmin>
             <EnhancedAdminDashboard user={currentUser} />
           </ProtectedRoute>
         } />
+
+        {/* Note: /admin (without subpath) can be a creator username */}
 
         {/* Call Routes */}
         <Route path="/call/video" element={
