@@ -16,7 +16,6 @@ import {
   KeyIcon,
   SparklesIcon,
   UserGroupIcon,
-  LinkIcon,
   PhotoIcon,
   GlobeAltIcon,
   LockClosedIcon,
@@ -83,12 +82,6 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
   const [interests, setInterests] = useState([]);
   const [state, setState] = useState('');
   const [country, setCountry] = useState('');
-  const [socialLinks, setSocialLinks] = useState({
-    instagram: '',
-    twitter: '',
-    youtube: '',
-    tiktok: ''
-  });
   
   // Image cropper state
   const [showImageCropper, setShowImageCropper] = useState(false);
@@ -219,12 +212,6 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         setCountry(data.country || '');
         setPreviewImage(data.profile_pic_url || '');
         setPreviewBanner(data.banner_url || '');
-        setSocialLinks(data.social_links || {
-          instagram: '',
-          twitter: '',
-          youtube: '',
-          tiktok: ''
-        });
         
         // Mock stats for now
         setStats({
@@ -385,8 +372,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         bio: bio.trim(),
         profile_pic_url: nextProfilePicUrl,
         banner_url: nextBannerUrl,
-        is_creator: isCreator,
-        social_links: socialLinks
+        is_creator: isCreator
       };
 
       // Add creator-specific fields if user is a creator
@@ -501,8 +487,7 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
       interests,
       isCreator,
       pic,
-      bannerUrl,
-      socialLinks
+      bannerUrl
     });
 
     if (!validateProfile()) {
@@ -519,7 +504,6 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
         display_name: displayName,
         bio: bio.trim(),
         is_creator: isCreator,
-        social_links: socialLinks,
         state: state.trim(),
         country: country.trim()
       };
@@ -1023,76 +1007,6 @@ const ImprovedProfile = ({ user, isCreator: propIsCreator, onProfileUpdate, setC
                       </div>
                     </div>
                   </motion.div>
-
-
-                  {/* Social Links for Creators */}
-                  {isCreator && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6"
-                    >
-                      <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                        <LinkIcon className="w-5 h-5 text-purple-600" />
-                        Social Links
-                      </h3>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Instagram
-                          </label>
-                          <input
-                            type="text"
-                            value={socialLinks.instagram}
-                            onChange={(e) => setSocialLinks({...socialLinks, instagram: e.target.value})}
-                            placeholder="@yourinstagram"
-                            className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Twitter/X
-                          </label>
-                          <input
-                            type="text"
-                            value={socialLinks.twitter}
-                            onChange={(e) => setSocialLinks({...socialLinks, twitter: e.target.value})}
-                            placeholder="@yourtwitter"
-                            className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            YouTube
-                          </label>
-                          <input
-                            type="text"
-                            value={socialLinks.youtube}
-                            onChange={(e) => setSocialLinks({...socialLinks, youtube: e.target.value})}
-                            placeholder="youtube.com/yourchannel"
-                            className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            TikTok
-                          </label>
-                          <input
-                            type="text"
-                            value={socialLinks.tiktok}
-                            onChange={(e) => setSocialLinks({...socialLinks, tiktok: e.target.value})}
-                            placeholder="@yourtiktok"
-                            className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
 
 
                   {/* Account Security Section */}
