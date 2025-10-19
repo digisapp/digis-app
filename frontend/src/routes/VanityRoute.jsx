@@ -48,10 +48,10 @@ const RE = /^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$/;
  * - Otherwise: render creator profile (via Outlet)
  */
 export default function VanityRoute() {
-  const { handle = '' } = useParams();
-  const normalized = handle.trim().toLowerCase();
+  const { username = '' } = useParams(); // Fixed: was 'handle', should be 'username'
+  const normalized = username.trim().toLowerCase();
 
-  console.log('[VanityRoute] Handle:', normalized);
+  console.log('[VanityRoute] Username:', normalized);
 
   // Reserved words should pass through to their normal routes
   // React Router will prioritize static routes over this dynamic one,
