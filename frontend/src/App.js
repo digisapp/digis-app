@@ -479,7 +479,7 @@ const App = () => {
         console.log('🔴 Calling backend to start stream with config:', config);
 
         // Get auth token
-        const { supabase } = await import('./utils/supabaseClient');
+        const { supabase } = await import('./utils/supabase-auth');
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session?.access_token) {
