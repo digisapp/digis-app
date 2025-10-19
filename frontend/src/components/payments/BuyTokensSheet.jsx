@@ -1,7 +1,6 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Coins, Zap, TrendingUp, Check } from 'lucide-react';
-import { AppContext } from '../../context/AppContext';
 import api from '../../services/api';
 
 const TOKEN_PACKAGES = [
@@ -32,7 +31,6 @@ const TOKEN_PACKAGES = [
 ];
 
 const BuyTokensSheet = ({ isOpen, onClose, onSuccess }) => {
-  const { user, setUser } = useContext(AppContext);
   const [selectedPackage, setSelectedPackage] = useState('popular');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
