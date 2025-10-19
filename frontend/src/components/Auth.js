@@ -215,12 +215,23 @@ const Auth = ({ mode: initialMode = 'signin', onModeSwitch, onLogin }) => {
           if (user.email_confirmed_at || user.confirmed_at) {
             await handleSuccessfulAuth(user);
           } else {
+            // Email confirmation required - show message and redirect to appropriate page
             if (accountType === 'creator') {
-              setSuccessMessage('Creator application submitted! You will receive an email once your application is reviewed.');
+              setSuccessMessage('Creator application submitted! Redirecting to waiting room...');
               toast.success('Creator application submitted! You will receive an email once your application is reviewed.');
+
+              // Redirect to creator pending page after 2 seconds
+              setTimeout(() => {
+                window.location.href = '/creator/pending';
+              }, 2000);
             } else {
-              setSuccessMessage('Welcome to Digis! Please check your email to verify your account.');
-              toast.success('Welcome to Digis! Please check your email to verify your account.');
+              setSuccessMessage('Welcome to Digis! Redirecting...');
+              toast.success('Welcome! Please check your email to verify your account.');
+
+              // Redirect fans to explore page after 2 seconds
+              setTimeout(() => {
+                window.location.href = '/explore';
+              }, 2000);
             }
           }
         }

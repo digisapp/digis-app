@@ -52,6 +52,7 @@ const FollowingSystem = lazy(() => import('../components/FollowingSystem'));
 const ShopManagementPage = lazy(() => import('../components/pages/ShopManagementPage'));
 const CreatorKYCVerification = lazy(() => import('../components/CreatorKYCVerification'));
 const SupabaseTestPage = lazy(() => import('../components/SupabaseTestPage'));
+const CreatorPending = lazy(() => import('../components/pages/CreatorPending'));
 
 // Mobile-specific pages
 const MobileExplore = lazy(() => import('../components/mobile/MobileExplore'));
@@ -172,6 +173,13 @@ const AppRoutes = () => {
           <PublicOrRedirectAdmin>
             <AdminLoginPage />
           </PublicOrRedirectAdmin>
+        } />
+
+        {/* Creator Application Pending - Protected route */}
+        <Route path="/creator/pending" element={
+          <ProtectedRoute>
+            <CreatorPending />
+          </ProtectedRoute>
         } />
 
         {/* Legacy redirect: /creator/:username -> /:username */}
