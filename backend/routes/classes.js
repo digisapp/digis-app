@@ -241,94 +241,57 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Join a class
+// Join a class (FREE enrollment - payment happens when joining live stream)
 router.post('/:classId/join', authenticateToken, async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const userId = req.user.supabase_id;
     const { classId } = req.params;
-    const { tokenAmount } = req.body;
-    
-    // Get user's database ID and token balance
+
+    // Get user's database ID
     const userResult = await client.query(
-      'SELECT id, id::text as user_id FROM users WHERE supabase_id = $1',
+      'SELECT id FROM users WHERE supabase_id = $1',
       [userId]
     );
-    
+
     if (!userResult.rows[0]) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     const userDbId = userResult.rows[0].id;
-    
-    // Get current token balance
-    const balanceResult = await client.query(
-      'SELECT balance FROM token_balances WHERE user_id = $1',
-      [userDbId]
+
+    // Check if class exists
+    const classResult = await client.query(
+      'SELECT * FROM classes WHERE id = $1',
+      [classId]
     );
-    
-    const currentBalance = balanceResult.rows[0] ? parseFloat(balanceResult.rows[0].balance) : 0;
-    
-    if (currentBalance < tokenAmount) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Insufficient token balance' });
-    }
-    
-    // Check if class exists and has space
-    const classResult = await client.query(`
-      SELECT c.*, COUNT(cp.user_id) as current_participants
-      FROM classes c
-      LEFT JOIN class_participants cp ON c.id = cp.class_id
-      WHERE c.id = $1
-      GROUP BY c.id
-    `, [classId]);
-    
+
     if (!classResult.rows[0]) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Class not found' });
     }
-    
+
     const classData = classResult.rows[0];
-    const currentParticipants = parseInt(classData.current_participants);
-    
-    if (currentParticipants >= classData.max_participants) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Class is full' });
-    }
-    
-    // Check if user already joined
+
+    // Check if user already enrolled
     const existingParticipant = await client.query(
       'SELECT id FROM class_participants WHERE class_id = $1 AND user_id = $2',
       [classId, userDbId]
     );
-    
+
     if (existingParticipant.rows.length > 0) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Already joined this class' });
+      return res.status(400).json({ error: 'Already enrolled in this class' });
     }
-    
-    // Deduct tokens
-    await client.query(`
-      INSERT INTO token_balances (user_id, balance, updated_at)
-      VALUES ($1, $2, NOW())
-      ON CONFLICT (user_id)
-      DO UPDATE SET balance = $2, updated_at = NOW()
-    `, [userDbId, currentBalance - tokenAmount]);
-    
-    // Record transaction
-    await client.query(`
-      INSERT INTO token_transactions (user_id, amount, type, description, created_at)
-      VALUES ($1, $2, 'debit', $3, NOW())
-    `, [userDbId, tokenAmount, `Joined class: ${classData.title}`]);
-    
-    // Add user to class participants
+
+    // Add user to class participants (FREE enrollment)
     await client.query(`
       INSERT INTO class_participants (class_id, user_id, status, joined_at)
-      VALUES ($1, $2, 'joined', NOW())
+      VALUES ($1, $2, 'enrolled', NOW())
     `, [classId, userDbId]);
 
     // Auto-sync to user's calendar
@@ -405,7 +368,7 @@ router.post('/:classId/join', authenticateToken, async (req, res) => {
           startTime: classData.start_time,
           duration: classData.duration,
           creatorName: creatorName,
-          tokenPrice: tokenAmount,
+          tokenPrice: classData.token_price,
           description: classData.description,
           category: classData.category
         };
@@ -427,11 +390,11 @@ router.post('/:classId/join', authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Successfully joined class',
-      newBalance: currentBalance - tokenAmount
+      message: 'Successfully enrolled! Payment will be processed when you join the live class.',
+      tokenPrice: classData.token_price
     });
 
-    logger.info(`User ${userId} joined class ${classId}`, { tokenAmount });
+    logger.info(`User ${userId} enrolled in class ${classId} (free enrollment)`);
     
   } catch (error) {
     await client.query('ROLLBACK');
@@ -597,18 +560,18 @@ router.delete('/:classId', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
     
-    // Get participants to refund tokens
-    const participants = await client.query(`
+    // Get participants who PAID (attended) to refund them
+    const paidParticipants = await client.query(`
       SELECT cp.user_id, c.token_price
       FROM class_participants cp
       JOIN classes c ON cp.class_id = c.id
-      WHERE cp.class_id = $1
+      WHERE cp.class_id = $1 AND cp.attended = true
     `, [classId]);
-    
-    // Refund tokens to participants
-    for (const participant of participants.rows) {
+
+    // Refund tokens only to participants who actually paid
+    for (const participant of paidParticipants.rows) {
       const tokenPrice = parseFloat(participant.token_price);
-      
+
       // Add tokens back
       await client.query(`
         INSERT INTO token_balances (user_id, balance, updated_at)
@@ -616,14 +579,14 @@ router.delete('/:classId', authenticateToken, async (req, res) => {
         ON CONFLICT (user_id)
         DO UPDATE SET balance = token_balances.balance + $2, updated_at = NOW()
       `, [participant.user_id, tokenPrice]);
-      
+
       // Record refund transaction
       await client.query(`
         INSERT INTO token_transactions (user_id, amount, type, description, created_at)
         VALUES ($1, $2, 'credit', $3, NOW())
       `, [participant.user_id, tokenPrice, `Refund for cancelled class`]);
     }
-    
+
     // Delete participants
     await client.query('DELETE FROM class_participants WHERE class_id = $1', [classId]);
 
@@ -638,10 +601,16 @@ router.delete('/:classId', authenticateToken, async (req, res) => {
     await client.query('DELETE FROM classes WHERE id = $1', [classId]);
 
     await client.query('COMMIT');
-    
-    res.json({ success: true, message: 'Class cancelled and participants refunded' });
-    
-    logger.info(`Class deleted: ${classId}`, { participantCount: participants.rows.length });
+
+    res.json({
+      success: true,
+      message: `Class cancelled. ${paidParticipants.rows.length} participants who paid have been refunded.`
+    });
+
+    logger.info(`Class deleted: ${classId}`, {
+      totalParticipants: participants.rows.length,
+      refunded: paidParticipants.rows.length
+    });
     
   } catch (error) {
     await client.query('ROLLBACK');
@@ -980,48 +949,143 @@ router.post('/:classId/grant-replay-access', authenticateToken, async (req, res)
   }
 });
 
-// Mark attendance when user joins class stream
+// Mark attendance when user joins class stream (THIS IS WHERE PAYMENT HAPPENS)
 router.post('/:classId/mark-attendance', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+
   try {
+    await client.query('BEGIN');
+
     const userId = req.user.supabase_id;
     const { classId } = req.params;
 
     // Get user's numeric ID
-    const userResult = await pool.query(
+    const userResult = await client.query(
       'SELECT id FROM users WHERE supabase_id = $1',
       [userId]
     );
 
     if (!userResult.rows[0]) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'User not found' });
     }
 
     const userDbId = userResult.rows[0].id;
 
+    // Get class data
+    const classResult = await client.query(
+      'SELECT * FROM classes WHERE id = $1',
+      [classId]
+    );
+
+    if (!classResult.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Class not found' });
+    }
+
+    const classData = classResult.rows[0];
+    const tokenPrice = parseFloat(classData.token_price);
+
     // Check if user is enrolled
-    const enrollment = await pool.query(
+    const enrollment = await client.query(
       'SELECT * FROM class_participants WHERE class_id = $1 AND user_id = $2',
       [classId, userDbId]
     );
 
     if (!enrollment.rows[0]) {
+      await client.query('ROLLBACK');
       return res.status(403).json({ error: 'Not enrolled in this class' });
     }
 
-    // Mark as attended
-    await pool.query(
+    // Check if already paid (attended before)
+    if (enrollment.rows[0].attended) {
+      // Already paid, just return success
+      await client.query('COMMIT');
+      return res.json({
+        success: true,
+        alreadyPaid: true,
+        message: 'Welcome back! You already paid for this class.'
+      });
+    }
+
+    // Get current token balance
+    const balanceResult = await client.query(
+      'SELECT balance FROM token_balances WHERE user_id = $1',
+      [userDbId]
+    );
+
+    const currentBalance = balanceResult.rows[0] ? parseFloat(balanceResult.rows[0].balance) : 0;
+
+    // Check if user has enough tokens
+    if (currentBalance < tokenPrice) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        error: 'Insufficient token balance',
+        required: tokenPrice,
+        current: currentBalance,
+        needed: tokenPrice - currentBalance
+      });
+    }
+
+    // Deduct tokens
+    await client.query(`
+      INSERT INTO token_balances (user_id, balance, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (user_id)
+      DO UPDATE SET balance = $2, updated_at = NOW()
+    `, [userDbId, currentBalance - tokenPrice]);
+
+    // Record transaction
+    await client.query(`
+      INSERT INTO token_transactions (user_id, amount, type, description, created_at)
+      VALUES ($1, $2, 'debit', $3, NOW())
+    `, [userDbId, tokenPrice, `Attended class: ${classData.title}`]);
+
+    // Mark as attended (payment complete)
+    await client.query(
       `UPDATE class_participants
-       SET attended = true, attended_at = NOW()
+       SET attended = true, attended_at = NOW(), status = 'attended'
        WHERE class_id = $1 AND user_id = $2`,
       [classId, userDbId]
     );
 
-    res.json({ success: true });
-    logger.info(`Attendance marked for class ${classId}`, { userId: userDbId });
+    // Transfer tokens to creator (credit creator account)
+    await client.query(`
+      INSERT INTO token_balances (user_id, balance, updated_at)
+      VALUES ($1, COALESCE((SELECT balance FROM token_balances WHERE user_id = $1), 0) + $2, NOW())
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        balance = token_balances.balance + $2,
+        updated_at = NOW()
+    `, [classData.creator_id, tokenPrice]);
+
+    // Record creator's earning
+    await client.query(`
+      INSERT INTO token_transactions (user_id, amount, type, description, created_at)
+      VALUES ($1, $2, 'credit', $3, NOW())
+    `, [classData.creator_id, tokenPrice, `Class revenue: ${classData.title}`]);
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      paid: true,
+      amountCharged: tokenPrice,
+      newBalance: currentBalance - tokenPrice,
+      message: 'Payment successful! Welcome to the class.'
+    });
+
+    logger.info(`Attendance marked and payment processed for class ${classId}`, {
+      userId: userDbId,
+      tokenPrice
+    });
 
   } catch (error) {
-    logger.error('Error marking attendance:', error);
-    res.status(500).json({ error: 'Failed to mark attendance' });
+    await client.query('ROLLBACK');
+    logger.error('Error marking attendance and processing payment:', error);
+    res.status(500).json({ error: 'Failed to process payment' });
+  } finally {
+    client.release();
   }
 });
 

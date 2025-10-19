@@ -149,12 +149,7 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
 
   const handleJoinClass = async (classItem) => {
     if (!user) {
-      toast.error('Please sign in to join classes');
-      return;
-    }
-
-    if (tokenBalance < classItem.tokenPrice) {
-      toast.error(`Insufficient tokens. You need ${classItem.tokenPrice} tokens to join this class.`);
+      toast.error('Please sign in to enroll in classes');
       return;
     }
 
@@ -169,29 +164,30 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
         },
         body: JSON.stringify({
           userId: user.id,
-          classId: classItem.id,
-          tokenAmount: classItem.tokenPrice
+          classId: classItem.id
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        // toast.success(`Successfully joined "${classItem.title}"! Class starts at ${formatTime(classItem.startTime)}`);
-        
-        // Update token balance
-        if (onTokenUpdate) {
-          onTokenUpdate();
-        }
-        
-        // Refresh classes to show updated participant count
+        toast.success(
+          `Enrolled in "${classItem.title}"! 💎 You'll pay ${classItem.tokenPrice} tokens when you join the live class.`,
+          {
+            duration: 5000,
+            icon: '✅'
+          }
+        );
+
+        // Refresh classes to show enrollment status
         fetchClasses();
+        fetchEnrolledClasses();
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Failed to join class');
+        toast.error(error.error || 'Failed to enroll in class');
       }
     } catch (error) {
-      console.error('Error joining class:', error);
-      toast.error('Failed to join class. Please try again.');
+      console.error('Error enrolling in class:', error);
+      toast.error('Failed to enroll. Please try again.');
     }
   };
 
@@ -365,11 +361,14 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
               </span>
             </div>
 
-            {/* Token Price */}
+            {/* Token Price - Pay when live */}
             <div className="absolute bottom-4 right-4">
-              <div className="px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white font-bold text-sm flex items-center gap-1">
-                <CurrencyDollarIcon className="w-4 h-4" />
-                {classItem.tokenPrice}
+              <div className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white font-bold text-xs flex flex-col items-center shadow-lg">
+                <div className="flex items-center gap-1">
+                  <CurrencyDollarIcon className="w-4 h-4" />
+                  <span className="text-sm">{classItem.tokenPrice}</span>
+                </div>
+                <span className="text-[10px] opacity-90 font-medium">pay when live</span>
               </div>
             </div>
 
@@ -469,24 +468,22 @@ const ClassesPage = ({ user, isCreator, tokenBalance, onTokenUpdate }) => {
               ) : !isEnrolled ? (
                 <button
                   onClick={() => handleJoinClass(classItem)}
-                  disabled={classItem.currentParticipants >= classItem.maxParticipants}
-                  className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors duration-200 flex items-center justify-center gap-2 group ${
-                    classItem.currentParticipants >= classItem.maxParticipants
-                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-900 hover:bg-black text-white'
-                  }`}
+                  className="flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors duration-200 flex items-center justify-center gap-2 group bg-gray-900 hover:bg-black text-white"
                 >
-                  <span>{classItem.currentParticipants >= classItem.maxParticipants ? 'Class Full' : 'Join Class'}</span>
-                  {classItem.currentParticipants < classItem.maxParticipants && (
-                    <motion.span
-                      animate={{ x: [0, 5, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    >
-                      →
-                    </motion.span>
-                  )}
+                  <span>Enroll Free</span>
+                  <motion.span
+                    animate={{ x: [0, 5, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    →
+                  </motion.span>
                 </button>
-              ) : null}
+              ) : (
+                <div className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex items-center justify-center gap-2">
+                  <CheckCircleIcon className="w-4 h-4" />
+                  <span>Enrolled</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
