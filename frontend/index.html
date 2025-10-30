@@ -26,36 +26,54 @@
       // This will run before anything else loads
       (async function() {
         console.log('🧹 Starting aggressive service worker cleanup...');
-        
+
+        // Check if we just did cleanup and reloaded
+        const cleanupDone = sessionStorage.getItem('sw-cleanup-done');
+
         if ('serviceWorker' in navigator) {
           // Get all registrations
           const registrations = await navigator.serviceWorker.getRegistrations();
-          
-          // Unregister everything
-          for (let registration of registrations) {
-            try {
-              const success = await registration.unregister();
-              console.log(`🗑️ Unregistered SW: ${registration.scope} - Success: ${success}`);
-            } catch (e) {
-              console.error('Failed to unregister:', e);
+
+          // If we have service workers and haven't cleaned up yet
+          if (registrations.length > 0 && !cleanupDone) {
+            // Unregister everything
+            for (let registration of registrations) {
+              try {
+                const success = await registration.unregister();
+                console.log(`🗑️ Unregistered SW: ${registration.scope} - Success: ${success}`);
+              } catch (e) {
+                console.error('Failed to unregister:', e);
+              }
             }
+
+            // Clear all caches
+            if ('caches' in window) {
+              const cacheNames = await caches.keys();
+              for (let cacheName of cacheNames) {
+                try {
+                  await caches.delete(cacheName);
+                  console.log(`🗑️ Deleted cache: ${cacheName}`);
+                } catch (e) {
+                  console.error('Failed to delete cache:', e);
+                }
+              }
+            }
+
+            // Mark cleanup as done and force hard reload
+            sessionStorage.setItem('sw-cleanup-done', 'true');
+            console.log('✅ Service worker cleanup complete - forcing hard reload...');
+
+            // Hard reload to get fresh assets (bypasses all caches)
+            window.location.reload(true);
+            return; // Stop execution since we're reloading
           }
         }
-        
-        // Clear all caches
-        if ('caches' in window) {
-          const cacheNames = await caches.keys();
-          for (let cacheName of cacheNames) {
-            try {
-              await caches.delete(cacheName);
-              console.log(`🗑️ Deleted cache: ${cacheName}`);
-            } catch (e) {
-              console.error('Failed to delete cache:', e);
-            }
-          }
+
+        // Clear the flag after successful load
+        if (cleanupDone) {
+          sessionStorage.removeItem('sw-cleanup-done');
+          console.log('✅ Service worker cleanup complete - fresh assets loaded');
         }
-        
-        console.log('✅ Service worker cleanup complete');
       })();
     </script>
     <style>
@@ -107,5 +125,49 @@
     <div id="root"></div>
     <div id="modal-root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <script>
+      // Global error handler for module loading failures
+      window.addEventListener('error', function(event) {
+        if (event.message && event.message.includes('Failed to load module script')) {
+          console.error('❌ Module loading failed - clearing caches and reloading...');
+
+          // Clear all caches and reload ONCE
+          if (!sessionStorage.getItem('module-error-reload')) {
+            sessionStorage.setItem('module-error-reload', 'true');
+
+            // Clear all caches
+            if ('caches' in window) {
+              caches.keys().then(function(cacheNames) {
+                return Promise.all(
+                  cacheNames.map(function(cacheName) {
+                    return caches.delete(cacheName);
+                  })
+                );
+              }).then(function() {
+                // Hard reload
+                window.location.reload(true);
+              });
+            } else {
+              window.location.reload(true);
+            }
+          } else {
+            // If we already tried reloading, show an error
+            sessionStorage.removeItem('module-error-reload');
+            document.getElementById('root').innerHTML =
+              '<div style="padding: 40px; text-align: center; background: #667eea; color: white; font-family: Inter, sans-serif;">' +
+              '<h1 style="margin-bottom: 20px;">Loading Error</h1>' +
+              '<p style="margin-bottom: 20px;">Unable to load the application. Please try:</p>' +
+              '<ol style="text-align: left; display: inline-block; margin-bottom: 20px;">' +
+              '<li>Pressing Ctrl+Shift+R (or Cmd+Shift+R on Mac) to hard refresh</li>' +
+              '<li>Clearing your browser cache</li>' +
+              '<li>Using an incognito/private window</li>' +
+              '</ol>' +
+              '<button onclick="window.location.reload(true)" style="padding: 12px 24px; background: white; color: #667eea; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">Try Again</button>' +
+              '</div>';
+          }
+        }
+      }, true);
+    </script>
   </body>
 </html>
