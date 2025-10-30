@@ -2180,13 +2180,13 @@ router.get('/public/creator/:identifier', async (req, res) => {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
     
     const query = isUUID
-      ? `SELECT username, bio, profile_pic_url, banner_url, stream_price, video_price, voice_price, message_price, 
+      ? `SELECT id, username, bio, profile_pic_url, banner_url, stream_price, video_price, voice_price, message_price,
                 created_at, total_sessions, total_earnings, state, country, supabase_id, interests, creator_type
-         FROM users 
+         FROM users
          WHERE (supabase_id = $1 OR id = $1) AND is_creator = TRUE`
-      : `SELECT username, bio, profile_pic_url, banner_url, stream_price, video_price, voice_price, message_price, 
+      : `SELECT id, username, bio, profile_pic_url, banner_url, stream_price, video_price, voice_price, message_price,
                 created_at, total_sessions, total_earnings, state, country, supabase_id, interests, creator_type
-         FROM users 
+         FROM users
          WHERE username = $1 AND is_creator = TRUE`;
     
     const result = await pool.query(query, [identifier]);
