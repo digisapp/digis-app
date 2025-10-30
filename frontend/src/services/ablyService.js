@@ -583,13 +583,18 @@ class AblyService {
     if (this.client) {
       console.log('Disconnecting from Ably...');
 
-      // Leave all presence channels
+      // Leave all presence channels (silently handle auth errors)
       this.channels.forEach(async (channel) => {
         try {
           await channel.presence.leave();
           await channel.detach();
         } catch (error) {
-          console.error('Error leaving channel:', error);
+          // Silently handle auth expiry errors during disconnect
+          if (error?.message?.includes('authentication') || error?.message?.includes('401') || error?.statusCode === 401) {
+            console.log('ℹ️ Channel disconnection skipped (auth expired)');
+          } else {
+            console.error('Error leaving channel:', error);
+          }
         }
       });
 

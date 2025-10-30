@@ -140,38 +140,39 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
     const ac = new AbortController();
     let mounted = true;
 
-    // Fetch token balance if it's not loaded
-    if (effectiveTokenBalance === undefined && currentUser) {
+    // Only fetch if we have a stable user and role is resolved
+    if (effectiveTokenBalance === undefined && currentUser?.id && roleResolved) {
       console.log('🔄 Token balance undefined, triggering fetch...');
       // Trigger a token balance fetch through the API
       const fetchBalance = async () => {
         try {
           const { data: { session } } = await (await import('../../config/supabase')).supabase.auth.getSession();
-          if (!mounted) return; // Component unmounted during async import
+          if (!mounted || !session?.access_token) return;
 
-          if (session?.access_token) {
-            const response = await fetch(
-              `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
-              {
-                headers: {
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-                signal: ac.signal
-              }
-            );
-            if (!mounted) return; // Component unmounted during fetch
-
-            if (response.ok) {
-              const data = await response.json();
-              console.log('✅ Token balance fetched:', data.balance);
-              // Update the store with the fetched balance
-              if (mounted) {
-                useHybridStore.getState().setTokenBalance(data.balance || 0);
-              }
+          const response = await fetch(
+            `${import.meta.env.VITE_BACKEND_URL}/tokens/balance`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              signal: ac.signal
             }
+          );
+          if (!mounted) return;
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Token balance fetched:', data.balance);
+            // Use queueMicrotask to avoid state updates during render
+            if (mounted) {
+              queueMicrotask(() => {
+                useHybridStore.getState().setTokenBalance(data.balance || 0);
+              });
+            }
+          } else if (response.status === 401) {
+            console.warn('⚠️ Token balance fetch unauthorized - session may be expired');
           }
         } catch (error) {
-          // Ignore abort errors
           if (error.name === 'AbortError') return;
           console.error('Error fetching token balance:', error);
         }
@@ -179,24 +180,22 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
       fetchBalance();
     }
 
-    if (role === 'creator') {
-      const interval = setInterval(() => {
+    // Only start live viewer animation for creators
+    let interval;
+    if (role === 'creator' && mounted) {
+      interval = setInterval(() => {
         if (mounted) {
           setLiveViewers(prev => Math.max(0, prev + Math.floor(Math.random() * 10 - 3)));
         }
       }, 5000);
-      return () => {
-        mounted = false;
-        ac.abort();
-        clearInterval(interval);
-      };
     }
 
     return () => {
       mounted = false;
       ac.abort();
+      if (interval) clearInterval(interval);
     };
-  }, [role, effectiveTokenBalance, currentUser, roleResolved]);
+  }, [role, currentUser?.id, roleResolved]); // Removed effectiveTokenBalance from deps to prevent loop
 
   // Scroll effect
   useEffect(() => {
