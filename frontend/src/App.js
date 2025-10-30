@@ -1019,7 +1019,47 @@ const App = () => {
     return (
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/auth" element={<Auth />} />
+        <Route path="/auth" element={<Auth onLogin={async (user) => {
+          console.log('🖥️ Desktop unauthenticated Auth onLogin called with user:', user);
+
+          // Reset logout breadcrumb flag on login
+          resetLogoutBreadcrumb();
+
+          // Define profile data
+          let profileData = user.profile || user;
+
+          // Set profile first to prevent role flip-flopping
+          if (user.profile || user.is_creator !== undefined || user.role) {
+            console.log('🖥️ Desktop: Setting profile data:', {
+              is_creator: profileData.is_creator,
+              role: profileData.role,
+              email: profileData.email
+            });
+
+            setProfile(profileData);
+            authSetProfile(profileData);
+          }
+
+          // Set user
+          setUser(user);
+          authSetUser({
+            id: user.id,
+            email: user.email
+          });
+
+          // Wait for state to propagate
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Navigate based on role
+          const userRole = profileData?.role === 'admin' ? 'admin' :
+                          profileData?.is_creator ? 'creator' : 'fan';
+          const targetPath = defaultPathFor(userRole);
+
+          console.log('🖥️ Desktop: Navigating to:', targetPath);
+          startTransition(() => {
+            navigate(targetPath, { replace: true });
+          });
+        }} />} />
         <Route path="/explore" element={<HomePage />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />

@@ -87,6 +87,14 @@ const AppRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Redirect authenticated users away from /auth page
+  React.useEffect(() => {
+    if (currentUser && location.pathname === '/auth') {
+      const defaultPath = defaultPathFor(role);
+      navigate(defaultPath, { replace: true });
+    }
+  }, [currentUser, location.pathname, role, navigate]);
+
   // Route observability - tracks navigation performance and errors
   useRouteObservability();
 
