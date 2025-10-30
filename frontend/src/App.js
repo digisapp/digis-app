@@ -145,6 +145,23 @@ const App = () => {
     resetLogoutBreadcrumb();
   }, []);
 
+  // CRITICAL FIX: Force-correct /?mode=signin to /auth?mode=signin
+  // Something is intercepting Link clicks and stripping /auth pathname
+  // This ensures users always land on /auth when mode param is present
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const mode = params.get('mode');
+
+    // If we have ?mode= but we're NOT on /auth, redirect to /auth
+    if (mode && location.pathname !== '/auth') {
+      console.log(`🔧 URL Correction: ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
+      navigate({ pathname: '/auth', search: `?mode=${mode}` }, { replace: true });
+    }
+  }, [location.pathname, location.search, navigate]);
+
   // Mount adapter hook to sync currentView ↔ URL (Phase 2: Gradual Route Migration)
   useViewRouter();
 
