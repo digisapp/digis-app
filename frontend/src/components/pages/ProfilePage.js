@@ -4,6 +4,7 @@ import ImprovedProfile from '../ImprovedProfile';
 import PrivacySettings from '../PrivacySettings';
 import CreatorApplication from '../CreatorApplication';
 import CreatorAnalytics from '../CreatorAnalytics';
+import LiquidGlass from '../ui/LiquidGlass';
 import { useUsername } from '../../hooks/useUsername';
 import { 
   UserCircleIcon,
@@ -171,15 +172,15 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
       {/* Content */}
       <div className="min-h-96">
         {activeSection === 'profile' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <LiquidGlass className="rounded-xl overflow-hidden" intensity="light">
             <ImprovedProfile user={user} isCreator={isCreator} />
-          </div>
+          </LiquidGlass>
         )}
 
         {activeSection === 'settings' && (
           <div className="space-y-6">
             {/* Privacy Settings */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <LiquidGlass className="rounded-xl p-6" intensity="light">
               <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Privacy Settings</h2>
               
               <div className="space-y-4">
@@ -200,10 +201,10 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
                   </label>
                 </div>
               </div>
-            </div>
+            </LiquidGlass>
 
             {/* General Settings */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <LiquidGlass className="rounded-xl p-6" intensity="light">
               <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">General Settings</h2>
               
               <div className="space-y-4">
@@ -243,10 +244,10 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
                   </select>
                 </div>
               </div>
-            </div>
+            </LiquidGlass>
 
             {/* Account Actions */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <LiquidGlass className="rounded-xl p-6" intensity="light">
               <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Account</h2>
               
               <div className="space-y-4">
@@ -260,12 +261,12 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
                   <p className="text-sm text-red-500 dark:text-red-400">Permanently delete your account and all data</p>
                 </button>
               </div>
-            </div>
+            </LiquidGlass>
           </div>
         )}
 
         {activeSection === 'notifications' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <LiquidGlass className="rounded-xl p-6" intensity="light">
             <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Notification Preferences</h2>
             
             <div className="space-y-6">
@@ -297,17 +298,17 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
                 </label>
               </div>
             </div>
-          </div>
+          </LiquidGlass>
         )}
 
         {activeSection === 'analytics' && isCreator && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <LiquidGlass className="rounded-xl overflow-hidden" intensity="light">
             <CreatorAnalytics user={user} />
-          </div>
+          </LiquidGlass>
         )}
 
         {activeSection === 'privacy' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <LiquidGlass className="rounded-xl p-6" intensity="light">
             <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Privacy & Security</h2>
             
             <div className="space-y-6">
@@ -345,16 +346,16 @@ const ProfilePage = ({ user, isCreator, onLogout }) => {
                 </div>
               </div>
             </div>
-          </div>
+          </LiquidGlass>
         )}
 
         {activeSection === 'become-creator' && !isCreator && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <CreatorApplication 
+          <LiquidGlass className="rounded-xl overflow-hidden" intensity="light">
+            <CreatorApplication
               user={user}
               onClose={() => setActiveSection('profile')}
             />
-          </div>
+          </LiquidGlass>
         )}
       </div>
     </div>

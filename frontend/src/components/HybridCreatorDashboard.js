@@ -74,6 +74,7 @@ import {
 import api from '../services/api';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 import { getAuthToken } from '../utils/supabase-auth';
+import LiquidGlass from './ui/LiquidGlass';
 import toast from 'react-hot-toast';
 import Button from './ui/Button';
 import Card from './ui/Card';
@@ -975,7 +976,7 @@ const HybridCreatorDashboard = memo(({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 content-below-nav" data-test="creator-dashboard-top-grid">
 
         {/* Enhanced Calls Box */}
-        <Card className="p-6 bg-white dark:bg-gray-800 shadow-xl">
+        <LiquidGlass className="p-6 shadow-xl rounded-xl" intensity="light">
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -1151,10 +1152,10 @@ const HybridCreatorDashboard = memo(({
               }
             })()}
           </div>
-        </Card>
+        </LiquidGlass>
 
         {/* Schedule Box - Next 2 Events */}
-        <Card className="p-6 bg-white dark:bg-gray-800 shadow-xl">
+        <LiquidGlass className="p-6 shadow-xl rounded-xl" intensity="light">
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -1272,10 +1273,10 @@ const HybridCreatorDashboard = memo(({
               </div>
             )}
           </div>
-        </Card>
+        </LiquidGlass>
 
         {/* Recent Activity Section */}
-        <Card className="p-6 bg-white dark:bg-gray-800 shadow-xl">
+        <LiquidGlass className="p-6 shadow-xl rounded-xl" intensity="light">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl shadow-lg">
@@ -1422,7 +1423,7 @@ const HybridCreatorDashboard = memo(({
             </div>
           )}
         </div>
-        </Card>
+        </LiquidGlass>
       </div>
 
       {/* Enhanced Content Gallery */}

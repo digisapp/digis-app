@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSwipeable } from 'react-swipeable';
 import WalletErrorBoundary from '../WalletErrorBoundary';
 import LoadingSpinner from '../ui/LoadingSpinner';
-import { 
+import LiquidGlass from '../ui/LiquidGlass';
+import {
   WalletIcon,
   BanknotesIcon,
   CogIcon,
@@ -84,9 +85,9 @@ const WalletPageOptimized = ({ user, isCreator, isAdmin, tokenBalance, onTokenUp
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
         {/* Desktop Navigation - Only show for creators */}
         {isCreator && (
-          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-sm p-2">
+          <LiquidGlass className="hidden md:block rounded-xl p-2" intensity="light">
             <nav className="flex justify-center">
-              <div className="inline-flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <div className="inline-flex items-center gap-2 bg-white/30 dark:bg-gray-700/30 rounded-lg p-1 backdrop-blur-sm">
                 {sections.map((section) => (
                 <button
                   key={section.id}
@@ -110,7 +111,7 @@ const WalletPageOptimized = ({ user, isCreator, isAdmin, tokenBalance, onTokenUp
               ))}
             </div>
           </nav>
-        </div>
+        </LiquidGlass>
         )}
 
         {/* Mobile Navigation - Swipeable Pills - Only show for creators */}

@@ -28,6 +28,7 @@ import { isSelf } from '../../utils/creatorFilters';
 import MobileLandingPage from '../mobile/MobileLandingPage';
 import MobileCreatorCard from '../mobile/MobileCreatorCard';
 import CreatorCard from '../CreatorCard';
+import LiquidGlass from '../ui/LiquidGlass';
 import { addBreadcrumb } from '../../lib/sentry.client';
 import { getAuthToken } from '../../utils/supabase-auth';
 import { useAuth } from '../../contexts/AuthContext';
@@ -590,7 +591,7 @@ const ExplorePage = ({
   return (
     <div className={`min-h-screen ${isMobile ? 'bg-gradient-to-br from-purple-50 via-white to-pink-50' : 'bg-gray-50 dark:bg-gray-900'}`}>
       {/* Filters Bar */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 content-below-nav">
+      <LiquidGlass className="sticky top-0 z-40 shadow-sm content-below-nav" intensity="medium">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-5">
 
           {/* Search and Filters Row */}
@@ -766,7 +767,7 @@ const ExplorePage = ({
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </LiquidGlass>
 
       {/* Live Now Section */}
       {liveCreators.length > 0 && (

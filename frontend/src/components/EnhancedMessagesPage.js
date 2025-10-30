@@ -40,6 +40,7 @@ import MentionNotification from './MentionNotification';
 import BroadcastMessageModal from './BroadcastMessageModal';
 import RealTimeNotificationsHybrid from './RealTimeNotificationsHybrid';
 import PPVPricingModal from './messages/PPVPricingModal';
+import LiquidGlass from './ui/LiquidGlass';
 import { getAuthToken } from '../utils/supabase-auth';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 
@@ -1085,7 +1086,8 @@ const EnhancedMessagesPage = ({
       {/* Conversation List Sidebar */}
       <AnimatePresence>
         {(!isMobile || showConversationList) && (
-          <motion.div
+          <LiquidGlass
+            as={motion.div}
             role="region"
             aria-label="Conversation list"
             initial={{ x: -300 }}
@@ -1093,7 +1095,8 @@ const EnhancedMessagesPage = ({
             exit={{ x: -300 }}
             className={`${
               isMobile ? 'absolute inset-y-0 left-0 z-40' : 'relative'
-            } w-full md:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col`}
+            } w-full md:w-96 border-r border-white/20 dark:border-gray-700/30 flex flex-col`}
+            intensity="light"
           >
             {/* Header */}
             <div className="p-4 border-b border-gray-200">
@@ -1219,7 +1222,7 @@ const EnhancedMessagesPage = ({
                 </div>
               )}
             </div>
-          </motion.div>
+          </LiquidGlass>
         )}
       </AnimatePresence>
       
@@ -1228,7 +1231,7 @@ const EnhancedMessagesPage = ({
         {selectedConversation ? (
           <div className="flex flex-col h-full">
             {/* Chat Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
+            <LiquidGlass className="border-b border-white/20 dark:border-gray-700/30 px-6 py-4 flex-shrink-0" intensity="light">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   {isMobile && (
@@ -1322,7 +1325,7 @@ const EnhancedMessagesPage = ({
                   </button>
                 </div>
               </div>
-            </div>
+            </LiquidGlass>
             
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0" role="log" aria-label="Messages" aria-live="polite">
@@ -1415,7 +1418,7 @@ const EnhancedMessagesPage = ({
             </div>
             
             {/* Message Input */}
-            <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0">
+            <LiquidGlass className="border-t border-white/20 dark:border-gray-700/30 px-4 py-3 flex-shrink-0" intensity="light">
               {/* Creator's Message Rates Display */}
               {isCreator && (
                 <div className="mb-2 flex items-center justify-between">
@@ -1566,7 +1569,7 @@ const EnhancedMessagesPage = ({
                   )}
                 </button>
               </div>
-            </div>
+            </LiquidGlass>
           </div>
         ) : (
           /* No conversation selected */
