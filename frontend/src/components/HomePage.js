@@ -23,6 +23,14 @@ const HomePage = ({ onSignIn, onSignUp }) => {
   const [logoFailed, setLogoFailed] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
+  // Debug: Log props on mount
+  useEffect(() => {
+    console.log('🏠 HomePage mounted with props:', {
+      hasOnSignIn: typeof onSignIn === 'function',
+      hasOnSignUp: typeof onSignUp === 'function'
+    });
+  }, []);
+
   // Reset page title and meta tags on mount
   useEffect(() => {
     document.title = 'Digis - Connect with Creators';
@@ -189,14 +197,34 @@ const HomePage = ({ onSignIn, onSignUp }) => {
           
           <div className="flex items-center space-x-3">
             <button
-              onClick={onSignIn}
-              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('🔵 Log In button clicked');
+                if (onSignIn && typeof onSignIn === 'function') {
+                  onSignIn();
+                } else {
+                  console.log('🔵 onSignIn not provided, navigating directly');
+                  navigate('/auth?mode=signin');
+                }
+              }}
+              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200 cursor-pointer"
+              style={{ pointerEvents: 'auto' }}
             >
               Log In
             </button>
             <button
-              onClick={onSignUp}
-              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('🟢 Sign Up button clicked');
+                if (onSignUp && typeof onSignUp === 'function') {
+                  onSignUp();
+                } else {
+                  console.log('🟢 onSignUp not provided, navigating directly');
+                  navigate('/auth?mode=signup');
+                }
+              }}
+              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer"
+              style={{ pointerEvents: 'auto' }}
             >
               Sign Up
             </button>
@@ -234,8 +262,18 @@ const HomePage = ({ onSignIn, onSignUp }) => {
             className="flex justify-center items-center mb-8 md:mb-16"
           >
             <button
-              onClick={onSignUp}
-              className="group relative px-10 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xl rounded-full hover:from-pink-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-xl"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('🟢 Get Started button clicked');
+                if (onSignUp && typeof onSignUp === 'function') {
+                  onSignUp();
+                } else {
+                  console.log('🟢 onSignUp not provided, navigating directly');
+                  navigate('/auth?mode=signup');
+                }
+              }}
+              className="group relative px-10 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xl rounded-full hover:from-pink-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-xl cursor-pointer"
+              style={{ pointerEvents: 'auto' }}
             >
               <span className="flex items-center space-x-2">
                 <RocketLaunchIcon className="h-6 w-6" />
@@ -441,8 +479,18 @@ const HomePage = ({ onSignIn, onSignUp }) => {
           >
             <p className="text-xl md:text-2xl font-bold mb-4">Ready to join the fun? 🚀</p>
             <button
-              onClick={onSignUp}
-              className="px-10 py-4 bg-white text-purple-600 font-black text-xl rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-2xl"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('🟢 Join Digis button clicked');
+                if (onSignUp && typeof onSignUp === 'function') {
+                  onSignUp();
+                } else {
+                  console.log('🟢 onSignUp not provided, navigating directly');
+                  navigate('/auth?mode=signup');
+                }
+              }}
+              className="px-10 py-4 bg-white text-purple-600 font-black text-xl rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-2xl cursor-pointer"
+              style={{ pointerEvents: 'auto' }}
             >
               Join Digis
             </button>
