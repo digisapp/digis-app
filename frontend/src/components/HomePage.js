@@ -192,7 +192,7 @@ const HomePage = () => {
               className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200 cursor-pointer inline-block"
               style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
-              Log In
+              Sign in
             </Link>
             <Link
               to="/auth?mode=signup"
