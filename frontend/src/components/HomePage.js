@@ -180,9 +180,9 @@ const HomePage = ({ onSignIn, onSignUp }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-50 px-4 py-4">
+      <nav className="relative z-50 px-4 py-4" style={{ pointerEvents: 'auto' }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center group ml-6">
+          <Link to="/" className="flex items-center group ml-6" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}>
             {logoFailed ? (
               <span className="text-2xl font-black text-white">DIGIS</span>
             ) : (
@@ -194,8 +194,8 @@ const HomePage = ({ onSignIn, onSignUp }) => {
               />
             )}
           </Link>
-          
-          <div className="flex items-center space-x-3">
+
+          <div className="flex items-center space-x-3" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}>
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -208,7 +208,7 @@ const HomePage = ({ onSignIn, onSignUp }) => {
                 }
               }}
               className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200 cursor-pointer"
-              style={{ pointerEvents: 'auto' }}
+              style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               Log In
             </button>
@@ -224,7 +224,7 @@ const HomePage = ({ onSignIn, onSignUp }) => {
                 }
               }}
               className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer"
-              style={{ pointerEvents: 'auto' }}
+              style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               Sign Up
             </button>
@@ -259,7 +259,7 @@ const HomePage = ({ onSignIn, onSignUp }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex justify-center items-center mb-8 md:mb-16"
+            className="flex justify-center items-center mb-8 md:mb-16 relative z-10"
           >
             <button
               onClick={(e) => {
@@ -273,7 +273,7 @@ const HomePage = ({ onSignIn, onSignUp }) => {
                 }
               }}
               className="group relative px-10 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xl rounded-full hover:from-pink-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-xl cursor-pointer"
-              style={{ pointerEvents: 'auto' }}
+              style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               <span className="flex items-center space-x-2">
                 <RocketLaunchIcon className="h-6 w-6" />
@@ -475,7 +475,7 @@ const HomePage = ({ onSignIn, onSignUp }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.6 }}
-            className="mt-8 md:mt-16 pb-6 md:pb-12 text-white"
+            className="mt-8 md:mt-16 pb-6 md:pb-12 text-white relative z-10"
           >
             <p className="text-xl md:text-2xl font-bold mb-4">Ready to join the fun? 🚀</p>
             <button
@@ -490,7 +490,7 @@ const HomePage = ({ onSignIn, onSignUp }) => {
                 }
               }}
               className="px-10 py-4 bg-white text-purple-600 font-black text-xl rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-2xl cursor-pointer"
-              style={{ pointerEvents: 'auto' }}
+              style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               Join Digis
             </button>
