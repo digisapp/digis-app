@@ -75,6 +75,7 @@ import api from '../services/api';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 import { getAuthToken } from '../utils/supabase-auth';
 import LiquidGlass from './ui/LiquidGlass';
+import { isFeatureEnabled } from '../config/featureFlags';
 import toast from 'react-hot-toast';
 import Button from './ui/Button';
 import Card from './ui/Card';
@@ -368,13 +369,23 @@ const HybridCreatorDashboard = memo(({
 
       // Only fetch if user is available
       if (user?.username || user?.id) {
-        await Promise.all([
-          fetchDashboardData(),
-          fetchAnalytics(),
-          fetchTopFans(),
-          fetchDigitals(),
-          fetchOffers()
-        ]).catch(error => {
+        const fetchTasks = [fetchDashboardData()];
+
+        // Only fetch if endpoints are enabled
+        if (isFeatureEnabled('ANALYTICS_ENABLED')) {
+          fetchTasks.push(fetchAnalytics());
+        }
+        if (isFeatureEnabled('TOP_FANS_ENABLED')) {
+          fetchTasks.push(fetchTopFans());
+        }
+        if (isFeatureEnabled('DIGITALS_ENABLED')) {
+          fetchTasks.push(fetchDigitals());
+        }
+        if (isFeatureEnabled('OFFERS_ENABLED')) {
+          fetchTasks.push(fetchOffers());
+        }
+
+        await Promise.all(fetchTasks).catch(error => {
           console.error('Error fetching dashboard data:', error);
         });
       }
@@ -509,24 +520,26 @@ const HybridCreatorDashboard = memo(({
         }
       }
 
-      // Fetch upcoming sessions
-      try {
-        const sessionsResponse = await fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/sessions/upcoming`,
-          {
-            headers: { Authorization: `Bearer ${authToken}` }
-          }
-        );
+      // Fetch upcoming sessions (only if enabled)
+      if (isFeatureEnabled('UPCOMING_SESSIONS_ENABLED')) {
+        try {
+          const sessionsResponse = await fetchWithRetry(
+            `${import.meta.env.VITE_BACKEND_URL}/sessions/upcoming`,
+            {
+              headers: { Authorization: `Bearer ${authToken}` }
+            }
+          );
 
-        if (sessionsResponse.status === 404) {
-          console.log('ℹ️ Upcoming sessions endpoint not available yet');
-          setUpcomingSessions([]);
-        } else if (sessionsResponse.ok) {
-          const sessionsData = await sessionsResponse.json();
-          setUpcomingSessions(sessionsData.sessions || []);
+          if (sessionsResponse.status === 404) {
+            console.log('ℹ️ Upcoming sessions endpoint not available yet');
+            setUpcomingSessions([]);
+          } else if (sessionsResponse.ok) {
+            const sessionsData = await sessionsResponse.json();
+            setUpcomingSessions(sessionsData.sessions || []);
+          }
+        } catch (sessionsError) {
+          console.error('Error fetching upcoming sessions:', sessionsError);
         }
-      } catch (sessionsError) {
-        console.error('Error fetching upcoming sessions:', sessionsError);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
