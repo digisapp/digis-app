@@ -22,59 +22,10 @@
     <title>Digis - Content Creators</title>
     
     <script>
-      // AGGRESSIVE SERVICE WORKER CLEANUP
-      // This will run before anything else loads
-      (async function() {
-        console.log('🧹 Starting aggressive service worker cleanup...');
-
-        // Check if we just did cleanup and reloaded
-        const cleanupDone = sessionStorage.getItem('sw-cleanup-done');
-
-        if ('serviceWorker' in navigator) {
-          // Get all registrations
-          const registrations = await navigator.serviceWorker.getRegistrations();
-
-          // If we have service workers and haven't cleaned up yet
-          if (registrations.length > 0 && !cleanupDone) {
-            // Unregister everything
-            for (let registration of registrations) {
-              try {
-                const success = await registration.unregister();
-                console.log(`🗑️ Unregistered SW: ${registration.scope} - Success: ${success}`);
-              } catch (e) {
-                console.error('Failed to unregister:', e);
-              }
-            }
-
-            // Clear all caches
-            if ('caches' in window) {
-              const cacheNames = await caches.keys();
-              for (let cacheName of cacheNames) {
-                try {
-                  await caches.delete(cacheName);
-                  console.log(`🗑️ Deleted cache: ${cacheName}`);
-                } catch (e) {
-                  console.error('Failed to delete cache:', e);
-                }
-              }
-            }
-
-            // Mark cleanup as done and force hard reload
-            sessionStorage.setItem('sw-cleanup-done', 'true');
-            console.log('✅ Service worker cleanup complete - forcing hard reload...');
-
-            // Hard reload to get fresh assets (bypasses all caches)
-            window.location.reload(true);
-            return; // Stop execution since we're reloading
-          }
-        }
-
-        // Clear the flag after successful load
-        if (cleanupDone) {
-          sessionStorage.removeItem('sw-cleanup-done');
-          console.log('✅ Service worker cleanup complete - fresh assets loaded');
-        }
-      })();
+      // SERVICE WORKER CLEANUP - DISABLED
+      // Cleanup script was causing infinite reload loops
+      // Service workers are already disabled in disableServiceWorker.js
+      console.log('✅ Service worker cleanup skipped - handled by app initialization');
     </script>
     <style>
       /* Base styles */
