@@ -485,33 +485,53 @@ const HybridCreatorDashboard = memo(({
       // Fetch content (photos, videos, audios)
       const creatorId = user?.supabase_id || user?.id;
       if (creatorId) {
-        const contentResponse = await fetchWithRetry(
-          `${import.meta.env.VITE_BACKEND_URL}/content/creator/${creatorId}`,
+        try {
+          const contentResponse = await fetchWithRetry(
+            `${import.meta.env.VITE_BACKEND_URL}/content/creator/${creatorId}`,
+            {
+              headers: { Authorization: `Bearer ${authToken}` }
+            }
+          );
+
+          if (contentResponse.ok) {
+            const contentResult = await contentResponse.json();
+            setContentData({
+              photos: contentResult.pictures || [],
+              videos: contentResult.videos || []
+            });
+          }
+        } catch (contentError) {
+          // Silently handle 404 - endpoint not implemented yet
+          if (contentError.message?.includes('404') || contentError.message?.includes('NOT_FOUND')) {
+            console.log('ℹ️ Content endpoint not available yet');
+            setContentData({ photos: [], videos: [] });
+          } else {
+            console.error('Error fetching content:', contentError);
+          }
+        }
+      }
+
+      // Fetch upcoming sessions
+      try {
+        const sessionsResponse = await fetchWithRetry(
+          `${import.meta.env.VITE_BACKEND_URL}/sessions/upcoming`,
           {
             headers: { Authorization: `Bearer ${authToken}` }
           }
         );
-      
-        if (contentResponse.ok) {
-          const contentResult = await contentResponse.json();
-          setContentData({
-            photos: contentResult.pictures || [],
-            videos: contentResult.videos || []
-          });
+
+        if (sessionsResponse.ok) {
+          const sessionsData = await sessionsResponse.json();
+          setUpcomingSessions(sessionsData.sessions || []);
         }
-      }
-      
-      // Fetch upcoming sessions
-      const sessionsResponse = await fetchWithRetry(
-        `${import.meta.env.VITE_BACKEND_URL}/sessions/upcoming`,
-        {
-          headers: { Authorization: `Bearer ${authToken}` }
+      } catch (sessionsError) {
+        // Silently handle 404 - endpoint not implemented yet
+        if (sessionsError.message?.includes('404') || sessionsError.message?.includes('NOT_FOUND')) {
+          console.log('ℹ️ Upcoming sessions endpoint not available yet');
+          setUpcomingSessions([]);
+        } else {
+          console.error('Error fetching upcoming sessions:', sessionsError);
         }
-      );
-      
-      if (sessionsResponse.ok) {
-        const sessionsData = await sessionsResponse.json();
-        setUpcomingSessions(sessionsData.sessions || []);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
