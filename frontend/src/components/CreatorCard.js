@@ -376,19 +376,34 @@ const CreatorCard = ({
         const isFormEl = !!target.closest('input,textarea,select');
         const isInteractive = isButton || isFormEl;
 
+        console.log('🔍 CreatorCard clicked:', {
+          creator: creator?.username || creator?.id,
+          profilePath,
+          isButton,
+          isFormEl,
+          isInteractive,
+          targetTag: target.tagName,
+          targetClass: target.className
+        });
+
         // Buttons and form elements handle their own clicks
         if (isInteractive) {
+          console.log('⚠️ Click blocked - interactive element detected');
           return;
         }
 
         // Allow new tab/window behaviors (Cmd/Ctrl/Shift-click, middle-click)
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+          console.log('⚠️ Click blocked - modifier key detected');
           return;
         }
 
         // Navigate to profile page
         if (profilePath) {
+          console.log('✅ Navigating to:', profilePath);
           navigate(profilePath);
+        } else {
+          console.error('❌ No profilePath available for creator:', creator);
         }
       }}
       className={`
