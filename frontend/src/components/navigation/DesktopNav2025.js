@@ -80,60 +80,9 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
   const navOpacity = useTransform(scrollY, [0, 100], [0.95, 0.98]);
   const navBlur = useTransform(scrollY, [0, 100], [15, 25]);
 
-  // Debug log for QA (can be removed in production)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('🧭 DesktopNav Menu role:', role, {
-      isCreator,
-      isAdmin,
-      roleResolved
-    });
-  }
-
-  // ✅ NOW safe to do early return AFTER all hooks are declared
-  if (!currentUser) return null;
-
-  // Use store token balance if context doesn't have it
+  // Compute effective token balance early (before any early returns)
   const effectiveTokenBalance = tokenBalance !== undefined ? tokenBalance : storeTokenBalance;
-
-  const navItems = getDesktopMenuItems(role);
-  const mainNavItems = navItems.filter(item => {
-    // Main navigation items - wallet is NOT included here (it's a button on the right)
-    const allowedItems = role === 'creator'
-      ? ['dashboard', 'explore', 'messages']
-      : ['home', 'explore', 'messages', 'tv', 'classes'];
-    return allowedItems.includes(item.id);
-  });
-
-  // Debug token balance
-  console.log('🔍 DesktopNav2025 Debug:', {
-    role,
-    contextTokenBalance: tokenBalance,
-    storeTokenBalance,
-    effectiveTokenBalance,
-    hasTokenBalance: effectiveTokenBalance !== undefined,
-    tokenType: typeof effectiveTokenBalance,
-    allNavItems: navItems.map(i => i.id),
-    mainNavItems: mainNavItems.map(i => ({ id: i.id, label: i.label })),
-    hasWalletItem: mainNavItems.some(i => i.id === 'wallet')
-  });
-  const creatorItems = navItems.filter(item =>
-    ['dashboard', 'earnings', 'content', 'schedule'].includes(item.id)  // Removed analytics from here
-  );
-
-  // Guard: Don't render until role is resolved to prevent flicker
-  if (!roleResolved) {
-    return (
-      <nav className="fixed top-0 left-0 right-0 z-[100] h-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-lg">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
-          <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          <div className="flex items-center space-x-4">
-            <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            <div className="h-11 w-11 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
-          </div>
-        </div>
-      </nav>
-    );
-  }
+  const userId = currentUser?.id; // Stable primitive for dependencies
 
   // Mock live viewer count animation and fetch token balance if needed
   useEffect(() => {
@@ -141,7 +90,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
     let mounted = true;
 
     // Only fetch if we have a stable user and role is resolved
-    if (effectiveTokenBalance === undefined && currentUser?.id && roleResolved) {
+    if (effectiveTokenBalance === undefined && userId && roleResolved) {
       console.log('🔄 Token balance undefined, triggering fetch...');
       // Trigger a token balance fetch through the API
       const fetchBalance = async () => {
@@ -195,7 +144,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
       ac.abort();
       if (interval) clearInterval(interval);
     };
-  }, [role, currentUser?.id, roleResolved]); // Removed effectiveTokenBalance from deps to prevent loop
+  }, [role, userId, roleResolved]); // ❌ Do NOT include effectiveTokenBalance - it causes infinite loop
 
   // Scroll effect
   useEffect(() => {
@@ -232,6 +181,58 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
       setAiSuggestions([]);
     }
   }, [searchQuery]);
+
+  // Debug log for QA (can be removed in production)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🧭 DesktopNav Menu role:', role, {
+      isCreator,
+      isAdmin,
+      roleResolved
+    });
+  }
+
+  // ✅ NOW safe to do early return AFTER all hooks are declared
+  if (!currentUser) return null;
+
+  const navItems = getDesktopMenuItems(role);
+  const mainNavItems = navItems.filter(item => {
+    // Main navigation items - wallet is NOT included here (it's a button on the right)
+    const allowedItems = role === 'creator'
+      ? ['dashboard', 'explore', 'messages']
+      : ['home', 'explore', 'messages', 'tv', 'classes'];
+    return allowedItems.includes(item.id);
+  });
+
+  // Debug token balance
+  console.log('🔍 DesktopNav2025 Debug:', {
+    role,
+    contextTokenBalance: tokenBalance,
+    storeTokenBalance,
+    effectiveTokenBalance,
+    hasTokenBalance: effectiveTokenBalance !== undefined,
+    tokenType: typeof effectiveTokenBalance,
+    allNavItems: navItems.map(i => i.id),
+    mainNavItems: mainNavItems.map(i => ({ id: i.id, label: i.label })),
+    hasWalletItem: mainNavItems.some(i => i.id === 'wallet')
+  });
+  const creatorItems = navItems.filter(item =>
+    ['dashboard', 'earnings', 'content', 'schedule'].includes(item.id)  // Removed analytics from here
+  );
+
+  // Guard: Don't render until role is resolved to prevent flicker
+  if (!roleResolved) {
+    return (
+      <nav className="fixed top-0 left-0 right-0 z-[100] h-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-lg">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+          <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="flex items-center space-x-4">
+            <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-11 w-11 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   const handleSearch = (e) => {
     e.preventDefault();
