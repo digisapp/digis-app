@@ -148,9 +148,6 @@ const App = () => {
   // CRITICAL FIX: Force-correct /?mode=signin to /auth?mode=signin
   // Something is intercepting Link clicks and stripping /auth pathname
   // This ensures users always land on /auth when mode param is present
-  const location = useLocation();
-  const navigate = useNavigate();
-
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const mode = params.get('mode');
