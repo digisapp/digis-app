@@ -71,9 +71,44 @@ class AblyService {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         } : {},
+        // Custom auth callback to handle 404 errors gracefully
+        authCallback: async (tokenParams, callback) => {
+          try {
+            const response = await fetch(authUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': token ? `Bearer ${token}` : '',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(authParams)
+            });
+
+            if (response.status === 404) {
+              console.log('ℹ️ Ably token endpoint not available yet - real-time features disabled');
+              callback(new Error('Ably not configured'), null);
+              this.isConnecting = false;
+              this.connectionPromise = null;
+              return;
+            }
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+
+            const tokenRequest = await response.json();
+            callback(null, tokenRequest);
+          } catch (error) {
+            console.error('Ably auth error:', error);
+            callback(error, null);
+            this.isConnecting = false;
+            this.connectionPromise = null;
+          }
+        },
         // Automatic reconnection with exponential backoff
-        disconnectedRetryTimeout: 3000,
-        suspendedRetryTimeout: 10000,
+        disconnectedRetryTimeout: 15000, // Increase to 15s to reduce retries
+        suspendedRetryTimeout: 30000, // Increase to 30s
+        // Disable automatic connection to prevent immediate retry
+        autoConnect: false,
         // Enable message history (last 50 messages on rejoin)
         recover: (lastConnectionDetails, callback) => {
           callback(true); // Always try to recover
@@ -91,7 +126,8 @@ class AblyService {
         const timeout = setTimeout(() => {
           this.isConnecting = false;
           this.connectionPromise = null;
-          reject(new Error('Ably connection timeout'));
+          console.log('ℹ️ Ably connection timeout - continuing without real-time features');
+          resolve(); // Resolve instead of reject to not break the app
         }, 30000);
 
         this.client.connection.once('connected', () => {
@@ -109,17 +145,21 @@ class AblyService {
           clearTimeout(timeout);
           this.isConnecting = false;
           this.connectionPromise = null;
-          console.error('❌ Ably connection failed:', error);
-          reject(error);
+          console.log('ℹ️ Ably connection failed - continuing without real-time features');
+          resolve(); // Resolve instead of reject to not break the app
         });
       });
 
+      // Manually trigger connection since autoConnect is false
+      this.client.connect();
+
       return this.connectionPromise;
     } catch (error) {
-      console.error('Failed to connect to Ably:', error);
+      console.log('ℹ️ Failed to initialize Ably - continuing without real-time features');
       this.isConnecting = false;
       this.notifyErrorListeners(error);
-      throw error;
+      // Don't throw - allow app to continue without real-time features
+      return Promise.resolve();
     }
   }
 
