@@ -700,12 +700,14 @@ const App = () => {
   // Handle auth - Navigate to auth page with mode parameter
   const handleSignIn = () => {
     console.log('🔵 handleSignIn called - navigating to /auth?mode=signin');
-    navigate('/auth?mode=signin');
+    const { buildAuthUrl } = require('./utils/nav');
+    navigate(buildAuthUrl('signin'));
   };
 
   const handleSignUp = () => {
     console.log('🔵 handleSignUp called - navigating to /auth?mode=signup');
-    navigate('/auth?mode=signup');
+    const { buildAuthUrl } = require('./utils/nav');
+    navigate(buildAuthUrl('signup'));
   };
 
   const handleBackToLanding = () => {
@@ -1021,13 +1023,14 @@ const App = () => {
     console.log('📍 Desktop routing - rendering Routes with pathname:', location.pathname);
 
     // CRITICAL FIX: Atomic redirect gate - runs during render before effects
-    // If someone lands on /?mode=signin, immediately redirect to /auth?mode=signin
+    // If someone lands on /?mode=signin (or any non-auth path), redirect to /auth?mode=signin
     const params = new URLSearchParams(location.search);
     const mode = params.get('mode');
-    // Only redirect if we're on homepage "/" with mode param (prevents loops)
-    if (mode && location.pathname === '/') {
-      console.log(`🔧 ModeRedirectGate: /?mode=${mode} → /auth?mode=${mode}`);
-      return <Navigate to={{ pathname: '/auth', search: `?mode=${mode}` }} replace />;
+    // Redirect if we have a mode param but we're NOT on /auth (prevents loops)
+    if (mode && location.pathname !== '/auth') {
+      console.log(`🔧 ModeRedirectGate: ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
+      const { buildAuthUrl } = require('./utils/nav');
+      return <Navigate to={buildAuthUrl(mode)} replace />;
     }
 
     return (

@@ -239,7 +239,8 @@ export const useAuth = (): UseAuthReturn => {
 
         if (profileError) throw profileError;
 
-        navigate('/auth?mode=verify-email');
+        const { buildAuthUrl } = await import('../utils/nav');
+        navigate(buildAuthUrl('verify-email'));
       }
     } catch (err) {
       const error = err as Error;
@@ -346,7 +347,8 @@ export const useAuth = (): UseAuthReturn => {
 
       if (error) throw error;
 
-      navigate('/auth?mode=signin');
+      const { buildAuthUrl } = await import('../utils/nav');
+      navigate(buildAuthUrl('signin'));
     } catch (err) {
       const error = err as Error;
       console.error('Password reset confirmation error:', error);
