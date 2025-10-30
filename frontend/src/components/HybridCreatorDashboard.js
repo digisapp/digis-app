@@ -980,26 +980,22 @@ const HybridCreatorDashboard = memo(({
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log('[CALLS] Icon clicked - navigating to call requests');
+                    navigate('/call-requests');
+                  }}
+                  className="p-3 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+                  aria-label="Manage call requests"
+                >
                   <ClockIcon className="w-6 h-6 text-white" />
-                </div>
+                </button>
                 <div>
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Calls</p>
                   <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Upcoming</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  console.log('[CALLS] Manage button clicked');
-                  navigate('/call-requests');
-                }}
-                className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer"
-                aria-label="Manage call requests"
-                data-testid="manage-calls"
-              >
-                Manage
-              </button>
             </div>
 
             {(() => {
@@ -1159,26 +1155,22 @@ const HybridCreatorDashboard = memo(({
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-2xl shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log('[SCHEDULE] Icon clicked - navigating to schedule');
+                    navigate('/schedule');
+                  }}
+                  className="p-3 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-2xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+                  aria-label="Manage schedule"
+                >
                   <CalendarIcon className="w-6 h-6 text-white" />
-                </div>
+                </button>
                 <div>
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Schedule</p>
                   <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Upcoming Events</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  console.log('[SCHEDULE] Manage button clicked');
-                  navigate('/schedule');
-                }}
-                className="relative z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer"
-                aria-label="Manage schedule"
-                data-testid="manage-schedule"
-              >
-                Manage
-              </button>
             </div>
 
             {upcomingSessions.length > 0 ? (
@@ -1279,21 +1271,22 @@ const HybridCreatorDashboard = memo(({
         <LiquidGlass className="p-6 shadow-xl rounded-xl" intensity="light">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl shadow-lg">
+            <button
+              type="button"
+              onClick={() => {
+                console.log('[ACTIVITY] Icon clicked - showing notifications modal');
+                setShowNotificationsModal(true);
+              }}
+              className="p-3 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+              aria-label="View all activity"
+            >
               <ClockIcon className="w-6 h-6 text-white" />
-            </div>
+            </button>
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activity</p>
               <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Last 24 hours</p>
             </div>
           </div>
-          <Button
-            onClick={() => setShowNotificationsModal(true)}
-            className="text-xs px-2 py-1"
-            variant="secondary"
-          >
-            View All
-          </Button>
         </div>
 
         <div className="space-y-3">
