@@ -115,11 +115,8 @@ const MessageComposeModal = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: 30 }}
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
-            className="fixed z-[10002]"
+            className="fixed z-[10002] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
             style={{
-              left: cardPosition?.centerX ? `${cardPosition.centerX}px` : '50%',
-              top: cardPosition?.centerY ? `${cardPosition.centerY}px` : '50%',
-              transform: 'translate(-50%, -50%)',
               width: '420px',
               maxWidth: '90vw'
             }}
