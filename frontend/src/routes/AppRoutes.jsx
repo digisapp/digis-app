@@ -190,19 +190,7 @@ const AppRoutes = () => {
       <Suspense fallback={LoadingFallback}>
         <Routes>
         {/* Public Routes */}
-        <Route path="/" element={
-          currentUser ? (
-            // Wait for role resolution before redirecting
-            roleResolved ? (
-              <Navigate to={defaultPathFor(role)} replace />
-            ) : (
-              // Neutral loader while waiting for role resolution
-              <RouteFallback />
-            )
-          ) : (
-            <HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />
-          )
-        } />
+        <Route path="/" element={<HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />} />
 
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
