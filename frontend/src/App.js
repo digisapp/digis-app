@@ -1010,8 +1010,9 @@ const App = () => {
     // If someone lands on /?mode=signin, immediately redirect to /auth?mode=signin
     const params = new URLSearchParams(location.search);
     const mode = params.get('mode');
-    if (mode && location.pathname !== '/auth') {
-      console.log(`🔧 ModeRedirectGate: ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
+    // Only redirect if we're on homepage "/" with mode param (prevents loops)
+    if (mode && location.pathname === '/') {
+      console.log(`🔧 ModeRedirectGate: /?mode=${mode} → /auth?mode=${mode}`);
       return <Navigate to={{ pathname: '/auth', search: `?mode=${mode}` }} replace />;
     }
 
