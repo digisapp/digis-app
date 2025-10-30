@@ -1113,7 +1113,7 @@ const App = () => {
   // Route guard - prevent legacy views from rendering when on routed pages
   const routedRoots = [
     '/dashboard', '/messages', '/wallet', '/tv', '/classes', '/explore', '/call',
-    '/subscriptions', '/following', '/schedule', '/admin', '/content', '/analytics',
+    '/subscriptions', '/following', '/schedule', '/call-requests', '/admin', '/content', '/analytics',
     '/collections', '/profile', '/settings', '/followers', '/subscribers',
     // 🔐 All live-related paths to prevent legacy renderer from double-mounting streaming UI
     '/streaming', '/stream', '/live', '/go-live', '/go-live-setup'
