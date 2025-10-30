@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CreatorCard Navigation Test</title>
+</head>
+<body>
+  <h1>CreatorCard Navigation Test</h1>
+  <p>Open your browser console (F12) and click on a creator card on the Explore page.</p>
+  <p>Look for these logs:</p>
+  <ul>
+    <li><strong>🔍 CreatorCard clicked:</strong> - Shows click was detected</li>
+    <li><strong>✅ Navigating to:</strong> - Shows navigation was triggered</li>
+    <li><strong>[VanityRoute] Username:</strong> - Shows VanityRoute received the username</li>
+  </ul>
+
+  <h2>Common Issues:</h2>
+  <ol>
+    <li><strong>No logs at all</strong> - Click is being blocked by a button/form element</li>
+    <li><strong>Logs show but no navigation</strong> - profilePath is null or navigation is failing</li>
+    <li><strong>[VanityRoute] says "Invalid format"</strong> - Username has invalid characters or length</li>
+    <li><strong>[VanityRoute] says "Reserved word"</strong> - Username conflicts with a route</li>
+  </ol>
+
+  <h2>Quick Fix:</h2>
+  <p>If you see "Invalid format", check the username in the database. It must be:</p>
+  <ul>
+    <li>3-30 characters</li>
+    <li>Only lowercase letters, numbers, dots, underscores, hyphens</li>
+    <li>Start and end with alphanumeric</li>
+  </ul>
+
+  <script>
+    console.log('Navigation test page loaded. Click a creator card and watch the console.');
+  </script>
+</body>
+</html>

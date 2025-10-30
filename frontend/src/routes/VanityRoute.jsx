@@ -51,24 +51,34 @@ export default function VanityRoute() {
   const { username = '' } = useParams(); // Fixed: was 'handle', should be 'username'
   const normalized = username.trim().toLowerCase();
 
-  console.log('[VanityRoute] Username:', normalized);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('[VanityRoute] 📍 Triggered!');
+  console.log('[VanityRoute] Raw username:', username);
+  console.log('[VanityRoute] Normalized:', normalized);
+  console.log('[VanityRoute] Length:', normalized.length);
 
   // Reserved words should pass through to their normal routes
   // React Router will prioritize static routes over this dynamic one,
   // but this is a safety net
   if (RESERVED_HANDLES.has(normalized)) {
-    console.log('[VanityRoute] Reserved word, passing through');
+    console.log('[VanityRoute] ⚠️  Reserved word detected, passing through');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     // Don't navigate - let the router find the actual route
     return null;
   }
 
   // Validate username format (keep in sync with backend)
   if (normalized.length < 3 || normalized.length > 30 || !RE.test(normalized)) {
-    console.log('[VanityRoute] Invalid format, redirecting to 404');
+    console.log('[VanityRoute] ❌ Invalid format!');
+    console.log('[VanityRoute] Length check:', normalized.length >= 3 && normalized.length <= 30 ? '✅' : '❌');
+    console.log('[VanityRoute] Regex check:', RE.test(normalized) ? '✅' : '❌');
+    console.log('[VanityRoute] Redirecting to 404');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     return <Navigate to="/404" replace />;
   }
 
   // Valid username format - render creator profile
-  console.log('[VanityRoute] Valid username, rendering profile');
+  console.log('[VanityRoute] ✅ Valid username, rendering profile via Outlet');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   return <Outlet />;
 }
