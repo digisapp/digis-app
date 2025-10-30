@@ -88,12 +88,14 @@ const AppRoutes = () => {
   const navigate = useNavigate();
 
   // Redirect authenticated users away from /auth page
+  // Only redirect if role is fully resolved to prevent glitching
   React.useEffect(() => {
-    if (currentUser && location.pathname === '/auth') {
+    if (currentUser && roleResolved && location.pathname === '/auth') {
       const defaultPath = defaultPathFor(role);
+      console.log('🔄 Redirecting authenticated user from /auth to', defaultPath);
       navigate(defaultPath, { replace: true });
     }
-  }, [currentUser, location.pathname, role, navigate]);
+  }, [currentUser, roleResolved, location.pathname, role, navigate]);
 
   // Route observability - tracks navigation performance and errors
   useRouteObservability();
