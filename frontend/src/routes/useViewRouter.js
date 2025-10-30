@@ -51,16 +51,17 @@ export default function useViewRouter() {
     const isAtRoot = location.pathname === '/';
     const isAtExpectedPath = location.pathname === expectedPath;
 
-    // Allow redirect from root once auth is resolved
-    if (isAtRoot && roleResolved && expectedPath !== '/') {
-      console.log('📍 Redirecting from root to:', currentView, '→', expectedPath);
-      // Preserve query params and hash
-      const url = new URL(window.location.href);
-      navigate(`${expectedPath}${url.search}${url.hash}`, { replace: true });
-      lastViewRef.current = currentView;
-      redirectedOnceRef.current = true;
-      return;
-    }
+    // DISABLED: Don't auto-redirect from root - let users see the homepage
+    // Users can navigate to their dashboard/explore via navigation links
+    // if (isAtRoot && roleResolved && expectedPath !== '/') {
+    //   console.log('📍 Redirecting from root to:', currentView, '→', expectedPath);
+    //   // Preserve query params and hash
+    //   const url = new URL(window.location.href);
+    //   navigate(`${expectedPath}${url.search}${url.hash}`, { replace: true });
+    //   lastViewRef.current = currentView;
+    //   redirectedOnceRef.current = true;
+    //   return;
+    // }
 
     // Already at the expected path - reset redirect flag
     if (isAtExpectedPath) {
