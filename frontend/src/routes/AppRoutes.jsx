@@ -89,12 +89,20 @@ const AppRoutes = () => {
 
   // CRITICAL FIX: ModeRedirectGate - catch any URL with ?mode= parameter
   // If someone navigates to /explore?mode=signin, redirect to /auth?mode=signin
+  // BUT only if user is NOT authenticated (prevents redirect loop)
   const params = new URLSearchParams(location.search);
   const mode = params.get('mode');
   if (mode && location.pathname !== '/auth') {
-    console.log(`🔧 ModeRedirectGate (AppRoutes): ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
-    const { buildAuthUrl } = require('../utils/nav');
-    return <Navigate to={buildAuthUrl(mode)} replace />;
+    if (!currentUser) {
+      // Unauthenticated user with mode param - redirect to /auth
+      console.log(`🔧 ModeRedirectGate (AppRoutes): ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
+      const { buildAuthUrl } = require('../utils/nav');
+      return <Navigate to={buildAuthUrl(mode)} replace />;
+    } else {
+      // Authenticated user with mode param - just strip it (don't redirect to /auth)
+      console.log(`🔧 ModeRedirectGate (AppRoutes): Stripping ?mode=${mode} from ${location.pathname} (user authenticated)`);
+      return <Navigate to={location.pathname} replace />;
+    }
   }
 
   // Redirect authenticated users away from /auth page
