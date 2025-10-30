@@ -145,22 +145,9 @@ const App = () => {
     resetLogoutBreadcrumb();
   }, []);
 
-  // Get location and navigate BEFORE using them in effects
+  // Get location for other uses
   const location = useLocation();
   const navigate = useNavigate();
-
-  // CRITICAL FIX: Force-correct /?mode=signin to /auth?mode=signin
-  // Only redirect if we're on "/" with mode param (not on any other page)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const mode = params.get('mode');
-
-    // Only redirect if we're specifically on "/" with a mode param
-    if (mode && location.pathname === '/') {
-      console.log(`🔧 URL Correction: /?mode=${mode} → /auth?mode=${mode}`);
-      navigate({ pathname: '/auth', search: `?mode=${mode}` }, { replace: true });
-    }
-  }, [location.pathname, location.search, navigate]);
 
   // Mount adapter hook to sync currentView ↔ URL (Phase 2: Gradual Route Migration)
   useViewRouter();
@@ -1018,6 +1005,16 @@ const App = () => {
 
     // Desktop routing
     console.log('📍 Desktop routing - rendering Routes with pathname:', location.pathname);
+
+    // CRITICAL FIX: Atomic redirect gate - runs during render before effects
+    // If someone lands on /?mode=signin, immediately redirect to /auth?mode=signin
+    const params = new URLSearchParams(location.search);
+    const mode = params.get('mode');
+    if (mode && location.pathname !== '/auth') {
+      console.log(`🔧 ModeRedirectGate: ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
+      return <Navigate to={{ pathname: '/auth', search: `?mode=${mode}` }} replace />;
+    }
+
     return (
       <Routes>
         <Route path="/" element={<HomePage />} />
