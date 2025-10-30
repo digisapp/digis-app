@@ -3,6 +3,8 @@
  * Features: Auth, retry logic, abort handling, type safety
  */
 
+import React from 'react';
+
 class ApiError extends Error {
   constructor(message, status, data) {
     super(message);

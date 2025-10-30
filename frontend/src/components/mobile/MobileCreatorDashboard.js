@@ -20,7 +20,7 @@ import {
 import {
   StarIcon
 } from '@heroicons/react/24/solid';
-import api from '../../services/api';
+import api, { apiClient } from '../../services/api';
 import toast from 'react-hot-toast';
 
 // Default stats to avoid repetition
@@ -252,7 +252,7 @@ const MobileCreatorDashboard = ({
       console.log('📊 Starting to fetch creator stats...');
 
       // Fetch real follower/subscriber count from API
-      const response = await api.get('/api/creators/stats');
+      const response = await apiClient.get('/api/v1/creators/stats');
 
       if (response.data && response.data.success) {
         setStats({

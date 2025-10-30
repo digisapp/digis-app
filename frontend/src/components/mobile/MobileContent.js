@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
+import { isFeatureEnabled } from '../../config/featureFlags';
 
 const MobileContent = ({ user, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('all');
@@ -35,6 +36,14 @@ const MobileContent = ({ user, onNavigate }) => {
 
   const fetchContent = async () => {
     if (!user?.username && !user?.supabase_id) {
+      setLoading(false);
+      return;
+    }
+
+    // Skip API call if content endpoint is not implemented yet
+    if (!isFeatureEnabled('CONTENT_API_ENABLED')) {
+      console.log('📋 Content API is disabled - using default empty state');
+      setAllContentItems([]);
       setLoading(false);
       return;
     }
