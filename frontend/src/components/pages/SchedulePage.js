@@ -49,11 +49,23 @@ const SchedulePage = ({ user, isCreator = false }) => {
 
   // Fetch events and stats
   useEffect(() => {
-    fetchScheduleData();
-    if (isCreator) {
-      fetchPendingRequestsCount();
-    }
-  }, [user, isCreator]);
+    let isMounted = true;
+
+    const fetchAllData = async () => {
+      if (!isMounted || !user?.id) return;
+
+      await fetchScheduleData();
+      if (isCreator) {
+        await fetchPendingRequestsCount();
+      }
+    };
+
+    fetchAllData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, isCreator]); // Only depend on stable user ID
 
   const fetchPendingRequestsCount = async () => {
     try {
@@ -64,37 +76,36 @@ const SchedulePage = ({ user, isCreator = false }) => {
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         setPendingRequestsCount(data.requests?.length || 0);
+      } else if (response.status === 404) {
+        // Endpoint not implemented yet, silently skip
+        console.log('ℹ️ Pending requests endpoint not available yet');
+        setPendingRequestsCount(0);
       }
     } catch (error) {
+      // Silently handle 404 - endpoint not implemented yet
+      if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
+        console.log('ℹ️ Pending requests endpoint not available yet');
+        setPendingRequestsCount(0);
+        return;
+      }
       console.error('Error fetching pending requests count:', error);
     }
   };
 
   const fetchScheduleData = async () => {
+    if (!user?.id) {
+      console.log('User not loaded yet, skipping schedule fetch');
+      return;
+    }
+
     try {
       setIsLoading(true);
       const authToken = await getAuthToken();
-      
-      // Fetch calendar events from the new endpoint
-      const calendarResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/schedule/calendar-events/${user?.id}`,
-        {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }
-      );
-      
-      // Fetch regular events (calls, etc.)
-      const eventsResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/schedule/${user?.id}`,
-        {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }
-      );
-      
+
       let allEvents = [];
       let calendarEvents = [];
       let stats = {
@@ -103,113 +114,165 @@ const SchedulePage = ({ user, isCreator = false }) => {
         completedCalls: 0,
         revenue: 0
       };
-      
-      // Process calendar events if available
-      if (calendarResponse && calendarResponse.ok) {
-        const calendarData = await calendarResponse.json();
-        calendarEvents = (calendarData.events || [])
-          .filter(event => event.status !== 'cancelled') // Filter out cancelled events
-          .map(event => ({
-            id: event.id,
-            type: event.event_type,
-            title: event.title,
-            date: event.scheduled_date,
-            time: event.scheduled_time,
-            duration: event.duration_minutes,
-            status: event.status,
-            fan_id: event.fan_id,
-            creator_id: event.creator_id,
-            isFromCalendar: true
-          }));
-      }
-      
-      if (eventsResponse.ok) {
-        const data = await eventsResponse.json();
-        const sessionEvents = (data.events || [])
-          .filter(event => event.status !== 'cancelled'); // Filter out cancelled events
-        
-        allEvents = [...calendarEvents, ...sessionEvents];
-        stats = {
-          totalEvents: data.stats?.totalEvents || 0,
-          upcomingCalls: data.stats?.upcomingCalls || 0,
-          completedCalls: data.stats?.completedCalls || 0,
-          revenue: data.stats?.revenue || 0
-        };
-      }
-      
-      // Fetch enrolled classes
-      const classesResponse = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/classes/enrolled/${user?.id}`,
-        {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }
-      );
-      
-      if (classesResponse.ok) {
-        const classData = await classesResponse.json();
-        const classEvents = (classData.classes || []).map(cls => ({
-          id: `class-${cls.id}`,
-          type: 'class',
-          title: cls.title,
-          date: cls.scheduled_date,
-          time: cls.scheduled_time,
-          duration: cls.duration || 60,
-          instructor: cls.creator_name,
-          instructor_id: cls.creator_id,
-          price: cls.price,
-          enrolled: true,
-          category: cls.category
-        }));
-        
-        allEvents = [...allEvents, ...classEvents];
-        stats.totalEvents += classEvents.length;
-      }
-      
-      // If user is a creator, also fetch classes they're hosting
-      if (isCreator) {
-        const hostingResponse = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/classes/hosting/${user?.id}`,
+
+      // Fetch calendar events from the new endpoint
+      try {
+        const calendarResponse = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/schedule/calendar-events/${user?.id}`,
           {
             headers: { Authorization: `Bearer ${authToken}` }
           }
         );
-        
-        if (hostingResponse.ok) {
-          const hostingData = await hostingResponse.json();
-          const hostingEvents = (hostingData.classes || []).map(cls => ({
-            id: `hosting-${cls.id}`,
+
+        if (calendarResponse.ok) {
+          const calendarData = await calendarResponse.json();
+          calendarEvents = (calendarData.events || [])
+            .filter(event => event.status !== 'cancelled') // Filter out cancelled events
+            .map(event => ({
+              id: event.id,
+              type: event.event_type,
+              title: event.title,
+              date: event.scheduled_date,
+              time: event.scheduled_time,
+              duration: event.duration_minutes,
+              status: event.status,
+              fan_id: event.fan_id,
+              creator_id: event.creator_id,
+              isFromCalendar: true
+            }));
+        } else if (calendarResponse.status === 404) {
+          console.log('ℹ️ Calendar events endpoint not available yet');
+        }
+      } catch (error) {
+        if (!error.message?.includes('404')) {
+          console.error('Error fetching calendar events:', error);
+        }
+      }
+
+      // Fetch regular events (calls, etc.)
+      try {
+        const eventsResponse = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/schedule/${user?.id}`,
+          {
+            headers: { Authorization: `Bearer ${authToken}` }
+          }
+        );
+
+        if (eventsResponse.ok) {
+          const data = await eventsResponse.json();
+          const sessionEvents = (data.events || [])
+            .filter(event => event.status !== 'cancelled'); // Filter out cancelled events
+
+          allEvents = [...calendarEvents, ...sessionEvents];
+          stats = {
+            totalEvents: data.stats?.totalEvents || 0,
+            upcomingCalls: data.stats?.upcomingCalls || 0,
+            completedCalls: data.stats?.completedCalls || 0,
+            revenue: data.stats?.revenue || 0
+          };
+        } else if (eventsResponse.status === 404) {
+          console.log('ℹ️ Schedule endpoint not available yet');
+          allEvents = [...calendarEvents];
+        }
+      } catch (error) {
+        if (!error.message?.includes('404')) {
+          console.error('Error fetching schedule events:', error);
+        }
+        allEvents = [...calendarEvents];
+      }
+
+      // Fetch enrolled classes
+      try {
+        const classesResponse = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/classes/enrolled/${user?.id}`,
+          {
+            headers: { Authorization: `Bearer ${authToken}` }
+          }
+        );
+
+        if (classesResponse.ok) {
+          const classData = await classesResponse.json();
+          const classEvents = (classData.classes || []).map(cls => ({
+            id: `class-${cls.id}`,
             type: 'class',
-            title: cls.title + ' (Hosting)',
+            title: cls.title,
             date: cls.scheduled_date,
             time: cls.scheduled_time,
             duration: cls.duration || 60,
-            hosting: true,
-            enrolled_count: cls.enrolled_count || 0,
-            max_participants: cls.max_participants,
+            instructor: cls.creator_name,
+            instructor_id: cls.creator_id,
             price: cls.price,
+            enrolled: true,
             category: cls.category
           }));
-          
-          // Avoid duplicates if creator enrolled in their own class
-          const hostingIds = new Set(hostingEvents.map(e => e.id.replace('hosting-', '')));
-          allEvents = allEvents.filter(e => !e.id.startsWith('class-') || !hostingIds.has(e.id.replace('class-', '')));
-          allEvents = [...allEvents, ...hostingEvents];
-          stats.totalEvents = allEvents.length;
+
+          allEvents = [...allEvents, ...classEvents];
+          stats.totalEvents += classEvents.length;
+        } else if (classesResponse.status === 404) {
+          console.log('ℹ️ Enrolled classes endpoint not available yet');
+        }
+      } catch (error) {
+        if (!error.message?.includes('404')) {
+          console.error('Error fetching enrolled classes:', error);
         }
       }
-      
+
+      // If user is a creator, also fetch classes they're hosting
+      if (isCreator) {
+        try {
+          const hostingResponse = await fetch(
+            `${import.meta.env.VITE_BACKEND_URL}/classes/hosting/${user?.id}`,
+            {
+              headers: { Authorization: `Bearer ${authToken}` }
+            }
+          );
+
+          if (hostingResponse.ok) {
+            const hostingData = await hostingResponse.json();
+            const hostingEvents = (hostingData.classes || []).map(cls => ({
+              id: `hosting-${cls.id}`,
+              type: 'class',
+              title: cls.title + ' (Hosting)',
+              date: cls.scheduled_date,
+              time: cls.scheduled_time,
+              duration: cls.duration || 60,
+              hosting: true,
+              enrolled_count: cls.enrolled_count || 0,
+              max_participants: cls.max_participants,
+              price: cls.price,
+              category: cls.category
+            }));
+
+            // Avoid duplicates if creator enrolled in their own class
+            const hostingIds = new Set(hostingEvents.map(e => e.id.replace('hosting-', '')));
+            allEvents = allEvents.filter(e => !e.id.startsWith('class-') || !hostingIds.has(e.id.replace('class-', '')));
+            allEvents = [...allEvents, ...hostingEvents];
+            stats.totalEvents = allEvents.length;
+          } else if (hostingResponse.status === 404) {
+            console.log('ℹ️ Hosting classes endpoint not available yet');
+          }
+        } catch (error) {
+          if (!error.message?.includes('404')) {
+            console.error('Error fetching hosting classes:', error);
+          }
+        }
+      }
+
       // Sort events by date/time
       allEvents.sort((a, b) => {
         const dateA = new Date(`${a.date} ${a.time}`);
         const dateB = new Date(`${b.date} ${b.time}`);
         return dateA - dateB;
       });
-      
+
       setEvents(allEvents);
       setStats(stats);
     } catch (error) {
       console.error('Error fetching schedule:', error);
-      toast.error('Failed to load schedule');
+      // Don't show error toast for 404s - these are expected for unimplemented endpoints
+      if (!error.message?.includes('404') && !error.message?.includes('NOT_FOUND')) {
+        toast.error('Failed to load schedule');
+      }
     } finally {
       setIsLoading(false);
     }
