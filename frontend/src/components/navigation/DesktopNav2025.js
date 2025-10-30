@@ -281,8 +281,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
           scrolled ? 'shadow-2xl' : 'shadow-lg'
         }`}
         style={{
-          borderRadius: 0,
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+          borderRadius: 0
         }}
         intensity={scrolled ? 'strong' : 'medium'}
         enableRefraction={true}
