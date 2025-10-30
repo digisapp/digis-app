@@ -118,15 +118,31 @@ const CallRequestsPage = ({ user }) => {
   ];
 
   useEffect(() => {
-    fetchCallRequests();
-    calculateStats();
+    let isMounted = true;
+
+    const fetchData = async () => {
+      if (isMounted) {
+        await fetchCallRequests();
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [activeTab, filterType, sortBy]);
+
+  // Recalculate stats whenever requests change
+  useEffect(() => {
+    calculateStats();
+  }, [requests]);
 
   const fetchCallRequests = async () => {
     try {
       setIsLoading(true);
       const authToken = await getAuthToken();
-      
+
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/sessions/requests?status=${activeTab}`,
         {
@@ -161,24 +177,33 @@ const CallRequestsPage = ({ user }) => {
           expires_at: req.expires_at,
           request_type: req.request_type
         }));
-        
+
         // Apply local filtering based on type
         let filtered = transformedRequests;
         if (filterType !== 'all') {
           filtered = transformedRequests.filter(r => r.type === filterType);
         }
-        
+
         // Apply sorting
         filtered = sortRequests(filtered);
         setRequests(filtered);
+      } else if (response.status === 404) {
+        // Endpoint not implemented yet, silently set empty array
+        console.log('ℹ️ Call requests endpoint not available yet');
+        setRequests([]);
       } else {
         // No requests found or error
         setRequests([]);
       }
     } catch (error) {
+      // Silently handle 404 - endpoint not implemented yet
+      if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
+        console.log('ℹ️ Call requests endpoint not available yet');
+        setRequests([]);
+        return;
+      }
       console.error('Error fetching call requests:', error);
       setRequests([]);
-      toast.error('Failed to load call requests');
     } finally {
       setIsLoading(false);
     }

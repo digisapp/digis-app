@@ -360,12 +360,31 @@ const HybridCreatorDashboard = memo(({
   }, [user]);
 
   useEffect(() => {
-    fetchDashboardData();
-    fetchAnalytics();
-    fetchTopFans();
-    fetchDigitals();
-    fetchOffers();
-  }, [user]);
+    let isMounted = true;
+
+    const fetchAllData = async () => {
+      if (!isMounted) return;
+
+      // Only fetch if user is available
+      if (user?.username || user?.id) {
+        await Promise.all([
+          fetchDashboardData(),
+          fetchAnalytics(),
+          fetchTopFans(),
+          fetchDigitals(),
+          fetchOffers()
+        ]).catch(error => {
+          console.error('Error fetching dashboard data:', error);
+        });
+      }
+    };
+
+    fetchAllData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, user?.username]); // Only depend on stable user identifiers
 
   const fetchDashboardData = async () => {
     if (!user?.username && !user?.id) {
