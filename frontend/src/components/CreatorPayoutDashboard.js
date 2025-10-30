@@ -14,7 +14,7 @@ import {
   ArrowRightIcon,
   ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
-import { api } from '../services/api';
+import api from '../services/api';
 import Button from './ui/Button';
 import LoadingSpinner from './ui/LoadingSpinner';
 import toast from 'react-hot-toast';

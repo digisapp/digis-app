@@ -11,7 +11,7 @@ import {
   WalletIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
-import { api } from '../services/api';
+import api from '../services/api';
 import { supabase } from '../utils/supabase-auth.js';
 import { getAuthToken } from '../utils/supabase-auth-enhanced';
 import Button from './ui/Button';
