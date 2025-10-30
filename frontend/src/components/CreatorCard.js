@@ -416,7 +416,28 @@ const CreatorCard = ({
       {/* Main Image Container */}
       {profilePath ? (
         <div
-          className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient}`}
+          onClick={(e) => {
+            // Make image area directly clickable for navigation
+            const target = e.target;
+            const isButton = !!target.closest('button,[role="button"]');
+            const isFormEl = !!target.closest('input,textarea,select');
+            const isInteractive = isButton || isFormEl;
+
+            // Don't navigate if clicking on buttons
+            if (isInteractive) {
+              return;
+            }
+
+            // Don't navigate if modifier keys are pressed
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+              return;
+            }
+
+            console.log('🖼️ Image clicked - navigating to:', profilePath);
+            e.stopPropagation(); // Prevent parent card onClick from also firing
+            navigate(profilePath);
+          }}
+          className={`block relative ${getAspectRatioClass()} overflow-hidden bg-gradient-to-br ${categoryGradient} cursor-pointer`}
           onMouseEnter={prefetchProfile}
           aria-label={`View ${creator.displayName || creator.username}'s profile`}
           title={`View @${creator.username}'s profile`}
@@ -509,7 +530,14 @@ const CreatorCard = ({
         <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10
                       bg-black/40 backdrop-blur-xl p-3 z-20">
           {/* Two-line name lockup */}
-          <div className="mb-2">
+          <div
+            className="mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('👤 Name clicked - navigating to:', profilePath);
+              navigate(profilePath);
+            }}
+          >
             <div className="flex items-center gap-1.5">
               <span className="text-white font-semibold text-sm truncate">
                 {creator.displayName || creator.username}
@@ -706,7 +734,14 @@ const CreatorCard = ({
         <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10
                       bg-black/40 backdrop-blur-xl p-3 z-20">
           {/* Two-line name lockup */}
-          <div className="mb-2">
+          <div
+            className="mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('👤 Name clicked - navigating to:', profilePath);
+              navigate(profilePath);
+            }}
+          >
             <div className="flex items-center gap-1.5">
               <span className="text-white font-semibold text-sm truncate">
                 {creator.displayName || creator.username}
