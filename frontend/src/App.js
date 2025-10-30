@@ -145,6 +145,10 @@ const App = () => {
     resetLogoutBreadcrumb();
   }, []);
 
+  // Get location and navigate BEFORE using them in effects
+  const location = useLocation();
+  const navigate = useNavigate();
+
   // CRITICAL FIX: Force-correct /?mode=signin to /auth?mode=signin
   // Something is intercepting Link clicks and stripping /auth pathname
   // This ensures users always land on /auth when mode param is present
@@ -208,9 +212,6 @@ const App = () => {
 
     return () => clearTimeout(timeoutId);
   }, [authLoading, authSetAuthLoading]);
-
-  const navigate = useNavigate();
-  const location = useLocation();
 
   // Still need notifications and some state from hybrid store
   const notifications = useHybridStore((state)=> state.notifications, shallow);
