@@ -239,7 +239,7 @@ export const useAuth = (): UseAuthReturn => {
 
         if (profileError) throw profileError;
 
-        navigate('/auth/verify-email');
+        navigate('/auth?mode=verify-email');
       }
     } catch (err) {
       const error = err as Error;
@@ -346,7 +346,7 @@ export const useAuth = (): UseAuthReturn => {
 
       if (error) throw error;
 
-      navigate('/auth/signin');
+      navigate('/auth?mode=signin');
     } catch (err) {
       const error = err as Error;
       console.error('Password reset confirmation error:', error);
