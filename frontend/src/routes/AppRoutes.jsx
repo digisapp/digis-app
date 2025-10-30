@@ -16,6 +16,7 @@ import AdminLoginPage from '../components/pages/AdminLoginPage';
 import PublicOrRedirectAdmin from './guards/PublicOrRedirectAdmin';
 import AdminGuard from './guards/AdminGuard';
 import HomePage from '../components/HomePage';
+import Auth from '../components/Auth';
 import ExplorePage from '../components/pages/ExplorePage';
 import DashboardRouter from '../components/pages/DashboardRouter';
 
@@ -191,6 +192,7 @@ const AppRoutes = () => {
         <Routes>
         {/* Public Routes */}
         <Route path="/" element={<HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />} />
+        <Route path="/auth" element={<Auth />} />
 
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
