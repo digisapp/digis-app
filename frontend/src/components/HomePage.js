@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   SparklesIcon,
@@ -15,21 +15,12 @@ import {
   HandRaisedIcon
 } from '@heroicons/react/24/solid';
 
-const HomePage = ({ onSignIn, onSignUp }) => {
-  const navigate = useNavigate();
+const HomePage = () => {
   const videoRef1 = useRef(null);
   const videoRef2 = useRef(null);
   const videoRef3 = useRef(null);
   const [logoFailed, setLogoFailed] = useState(false);
   const shouldReduceMotion = useReducedMotion();
-
-  // Debug: Log props on mount
-  useEffect(() => {
-    console.log('🏠 HomePage mounted with props:', {
-      hasOnSignIn: typeof onSignIn === 'function',
-      hasOnSignUp: typeof onSignUp === 'function'
-    });
-  }, []);
 
   // Reset page title and meta tags on mount
   useEffect(() => {
@@ -196,38 +187,20 @@ const HomePage = ({ onSignIn, onSignUp }) => {
           </Link>
 
           <div className="flex items-center space-x-3" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('🔵 Log In button clicked');
-                if (onSignIn && typeof onSignIn === 'function') {
-                  onSignIn();
-                } else {
-                  console.log('🔵 onSignIn not provided, navigating directly');
-                  navigate('/auth?mode=signin');
-                }
-              }}
-              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200 cursor-pointer"
+            <Link
+              to="/auth?mode=signin"
+              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200 cursor-pointer inline-block"
               style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               Log In
-            </button>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('🟢 Sign Up button clicked');
-                if (onSignUp && typeof onSignUp === 'function') {
-                  onSignUp();
-                } else {
-                  console.log('🟢 onSignUp not provided, navigating directly');
-                  navigate('/auth?mode=signup');
-                }
-              }}
-              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer"
+            </Link>
+            <Link
+              to="/auth?mode=signup"
+              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer inline-block"
               style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               Sign Up
-            </button>
+            </Link>
           </div>
         </div>
       </nav>
@@ -261,25 +234,16 @@ const HomePage = ({ onSignIn, onSignUp }) => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="flex justify-center items-center mb-8 md:mb-16 relative z-10"
           >
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('🟢 Get Started button clicked');
-                if (onSignUp && typeof onSignUp === 'function') {
-                  onSignUp();
-                } else {
-                  console.log('🟢 onSignUp not provided, navigating directly');
-                  navigate('/auth?mode=signup');
-                }
-              }}
-              className="group relative px-10 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xl rounded-full hover:from-pink-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-xl cursor-pointer"
+            <Link
+              to="/auth?mode=signup"
+              className="group relative px-10 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xl rounded-full hover:from-pink-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-xl cursor-pointer inline-block"
               style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               <span className="flex items-center space-x-2">
                 <RocketLaunchIcon className="h-6 w-6" />
                 <span>Get Started Now</span>
               </span>
-            </button>
+            </Link>
           </motion.div>
 
           {/* Video Gallery Section - 3 Vertical Videos */}
@@ -478,22 +442,13 @@ const HomePage = ({ onSignIn, onSignUp }) => {
             className="mt-8 md:mt-16 pb-6 md:pb-12 text-white relative z-10"
           >
             <p className="text-xl md:text-2xl font-bold mb-4">Ready to join the fun? 🚀</p>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('🟢 Join Digis button clicked');
-                if (onSignUp && typeof onSignUp === 'function') {
-                  onSignUp();
-                } else {
-                  console.log('🟢 onSignUp not provided, navigating directly');
-                  navigate('/auth?mode=signup');
-                }
-              }}
-              className="px-10 py-4 bg-white text-purple-600 font-black text-xl rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-2xl cursor-pointer"
+            <Link
+              to="/auth?mode=signup"
+              className="px-10 py-4 bg-white text-purple-600 font-black text-xl rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-2xl cursor-pointer inline-block"
               style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               Join Digis
-            </button>
+            </Link>
           </motion.div>
         </div>
       </div>

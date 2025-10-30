@@ -1006,9 +1006,9 @@ const App = () => {
     console.log('📍 Desktop routing - rendering Routes with pathname:', location.pathname);
     return (
       <Routes>
-        <Route path="/" element={<HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/explore" element={<HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />} />
+        <Route path="/explore" element={<HomePage />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/creator/:username" element={<CreatorPublicProfileEnhanced />} />
@@ -1028,7 +1028,7 @@ const App = () => {
             })()}
           </Suspense>
         } />
-        <Route path="*" element={<HomePage onSignIn={handleSignIn} onSignUp={handleSignUp} />} />
+        <Route path="*" element={<HomePage />} />
       </Routes>
     );
   }
