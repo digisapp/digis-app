@@ -24,7 +24,11 @@ export default function SafeAuthLink({ mode = "signin", children, className, sty
     // CRITICAL: Prevent default and stop propagation IMMEDIATELY
     e.preventDefault();
     e.stopPropagation();
-    e.stopImmediatePropagation(); // Stop other listeners on the same element
+
+    // Stop immediate propagation on native event if available
+    if (e.nativeEvent?.stopImmediatePropagation) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
 
     console.log(`🔗 SafeAuthLink: Navigating to /auth?mode=${mode}`);
     console.log(`🔗 Current location:`, window.location.href);
