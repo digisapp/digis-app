@@ -140,6 +140,20 @@ const AppRoutes = () => {
           return;
         }
 
+        // Extract only serializable data from config (avoid circular references from Agora SDK)
+        const sanitizedConfig = {
+          title: config.title,
+          description: config.description,
+          category: config.category,
+          isPrivate: config.isPrivate,
+          ticketPrice: config.ticketPrice,
+          maxViewers: config.maxViewers,
+          tags: config.tags,
+          thumbnailUrl: config.thumbnailUrl
+        };
+
+        console.log('📤 Sending sanitized config:', sanitizedConfig);
+
         // Call unified backend endpoint
         const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/streaming/go-live`, {
           method: 'POST',
@@ -147,7 +161,7 @@ const AppRoutes = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`
           },
-          body: JSON.stringify(config)
+          body: JSON.stringify(sanitizedConfig)
         });
 
         if (!response.ok) {
@@ -162,7 +176,7 @@ const AppRoutes = () => {
         sessionStorage.setItem('activeStream', JSON.stringify({
           ...data.stream,
           agora: data.agora,
-          config: config
+          config: sanitizedConfig
         }));
 
         // Navigate to streaming page
