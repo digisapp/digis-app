@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import SafeAuthLink from './SafeAuthLink';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   SparklesIcon,
@@ -187,20 +188,20 @@ const HomePage = () => {
           </Link>
 
           <div className="flex items-center space-x-3" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}>
-            <Link
-              to="/auth?mode=signin"
+            <SafeAuthLink
+              mode="signin"
               className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200 cursor-pointer inline-block"
               style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               Sign in
-            </Link>
-            <Link
-              to="/auth?mode=signup"
+            </SafeAuthLink>
+            <SafeAuthLink
+              mode="signup"
               className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer inline-block"
               style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               Sign Up
-            </Link>
+            </SafeAuthLink>
           </div>
         </div>
       </nav>
@@ -234,8 +235,8 @@ const HomePage = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="flex justify-center items-center mb-8 md:mb-16 relative z-10"
           >
-            <Link
-              to="/auth?mode=signup"
+            <SafeAuthLink
+              mode="signup"
               className="group relative px-10 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xl rounded-full hover:from-pink-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-xl cursor-pointer inline-block"
               style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
@@ -243,7 +244,7 @@ const HomePage = () => {
                 <RocketLaunchIcon className="h-6 w-6" />
                 <span>Get Started Now</span>
               </span>
-            </Link>
+            </SafeAuthLink>
           </motion.div>
 
           {/* Video Gallery Section - 3 Vertical Videos */}
@@ -442,13 +443,13 @@ const HomePage = () => {
             className="mt-8 md:mt-16 pb-6 md:pb-12 text-white relative z-10"
           >
             <p className="text-xl md:text-2xl font-bold mb-4">Ready to join the fun? 🚀</p>
-            <Link
-              to="/auth?mode=signup"
+            <SafeAuthLink
+              mode="signup"
               className="px-10 py-4 bg-white text-purple-600 font-black text-xl rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-2xl cursor-pointer inline-block"
               style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
             >
               Join Digis
-            </Link>
+            </SafeAuthLink>
           </motion.div>
         </div>
       </div>
