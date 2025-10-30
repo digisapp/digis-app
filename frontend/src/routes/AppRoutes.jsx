@@ -87,6 +87,16 @@ const AppRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // CRITICAL FIX: ModeRedirectGate - catch any URL with ?mode= parameter
+  // If someone navigates to /explore?mode=signin, redirect to /auth?mode=signin
+  const params = new URLSearchParams(location.search);
+  const mode = params.get('mode');
+  if (mode && location.pathname !== '/auth') {
+    console.log(`🔧 ModeRedirectGate (AppRoutes): ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
+    const { buildAuthUrl } = require('../utils/nav');
+    return <Navigate to={buildAuthUrl(mode)} replace />;
+  }
+
   // Redirect authenticated users away from /auth page
   // Only redirect if role is fully resolved to prevent glitching
   React.useEffect(() => {
