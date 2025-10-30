@@ -1,5 +1,5 @@
-// Smart console override for production
-const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
+// Smart console override for production - TEMPORARILY DISABLED FOR DEBUGGING
+const isDev = true; // Force development mode to enable all console logs
 const noop = () => {};
 
 // Store original console methods
