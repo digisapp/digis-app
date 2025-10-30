@@ -592,7 +592,7 @@ const ExplorePage = ({
     <div className={`min-h-screen ${isMobile ? 'bg-gradient-to-br from-purple-50 via-white to-pink-50' : 'bg-gray-50 dark:bg-gray-900'}`}>
       {/* Filters Bar */}
       <LiquidGlass className="sticky top-0 z-40 shadow-sm content-below-nav" intensity="medium">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-5">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-5 md:py-6">
 
           {/* Search and Filters Row */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">

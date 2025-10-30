@@ -984,9 +984,9 @@ const HybridCreatorDashboard = memo(({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
       {/* Top Section: 3-Column Grid - Calls, Schedule, Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 content-below-nav" data-test="creator-dashboard-top-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 content-below-nav" data-test="creator-dashboard-top-grid">
 
         {/* Enhanced Calls Box */}
         <LiquidGlass className="p-6 shadow-xl rounded-xl" intensity="light">
@@ -999,7 +999,7 @@ const HybridCreatorDashboard = memo(({
                     console.log('[CALLS] Icon clicked - navigating to call requests');
                     navigate('/call-requests');
                   }}
-                  className="p-3 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+                  className="p-3 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
                   aria-label="Manage call requests"
                 >
                   <ClockIcon className="w-6 h-6 text-white" />
@@ -1021,7 +1021,7 @@ const HybridCreatorDashboard = memo(({
                 return (
                   <div className="space-y-4">
                     <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl">
-                      <p className="text-3xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                      <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                         {formatTime(nextCall.time || nextCall.scheduled_time)}
                       </p>
                       <div className="flex items-center gap-2 mt-3">
@@ -1550,7 +1550,7 @@ const HybridCreatorDashboard = memo(({
 
       {/* Quick Insights Bar */}
       {(quickStats.pendingRequests > 0 || quickStats.recentTips > 0 || quickStats.messagesUnread > 0) && (
-        <div className="flex flex-wrap gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+        <div className="flex flex-wrap gap-3 px-4 py-6 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
           {quickStats.pendingRequests > 0 && (
             <button
               onClick={() => navigate('/requests')}
