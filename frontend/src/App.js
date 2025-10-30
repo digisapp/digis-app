@@ -150,23 +150,15 @@ const App = () => {
   const navigate = useNavigate();
 
   // CRITICAL FIX: Force-correct /?mode=signin to /auth?mode=signin
-  // Use ref to prevent infinite redirect loops
-  const hasRedirectedRef = useRef(false);
-
+  // Only redirect if we're on "/" with mode param (not on any other page)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const mode = params.get('mode');
 
-    // If we have ?mode= but we're NOT on /auth, redirect to /auth (only once)
-    if (mode && location.pathname !== '/auth' && !hasRedirectedRef.current) {
-      console.log(`🔧 URL Correction: ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
-      hasRedirectedRef.current = true;
+    // Only redirect if we're specifically on "/" with a mode param
+    if (mode && location.pathname === '/') {
+      console.log(`🔧 URL Correction: /?mode=${mode} → /auth?mode=${mode}`);
       navigate({ pathname: '/auth', search: `?mode=${mode}` }, { replace: true });
-
-      // Reset after a delay to allow future corrections if needed
-      setTimeout(() => {
-        hasRedirectedRef.current = false;
-      }, 1000);
     }
   }, [location.pathname, location.search, navigate]);
 
