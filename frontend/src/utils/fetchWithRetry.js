@@ -49,6 +49,10 @@ export const fetchWithRetry = async (url, options = {}, retries = 3, delay = 100
       
       // If it's a client error (4xx), don't retry (except 429 - rate limiting)
       if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        // For 404s, silently return the response to let component-level handlers deal with it
+        if (response.status === 404) {
+          return response;
+        }
         const errorText = await response.text().catch(() => response.statusText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }

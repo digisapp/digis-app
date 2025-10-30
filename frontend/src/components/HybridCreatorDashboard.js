@@ -425,7 +425,10 @@ const HybridCreatorDashboard = memo(({
             }
           );
 
-          if (itemsResponse.ok) {
+          if (itemsResponse.status === 404) {
+            console.log('ℹ️ Shop items endpoint not available yet');
+            setShopProducts([]);
+          } else if (itemsResponse.ok) {
             const itemsData = await itemsResponse.json();
             const products = (itemsData.items || []).map(item => ({
               ...item,
@@ -448,16 +451,13 @@ const HybridCreatorDashboard = memo(({
             }
           );
 
-          if (analyticsResponse.ok) {
+          if (analyticsResponse.status === 404) {
+            console.log('ℹ️ Shop analytics endpoint not available yet');
+          } else if (analyticsResponse.ok) {
             const analyticsData = await analyticsResponse.json();
             setShopStats(analyticsData.analytics || {});
           }
         } catch (error) {
-          // Silently handle 404 - endpoint not implemented yet
-          if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
-            setShopProducts([]);
-            return;
-          }
           console.error('Failed to fetch shop data:', error);
         }
       }, 100); // Small delay to let critical content load first
@@ -471,15 +471,15 @@ const HybridCreatorDashboard = memo(({
           }
         );
 
-        if (tiersResponse.ok) {
+        if (tiersResponse.status === 404) {
+          console.log('ℹ️ Subscription tiers endpoint not available yet');
+          setSubscriptionTiers([]);
+        } else if (tiersResponse.ok) {
           const tiersData = await tiersResponse.json();
           setSubscriptionTiers(tiersData.tiers || []);
         }
       } catch (tiersError) {
-        // Silently handle 404 - endpoint not implemented yet
-        if (tiersError.message?.includes('404') || tiersError.message?.includes('NOT_FOUND')) {
-          setSubscriptionTiers([]);
-        }
+        console.error('Error fetching subscription tiers:', tiersError);
       }
       
       // Fetch content (photos, videos, audios)
@@ -493,7 +493,10 @@ const HybridCreatorDashboard = memo(({
             }
           );
 
-          if (contentResponse.ok) {
+          if (contentResponse.status === 404) {
+            console.log('ℹ️ Content endpoint not available yet');
+            setContentData({ photos: [], videos: [] });
+          } else if (contentResponse.ok) {
             const contentResult = await contentResponse.json();
             setContentData({
               photos: contentResult.pictures || [],
@@ -501,13 +504,7 @@ const HybridCreatorDashboard = memo(({
             });
           }
         } catch (contentError) {
-          // Silently handle 404 - endpoint not implemented yet
-          if (contentError.message?.includes('404') || contentError.message?.includes('NOT_FOUND')) {
-            console.log('ℹ️ Content endpoint not available yet');
-            setContentData({ photos: [], videos: [] });
-          } else {
-            console.error('Error fetching content:', contentError);
-          }
+          console.error('Error fetching content:', contentError);
         }
       }
 
@@ -520,18 +517,15 @@ const HybridCreatorDashboard = memo(({
           }
         );
 
-        if (sessionsResponse.ok) {
+        if (sessionsResponse.status === 404) {
+          console.log('ℹ️ Upcoming sessions endpoint not available yet');
+          setUpcomingSessions([]);
+        } else if (sessionsResponse.ok) {
           const sessionsData = await sessionsResponse.json();
           setUpcomingSessions(sessionsData.sessions || []);
         }
       } catch (sessionsError) {
-        // Silently handle 404 - endpoint not implemented yet
-        if (sessionsError.message?.includes('404') || sessionsError.message?.includes('NOT_FOUND')) {
-          console.log('ℹ️ Upcoming sessions endpoint not available yet');
-          setUpcomingSessions([]);
-        } else {
-          console.error('Error fetching upcoming sessions:', sessionsError);
-        }
+        console.error('Error fetching upcoming sessions:', sessionsError);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -548,6 +542,13 @@ const HybridCreatorDashboard = memo(({
         }
       );
 
+      if (response.status === 404) {
+        console.log('ℹ️ Digitals endpoint not available yet');
+        setDigitals([]);
+        setContentData(prev => ({ ...prev, digitals: [] }));
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         setDigitals(data.digitals || []);
@@ -557,13 +558,6 @@ const HybridCreatorDashboard = memo(({
         }));
       }
     } catch (error) {
-      // Silently handle 404 - endpoint not implemented yet
-      if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
-        console.log('ℹ️ Digitals endpoint not available yet, skipping...');
-        setDigitals([]);
-        setContentData(prev => ({ ...prev, digitals: [] }));
-        return;
-      }
       console.error('Error fetching digitals:', error);
     }
   };
@@ -578,12 +572,18 @@ const HybridCreatorDashboard = memo(({
         }
       );
 
+      if (response.status === 404) {
+        console.log('ℹ️ Offers endpoint not available yet');
+        setOffers([]);
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         setOffers(data.offers || []);
       }
     } catch (error) {
-      // Silently handle 404 - endpoint not implemented yet
+      // Silently handle other errors
       if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
         setOffers([]);
         return;
@@ -688,6 +688,11 @@ const HybridCreatorDashboard = memo(({
         }
       );
 
+      if (response.status === 404) {
+        console.log('ℹ️ Analytics endpoint not available yet');
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
 
@@ -736,10 +741,6 @@ const HybridCreatorDashboard = memo(({
         });
       }
     } catch (error) {
-      // Silently handle 404 - endpoint not implemented yet
-      if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
-        return;
-      }
       console.error('Error fetching analytics:', error);
     }
   };
@@ -754,16 +755,17 @@ const HybridCreatorDashboard = memo(({
         }
       );
 
+      if (response.status === 404) {
+        console.log('ℹ️ Top fans endpoint not available yet');
+        setTopFans([]);
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         setTopFans(data.fans || []);
       }
     } catch (error) {
-      // Silently handle 404 - endpoint not implemented yet
-      if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
-        setTopFans([]);
-        return;
-      }
       console.error('Error fetching top fans:', error);
     }
   };
