@@ -362,39 +362,36 @@ const CreatorCard = ({
   }
 
   return (
-    <motion.div
-      ref={cardRef}
-      initial={{ opacity: 0, y: reducedMotion ? 0 : 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: reducedMotion ? 0 : 0.5, delay: reducedMotion ? 0 : 0.1 * (creator.id || 0) }}
-      whileHover={reducedMotion ? {} : { y: -4, scale: 1.01 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
+    <Link
+      to={profilePath || '#'}
       onClick={(e) => {
-        // Check if the click target is a button or inside a button
-        const target = e.target;
-        const isButton = target.tagName === 'BUTTON' || target.closest('button');
+        console.log('🔥 [CreatorCard] Link clicked!', { profilePath, username: creator?.username });
 
-        // If it's a button, let the button handle it
-        if (isButton) {
+        // If no profile path, prevent navigation
+        if (!profilePath) {
+          e.preventDefault();
+          console.error('❌ No profilePath available');
           return;
         }
 
-        // Navigate to profile page
-        if (profilePath) {
-          console.log('✅ [CreatorCard] Navigating to profile:', profilePath);
+        // Check if clicking a button - let buttons handle their own clicks
+        const target = e.target;
+        const isButton = target.tagName === 'BUTTON' || target.closest('button');
+
+        if (isButton) {
+          console.log('⚠️ Button clicked, preventing Link navigation');
           e.preventDefault();
-          navigate(profilePath);
-        } else {
-          console.error('❌ [CreatorCard] No profilePath for:', creator?.username);
+          return;
         }
+
+        console.log('✅ Navigating to:', profilePath);
       }}
-      className={`
-        relative cursor-pointer overflow-hidden rounded-[2rem] bg-white
-        shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all will-change-transform
-        hover:shadow-[0_20px_40px_rgba(0,0,0,0.15)]
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2
-      `}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="block relative cursor-pointer overflow-hidden rounded-[2rem] bg-white
+        shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all
+        hover:shadow-[0_20px_40px_rgba(0,0,0,0.15)] hover:-translate-y-1
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
     >
       {/* Main Image Container */}
       {profilePath ? (
@@ -866,7 +863,7 @@ const CreatorCard = ({
           }
         }
       `}</style>
-    </motion.div>
+    </Link>
   );
 };
 
