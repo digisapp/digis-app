@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigation } from '../contexts/NavigationContext';
 import PropTypes from 'prop-types';
 import CallRequestsModal from './CallRequestsModal';
 import CallQueueSystem from './CallQueueSystem';
@@ -113,7 +112,6 @@ const HybridCreatorDashboard = memo(({
     console.info("[MOUNT] HybridCreatorDashboard.js");
   }, []);
 
-  const { onNavigate } = useNavigation();
   const isNavigatingRef = useRef(false);
   // Initialize profile data from user prop (from Zustand store) without fallback defaults
   // This prevents showing "Creator Name" / "creator" before API data loads
