@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from '../contexts/NavigationContext';
 import PropTypes from 'prop-types';
 import CallRequestsModal from './CallRequestsModal';
 import CallQueueSystem from './CallQueueSystem';
@@ -113,7 +113,7 @@ const HybridCreatorDashboard = memo(({
     console.info("[MOUNT] HybridCreatorDashboard.js");
   }, []);
 
-  const navigate = useNavigate();
+  const { onNavigate } = useNavigation();
   const isNavigatingRef = useRef(false);
   // Initialize profile data from user prop (from Zustand store) without fallback defaults
   // This prevents showing "Creator Name" / "creator" before API data loads
@@ -905,7 +905,7 @@ const HybridCreatorDashboard = memo(({
     if (onShowGoLive) {
       onShowGoLive();
     } else {
-      navigate('/streaming');
+      onNavigate('/streaming');
     }
   };
 
@@ -933,7 +933,7 @@ const HybridCreatorDashboard = memo(({
         onNavigate(normalizedPath);
       } else {
         console.log('[Nav] Using react-router navigate');
-        navigate(normalizedPath);
+        onNavigate(normalizedPath);
       }
     } catch (error) {
       console.error('[Nav] Navigation error:', error);
@@ -997,7 +997,7 @@ const HybridCreatorDashboard = memo(({
                   type="button"
                   onClick={() => {
                     console.log('[CALLS] Icon clicked - navigating to call requests');
-                    navigate('/call-requests');
+                    onNavigate('/call-requests');
                   }}
                   className="p-3 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
                   aria-label="Manage call requests"
@@ -1095,9 +1095,9 @@ const HybridCreatorDashboard = memo(({
                           if (minutesUntil <= 5 && minutesUntil >= 0) {
                             // Start the call with the fan
                             if (nextCall.type === 'video') {
-                              navigate(`/video-call/${nextCall.id || nextCall.session_id}?fan=${nextCall.fan_username || nextCall.username}`);
+                              onNavigate(`/video-call/${nextCall.id || nextCall.session_id}?fan=${nextCall.fan_username || nextCall.username}`);
                             } else {
-                              navigate(`/voice-call/${nextCall.id || nextCall.session_id}?fan=${nextCall.fan_username || nextCall.username}`);
+                              onNavigate(`/voice-call/${nextCall.id || nextCall.session_id}?fan=${nextCall.fan_username || nextCall.username}`);
                             }
                             toast.success('Starting call with ' + (nextCall.fan_username || nextCall.username));
                           } else if (minutesUntil > 5) {
@@ -1123,7 +1123,7 @@ const HybridCreatorDashboard = memo(({
                         onClick={() => {
                           // Open messages with the specific fan
                           const username = nextCall.fan_username || nextCall.username;
-                          navigate(`/messages?user=${username}`);
+                          onNavigate(`/messages?user=${username}`);
                           toast.success(`Opening messages with @${username}`);
                         }}
                       >
@@ -1172,7 +1172,7 @@ const HybridCreatorDashboard = memo(({
                   type="button"
                   onClick={() => {
                     console.log('[SCHEDULE] Icon clicked - navigating to schedule');
-                    navigate('/schedule');
+                    onNavigate('/schedule');
                   }}
                   className="p-3 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-2xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
                   aria-label="Manage schedule"
@@ -1324,7 +1324,7 @@ const HybridCreatorDashboard = memo(({
           {/* New Messages */}
           {quickStats.messagesUnread > 0 && (
             <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg cursor-pointer hover:bg-opacity-80 transition-colors"
-                 onClick={() => navigate('/messages')}>
+                 onClick={() => onNavigate('/messages')}>
               <div className="flex items-center gap-3">
                 <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-500" />
                 <div>
@@ -1361,7 +1361,7 @@ const HybridCreatorDashboard = memo(({
               </div>
               <button
                 onClick={() => {
-                  navigate(`/messages?user=${topFans[0].username || topFans[0].id}`);
+                  onNavigate(`/messages?user=${topFans[0].username || topFans[0].id}`);
                   toast.success('Opening chat with your top fan!');
                 }}
                 className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-lg text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
@@ -1531,7 +1531,7 @@ const HybridCreatorDashboard = memo(({
         }}
         onViewDetails={(item) => {
           if (item.type === 'product') {
-            navigate(`/shop/product/${item.id}`);
+            onNavigate(`/shop/product/${item.id}`);
           } else if (item.type === 'video') {
             // Open in a modal or viewer instead of navigating
             console.log('View video:', item);
@@ -1553,7 +1553,7 @@ const HybridCreatorDashboard = memo(({
         <div className="flex flex-wrap gap-3 px-4 py-6 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
           {quickStats.pendingRequests > 0 && (
             <button
-              onClick={() => navigate('/requests')}
+              onClick={() => onNavigate('/requests')}
               className="flex items-center space-x-2 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-full text-sm hover:shadow-md transition-shadow"
             >
               <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
@@ -1563,7 +1563,7 @@ const HybridCreatorDashboard = memo(({
           )}
           {quickStats.messagesUnread > 0 && (
             <button
-              onClick={() => navigate('/messages')}
+              onClick={() => onNavigate('/messages')}
               className="flex items-center space-x-2 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-full text-sm hover:shadow-md transition-shadow"
             >
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
@@ -1591,7 +1591,7 @@ const HybridCreatorDashboard = memo(({
                 if (onNavigate) {
                   onNavigate('content-studio');
                 } else {
-                  navigate('/content-studio');
+                  onNavigate('/content-studio');
                 }
               }}
             >
@@ -1649,7 +1649,7 @@ const HybridCreatorDashboard = memo(({
                 if (onShowContent) {
                   onShowContent();
                 } else {
-                  navigate('/creator/content?tab=videos');
+                  onNavigate('/creator/content?tab=videos');
                 }
               }}
             >
