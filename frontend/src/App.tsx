@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ModalProvider } from './contexts/ModalContext';
 import AppRoutes from './routes/AppRoutes';
 import Modals from './components/modals/Modals';
 
@@ -25,7 +26,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppInner />
+        <ModalProvider>
+          <AppInner />
+        </ModalProvider>
       </AuthProvider>
     </BrowserRouter>
   );
