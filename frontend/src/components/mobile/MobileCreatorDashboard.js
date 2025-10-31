@@ -330,7 +330,7 @@ const MobileCreatorDashboard = ({
           onShowAvailability();
         } else if (onNavigate) {
           // Fallback to navigate to schedule page
-          onNavigate('schedule');
+          onNavigate('/schedule');
         } else {
           console.error('onShowAvailability is not defined');
         }
@@ -347,7 +347,7 @@ const MobileCreatorDashboard = ({
         if (onShowContent) {
           onShowContent();
         } else if (onNavigate) {
-          onNavigate('content');
+          onNavigate('/content');
         } else {
           console.error('onShowContent is not defined');
         }
@@ -364,7 +364,7 @@ const MobileCreatorDashboard = ({
         if (onShowEarnings) {
           onShowEarnings();
         } else if (onNavigate) {
-          onNavigate('wallet');
+          onNavigate('/wallet');
         } else {
           console.error('onShowEarnings is not defined');
         }
@@ -528,7 +528,7 @@ const MobileCreatorDashboard = ({
                 {/* Followers Button */}
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => onNavigate && onNavigate('followers')}
+                  onClick={() => onNavigate && onNavigate('/followers')}
                   className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5"
                 >
                   <UserGroupIcon className="w-5 h-5 text-white" />
@@ -772,7 +772,7 @@ const MobileCreatorDashboard = ({
                     }
                     // Navigate to schedule page
                     if (onNavigate) {
-                      onNavigate('schedule');
+                      onNavigate('/schedule');
                     }
                   }}
                   className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow cursor-pointer"
@@ -936,7 +936,7 @@ const MobileCreatorDashboard = ({
                     </div>
                   </div>
                   <button
-                    onClick={() => onNavigate('streaming')}
+                    onClick={() => onNavigate('/streaming')}
                     className="bg-white/20 backdrop-blur px-3 py-1 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
                   >
                     View Stream
@@ -987,7 +987,8 @@ const MobileCreatorDashboard = ({
                     onClick={() => {
                       console.log('Navigating to fan profile:', fan.username);
                       if (onNavigate) {
-                        onNavigate('fan-profile', { fanId: fan.id, username: fan.username });
+                        // Navigate to messages with this fan
+                        onNavigate(`/messages?user=${fan.username}`);
                       }
                     }}
                     className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer"

@@ -67,7 +67,7 @@ const MobileFanDashboard = ({
       title: 'Explore',
       icon: MagnifyingGlassIcon,
       color: 'bg-gradient-to-r from-blue-500 to-cyan-500',
-      onClick: () => onNavigate('explore'),
+      onClick: () => onNavigate('/explore'),
       description: 'Discover creators'
     },
     {
@@ -92,7 +92,7 @@ const MobileFanDashboard = ({
       title: 'Schedule',
       icon: CalendarIcon,
       color: 'bg-gradient-to-r from-green-500 to-emerald-500',
-      onClick: () => onNavigate('schedule'),
+      onClick: () => onNavigate('/schedule'),
       description: 'Upcoming calls'
     }
   ];
@@ -149,7 +149,7 @@ const MobileFanDashboard = ({
                 {/* Followers Button */}
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => onNavigate('followers')}
+                  onClick={() => onNavigate('/followers')}
                   className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5"
                 >
                   <HeartIcon className="w-5 h-5 text-white" />
@@ -159,7 +159,7 @@ const MobileFanDashboard = ({
                 {/* Tokens Button */}
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => onNavigate('wallet')}
+                  onClick={() => onNavigate('/wallet')}
                   className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5"
                 >
                   <WalletIcon className="w-5 h-5 text-white" />
@@ -220,7 +220,7 @@ const MobileFanDashboard = ({
               <motion.button
                 key={category.id}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => onNavigate(`explore?category=${category.id}`)}
+                onClick={() => onNavigate(`/explore?category=${category.id}`)}
                 className="flex-shrink-0 bg-white rounded-xl px-4 py-3 shadow-md border border-gray-100 flex items-center space-x-2 hover:shadow-lg transition-shadow active:bg-gray-50"
               >
                 <category.icon className={`w-5 h-5 ${category.color}`} strokeWidth={2} />
@@ -241,7 +241,7 @@ const MobileFanDashboard = ({
                 Live Now
               </h2>
               <button 
-                onClick={() => onNavigate('live')}
+                onClick={() => onNavigate('/live')}
                 className="text-sm text-purple-600 font-semibold hover:text-purple-700 flex items-center"
               >
                 View All
@@ -288,7 +288,7 @@ const MobileFanDashboard = ({
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-gray-800">Following</h2>
             <button 
-              onClick={() => onNavigate('following')}
+              onClick={() => onNavigate('/following')}
               className="text-sm text-purple-600 font-medium"
             >
               View All
@@ -342,7 +342,7 @@ const MobileFanDashboard = ({
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-semibold text-gray-800">Featured Creators</h2>
           <button 
-            onClick={() => onNavigate('explore')}
+            onClick={() => onNavigate('/explore')}
             className="text-sm text-purple-600 font-medium"
           >
             Explore

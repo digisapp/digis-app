@@ -1589,7 +1589,7 @@ const HybridCreatorDashboard = memo(({
               size="sm"
               onClick={() => {
                 if (onNavigate) {
-                  onNavigate('content-studio');
+                  onNavigate('/content-studio');
                 } else {
                   onNavigate('/content-studio');
                 }
