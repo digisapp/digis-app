@@ -172,9 +172,9 @@ const HomePage = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-[100] md:z-[1000] px-4 py-4" style={{ isolation: 'isolate' }}>
+      <nav className="relative z-50 px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center group ml-6 md:pointer-events-auto">
+          <Link to="/" className="flex items-center group ml-6">
             {logoFailed ? (
               <span className="text-2xl font-black text-white">DIGIS</span>
             ) : (
@@ -187,16 +187,16 @@ const HomePage = () => {
             )}
           </Link>
 
-          <div className="flex items-center gap-3 md:pointer-events-auto">
+          <div className="flex items-center gap-3">
             <SafeAuthLink
               mode="signin"
-              className="relative z-[1100] md:z-[1100] block px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 cursor-pointer"
+              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 cursor-pointer"
             >
               Sign in
             </SafeAuthLink>
             <SafeAuthLink
               mode="signup"
-              className="relative z-[1100] md:z-[1100] block px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 shadow-lg cursor-pointer"
+              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 shadow-lg cursor-pointer"
             >
               Sign Up
             </SafeAuthLink>

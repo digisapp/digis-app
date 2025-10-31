@@ -11,15 +11,14 @@ import { buildAuthUrl } from "../utils/nav";
 export default function SafeAuthLink({ mode = "signin", children, className, style }) {
   const navigate = useNavigate();
 
-  // Build proper auth URL with pathname + search
-  const authUrl = buildAuthUrl(mode);
-
   const onClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    console.log(`🔗 SafeAuthLink: Navigating to /auth?mode=${mode}`);
-    navigate(authUrl);
+    // Simple string path - no complex object
+    const path = `/auth?mode=${mode}`;
+    console.log(`🔗 SafeAuthLink: Navigating to ${path}`);
+    navigate(path);
   };
 
   // Use regular anchor with onClick handler
