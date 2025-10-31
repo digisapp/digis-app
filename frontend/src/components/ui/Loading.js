@@ -3,15 +3,10 @@ import { motion } from 'framer-motion';
 
 // Simple fallback hook when ThemeContext is not available
 const useThemeFallback = () => {
-  try {
-    const { useTheme } = require('../../contexts/ThemeContext');
-    return useTheme();
-  } catch (error) {
-    // Fallback values when ThemeContext is not available
-    return {
-      animations: !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    };
-  }
+  // Fallback values when ThemeContext is not available
+  return {
+    animations: !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  };
 };
 
 const Loading = ({ 

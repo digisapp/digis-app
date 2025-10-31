@@ -1,15 +1,18 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  ExclamationTriangleIcon, 
+import {
+  ExclamationTriangleIcon,
   ArrowPathIcon,
-  HomeIcon 
+  HomeIcon
 } from '@heroicons/react/24/outline';
 
 // Conditionally import Sentry
 let Sentry = null;
 try {
-  Sentry = require('@sentry/react');
+  // Use dynamic import which is supported in browsers
+  import('@sentry/react').then(module => {
+    Sentry = module;
+  });
 } catch (e) {
   // Sentry not available, error tracking disabled
 }
