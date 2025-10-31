@@ -172,9 +172,9 @@ const HomePage = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-[9999] px-4 py-4 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-indigo-600/20 backdrop-blur-sm">
+      <nav className="relative z-[9999] px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center group ml-6 relative z-[10000]">
+          <Link to="/" className="flex items-center group ml-6">
             {logoFailed ? (
               <span className="text-2xl font-black text-white">DIGIS</span>
             ) : (
@@ -187,16 +187,16 @@ const HomePage = () => {
             )}
           </Link>
 
-          <div className="flex items-center space-x-3 relative z-[10000]">
+          <div className="flex items-center space-x-3">
             <SafeAuthLink
               mode="signin"
-              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200 cursor-pointer inline-block"
+              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200 cursor-pointer inline-block relative z-[10000]"
             >
               Sign in
             </SafeAuthLink>
             <SafeAuthLink
               mode="signup"
-              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer inline-block"
+              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer inline-block relative z-[10000]"
             >
               Sign Up
             </SafeAuthLink>
@@ -205,7 +205,7 @@ const HomePage = () => {
       </nav>
 
       {/* Hero Section */}
-      <div className="relative z-40 px-4 pt-24 pb-6 md:pt-28 md:py-12">
+      <div className="relative z-40 px-4 pt-4 pb-6 md:py-12">
         <div className="max-w-6xl mx-auto text-center w-full">
           {/* Main Headline */}
           <motion.div
