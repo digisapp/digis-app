@@ -6,6 +6,7 @@ import DashboardRouter from '../components/pages/DashboardRouter';
 const HomePage = lazy(() => import('../components/HomePageNew'));
 const AuthPage = lazy(() => import('../components/Auth'));
 const ExplorePage = lazy(() => import('../components/pages/ExplorePage'));
+const CreatorProfile = lazy(() => import('../components/CreatorPublicProfileEnhanced'));
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -49,13 +50,36 @@ function Explore() {
 
   return (
     <ExplorePage
-      onCreatorSelect={(creatorId: string) => navigate(`/creator/${creatorId}`)}
-      onStartVideoCall={(creatorId: string) => navigate(`/call/video/${creatorId}`)}
-      onStartVoiceCall={(creatorId: string) => navigate(`/call/voice/${creatorId}`)}
-      onScheduleSession={(creatorId: string) => navigate(`/schedule/${creatorId}`)}
-      onTipCreator={(creatorId: string) => navigate(`/tip/${creatorId}`)}
-      onSendMessage={(creatorId: string) => navigate(`/messages/${creatorId}`)}
-      onMakeOffer={(creatorId: string) => navigate(`/offer/${creatorId}`)}
+      onCreatorSelect={(creator: any) => {
+        const username = creator?.username || creator?.display_name || creator?.id;
+        if (username) {
+          navigate(`/creator/${username}`);
+        }
+      }}
+      onStartVideoCall={(creator: any) => {
+        const username = creator?.username || creator?.id;
+        navigate(`/call/video/${username}`);
+      }}
+      onStartVoiceCall={(creator: any) => {
+        const username = creator?.username || creator?.id;
+        navigate(`/call/voice/${username}`);
+      }}
+      onScheduleSession={(creator: any) => {
+        const username = creator?.username || creator?.id;
+        navigate(`/schedule/${username}`);
+      }}
+      onTipCreator={(creator: any) => {
+        const username = creator?.username || creator?.id;
+        navigate(`/tip/${username}`);
+      }}
+      onSendMessage={(creator: any) => {
+        const username = creator?.username || creator?.id;
+        navigate(`/messages/${username}`);
+      }}
+      onMakeOffer={(creator: any) => {
+        const username = creator?.username || creator?.id;
+        navigate(`/offer/${username}`);
+      }}
     />
   );
 }
@@ -123,6 +147,16 @@ export default function AppRoutes() {
           element={
             <Private>
               <Placeholder title="Settings" />
+            </Private>
+          }
+        />
+
+        {/* Creator profile - public but requires auth */}
+        <Route
+          path="/creator/:username"
+          element={
+            <Private>
+              <CreatorProfile />
             </Private>
           }
         />
