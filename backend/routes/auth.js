@@ -1254,12 +1254,12 @@ router.delete('/account', authenticateToken, async (req, res) => {
     
     try {
       // Delete user data in correct order due to foreign key constraints
-      await db(req).query('DELETE FROM tips WHERE tipper_id = $1 OR supabase_tipper_id = $2', [userId, userId]);
-      await db(req).query('DELETE FROM followers WHERE follower_id = $1 OR supabase_follower_id = $2', [userId, userId]);
-      await db(req).query('DELETE FROM creator_subscriptions WHERE subscriber_id = $1 OR supabase_subscriber_id = $2', [userId, userId]);
-      await db(req).query('DELETE FROM token_transactions WHERE user_id = $1 OR supabase_user_id = $2', [userId, userId]);
-      await db(req).query('DELETE FROM token_balances WHERE user_id = $1 OR supabase_user_id = $2', [userId, userId]);
-      await db(req).query('DELETE FROM payments WHERE user_id = $1 OR supabase_user_id = $2', [userId, userId]);
+      await db(req).query('DELETE FROM tips WHERE tipper_id = $1', [userId]);
+      await db(req).query('DELETE FROM followers WHERE follower_id = $1', [userId]);
+      await db(req).query('DELETE FROM creator_subscriptions WHERE subscriber_id = $1', [userId]);
+      await db(req).query('DELETE FROM token_transactions WHERE user_id = $1', [userId]);
+      await db(req).query('DELETE FROM token_balances WHERE user_id = $1', [userId]);
+      await db(req).query('DELETE FROM payments WHERE user_id = $1', [userId]);
       
       // Delete sessions where user is either creator or member
       await db(req).query(`
