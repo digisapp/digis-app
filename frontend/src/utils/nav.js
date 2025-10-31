@@ -5,16 +5,18 @@
 
 import { createSearchParams } from 'react-router-dom';
 
-export type AuthMode = 'signin' | 'signup' | 'verify-email' | 'reset';
+/**
+ * @typedef {'signin' | 'signup' | 'verify-email' | 'reset'} AuthMode
+ */
 
 /**
  * Build proper auth URL with pathname + search params
  * Prevents the common bug: navigate({ search: '?mode=signin' }) → /?mode=signin
  *
- * @param mode - Auth mode to navigate to
- * @returns Object with pathname and search for React Router navigate()
+ * @param {AuthMode} mode - Auth mode to navigate to
+ * @returns {{pathname: string, search: string}} Object with pathname and search for React Router navigate()
  */
-export function buildAuthUrl(mode: AuthMode) {
+export function buildAuthUrl(mode) {
   const search = createSearchParams({ mode }).toString();
   return {
     pathname: '/auth',

@@ -380,6 +380,8 @@ try {
   app.use('/api/connect', rateLimiters.api || ((req, res, next) => next()), connectRoutes);
   app.use('/api/creator-payouts', rateLimiters.api || ((req, res, next) => next()), creatorPayoutRoutes);
   app.use('/api/creator-payouts', rateLimiters.api || ((req, res, next) => next()), creatorPayoutIntentRoutes);
+  app.use('/api/v1/creator-payouts', rateLimiters.api || ((req, res, next) => next()), creatorPayoutRoutes);
+  app.use('/api/v1/creator-payouts', rateLimiters.api || ((req, res, next) => next()), creatorPayoutIntentRoutes);
   app.use('/api/stripe', rateLimiters.api || ((req, res, next) => next()), stripeRoutes);
   app.use('/api/privacy', rateLimiters.api || ((req, res, next) => next()), privacyRoutes);
   app.use('/api/recording', rateLimiters.streaming || ((req, res, next) => next()), recordingRoutes);
