@@ -97,7 +97,7 @@ const AppRoutes = () => {
     if (!currentUser) {
       // Unauthenticated user with mode param - redirect to /auth
       console.log(`🔧 ModeRedirectGate (AppRoutes): ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
-      return <Navigate to={buildAuthUrl(mode)} replace />;
+      return <Navigate to={`/auth?mode=${mode}`} replace />;
     } else {
       // Authenticated user with mode param - just strip it (don't redirect to /auth)
       console.log(`🔧 ModeRedirectGate (AppRoutes): Stripping ?mode=${mode} from ${location.pathname} (user authenticated)`);
