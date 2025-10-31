@@ -1,12 +1,12 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import DashboardRouter from '../components/pages/DashboardRouter';
 
 const HomePage = lazy(() => import('../components/HomePageNew'));
 const AuthPage = lazy(() => import('../components/Auth'));
+const ExplorePage = lazy(() => import('../components/pages/ExplorePage'));
 
-// For now, simplify - just show basic routes that work
-// Complex components can be added back later after refactoring to use useAuth() directly
 function Private({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const loc = useLocation();
@@ -15,7 +15,51 @@ function Private({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Simple placeholder for protected pages
+function Dashboard() {
+  const { user, isCreator, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <DashboardRouter
+      user={user}
+      isCreator={isCreator}
+      isAdmin={isAdmin}
+      tokenBalance={0}
+      sessionStats={null}
+      roleResolved={true}
+      onNavigate={(path: string) => navigate(path)}
+      onShowAvailability={() => navigate('/availability')}
+      onShowGoLive={() => navigate('/go-live')}
+      onCreatorSelect={(creatorId: string) => navigate(`/creator/${creatorId}`)}
+      onTipCreator={() => {}}
+      onStartVideoCall={() => {}}
+      onStartVoiceCall={() => {}}
+      onShowEarnings={() => navigate('/earnings')}
+      onShowOffers={() => navigate('/offers')}
+      onShowSettings={() => navigate('/settings')}
+      onShowExperiences={() => navigate('/experiences')}
+      contentData={null}
+      onContentUpdate={() => {}}
+    />
+  );
+}
+
+function Explore() {
+  const navigate = useNavigate();
+
+  return (
+    <ExplorePage
+      onCreatorSelect={(creatorId: string) => navigate(`/creator/${creatorId}`)}
+      onStartVideoCall={(creatorId: string) => navigate(`/call/video/${creatorId}`)}
+      onStartVoiceCall={(creatorId: string) => navigate(`/call/voice/${creatorId}`)}
+      onScheduleSession={(creatorId: string) => navigate(`/schedule/${creatorId}`)}
+      onTipCreator={(creatorId: string) => navigate(`/tip/${creatorId}`)}
+      onSendMessage={(creatorId: string) => navigate(`/messages/${creatorId}`)}
+      onMakeOffer={(creatorId: string) => navigate(`/offer/${creatorId}`)}
+    />
+  );
+}
+
 function Placeholder({ title }: { title: string }) {
   return (
     <div className="p-8">
@@ -33,12 +77,12 @@ export default function AppRoutes() {
         <Route path="/" element={<HomePage />} />
         <Route path="/auth" element={<AuthPage />} />
 
-        {/* Protected routes - showing placeholders for now */}
+        {/* Protected routes */}
         <Route
           path="/dashboard"
           element={
             <Private>
-              <Placeholder title="Dashboard" />
+              <Dashboard />
             </Private>
           }
         />
@@ -46,7 +90,7 @@ export default function AppRoutes() {
           path="/explore"
           element={
             <Private>
-              <Placeholder title="Explore" />
+              <Explore />
             </Private>
           }
         />
