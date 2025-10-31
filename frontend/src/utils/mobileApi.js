@@ -184,13 +184,13 @@ export const api = {
   },
   messages: {
     list: () => '/api/messages',
-    get: (id) => `/messages/${id}`,
+    get: (id) => `/api/messages/${id}`,
     send: () => '/api/messages',
-    markRead: (id) => `/messages/${id}/read`,
+    markRead: (id) => `/api/messages/${id}/read`,
   },
   wallet: {
-    balance: () => '/api/wallet/balance',
-    transactions: (page = 1) => `/wallet/transactions?page=${page}`,
+    balance: () => '/api/tokens/balance',
+    transactions: (page = 1) => `/api/tokens/transactions?page=${page}`,
     purchase: () => '/api/tokens/purchase',
   },
   user: {
