@@ -818,7 +818,7 @@ router.get('/followers', authenticateToken, async (req, res) => {
 
     // Get followers with user details
     // IMPORTANT: Exclude the creator from their own followers list
-    // Note: follower_id uses supabase_id, creator_id uses database id
+    // Note: follower_id is VARCHAR that stores supabase_id as text, creator_id uses database id
     const query = `
       SELECT
         u.id,
@@ -829,9 +829,9 @@ router.get('/followers', authenticateToken, async (req, res) => {
         u.is_creator as "isVerified",
         f.created_at as "followedAt"
       FROM followers f
-      JOIN users u ON u.supabase_id = f.follower_id
+      JOIN users u ON u.supabase_id::text = f.follower_id
       WHERE f.creator_id = $1
-        AND f.follower_id != $2
+        AND f.follower_id != $2::text
       ORDER BY f.created_at DESC
     `;
 
@@ -874,7 +874,7 @@ router.get('/subscribers', authenticateToken, async (req, res) => {
 
     // Get active subscribers with tier info
     // IMPORTANT: Exclude the creator from their own subscribers list
-    // Note: subscriber_id uses supabase_id, creator_id uses database id
+    // Note: subscriber_id is VARCHAR that stores supabase_id as text, creator_id uses database id
     const query = `
       SELECT
         u.id,
@@ -887,9 +887,9 @@ router.get('/subscribers', authenticateToken, async (req, res) => {
         cs.monthly_price as "monthlyRevenue",
         cs.tier_name as tier
       FROM creator_subscriptions cs
-      JOIN users u ON u.supabase_id = cs.subscriber_id
+      JOIN users u ON u.supabase_id::text = cs.subscriber_id
       WHERE cs.creator_id = $1
-        AND cs.subscriber_id != $2
+        AND cs.subscriber_id != $2::text
         AND cs.status = 'active'
         AND (cs.current_period_end IS NULL OR cs.current_period_end > NOW())
       ORDER BY cs.created_at DESC
@@ -939,7 +939,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
         `SELECT COUNT(*) as count
          FROM followers
          WHERE creator_id = $1
-           AND follower_id != $2`,
+           AND follower_id != $2::text`,
         [creatorDbId, supabaseId]
       );
       followersCount = parseInt(followersResult.rows[0]?.count) || 0;
@@ -955,7 +955,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
         `SELECT COUNT(*) as count
          FROM creator_subscriptions
          WHERE creator_id = $1
-           AND subscriber_id != $2
+           AND subscriber_id != $2::text
            AND status = 'active'
            AND (current_period_end IS NULL OR current_period_end > NOW())`,
         [creatorDbId, supabaseId]
