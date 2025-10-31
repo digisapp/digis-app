@@ -1,16 +1,36 @@
 import React from 'react';
-import { BrowserRouter, useNavigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth, supabase } from './contexts/AuthContext';
 import { ModalProvider } from './contexts/ModalContext';
 import AppRoutes from './routes/AppRoutes';
 import Modals from './components/modals/Modals';
+import NavigationShell from './components/navigation/NavigationShell';
 
 function AppInner() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Don't show navigation on auth page
+  const isAuthPage = location.pathname === '/auth' || location.pathname === '/';
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth?mode=signin');
+  };
+
+  const handleGoLive = () => {
+    navigate('/go-live');
+  };
 
   return (
     <>
+      {user && !isAuthPage && (
+        <NavigationShell
+          onLogout={handleLogout}
+          onShowGoLive={handleGoLive}
+        />
+      )}
       <AppRoutes />
       <Modals
         user={user}

@@ -9,7 +9,7 @@ const NavigationShell = ({
   onShowGoLive
 }) => {
   // Use AuthContext for user data
-  const { currentUser } = useAuth();
+  const { user: currentUser } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [theme, setTheme] = useState(() => {
     // Get initial theme from localStorage or default to light
