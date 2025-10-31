@@ -1,39 +1,19 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { buildAuthUrl } from "../utils/nav";
+import { Link } from "react-router-dom";
 
 /**
- * SafeAuthLink - Centralized auth navigation component
+ * SafeAuthLink - Proper React Router link to auth page
  *
- * Uses buildAuthUrl() to ensure proper navigation to /auth?mode=X
- * Prevents the common bug: navigate({ search: '?mode=signin' }) → /?mode=signin
+ * Uses Link with pathname + search (search MUST start with '?')
+ * No custom onClick needed - React Router handles it correctly
  */
-export default function SafeAuthLink({ mode = "signin", children, className, style }) {
-  const navigate = useNavigate();
-
-  const onClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Use object syntax - pathname + search (without leading ?)
-    console.log(`🔗 SafeAuthLink: Navigating to /auth?mode=${mode}`);
-    navigate({
-      pathname: '/auth',
-      search: `mode=${mode}`
-    });
-  };
-
-  // Use regular anchor with onClick handler
-  // href provides fallback for accessibility and no-JS scenarios
+export default function SafeAuthLink({ mode = "signin", children, className = "" }) {
   return (
-    <a
-      href={`/auth?mode=${mode}`}
-      onClick={onClick}
+    <Link
+      to={{ pathname: '/auth', search: `?mode=${mode}` }}
       className={className}
-      style={style}
-      data-auth-link={mode}
     >
       {children ?? 'Sign in'}
-    </a>
+    </Link>
   );
 }

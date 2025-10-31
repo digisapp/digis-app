@@ -121,6 +121,7 @@ import AuthAnalyticsBridge from './components/AuthAnalyticsBridge';
 
 // Import call navigator
 import CallNavigator from './components/CallNavigator';
+import { ModeRedirectGate } from './components/ModeRedirectGate';
 
 // Import preloading utilities
 import { preloadOnIdle } from './lib/preload';
@@ -1147,6 +1148,9 @@ const App = () => {
 
         {/* Auto-navigate to call page when creator accepts */}
         <CallNavigator />
+
+        {/* Auto-correct /?mode=signin to /auth?mode=signin */}
+        <ModeRedirectGate />
 
         {/* Navigation Component - Outside main content for proper fixed positioning */}
         {user && (
