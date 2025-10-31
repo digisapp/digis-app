@@ -77,20 +77,96 @@ CREATE INDEX IF NOT EXISTS idx_users_supabase_id ON users(supabase_id);
 
 -- Step 7: Create indexes on foreign key columns for performance
 -- These columns store supabase_id as VARCHAR/text
-CREATE INDEX IF NOT EXISTS idx_followers_follower_id ON followers(follower_id);
-CREATE INDEX IF NOT EXISTS idx_followers_creator_id ON followers(creator_id);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_subscriber_id ON creator_subscriptions(subscriber_id);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_creator_id ON creator_subscriptions(creator_id);
-CREATE INDEX IF NOT EXISTS idx_token_balances_user_id ON token_balances(user_id);
-CREATE INDEX IF NOT EXISTS idx_token_transactions_user_id ON token_transactions(user_id);
-CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
-CREATE INDEX IF NOT EXISTS idx_tips_tipper_id ON tips(tipper_id);
-CREATE INDEX IF NOT EXISTS idx_tips_creator_id ON tips(creator_id);
+-- Only create indexes if tables and columns exist
+DO $$
+BEGIN
+    -- Followers table indexes
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'followers') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'followers' AND column_name = 'follower_id') THEN
+            CREATE INDEX IF NOT EXISTS idx_followers_follower_id ON followers(follower_id);
+            RAISE NOTICE 'Created index on followers.follower_id';
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'followers' AND column_name = 'creator_id') THEN
+            CREATE INDEX IF NOT EXISTS idx_followers_creator_id ON followers(creator_id);
+            RAISE NOTICE 'Created index on followers.creator_id';
+        END IF;
+    ELSE
+        RAISE NOTICE 'Followers table does not exist - skipping indexes';
+    END IF;
 
--- Step 8: Add helpful comments
-COMMENT ON COLUMN users.supabase_id IS 'Primary authentication identifier from Supabase Auth (UUID)';
-COMMENT ON COLUMN followers.follower_id IS 'Follower supabase_id stored as VARCHAR';
-COMMENT ON COLUMN creator_subscriptions.subscriber_id IS 'Subscriber supabase_id stored as VARCHAR';
+    -- Creator subscriptions table indexes (may not exist)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'creator_subscriptions') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'creator_subscriptions' AND column_name = 'subscriber_id') THEN
+            CREATE INDEX IF NOT EXISTS idx_subscriptions_subscriber_id ON creator_subscriptions(subscriber_id);
+            RAISE NOTICE 'Created index on creator_subscriptions.subscriber_id';
+        ELSE
+            RAISE NOTICE 'creator_subscriptions.subscriber_id column does not exist - skipping index';
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'creator_subscriptions' AND column_name = 'creator_id') THEN
+            CREATE INDEX IF NOT EXISTS idx_subscriptions_creator_id ON creator_subscriptions(creator_id);
+            RAISE NOTICE 'Created index on creator_subscriptions.creator_id';
+        ELSE
+            RAISE NOTICE 'creator_subscriptions.creator_id column does not exist - skipping index';
+        END IF;
+    ELSE
+        RAISE NOTICE 'creator_subscriptions table does not exist - skipping indexes';
+    END IF;
+
+    -- Token balances indexes
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'token_balances') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'token_balances' AND column_name = 'user_id') THEN
+            CREATE INDEX IF NOT EXISTS idx_token_balances_user_id ON token_balances(user_id);
+            RAISE NOTICE 'Created index on token_balances.user_id';
+        END IF;
+    END IF;
+
+    -- Token transactions indexes
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'token_transactions') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'token_transactions' AND column_name = 'user_id') THEN
+            CREATE INDEX IF NOT EXISTS idx_token_transactions_user_id ON token_transactions(user_id);
+            RAISE NOTICE 'Created index on token_transactions.user_id';
+        END IF;
+    END IF;
+
+    -- Payments indexes
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'payments') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'user_id') THEN
+            CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
+            RAISE NOTICE 'Created index on payments.user_id';
+        END IF;
+    END IF;
+
+    -- Tips indexes
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tips') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tips' AND column_name = 'tipper_id') THEN
+            CREATE INDEX IF NOT EXISTS idx_tips_tipper_id ON tips(tipper_id);
+            RAISE NOTICE 'Created index on tips.tipper_id';
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tips' AND column_name = 'creator_id') THEN
+            CREATE INDEX IF NOT EXISTS idx_tips_creator_id ON tips(creator_id);
+            RAISE NOTICE 'Created index on tips.creator_id';
+        END IF;
+    END IF;
+END $$;
+
+-- Step 8: Add helpful comments (only if columns exist)
+DO $$
+BEGIN
+    COMMENT ON COLUMN users.supabase_id IS 'Primary authentication identifier from Supabase Auth (UUID)';
+    RAISE NOTICE 'Added comment on users.supabase_id';
+
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'followers' AND column_name = 'follower_id') THEN
+        COMMENT ON COLUMN followers.follower_id IS 'Follower supabase_id stored as VARCHAR';
+        RAISE NOTICE 'Added comment on followers.follower_id';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'creator_subscriptions' AND column_name = 'subscriber_id') THEN
+        COMMENT ON COLUMN creator_subscriptions.subscriber_id IS 'Subscriber supabase_id stored as VARCHAR';
+        RAISE NOTICE 'Added comment on creator_subscriptions.subscriber_id';
+    ELSE
+        RAISE NOTICE 'creator_subscriptions.subscriber_id does not exist - skipping comment';
+    END IF;
+END $$;
 
 -- Step 9: Verification
 DO $$
