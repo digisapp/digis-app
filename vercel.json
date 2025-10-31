@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd backend && npm install",
-  "devCommand": "cd backend && npm run dev",
-  "installCommand": "cd backend && npm install",
+  "buildCommand": "cd frontend && npm install --legacy-peer-deps && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps",
   "functions": {
     "api/**/*.js": {
       "memory": 1024,
@@ -42,12 +42,10 @@
   "crons": [
     {
       "path": "/api/cron/bill-active-calls",
-      "schedule": "* * * * *",
-      "description": "Bill active calls every minute"
+      "schedule": "* * * * *"
     }
   ],
   "env": {
-    "NODE_ENV": "production",
-    "CRON_SECRET": "@cron-secret"
+    "NODE_ENV": "production"
   }
 }
