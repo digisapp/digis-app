@@ -9,7 +9,8 @@ type AuthState = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signInWithOtp: (email: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithOtp: (email: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   isCreator: boolean;
   isAdmin: boolean;
@@ -38,8 +39,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const signInWithPassword = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error };
+  };
+
   const signInWithOtp = async (email: string) => {
-    await supabase.auth.signInWithOtp({ email });
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth?mode=callback`,
+      },
+    });
+    return { error };
   };
 
   const signOut = async () => {
@@ -51,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = !!user?.user_metadata?.isAdmin;
 
   return (
-    <Ctx.Provider value={{ user, session, loading, signInWithOtp, signOut, isCreator, isAdmin }}>
+    <Ctx.Provider value={{ user, session, loading, signInWithPassword, signInWithOtp, signOut, isCreator, isAdmin }}>
       {children}
     </Ctx.Provider>
   );
