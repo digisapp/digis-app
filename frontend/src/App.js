@@ -1021,15 +1021,8 @@ const App = () => {
     // Desktop routing
     console.log('📍 Desktop routing - rendering Routes with pathname:', location.pathname);
 
-    // CRITICAL FIX: Atomic redirect gate - runs during render before effects
-    // If someone lands on /?mode=signin (or any non-auth path), redirect to /auth?mode=signin
-    const params = new URLSearchParams(location.search);
-    const mode = params.get('mode');
-    // Redirect if we have a mode param but we're NOT on /auth (prevents loops)
-    if (mode && location.pathname !== '/auth') {
-      console.log(`🔧 ModeRedirectGate: ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
-      return <Navigate to={buildAuthUrl(mode)} replace />;
-    }
+    // NOTE: ModeRedirectGate removed from here - now handled in AppRoutes.jsx
+    // to prevent duplicate redirect logic and infinite loops
 
     return (
       <Routes>
