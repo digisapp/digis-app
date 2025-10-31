@@ -130,14 +130,14 @@ const HomePage = () => {
   return (
     <div className="bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-600">
       {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" role="presentation">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none md:pointer-events-none -z-10" aria-hidden="true" role="presentation">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-pulse animation-delay-2000"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-300 rounded-full mix-blend-screen filter blur-3xl opacity-50 animate-pulse animation-delay-4000"></div>
-        
+
         {/* Floating emojis with reduced motion support */}
         <motion.div
-          className="absolute top-20 left-10 text-4xl"
+          className="absolute top-20 left-10 text-4xl pointer-events-none"
           animate={shouldReduceMotion ? undefined : {
             y: [0, -20, 0],
             rotate: [-10, 10, -10]
@@ -148,7 +148,7 @@ const HomePage = () => {
           ✨
         </motion.div>
         <motion.div
-          className="absolute top-40 right-20 text-4xl"
+          className="absolute top-40 right-20 text-4xl pointer-events-none"
           animate={shouldReduceMotion ? undefined : {
             y: [0, 20, 0],
             rotate: [10, -10, 10]
@@ -159,7 +159,7 @@ const HomePage = () => {
           💫
         </motion.div>
         <motion.div
-          className="absolute bottom-20 left-20 text-4xl"
+          className="absolute bottom-20 left-20 text-4xl pointer-events-none"
           animate={shouldReduceMotion ? undefined : {
             y: [0, -30, 0],
             scale: [1, 1.2, 1]
@@ -172,9 +172,9 @@ const HomePage = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-[9999] px-4 py-4" style={{ isolation: 'isolate' }}>
+      <nav className="relative z-[100] md:z-[1000] px-4 py-4" style={{ isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center group ml-6" style={{ pointerEvents: 'auto' }}>
+          <Link to="/" className="flex items-center group ml-6 md:pointer-events-auto">
             {logoFailed ? (
               <span className="text-2xl font-black text-white">DIGIS</span>
             ) : (
@@ -187,18 +187,16 @@ const HomePage = () => {
             )}
           </Link>
 
-          <div className="flex items-center gap-3" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 10000 }}>
+          <div className="flex items-center gap-3 md:pointer-events-auto">
             <SafeAuthLink
               mode="signin"
-              className="block px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 cursor-pointer"
-              style={{ touchAction: 'manipulation', userSelect: 'none' }}
+              className="relative z-[1100] md:z-[1100] block px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 cursor-pointer"
             >
               Sign in
             </SafeAuthLink>
             <SafeAuthLink
               mode="signup"
-              className="block px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 shadow-lg cursor-pointer"
-              style={{ touchAction: 'manipulation', userSelect: 'none' }}
+              className="relative z-[1100] md:z-[1100] block px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 shadow-lg cursor-pointer"
             >
               Sign Up
             </SafeAuthLink>
