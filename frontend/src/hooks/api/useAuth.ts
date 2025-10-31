@@ -1,9 +1,8 @@
 import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../utils/supabase-auth';
+import { supabase } from '../../contexts/AuthContext';
 import { useAppStore } from '../../stores/useAppStore';
 import toast from 'react-hot-toast';
-import { getAuthToken } from '../../utils/auth-helpers';
 
 // Types
 interface LoginCredentials {
@@ -184,7 +183,8 @@ export const useTokenBalance = () => {
   const query = useQuery({
     queryKey: ['tokens', 'balance'],
     queryFn: async () => {
-      const token = await getAuthToken();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tokens/balance`, {

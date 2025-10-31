@@ -10,7 +10,7 @@
 
 import React, { useState } from 'react';
 import { useUsernameAvailability } from '../../hooks/useUsernameAvailability';
-import { getAuthToken } from '../../utils/auth-helpers';
+import { supabase } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 type Props = {
@@ -32,7 +32,8 @@ export default function UsernameField({ initial = '', onSaved, className = '' }:
     setSaving(true);
 
     try {
-      const authToken = await getAuthToken();
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token;
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
       const res = await fetch(`${backendUrl}/users/profile`, {

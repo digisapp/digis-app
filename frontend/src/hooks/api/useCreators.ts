@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../utils/supabase-auth';
+import { supabase } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { getAuthToken } from '../../utils/auth-helpers';
 
 // Types
 interface Creator {
@@ -42,7 +41,8 @@ export const useCreators = (filters?: CreatorFilters) => {
         });
       }
 
-      const token = await getAuthToken();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/creators?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
