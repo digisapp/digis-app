@@ -14,6 +14,7 @@ type AuthState = {
   signOut: () => Promise<void>;
   isCreator: boolean;
   isAdmin: boolean;
+  role: 'admin' | 'creator' | 'fan';
 };
 
 const Ctx = createContext<AuthState | undefined>(undefined);
@@ -62,8 +63,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isCreator = !!user?.user_metadata?.isCreator;
   const isAdmin = !!user?.user_metadata?.isAdmin;
 
+  // Computed role for backwards compatibility
+  const role = isAdmin ? 'admin' : isCreator ? 'creator' : 'fan';
+
   return (
-    <Ctx.Provider value={{ user, session, loading, signInWithPassword, signInWithOtp, signOut, isCreator, isAdmin }}>
+    <Ctx.Provider value={{ user, session, loading, signInWithPassword, signInWithOtp, signOut, isCreator, isAdmin, role }}>
       {children}
     </Ctx.Provider>
   );

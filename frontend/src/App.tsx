@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth, supabase } from './contexts/AuthContext';
 import { ModalProvider } from './contexts/ModalContext';
+import { NavigationProvider } from './contexts/NavigationContext';
 import AppRoutes from './routes/AppRoutes';
 import Modals from './components/modals/Modals';
 import NavigationShell from './components/navigation/NavigationShell';
@@ -24,7 +25,11 @@ function AppInner() {
   };
 
   return (
-    <>
+    <NavigationProvider
+      user={user}
+      tokenBalance={0}
+      onGoLive={handleGoLive}
+    >
       {user && !isAuthPage && (
         <NavigationShell
           onLogout={handleLogout}
@@ -38,7 +43,7 @@ function AppInner() {
         onTokenUpdate={() => {}}
         onNavigate={(path: string) => navigate(path)}
       />
-    </>
+    </NavigationProvider>
   );
 }
 
