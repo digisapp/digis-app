@@ -48,7 +48,8 @@ const fetchCreatorOverview = async (params = {}) => {
   if (params.to) queryParams.set('to', params.to);
   if (params.noCache) queryParams.set('noCache', 'true');
 
-  const url = `/api/v1/creators/overview${queryParams.toString() ? `?${queryParams}` : ''}`;
+  // Note: VITE_BACKEND_URL already includes /api/v1
+  const url = `/creators/overview${queryParams.toString() ? `?${queryParams}` : ''}`;
 
   const response = await apiClient.get(url);
   return response.data;
