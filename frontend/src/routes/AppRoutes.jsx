@@ -88,22 +88,8 @@ const AppRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // CRITICAL FIX: ModeRedirectGate - catch any URL with ?mode= parameter
-  // If someone navigates to /explore?mode=signin, redirect to /auth?mode=signin
-  // BUT only if user is NOT authenticated (prevents redirect loop)
-  const params = new URLSearchParams(location.search);
-  const mode = params.get('mode');
-  if (mode && location.pathname !== '/auth') {
-    if (!currentUser) {
-      // Unauthenticated user with mode param - redirect to /auth
-      console.log(`🔧 ModeRedirectGate (AppRoutes): ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
-      return <Navigate to={`/auth?mode=${mode}`} replace />;
-    } else {
-      // Authenticated user with mode param - just strip it (don't redirect to /auth)
-      console.log(`🔧 ModeRedirectGate (AppRoutes): Stripping ?mode=${mode} from ${location.pathname} (user authenticated)`);
-      return <Navigate to={location.pathname} replace />;
-    }
-  }
+  // REMOVED: ModeRedirectGate logic - was causing infinite loop (React error #310)
+  // Now using window.location.href in SafeAuthLink which bypasses React Router entirely
 
   // Redirect authenticated users away from /auth page
   // Only redirect if role is fully resolved to prevent glitching
