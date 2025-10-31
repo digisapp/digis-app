@@ -172,9 +172,9 @@ const HomePage = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-[9999] px-4 py-4">
+      <nav className="relative z-[9999] px-4 py-4" style={{ isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center group ml-6">
+          <Link to="/" className="flex items-center group ml-6" style={{ pointerEvents: 'auto' }}>
             {logoFailed ? (
               <span className="text-2xl font-black text-white">DIGIS</span>
             ) : (
@@ -187,16 +187,18 @@ const HomePage = () => {
             )}
           </Link>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3" style={{ pointerEvents: 'auto' }}>
             <SafeAuthLink
               mode="signin"
-              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transform hover:scale-105 transition-all duration-200 cursor-pointer inline-block relative z-[10000]"
+              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transition-all duration-200 cursor-pointer inline-block"
+              style={{ pointerEvents: 'auto', position: 'relative', zIndex: 10000, transform: 'translateZ(0)' }}
             >
               Sign in
             </SafeAuthLink>
             <SafeAuthLink
               mode="signup"
-              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer inline-block relative z-[10000]"
+              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transition-all duration-200 shadow-lg cursor-pointer inline-block"
+              style={{ pointerEvents: 'auto', position: 'relative', zIndex: 10000, transform: 'translateZ(0)' }}
             >
               Sign Up
             </SafeAuthLink>
