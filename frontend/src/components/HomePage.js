@@ -187,18 +187,18 @@ const HomePage = () => {
             )}
           </Link>
 
-          <div className="flex items-center space-x-3" style={{ pointerEvents: 'auto' }}>
+          <div className="flex items-center gap-3" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 10000 }}>
             <SafeAuthLink
               mode="signin"
-              className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 transition-all duration-200 cursor-pointer inline-block"
-              style={{ pointerEvents: 'auto', position: 'relative', zIndex: 10000, transform: 'translateZ(0)' }}
+              className="block px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-full hover:bg-white/30 cursor-pointer"
+              style={{ touchAction: 'manipulation', userSelect: 'none' }}
             >
               Sign in
             </SafeAuthLink>
             <SafeAuthLink
               mode="signup"
-              className="px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 transition-all duration-200 shadow-lg cursor-pointer inline-block"
-              style={{ pointerEvents: 'auto', position: 'relative', zIndex: 10000, transform: 'translateZ(0)' }}
+              className="block px-6 py-2.5 bg-white text-purple-600 font-bold rounded-full hover:bg-gray-100 shadow-lg cursor-pointer"
+              style={{ touchAction: 'manipulation', userSelect: 'none' }}
             >
               Sign Up
             </SafeAuthLink>
