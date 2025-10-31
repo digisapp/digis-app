@@ -252,7 +252,8 @@ const MobileCreatorDashboard = ({
       console.log('📊 Starting to fetch creator stats...');
 
       // Fetch real follower/subscriber count from API
-      const response = await apiClient.get('/api/v1/creators/stats');
+      // Note: VITE_BACKEND_URL already includes /api/v1
+      const response = await apiClient.get('/creators/stats');
 
       if (response.data && response.data.success) {
         setStats({
