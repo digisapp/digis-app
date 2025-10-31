@@ -9,6 +9,7 @@ import { RouteFallback, MobileRouteFallback } from '../components/ui/RouteFallba
 import DebugHUD from '../components/ui/DebugHUD';
 import useRouteObservability from '../hooks/useRouteMonitoring';
 import { defaultPathFor, isRoleReady } from '../utils/routeHelpers';
+import { buildAuthUrl } from '../utils/nav';
 import toast from 'react-hot-toast';
 
 // Critical imports - NOT lazy loaded for immediate access (prevents Suspense hang)
@@ -96,7 +97,6 @@ const AppRoutes = () => {
     if (!currentUser) {
       // Unauthenticated user with mode param - redirect to /auth
       console.log(`🔧 ModeRedirectGate (AppRoutes): ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
-      const { buildAuthUrl } = require('../utils/nav');
       return <Navigate to={buildAuthUrl(mode)} replace />;
     } else {
       // Authenticated user with mode param - just strip it (don't redirect to /auth)

@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import LiveStreamNotification from './components/LiveStreamNotification';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { BREAKPOINTS } from './constants/breakpoints';
+import { buildAuthUrl } from './utils/nav';
 // Core components (loaded immediately for auth flow)
 import Auth from './components/Auth';
 import HomePage from './components/HomePage';
@@ -700,13 +701,11 @@ const App = () => {
   // Handle auth - Navigate to auth page with mode parameter
   const handleSignIn = () => {
     console.log('🔵 handleSignIn called - navigating to /auth?mode=signin');
-    const { buildAuthUrl } = require('./utils/nav');
     navigate(buildAuthUrl('signin'));
   };
 
   const handleSignUp = () => {
     console.log('🔵 handleSignUp called - navigating to /auth?mode=signup');
-    const { buildAuthUrl } = require('./utils/nav');
     navigate(buildAuthUrl('signup'));
   };
 
@@ -1029,7 +1028,6 @@ const App = () => {
     // Redirect if we have a mode param but we're NOT on /auth (prevents loops)
     if (mode && location.pathname !== '/auth') {
       console.log(`🔧 ModeRedirectGate: ${location.pathname}?mode=${mode} → /auth?mode=${mode}`);
-      const { buildAuthUrl } = require('./utils/nav');
       return <Navigate to={buildAuthUrl(mode)} replace />;
     }
 
