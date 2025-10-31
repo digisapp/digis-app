@@ -25,8 +25,8 @@ export default defineConfig({
     // Service worker was causing stale JS bundles to be served after deployments
   ].filter(Boolean),
   esbuild: {
-    loader: 'jsx',
-    include: /src\/.*\.(js|jsx)$/,
+    loader: 'tsx',
+    include: /src\/.*\.(js|jsx|ts|tsx)$/,
     exclude: [],
   },
   optimizeDeps: {
@@ -34,6 +34,8 @@ export default defineConfig({
       loader: {
         '.js': 'jsx',
         '.jsx': 'jsx',
+        '.ts': 'tsx',
+        '.tsx': 'tsx',
       },
     },
     include: [

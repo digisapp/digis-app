@@ -1,41 +1,32 @@
-/**
- * App - Simple, boring, works every day
- *
- * No complex state management, no abstractions.
- * Just auth provider and routes.
- */
-
 import React from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { DeviceProvider } from './contexts/DeviceContext';
-import { ModalProvider } from './contexts/ModalContext';
+import { BrowserRouter, useNavigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AppRoutes from './routes/AppRoutes';
-import ErrorBoundary from './components/ui/ErrorBoundary';
-import EnhancedToaster from './components/ui/EnhancedToaster';
 import Modals from './components/modals/Modals';
 
-function App() {
+function AppInner() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   return (
-    <ErrorBoundary>
-      <BrowserRouter>
-        <AuthProvider>
-          <DeviceProvider>
-            <ModalProvider>
-              {/* Toast notifications */}
-              <EnhancedToaster />
-
-              {/* Main app routes */}
-              <AppRoutes />
-
-              {/* Global modals */}
-              <Modals />
-            </ModalProvider>
-          </DeviceProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </ErrorBoundary>
+    <>
+      <AppRoutes />
+      <Modals
+        user={user}
+        tokenBalance={0}
+        onTokenUpdate={() => {}}
+        onNavigate={(path: string) => navigate(path)}
+      />
+    </>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
