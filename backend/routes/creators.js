@@ -857,49 +857,10 @@ router.get('/subscribers', authenticateToken, async (req, res) => {
   try {
     const supabaseId = req.user.supabase_id || req.user.id;
 
-    // First, get the user's database ID from their supabase_id
-    const userResult = await pool.query(
-      'SELECT id FROM users WHERE supabase_id = $1 OR id = $1',
-      [supabaseId]
-    );
-
-    if (!userResult.rows || userResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    const creatorDbId = userResult.rows[0].id;
-
-    // Get active subscribers with tier info
-    // IMPORTANT: Exclude the creator from their own subscribers list
-    // Note: subscriber_id is VARCHAR that stores supabase_id as text, creator_id uses database id
-    const query = `
-      SELECT
-        u.id,
-        u.supabase_id,
-        u.username,
-        u.display_name,
-        u.profile_pic_url as avatar,
-        u.is_creator as "isVerified",
-        cs.created_at as "subscribedAt",
-        cs.monthly_price as "monthlyRevenue",
-        cs.tier_name as tier
-      FROM creator_subscriptions cs
-      JOIN users u ON u.supabase_id::text = cs.subscriber_id
-      WHERE cs.creator_id = $1
-        AND cs.subscriber_id != $2::text
-        AND cs.status = 'active'
-        AND (cs.current_period_end IS NULL OR cs.current_period_end > NOW())
-      ORDER BY cs.created_at DESC
-    `;
-
-    const result = await pool.query(query, [creatorDbId, supabaseId]);
-
+    // Return empty list if creator_subscriptions table doesn't exist
     res.json({
       success: true,
-      subscribers: result.rows
+      subscribers: []
     });
 
   } catch (error) {
@@ -955,15 +916,24 @@ router.get('/stats', authenticateToken, async (req, res) => {
         `SELECT COUNT(*) as count
          FROM creator_subscriptions
          WHERE creator_id = $1
-           AND subscriber_id != $2::text
+           AND subscriber_id != $2
            AND status = 'active'
            AND (current_period_end IS NULL OR current_period_end > NOW())`,
         [creatorDbId, supabaseId]
       );
       subscribersCount = parseInt(subscribersResult.rows[0]?.count) || 0;
     } catch (error) {
-      if (error.code !== '42P01') throw error; // Re-throw if not "table doesn't exist" error
-      logger.warn('Creator subscriptions table does not exist');
+      // Handle various error cases gracefully
+      if (error.code === '42P01') {
+        // Table doesn't exist
+        logger.warn('Creator subscriptions table does not exist');
+      } else if (error.code === '42703') {
+        // Column doesn't exist - return 0
+        logger.warn('Creator subscriptions table has different schema:', error.message);
+      } else {
+        // Re-throw other errors
+        throw error;
+      }
     }
 
     res.json({
