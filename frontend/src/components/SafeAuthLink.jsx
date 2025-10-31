@@ -15,10 +15,12 @@ export default function SafeAuthLink({ mode = "signin", children, className, sty
     e.preventDefault();
     e.stopPropagation();
 
-    // Simple string path - no complex object
-    const path = `/auth?mode=${mode}`;
-    console.log(`🔗 SafeAuthLink: Navigating to ${path}`);
-    navigate(path);
+    // Use object syntax - pathname + search (without leading ?)
+    console.log(`🔗 SafeAuthLink: Navigating to /auth?mode=${mode}`);
+    navigate({
+      pathname: '/auth',
+      search: `mode=${mode}`
+    });
   };
 
   // Use regular anchor with onClick handler
