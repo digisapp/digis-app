@@ -7,8 +7,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnon);
 
 type AuthState = {
   user: User | null;
+  currentUser: User | null;  // Alias for backwards compatibility
   session: Session | null;
   loading: boolean;
+  roleResolved: boolean;  // True when role determination is complete
   signInWithPassword: (email: string, password: string) => Promise<{ error: any }>;
   signInWithOtp: (email: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -104,8 +106,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Computed role for backwards compatibility
   const role = isAdmin ? 'admin' : isCreator ? 'creator' : 'fan';
 
+  // Role is resolved when loading is complete
+  const roleResolved = !loading;
+
+  // Alias for backwards compatibility
+  const currentUser = user;
+
   return (
-    <Ctx.Provider value={{ user, session, loading, signInWithPassword, signInWithOtp, signOut, isCreator, isAdmin, role }}>
+    <Ctx.Provider value={{ user, currentUser, session, loading, roleResolved, signInWithPassword, signInWithOtp, signOut, isCreator, isAdmin, role }}>
       {children}
     </Ctx.Provider>
   );
