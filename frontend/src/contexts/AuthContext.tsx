@@ -24,18 +24,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Sync user metadata from backend database to Supabase Auth
+  const syncMetadata = async (accessToken: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/sync-metadata`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        console.log('✅ User metadata synced successfully');
+        // Refresh the session to get updated metadata
+        const { data } = await supabase.auth.refreshSession();
+        if (data.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+        }
+      } else {
+        console.warn('⚠️ Failed to sync user metadata:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error syncing user metadata:', error);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getSession();
       setSession(data.session ?? null);
       setUser(data.session?.user ?? null);
+
+      // Sync metadata on initial load if user is logged in
+      if (data.session?.access_token) {
+        await syncMetadata(data.session.access_token);
+      }
+
       setLoading(false);
     };
     init();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
+
+      // Sync metadata on sign in
+      if (event === 'SIGNED_IN' && s?.access_token) {
+        await syncMetadata(s.access_token);
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, []);

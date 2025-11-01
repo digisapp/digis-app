@@ -1748,6 +1748,75 @@ router.get('/debug-db-info', async (req, res) => {
   }
 });
 
+// Sync user metadata from database to Supabase Auth
+router.post('/sync-metadata', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID not found' });
+    }
+
+    // Get user from database
+    const query = `
+      SELECT id, email, username, bio, profile_pic_url,
+             is_creator, role, creator_type,
+             is_admin, is_super_admin
+      FROM users
+      WHERE id = $1::uuid
+      LIMIT 1
+    `;
+
+    const result = await db(req).query(query, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found in database' });
+    }
+
+    const user = result.rows[0];
+
+    // Determine creator and admin status from database
+    const isCreator = user.is_creator === true ||
+                      user.role === 'creator' ||
+                      user.creator_type != null;
+
+    const isAdmin = user.is_super_admin === true ||
+                    user.is_admin === true ||
+                    user.role === 'admin';
+
+    // Update Supabase Auth user metadata
+    const admin = supabaseAdmin();
+    await admin.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        isCreator,
+        isAdmin,
+        username: user.username,
+        bio: user.bio,
+        profile_pic_url: user.profile_pic_url
+      }
+    });
+
+    console.log(`✅ Synced metadata for user ${userId}: isCreator=${isCreator}, isAdmin=${isAdmin}`);
+
+    return res.json({
+      success: true,
+      message: 'User metadata synced successfully',
+      metadata: {
+        isCreator,
+        isAdmin,
+        username: user.username
+      }
+    });
+
+  } catch (error) {
+    console.error('Error syncing user metadata:', error);
+    return res.status(500).json({
+      error: 'Failed to sync user metadata',
+      message: error.message
+    });
+  }
+});
+
 // Export router and middleware for backward compatibility
 module.exports = router;
 module.exports.verifySupabaseToken = authenticateToken; // Alias for migration
