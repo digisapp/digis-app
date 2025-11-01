@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { RocketLaunchIcon } from '@heroicons/react/24/solid';
+import { useAuth } from '../contexts/AuthContext';
 
 const HomePageNew = () => {
   const [logoFailed, setLogoFailed] = useState(false);
+  const { user, isCreator, loading } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect logged-in users to their appropriate page
+  useEffect(() => {
+    if (!loading && user) {
+      if (isCreator) {
+        navigate('/dashboard');
+      } else {
+        navigate('/explore');
+      }
+    }
+  }, [user, isCreator, loading, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-600">
