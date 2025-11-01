@@ -12,8 +12,8 @@ function AppInner() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Don't show navigation on auth page
-  const isAuthPage = location.pathname === '/auth' || location.pathname === '/';
+  // Don't show navigation on auth page only
+  const isAuthPage = location.pathname === '/auth';
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
