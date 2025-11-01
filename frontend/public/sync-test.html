@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sync Creator Metadata - Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #7c3aed;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+        }
+        .error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Sync Creator Metadata</h1>
+        <p>This page will sync your database role to your Supabase Auth metadata.</p>
+        
+        <button onclick="syncMetadata()">🚀 Sync My Metadata Now</button>
+        <button onclick="checkMetadata()">🔍 Check Current Metadata</button>
+        <button onclick="logout()">🚪 Logout & Reload</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        
+        const supabaseUrl = 'https://lpphsjowsivjtcmafxnj.supabase.co';
+        const supabaseAnon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwcGhzam93c2l2anRjbWFmeG5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NDg5ODQsImV4cCI6MjA2ODEyNDk4NH0.QnkIphnDGyB5jsO1IEq3p2ZQYSrRbPhXI8Me9lnC-SM';
+        const backendUrl = 'http://localhost:3005';
+        
+        const supabase = createClient(supabaseUrl, supabaseAnon);
+        
+        window.syncMetadata = async function() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = '⏳ Syncing metadata...';
+            resultDiv.className = '';
+            
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (!session) {
+                    resultDiv.textContent = '❌ Not logged in. Please log in first at /auth';
+                    resultDiv.className = 'error';
+                    return;
+                }
+                
+                const response = await fetch(`${backendUrl}/auth/sync-metadata`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Refresh session to get updated metadata
+                    await supabase.auth.refreshSession();
+                    
+                    resultDiv.textContent = '✅ Success!\n\n' + JSON.stringify(data, null, 2);
+                    resultDiv.className = 'success';
+                    
+                    setTimeout(() => {
+                        alert('Metadata synced! Redirecting to dashboard...');
+                        window.location.href = '/dashboard';
+                    }, 2000);
+                } else {
+                    resultDiv.textContent = '❌ Error:\n\n' + JSON.stringify(data, null, 2);
+                    resultDiv.className = 'error';
+                }
+            } catch (error) {
+                resultDiv.textContent = '❌ Error: ' + error.message;
+                resultDiv.className = 'error';
+            }
+        };
+        
+        window.checkMetadata = async function() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = '⏳ Checking metadata...';
+            resultDiv.className = '';
+            
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (!session) {
+                    resultDiv.textContent = '❌ Not logged in';
+                    resultDiv.className = 'error';
+                    return;
+                }
+                
+                const user = session.user;
+                resultDiv.textContent = `📋 Current Metadata:\n\nEmail: ${user.email}\nuser_metadata:\n${JSON.stringify(user.user_metadata, null, 2)}`;
+                resultDiv.className = 'success';
+            } catch (error) {
+                resultDiv.textContent = '❌ Error: ' + error.message;
+                resultDiv.className = 'error';
+            }
+        };
+        
+        window.logout = async function() {
+            await supabase.auth.signOut();
+            alert('Logged out! Redirecting to auth page...');
+            window.location.href = '/auth?mode=signin';
+        };
+    </script>
+</body>
+</html>

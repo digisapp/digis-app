@@ -59,8 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(data.session ?? null);
       setUser(data.session?.user ?? null);
 
-      // Sync metadata on initial load if user is logged in
+      // Always sync metadata on initial load if user is logged in
+      // This ensures database role is always reflected in the UI
       if (data.session?.access_token) {
+        console.log('🔄 Syncing user metadata from database...');
         await syncMetadata(data.session.access_token);
       }
 
