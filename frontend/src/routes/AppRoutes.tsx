@@ -7,6 +7,7 @@ const HomePage = lazy(() => import('../components/HomePageNew'));
 const AuthPage = lazy(() => import('../components/Auth'));
 const ExplorePage = lazy(() => import('../components/pages/ExplorePage'));
 const CreatorProfile = lazy(() => import('../components/CreatorPublicProfileEnhanced'));
+const MessagesPage = lazy(() => import('../components/pages/MessagesPage'));
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -84,6 +85,27 @@ function Explore() {
   );
 }
 
+function Messages() {
+  const { user, isCreator } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <MessagesPage
+      user={user}
+      isCreator={isCreator}
+      onStartVideoCall={(participant: any) => {
+        const username = participant?.username || participant?.id;
+        navigate(`/call/video/${username}`);
+      }}
+      onStartVoiceCall={(participant: any) => {
+        const username = participant?.username || participant?.id;
+        navigate(`/call/voice/${username}`);
+      }}
+      websocket={null}
+    />
+  );
+}
+
 function Placeholder({ title }: { title: string }) {
   return (
     <div className="p-8">
@@ -122,7 +144,7 @@ export default function AppRoutes() {
           path="/messages"
           element={
             <Private>
-              <Placeholder title="Messages" />
+              <Messages />
             </Private>
           }
         />
