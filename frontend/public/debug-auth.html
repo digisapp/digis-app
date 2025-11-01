@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Auth State</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #00ff00;
+        }
+        h2 { color: #00ffff; }
+        pre { 
+            background: #000;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffaa00; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        button:hover { background: #00ffff; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Auth Debug Console</h1>
+    
+    <button onclick="checkAuth()">🔄 Refresh Auth State</button>
+    <button onclick="forceSync()">🚀 Force Sync Metadata</button>
+    <button onclick="logout()">🚪 Logout</button>
+    
+    <div id="output"></div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        
+        const supabaseUrl = 'https://lpphsjowsivjtcmafxnj.supabase.co';
+        const supabaseAnon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwcGhzam93c2l2anRjbWFmeG5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NDg5ODQsImV4cCI6MjA2ODEyNDk4NH0.QnkIphnDGyB5jsO1IEq3p2ZQYSrRbPhXI8Me9lnC-SM';
+        const backendUrl = 'http://localhost:3005';
+        
+        const supabase = createClient(supabaseUrl, supabaseAnon);
+        
+        window.checkAuth = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<div class="section"><h2>⏳ Checking...</h2></div>';
+            
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                let html = '<div class="section">';
+                
+                if (!session) {
+                    html += '<h2 class="error">❌ NOT LOGGED IN</h2>';
+                    html += '<p>Go to <a href="/auth?mode=signin" style="color: #00ffff;">/auth?mode=signin</a> to log in</p>';
+                } else {
+                    const user = session.user;
+                    const metadata = user.user_metadata || {};
+                    
+                    html += '<h2 class="success">✅ LOGGED IN</h2>';
+                    html += '<h3>User Info:</h3>';
+                    html += '<pre>' + JSON.stringify({
+                        id: user.id,
+                        email: user.email,
+                        created_at: user.created_at
+                    }, null, 2) + '</pre>';
+                    
+                    html += '<h3>User Metadata (This determines your role!):</h3>';
+                    html += '<pre>' + JSON.stringify(metadata, null, 2) + '</pre>';
+                    
+                    const isCreator = !!metadata.isCreator;
+                    const isAdmin = !!metadata.isAdmin;
+                    const role = isAdmin ? 'admin' : isCreator ? 'creator' : 'fan';
+                    
+                    html += '<h3>Computed Role:</h3>';
+                    html += '<pre>';
+                    html += 'isCreator: ' + (isCreator ? '<span class="success">✅ true</span>' : '<span class="error">❌ false</span>') + '\n';
+                    html += 'isAdmin: ' + (isAdmin ? '<span class="success">✅ true</span>' : '<span class="error">❌ false</span>') + '\n';
+                    html += 'role: <span class="' + (role === 'creator' || role === 'admin' ? 'success' : 'warning') + '">' + role + '</span>';
+                    html += '</pre>';
+                    
+                    if (!isCreator) {
+                        html += '<div class="section" style="border-color: #ff0000;">';
+                        html += '<h3 class="error">⚠️ PROBLEM DETECTED</h3>';
+                        html += '<p>Your metadata shows you as a FAN, but you should be a CREATOR!</p>';
+                        html += '<p><strong>Click "🚀 Force Sync Metadata" above to fix this.</strong></p>';
+                        html += '</div>';
+                    } else {
+                        html += '<div class="section" style="border-color: #00ff00;">';
+                        html += '<h3 class="success">✅ METADATA CORRECT</h3>';
+                        html += '<p>You should see the CREATOR navigation!</p>';
+                        html += '<p>If you don\'t see it, there may be a frontend rendering issue.</p>';
+                        html += '</div>';
+                    }
+                }
+                
+                html += '</div>';
+                output.innerHTML = html;
+                
+            } catch (error) {
+                output.innerHTML = '<div class="section"><h2 class="error">❌ Error: ' + error.message + '</h2></div>';
+            }
+        };
+        
+        window.forceSync = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<div class="section"><h2>⏳ Syncing metadata...</h2></div>';
+            
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (!session) {
+                    output.innerHTML = '<div class="section"><h2 class="error">❌ Not logged in</h2></div>';
+                    return;
+                }
+                
+                const response = await fetch(`${backendUrl}/auth/sync-metadata`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    await supabase.auth.refreshSession();
+                    output.innerHTML = '<div class="section"><h2 class="success">✅ Sync successful!</h2><pre>' + JSON.stringify(data, null, 2) + '</pre><p>Refreshing in 2 seconds...</p></div>';
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 2000);
+                } else {
+                    output.innerHTML = '<div class="section"><h2 class="error">❌ Sync failed</h2><pre>' + JSON.stringify(data, null, 2) + '</pre></div>';
+                }
+            } catch (error) {
+                output.innerHTML = '<div class="section"><h2 class="error">❌ Error: ' + error.message + '</h2></div>';
+            }
+        };
+        
+        window.logout = async function() {
+            await supabase.auth.signOut();
+            window.location.href = '/auth?mode=signin';
+        };
+        
+        // Auto-check on load
+        window.checkAuth();
+    </script>
+</body>
+</html>
