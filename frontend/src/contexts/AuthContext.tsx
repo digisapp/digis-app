@@ -46,10 +46,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(data.session.user);
         }
       } else {
-        console.warn('⚠️ Failed to sync user metadata:', await response.text());
+        const errorText = await response.text();
+        console.warn('⚠️ Failed to sync user metadata:', response.status, errorText);
+        // Don't fail the login process if sync fails
+        // User can still use the app, metadata will sync on next login
       }
     } catch (error) {
-      console.error('Error syncing user metadata:', error);
+      console.error('❌ Error syncing user metadata (non-critical):', error);
+      // Non-critical error - don't prevent login
     }
   };
 
@@ -71,13 +75,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     init();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
+      console.log(`🔐 Auth state changed: ${event}`);
 
-      // Sync metadata on sign in
+      // Sync metadata on sign in BEFORE setting the session/user
       if (event === 'SIGNED_IN' && s?.access_token) {
+        console.log('🔄 Syncing metadata before setting session...');
         await syncMetadata(s.access_token);
       }
+
+      // Set session and user after metadata sync completes
+      setSession(s);
+      setUser(s?.user ?? null);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
