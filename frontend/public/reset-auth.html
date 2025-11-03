@@ -110,7 +110,8 @@
         addLog('Redirecting to login in 2 seconds...', 'info');
 
         setTimeout(() => {
-          window.location.href = '/auth/signin';
+          // Redirect to production login page
+          window.location.href = 'https://digis.cc/auth/signin';
         }, 2000);
 
       } catch (error) {
@@ -166,7 +167,9 @@
       try {
         addLog('Testing backend connection...', 'info');
 
+        // Use production backend URL
         const backendUrl = 'https://backend-digis.vercel.app/api/v1';
+        addLog(`Backend URL: ${backendUrl}`, 'info');
 
         // Test health endpoint
         addLog(`Testing: ${backendUrl}/health`, 'info');
