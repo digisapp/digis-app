@@ -942,7 +942,7 @@ const HybridCreatorDashboard = memo(({
       console.log('[Nav] Resetting navigation lock');
       isNavigatingRef.current = false;
     }, 300);
-  }, [onNavigate, navigate]);
+  }, [onNavigate]);
 
   const formatTime = (date) => {
     if (!date) return '';
