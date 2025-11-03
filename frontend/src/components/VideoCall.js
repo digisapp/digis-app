@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle, memo } from 'react';
 import { loadAgoraRTC, createAgoraClient, createLocalTracks, cleanupAgoraResources, preloadAgoraSDKs } from '../utils/agoraLazyLoader';
+import agoraLoader from '../utils/AgoraLoader';
 import { supabase, getAuthToken } from '../utils/supabase-auth.js';
 import { fetchWithRetry, fetchJSONWithRetry } from '../utils/fetchWithRetry.js';
 import toast from 'react-hot-toast';
