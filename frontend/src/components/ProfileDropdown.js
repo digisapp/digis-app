@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import PricingRatesModal from './PricingRatesModal';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
@@ -42,7 +43,9 @@ import {
   PhotoIcon,
   LockClosedIcon,
   PaintBrushIcon,
-  QuestionMarkCircleIcon
+  QuestionMarkCircleIcon,
+  LinkIcon,
+  ClipboardDocumentIcon
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, BoltIcon } from '@heroicons/react/24/solid';
 
@@ -149,6 +152,23 @@ const ProfileDropdown = ({
     } catch (error) {
       // Silently handle errors - endpoint not implemented yet
       setStats({ followersCount: 0, subscribersCount: 0 });
+    }
+  };
+
+  // Handle copy profile URL
+  const handleCopyProfileURL = () => {
+    if (userData?.username) {
+      const profileUrl = `${window.location.origin}/creator/${userData.username}`;
+      navigator.clipboard.writeText(profileUrl).then(() => {
+        toast.success('Profile URL copied to clipboard!', {
+          icon: '🔗',
+          duration: 2000,
+        });
+        setIsOpen(false);
+      }).catch((err) => {
+        console.error('Failed to copy URL:', err);
+        toast.error('Failed to copy URL');
+      });
     }
   };
 
@@ -610,7 +630,11 @@ const ProfileDropdown = ({
                         { label: 'Schedule', icon: CalendarIcon, path: '/schedule', color: 'text-indigo-600 dark:text-indigo-400' },
                         { label: 'Calls', icon: PhoneIcon, path: '/call-requests', color: 'text-blue-600 dark:text-blue-400' },
                         { label: 'Shop', icon: ShoppingBagIcon, path: '/shop', color: 'text-emerald-600 dark:text-emerald-400' },
-                        { label: 'Pricing Rates', icon: CurrencyDollarIcon, onClick: () => { setShowPricingRatesModal(true); setIsOpen(false); }, color: 'text-green-600 dark:text-green-400' }
+                        { label: 'Pricing Rates', icon: CurrencyDollarIcon, onClick: () => { setShowPricingRatesModal(true); setIsOpen(false); }, color: 'text-green-600 dark:text-green-400' },
+                        ...(userData?.username ? [
+                          { label: 'View Public Profile', icon: UserCircleIcon, path: `/creator/${userData.username}`, color: 'text-cyan-600 dark:text-cyan-400' },
+                          { label: 'Copy Profile URL', icon: LinkIcon, onClick: handleCopyProfileURL, color: 'text-teal-600 dark:text-teal-400' }
+                        ] : [])
                       ].map((item) => {
                         const Icon = item.icon;
                         const isActive = currentPath === item.path;

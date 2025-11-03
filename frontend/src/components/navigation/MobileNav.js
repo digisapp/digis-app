@@ -15,7 +15,8 @@ import {
   HeartIcon,
   TagIcon,
   CurrencyDollarIcon,
-  ClipboardDocumentIcon
+  ClipboardDocumentIcon,
+  LinkIcon
 } from '@heroicons/react/24/outline';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { getMobileBottomItems, getMobileCenterAction } from '../../config/navSchema';
@@ -80,6 +81,23 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
     requestAnimationFrame(() => {
       onNavigate(path);
     });
+  };
+
+  // Handle copy profile URL
+  const handleCopyProfileURL = () => {
+    if (currentUser?.username) {
+      const profileUrl = `${window.location.origin}/creator/${currentUser.username}`;
+      navigator.clipboard.writeText(profileUrl).then(() => {
+        toast.success('Profile URL copied to clipboard!', {
+          icon: '🔗',
+          duration: 2000,
+        });
+        setShowProfileMenu(false);
+      }).catch((err) => {
+        console.error('Failed to copy URL:', err);
+        toast.error('Failed to copy URL');
+      });
+    }
   };
 
   const bottomItems = getMobileBottomItems(role);
@@ -514,6 +532,26 @@ const MobileNav = ({ onShowGoLive, onLogout }) => {
                     <HeartIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     <span className="text-gray-900 dark:text-white">My Content</span>
                   </button>
+
+                  {currentUser?.username && (
+                    <>
+                      <button
+                        onClick={() => handleMenuNavigate(`/creator/${currentUser.username}`)}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <UserCircleIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <span className="text-gray-900 dark:text-white">View Public Profile</span>
+                      </button>
+
+                      <button
+                        onClick={handleCopyProfileURL}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <LinkIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <span className="text-gray-900 dark:text-white">Copy Profile URL</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               ) : (
                 // Fan-specific menu items
