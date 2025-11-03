@@ -18,6 +18,7 @@ import { SparklesIcon } from '@heroicons/react/24/solid';
 import VideoCall from './VideoCall';
 import LiveChat from './LiveChat';
 import LiveChatEnhanced from './LiveChatEnhanced';
+import LiveChatSupabase from './LiveChatSupabase';
 import VirtualGifts from './VirtualGifts';
 import TipButton from './payments/TipButton';
 import StreamingGiftDisplay from './StreamingGiftDisplay';
@@ -1036,7 +1037,7 @@ const StreamingLayout = ({
               exit={animations ? { opacity: 0, x: -20 } : {}}
               className="h-full"
             >
-              <LiveChatEnhanced
+              <LiveChatSupabase
                 user={user}
                 channel={channel}
                 isCreator={isCreator}
