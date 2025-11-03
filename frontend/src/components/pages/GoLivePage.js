@@ -24,7 +24,7 @@ const GoLivePage = ({ user }) => {
       };
 
       // Create the stream on the backend
-      const response = await apiPost('/streaming/create', streamConfig);
+      const response = await apiPost('/streaming/go-live', streamConfig);
 
       if (response.stream) {
         // Clean up the preview tracks since we'll create fresh ones in StreamingLayout
@@ -40,14 +40,16 @@ const GoLivePage = ({ user }) => {
 
         // Navigate with only serializable data
         // StreamingLayout will create its own Agora client and tracks
-        navigate(`/stream/${response.stream.channel_name}`, {
+        navigate(`/stream/${response.stream.channel}`, {
           state: {
             isHost: true,
             streamId: response.stream.id,
-            channelName: response.stream.channel_name,
+            channelName: response.stream.channel,
             title: streamConfig.title,
             category: streamConfig.category,
             description: streamConfig.description,
+            agoraToken: response.agora?.token,
+            agoraUid: response.agora?.uid,
           }
         });
       }
