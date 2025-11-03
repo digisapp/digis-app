@@ -17,6 +17,7 @@ const classesRoutes = require('../classes');
 const tvSubscriptionRoutes = require('../tv-subscription');
 const realtimeRoutes = require('../realtime');
 const shopRoutes = require('../shop');
+const adminRoutes = require('../admin');
 
 // Mount v1 routes
 router.use('/auth', authRoutes);
@@ -34,6 +35,7 @@ router.use('/classes', classesRoutes);
 router.use('/tv-subscription', tvSubscriptionRoutes);
 router.use('/realtime', realtimeRoutes);
 router.use('/shop', shopRoutes);
+router.use('/admin', adminRoutes);
 
 // v1 specific endpoints
 router.get('/status', (req, res) => {
@@ -55,7 +57,8 @@ router.get('/status', (req, res) => {
       '/classes',
       '/tv-subscription',
       '/realtime',
-      '/shop'
+      '/shop',
+      '/admin'
     ]
   });
 });
@@ -66,7 +69,7 @@ router.get('/_status', (req, res) => {
     ok: true,
     mounted: true,
     message: 'v1 router is loaded and mounted',
-    endpoints: ['/auth', '/users', '/tokens', '/payments', '/agora', '/subscriptions', '/creators', '/streaming', '/stream-chat', '/stream-features', '/public', '/classes', '/tv-subscription', '/realtime', '/shop'],
+    endpoints: ['/auth', '/users', '/tokens', '/payments', '/agora', '/subscriptions', '/creators', '/streaming', '/stream-chat', '/stream-features', '/public', '/classes', '/tv-subscription', '/realtime', '/shop', '/admin'],
     timestamp: new Date().toISOString()
   });
 });
