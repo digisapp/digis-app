@@ -79,16 +79,10 @@ CREATE TABLE messages (
 
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 
-  -- Ensure sender/recipient match conversation participants
-  CONSTRAINT sender_in_conversation CHECK (
-    sender_id IN (
-      SELECT user1_id FROM conversations WHERE id = conversation_id
-      UNION
-      SELECT user2_id FROM conversations WHERE id = conversation_id
-    )
-  )
+  -- Note: Sender/recipient validation enforced at application level
+  -- PostgreSQL doesn't allow subqueries in CHECK constraints
 );
 
 -- Indexes for performance
