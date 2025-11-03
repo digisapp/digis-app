@@ -25,21 +25,25 @@ const StreamPage = ({ user }) => {
       setLoading(true);
 
       // If coming from go-live setup, use the state data
-      if (location.state && location.state.channelName) {
+      if (location.state && location.state.isHost && location.state.channelName) {
+        // Get Agora token from backend for the new stream
+        const tokenData = await apiGet(`/streaming/token/${location.state.channelName}`);
+
         setStreamData({
           channel: location.state.channelName,
-          token: location.state.token,
-          chatToken: location.state.chatToken,
-          uid: location.state.uid,
-          streamTitle: location.state.streamTitle,
-          streamCategory: location.state.streamCategory,
-          isHost: location.state.isHost,
+          token: tokenData.token,
+          chatToken: tokenData.chatToken,
+          uid: tokenData.uid,
+          streamTitle: location.state.title,
+          streamCategory: location.state.category,
+          streamDescription: location.state.description,
+          isHost: true,
         });
         setLoading(false);
         return;
       }
 
-      // Otherwise, fetch stream data from API
+      // Otherwise, fetch stream data from API (viewer joining existing stream)
       const data = await apiGet(`/streaming/stream/${streamId}`);
 
       if (data.stream) {
@@ -50,6 +54,7 @@ const StreamPage = ({ user }) => {
           uid: data.uid,
           streamTitle: data.stream.title,
           streamCategory: data.stream.category,
+          streamDescription: data.stream.description,
           isHost: data.stream.creator_id === user?.id,
         });
       } else {
@@ -124,6 +129,7 @@ const StreamPage = ({ user }) => {
       isHost={streamData.isHost}
       streamTitle={streamData.streamTitle}
       streamCategory={streamData.streamCategory}
+      streamDescription={streamData.streamDescription}
       onStreamEnd={handleStreamEnd}
       onLeave={handleLeaveStream}
     />
