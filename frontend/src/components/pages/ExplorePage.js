@@ -984,7 +984,16 @@ const ExplorePage = ({
                 isSaved={savedCreators.includes(creator.id)}
                 onToggleSave={(creatorId) => toggleSaveCreator(creatorId)}
                 onCardClick={() => {
+                  console.log('🎯 ExplorePage: Creator card clicked', {
+                    creator,
+                    hasOnCreatorSelect: !!onCreatorSelect,
+                    username: creator.username,
+                    id: creator.id,
+                    display_name: creator.display_name
+                  });
+
                   if (onCreatorSelect) {
+                    console.log('✅ ExplorePage: Calling onCreatorSelect callback');
                     onCreatorSelect(creator);
                   } else {
                     // Use username or fallback to id

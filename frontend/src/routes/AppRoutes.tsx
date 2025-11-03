@@ -60,9 +60,18 @@ function Explore() {
   return (
     <ExplorePage
       onCreatorSelect={(creator: any) => {
+        console.log('🔷 AppRoutes Explore: onCreatorSelect called', {
+          creator,
+          username: creator?.username,
+          display_name: creator?.display_name,
+          id: creator?.id
+        });
         const username = creator?.username || creator?.display_name || creator?.id;
+        console.log('🔷 AppRoutes Explore: Navigating with username:', username);
         if (username) {
           navigate(`/creator/${username}`);
+        } else {
+          console.error('❌ AppRoutes Explore: No username found for creator');
         }
       }}
       onStartVideoCall={(creator: any) => {

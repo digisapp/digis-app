@@ -241,7 +241,7 @@ const CreatorCard = ({
     '';
 
   const safeHandle = String(rawHandle).trim().toLowerCase();
-  const profilePath = safeHandle ? `/${safeHandle}` : null;
+  const profilePath = safeHandle ? `/creator/${safeHandle}` : null;
 
   // Debug: Log when profilePath is missing to catch bad data
   if (!profilePath) {
