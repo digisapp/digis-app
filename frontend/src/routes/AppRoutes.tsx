@@ -14,6 +14,8 @@ const ClassesPage = lazy(() => import('../components/pages/ClassesPage'));
 const ProfilePage = lazy(() => import('../components/pages/ProfilePage'));
 const CallRequestsPage = lazy(() => import('../components/pages/CallRequestsPage'));
 const SchedulePage = lazy(() => import('../components/pages/SchedulePage'));
+const GoLivePage = lazy(() => import('../components/pages/GoLivePage'));
+const StreamPage = lazy(() => import('../components/pages/StreamPage'));
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -195,6 +197,26 @@ function Schedule() {
   );
 }
 
+function GoLive() {
+  const { user } = useAuth();
+
+  return (
+    <GoLivePage
+      user={user}
+    />
+  );
+}
+
+function Stream() {
+  const { user } = useAuth();
+
+  return (
+    <StreamPage
+      user={user}
+    />
+  );
+}
+
 function Placeholder({ title }: { title: string }) {
   return (
     <div className="p-8">
@@ -282,6 +304,22 @@ export default function AppRoutes() {
           element={
             <Private>
               <Schedule />
+            </Private>
+          }
+        />
+        <Route
+          path="/go-live"
+          element={
+            <Private>
+              <GoLive />
+            </Private>
+          }
+        />
+        <Route
+          path="/stream/:streamId"
+          element={
+            <Private>
+              <Stream />
             </Private>
           }
         />
