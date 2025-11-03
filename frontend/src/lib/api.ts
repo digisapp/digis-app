@@ -5,7 +5,25 @@ const API = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, ''); // no t
 async function authHeaders() {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
-  return token ? { Authorization: `Bearer ${token}` } : {};
+
+  // Validate token format before using it
+  if (token) {
+    // JWT tokens must have 3 parts: header.payload.signature
+    if (token.split('.').length !== 3) {
+      console.error('❌ Malformed JWT token detected in authHeaders');
+      // Try to refresh session
+      const { data: refreshData } = await supabase.auth.refreshSession();
+      const refreshedToken = refreshData.session?.access_token;
+      if (refreshedToken && refreshedToken.split('.').length === 3) {
+        return { Authorization: `Bearer ${refreshedToken}` };
+      }
+      // If still invalid, return empty headers (will trigger 401 and force re-login)
+      return {};
+    }
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  return {};
 }
 
 export async function apiGet(path: string) {

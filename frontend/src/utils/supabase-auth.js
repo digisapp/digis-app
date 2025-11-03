@@ -266,20 +266,51 @@ export const getAuthToken = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      // Validate JWT format (should have 3 parts: header.payload.signature)
-      if (token && token.split('.').length !== 3) {
-        console.warn('⚠️ Malformed JWT token detected, refreshing session...');
-        // Try to refresh the session to get a valid token
-        const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
-        return refreshedSession?.access_token || null;
+      // If no token at all, session has expired or user is not logged in
+      if (!token) {
+        console.warn('⚠️ No auth token found - session expired or user not logged in');
+        throw new Error('NO_SESSION');
       }
 
-      return token || null;
+      // Validate JWT format (should have 3 parts: header.payload.signature)
+      if (token.split('.').length !== 3) {
+        console.warn('⚠️ Malformed JWT token detected, refreshing session...');
+        // Try to refresh the session to get a valid token
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+
+        if (refreshError || !refreshedSession?.access_token) {
+          console.error('❌ Failed to refresh session:', refreshError);
+          throw new Error('REFRESH_FAILED');
+        }
+
+        const refreshedToken = refreshedSession.access_token;
+
+        // Validate refreshed token
+        if (refreshedToken.split('.').length !== 3) {
+          console.error('❌ Refreshed token is still malformed');
+          throw new Error('MALFORMED_TOKEN');
+        }
+
+        return refreshedToken;
+      }
+
+      return token;
     }, 2);
 
     return result;
   } catch (error) {
-    console.error('❌ Get auth token error:', error);
+    console.error('❌ Get auth token error:', error.message);
+
+    // If session is invalid/expired, clear local storage and redirect to login
+    if (error.message === 'NO_SESSION' || error.message === 'REFRESH_FAILED' || error.message === 'MALFORMED_TOKEN') {
+      console.warn('🔄 Clearing invalid session and redirecting to login...');
+      await supabase.auth.signOut();
+      // Don't redirect immediately if we're already on the auth page
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/auth/signin?expired=true';
+      }
+    }
+
     return null;
   }
 };
