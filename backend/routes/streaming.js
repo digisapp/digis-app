@@ -282,17 +282,45 @@ router.post('/go-live', authenticateToken, async (req, res) => {
 
     // 3. Check if creator is already live
     const existingStream = await client.query(
-      `SELECT id FROM streams
+      `SELECT id, started_at,
+              EXTRACT(EPOCH FROM (NOW() - started_at))/60 as minutes_live
+       FROM streams
        WHERE creator_id = $1 AND status = 'live'`,
       [dbCreatorId]
     );
 
     if (existingStream.rows.length > 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({
-        error: 'You are already live',
-        streamId: existingStream.rows[0].id
-      });
+      const stream = existingStream.rows[0];
+      const minutesLive = stream.minutes_live;
+
+      // If stream has been "live" for more than 10 minutes, it's likely stuck
+      // Auto-cleanup and allow creator to go live again
+      if (minutesLive > 10) {
+        logger.warn(`[${requestId}] Auto-ending stuck stream`, {
+          streamId: stream.id,
+          minutesLive: Math.round(minutesLive)
+        });
+
+        await client.query(
+          `UPDATE streams
+           SET status = 'ended',
+               ended_at = NOW(),
+               duration = EXTRACT(EPOCH FROM (NOW() - started_at))::INTEGER
+           WHERE id = $1`,
+          [stream.id]
+        );
+
+        logger.info(`[${requestId}] Stuck stream auto-ended, proceeding with new stream`);
+        // Continue to create new stream
+      } else {
+        // Stream is recent, likely actually active
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error: 'You are already live',
+          streamId: stream.id,
+          minutesLive: Math.round(minutesLive)
+        });
+      }
     }
 
     // 4. Generate unique channel name
