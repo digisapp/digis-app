@@ -1,436 +1,549 @@
+// routes/messages.js
+// Supabase-based Messaging System API
 const express = require('express');
-const { pool } = require('../utils/db');
-const { authenticateToken } = require('../middleware/auth');
-const { body, validationResult } = require('express-validator');
 const router = express.Router();
+const { authenticateToken } = require('../middleware/auth');
+const { supabase, getSupabaseAdmin } = require('../utils/supabase');
 
-// Validation middleware for message content
-const validateMessage = [
-  body('recipientId').notEmpty().isString().trim(),
-  body('content').notEmpty().isString().trim().isLength({ max: 5000 }),
-  body('messageType').optional().isIn(['text', 'image', 'audio', 'video'])
-];
+// ============================================================================
+// CONVERSATIONS
+// ============================================================================
 
-const handleValidationErrors = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      errors: errors.array()
-    });
-  }
-  next();
-};
-
-// Get conversations for a user
+/**
+ * GET /api/v1/messages/conversations
+ * Get all conversations for the authenticated user
+ */
 router.get('/conversations', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.supabase_id;
 
-    const query = `
-      SELECT DISTINCT
-        CASE 
-          WHEN sender_id = $1 THEN receiver_id 
-          ELSE sender_id 
-        END AS user_id,
-        u.email as user_name,
-        u.is_creator,
-        u.profile_pic_url,
-        COALESCE(last_msg.content, '') as last_message,
-        COALESCE(last_msg.created_at, NOW()) as last_message_time,
-        COALESCE(unread.unread_count, 0) as unread_count,
-        CASE WHEN u.last_seen > NOW() - INTERVAL '5 minutes' THEN true ELSE false END as is_online
-      FROM chat_messages cm
-      JOIN users u ON (
-        CASE 
-          WHEN cm.sender_id = $1 THEN cm.receiver_id = u.supabase_id 
-          ELSE cm.sender_id = u.supabase_id 
-        END
-      )
-      LEFT JOIN LATERAL (
-        SELECT content, created_at 
-        FROM chat_messages 
-        WHERE (sender_id = $1 AND receiver_id = u.supabase_id) 
-           OR (sender_id = u.supabase_id AND receiver_id = $1)
-        ORDER BY created_at DESC 
-        LIMIT 1
-      ) last_msg ON true
-      LEFT JOIN LATERAL (
-        SELECT COUNT(*) as unread_count
-        FROM chat_messages 
-        WHERE sender_id = u.supabase_id 
-          AND receiver_id = $1 
-          AND read_at IS NULL
-      ) unread ON true
-      WHERE cm.sender_id = $1 OR cm.receiver_id = $1
-      ORDER BY last_message_time DESC
-    `;
+    const { data: conversations, error } = await supabase
+      .from('conversations')
+      .select(`
+        *,
+        user1:user1_id(id, username, display_name, profile_pic_url),
+        user2:user2_id(id, username, display_name, profile_pic_url),
+        last_message:last_message_id(id, content, media_url, message_type, created_at, sender_id)
+      `)
+      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+      .order('last_message_at', { ascending: false });
 
-    const result = await pool.query(query, [userId]);
+    if (error) throw error;
 
-    res.json({
-      success: true,
-      conversations: result.rows
+    // Format conversations to show the "other" user
+    const formattedConversations = conversations.map(conv => {
+      const otherUser = conv.user1_id === userId ? conv.user2 : conv.user1;
+      return {
+        id: conv.id,
+        otherUser,
+        lastMessage: conv.last_message,
+        lastMessageAt: conv.last_message_at,
+        updatedAt: conv.updated_at
+      };
     });
 
+    res.json({ success: true, conversations: formattedConversations });
   } catch (error) {
-    console.error('Get conversations error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch conversations'
-    });
+    console.error('❌ Error fetching conversations:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch conversations' });
   }
 });
 
-// Get messages for a specific conversation
-router.get('/conversation/:userId', authenticateToken, async (req, res) => {
+/**
+ * POST /api/v1/messages/conversations
+ * Get or create a conversation with another user
+ */
+router.post('/conversations', authenticateToken, async (req, res) => {
   try {
-    const currentUserId = req.user.supabase_id;
-    const { userId } = req.params;
-    const { limit = 50, offset = 0 } = req.query;
+    const userId = req.user.supabase_id;
+    const { otherUserId } = req.body;
+
+    if (!otherUserId) {
+      return res.status(400).json({ success: false, error: 'otherUserId is required' });
+    }
+
+    if (otherUserId === userId) {
+      return res.status(400).json({ success: false, error: 'Cannot create conversation with yourself' });
+    }
+
+    // Call the database function to get or create conversation
+    const { data, error } = await supabase.rpc('get_or_create_conversation', {
+      p_user1_id: userId,
+      p_user2_id: otherUserId
+    });
+
+    if (error) throw error;
+
+    // Fetch the full conversation details
+    const { data: conversation, error: fetchError } = await supabase
+      .from('conversations')
+      .select(`
+        *,
+        user1:user1_id(id, username, display_name, profile_pic_url),
+        user2:user2_id(id, username, display_name, profile_pic_url)
+      `)
+      .eq('id', data)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    res.json({ success: true, conversation });
+  } catch (error) {
+    console.error('❌ Error creating conversation:', error);
+    res.status(500).json({ success: false, error: 'Failed to create conversation' });
+  }
+});
+
+// ============================================================================
+// MESSAGES
+// ============================================================================
+
+/**
+ * GET /api/v1/messages/conversation/:conversationId
+ * Get messages for a specific conversation
+ */
+router.get('/conversation/:conversationId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { conversationId } = req.params;
+    const { limit = 50, before } = req.query;
+
+    // Verify user has access to this conversation
+    const { data: conversation, error: convError } = await supabase
+      .from('conversations')
+      .select('user1_id, user2_id')
+      .eq('id', conversationId)
+      .single();
+
+    if (convError || !conversation) {
+      return res.status(404).json({ success: false, error: 'Conversation not found' });
+    }
+
+    if (conversation.user1_id !== userId && conversation.user2_id !== userId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    // Build query
+    let query = supabase
+      .from('messages')
+      .select(`
+        *,
+        sender:sender_id(id, username, display_name, profile_pic_url),
+        reactions:message_reactions(id, user_id, reaction)
+      `)
+      .eq('conversation_id', conversationId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit));
+
+    // Pagination: get messages before a specific timestamp
+    if (before) {
+      query = query.lt('created_at', before);
+    }
+
+    const { data: messages, error } = await query;
+
+    if (error) throw error;
 
     // Mark messages as read
-    await pool.query(
-      `UPDATE chat_messages 
-       SET read_at = NOW() 
-       WHERE sender_id = $1 AND receiver_id = $2 AND read_at IS NULL`,
-      [userId, currentUserId]
-    );
-
-    // Get messages
-    const query = `
-      SELECT 
-        id,
-        sender_id,
-        receiver_id,
-        content,
-        message_type,
-        created_at,
-        read_at,
-        CASE WHEN sender_id = $1 THEN 'sent' ELSE 'received' END as type
-      FROM chat_messages
-      WHERE (sender_id = $1 AND receiver_id = $2) 
-         OR (sender_id = $2 AND receiver_id = $1)
-      ORDER BY created_at DESC
-      LIMIT $3 OFFSET $4
-    `;
-
-    const result = await pool.query(query, [currentUserId, userId, limit, offset]);
-
-    res.json({
-      success: true,
-      messages: result.rows.reverse() // Reverse to show oldest first
+    await supabase.rpc('mark_messages_as_read', {
+      p_conversation_id: conversationId,
+      p_user_id: userId
     });
 
+    res.json({ success: true, messages: messages.reverse() });
   } catch (error) {
-    console.error('Get messages error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch messages'
-    });
+    console.error('❌ Error fetching messages:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch messages' });
   }
 });
 
-// Get creator message rates
+/**
+ * POST /api/v1/messages/send
+ * Send a new message
+ */
+router.post('/send', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const {
+      recipientId,
+      content,
+      mediaUrl,
+      mediaType,
+      messageType = 'text',
+      metadata = {},
+      isPremium = false,
+      unlockPrice = 0
+    } = req.body;
+
+    if (!recipientId) {
+      return res.status(400).json({ success: false, error: 'recipientId is required' });
+    }
+
+    if (!content && !mediaUrl) {
+      return res.status(400).json({ success: false, error: 'Either content or mediaUrl is required' });
+    }
+
+    // Get or create conversation
+    const { data: conversationId, error: convError } = await supabase.rpc('get_or_create_conversation', {
+      p_user1_id: userId,
+      p_user2_id: recipientId
+    });
+
+    if (convError) throw convError;
+
+    // Calculate token cost based on message type and creator settings
+    let tokensSpent = 0;
+    if (isPremium) {
+      // Fetch creator's message rate from users table
+      const { data: recipientData } = await supabase
+        .from('users')
+        .select('message_price')
+        .eq('supabase_id', recipientId)
+        .single();
+
+      tokensSpent = recipientData?.message_price || 5; // Default to 5 tokens
+
+      // Check if user has enough tokens
+      const { data: userData } = await supabase
+        .from('users')
+        .select('token_balance')
+        .eq('supabase_id', userId)
+        .single();
+
+      if (!userData || userData.token_balance < tokensSpent) {
+        return res.status(402).json({
+          success: false,
+          error: 'Insufficient tokens',
+          required: tokensSpent,
+          balance: userData?.token_balance || 0
+        });
+      }
+
+      // Deduct tokens from sender
+      await supabase
+        .from('users')
+        .update({ token_balance: userData.token_balance - tokensSpent })
+        .eq('supabase_id', userId);
+
+      // Add tokens to recipient (creator)
+      const { data: creatorData } = await supabase
+        .from('users')
+        .select('token_balance')
+        .eq('supabase_id', recipientId)
+        .single();
+
+      await supabase
+        .from('users')
+        .update({ token_balance: (creatorData?.token_balance || 0) + tokensSpent })
+        .eq('supabase_id', recipientId);
+
+      // Record transaction
+      await supabase.from('token_transactions').insert([
+        {
+          user_id: userId,
+          type: 'deduction',
+          amount: tokensSpent,
+          description: `Message to user (${messageType})`,
+          related_user_id: recipientId
+        },
+        {
+          user_id: recipientId,
+          type: 'earning',
+          amount: tokensSpent,
+          description: `Message received (${messageType})`,
+          related_user_id: userId
+        }
+      ]);
+    }
+
+    // Create message
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: userId,
+        recipient_id: recipientId,
+        content,
+        media_url: mediaUrl,
+        media_type: mediaType,
+        message_type: messageType,
+        metadata,
+        tokens_spent: tokensSpent,
+        is_premium: isPremium,
+        unlock_price: unlockPrice
+      })
+      .select(`
+        *,
+        sender:sender_id(id, username, display_name, profile_pic_url)
+      `)
+      .single();
+
+    if (messageError) throw messageError;
+
+    res.json({ success: true, message });
+  } catch (error) {
+    console.error('❌ Error sending message:', error);
+    res.status(500).json({ success: false, error: 'Failed to send message' });
+  }
+});
+
+/**
+ * PATCH /api/v1/messages/:messageId
+ * Update a message (mark as read, delete, etc.)
+ */
+router.patch('/:messageId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { messageId } = req.params;
+    const { isRead, isDeleted } = req.body;
+
+    // Verify user owns this message or is recipient
+    const { data: message, error: fetchError } = await supabase
+      .from('messages')
+      .select('sender_id, recipient_id')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchError || !message) {
+      return res.status(404).json({ success: false, error: 'Message not found' });
+    }
+
+    if (message.sender_id !== userId && message.recipient_id !== userId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    // Build update object
+    const updates = {};
+    if (typeof isRead === 'boolean' && message.recipient_id === userId) {
+      updates.is_read = isRead;
+      if (isRead) updates.read_at = new Date().toISOString();
+    }
+    if (typeof isDeleted === 'boolean' && message.sender_id === userId) {
+      updates.is_deleted = isDeleted;
+      if (isDeleted) updates.deleted_at = new Date().toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from('messages')
+      .update(updates)
+      .eq('id', messageId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, message: data });
+  } catch (error) {
+    console.error('❌ Error updating message:', error);
+    res.status(500).json({ success: false, error: 'Failed to update message' });
+  }
+});
+
+// ============================================================================
+// TYPING INDICATORS
+// ============================================================================
+
+/**
+ * POST /api/v1/messages/:conversationId/typing
+ * Update typing status for a conversation
+ */
+router.post('/:conversationId/typing', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { conversationId } = req.params;
+    const { isTyping } = req.body;
+
+    if (isTyping) {
+      // Upsert typing indicator
+      const { error } = await supabase
+        .from('typing_indicators')
+        .upsert({
+          conversation_id: conversationId,
+          user_id: userId,
+          started_at: new Date().toISOString()
+        }, {
+          onConflict: 'conversation_id,user_id'
+        });
+
+      if (error) throw error;
+    } else {
+      // Remove typing indicator
+      await supabase
+        .from('typing_indicators')
+        .delete()
+        .eq('conversation_id', conversationId)
+        .eq('user_id', userId);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Error updating typing status:', error);
+    res.status(500).json({ success: false, error: 'Failed to update typing status' });
+  }
+});
+
+// ============================================================================
+// MESSAGE REACTIONS
+// ============================================================================
+
+/**
+ * POST /api/v1/messages/:messageId/react
+ * Add a reaction to a message
+ */
+router.post('/:messageId/react', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+    const { messageId } = req.params;
+    const { reaction } = req.body;
+
+    if (!reaction) {
+      return res.status(400).json({ success: false, error: 'Reaction is required' });
+    }
+
+    // Add reaction (will fail if duplicate due to unique constraint)
+    const { data, error } = await supabase
+      .from('message_reactions')
+      .insert({
+        message_id: messageId,
+        user_id: userId,
+        reaction
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        // Already reacted, toggle it off
+        await supabase
+          .from('message_reactions')
+          .delete()
+          .eq('message_id', messageId)
+          .eq('user_id', userId)
+          .eq('reaction', reaction);
+
+        return res.json({ success: true, removed: true });
+      }
+      throw error;
+    }
+
+    res.json({ success: true, reaction: data });
+  } catch (error) {
+    console.error('❌ Error adding reaction:', error);
+    res.status(500).json({ success: false, error: 'Failed to add reaction' });
+  }
+});
+
+// ============================================================================
+// UNREAD COUNT
+// ============================================================================
+
+/**
+ * GET /api/v1/messages/unread/count
+ * Get total unread message count for user
+ */
+router.get('/unread/count', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.supabase_id;
+
+    const { data, error } = await supabase.rpc('get_unread_count', {
+      p_user_id: userId
+    });
+
+    if (error) throw error;
+
+    res.json({ success: true, count: data });
+  } catch (error) {
+    console.error('❌ Error fetching unread count:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch unread count' });
+  }
+});
+
+// ============================================================================
+// MESSAGE RATES
+// ============================================================================
+
+/**
+ * GET /api/v1/messages/rates/:creatorId
+ * Get message rates for a creator
+ */
 router.get('/rates/:creatorId', authenticateToken, async (req, res) => {
   try {
     const { creatorId } = req.params;
-    
-    const query = `
-      SELECT 
-        text_message_price,
-        image_message_price,
-        audio_message_price,
-        video_message_price,
-        is_creator
-      FROM users 
-      WHERE supabase_id = $1
-    `;
-    
-    const result = await pool.query(query, [creatorId]);
-    
-    if (result.rows.length === 0 || !result.rows[0].is_creator) {
+
+    const { data: creator, error } = await supabase
+      .from('users')
+      .select('message_price, is_creator')
+      .eq('supabase_id', creatorId)
+      .single();
+
+    if (error) throw error;
+
+    if (!creator || !creator.is_creator) {
       return res.json({
         success: true,
-        rates: {
-          text: 0,
-          image: 0,
-          audio: 0,
-          video: 0
-        }
+        rates: { text: 0, image: 0, audio: 0, video: 0 }
       });
     }
-    
-    const creator = result.rows[0];
+
     res.json({
       success: true,
       rates: {
-        text: creator.text_message_price || 1,
-        image: creator.image_message_price || 2,
-        audio: creator.audio_message_price || 3,
-        video: creator.video_message_price || 5
+        text: creator.message_price || 5,
+        image: creator.message_price || 5,
+        audio: creator.message_price || 5,
+        video: creator.message_price || 5
       }
     });
-    
   } catch (error) {
-    console.error('Get message rates error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch message rates'
-    });
+    console.error('❌ Error fetching message rates:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch message rates' });
   }
 });
 
-// Send a message
-router.post('/send', authenticateToken, validateMessage, handleValidationErrors, async (req, res) => {
-  try {
-    const senderId = req.user.supabase_id;
-    const { recipientId, content, messageType = 'text' } = req.body;
+// ============================================================================
+// MEDIA UPLOAD
+// ============================================================================
 
-    if (!recipientId || !content) {
-      return res.status(400).json({
-        success: false,
-        error: 'Recipient ID and content are required'
-      });
-    }
-
-    // Start a transaction for token deduction and message insertion
-    const client = await pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-
-      // Get recipient's rates if they're a creator
-      const ratesQuery = `
-        SELECT
-          is_creator,
-          text_message_price,
-          image_message_price,
-          audio_message_price,
-          video_message_price
-        FROM users
-        WHERE supabase_id = $1
-      `;
-
-      const ratesResult = await client.query(ratesQuery, [recipientId]);
-
-      let cost = 0;
-      if (ratesResult.rows.length > 0 && ratesResult.rows[0].is_creator) {
-        const rates = ratesResult.rows[0];
-        switch(messageType) {
-          case 'text':
-            cost = rates.text_message_price || 1;
-            break;
-          case 'image':
-            cost = rates.image_message_price || 2;
-            break;
-          case 'audio':
-            cost = rates.audio_message_price || 3;
-            break;
-          case 'video':
-            cost = rates.video_message_price || 5;
-            break;
-          default:
-            cost = rates.text_message_price || 1;
-        }
-      }
-
-      // If there's a cost, handle token deduction
-      if (cost > 0) {
-        // Get sender's current token balance with row lock to prevent race conditions
-        const balanceQuery = 'SELECT token_balance FROM users WHERE supabase_id = $1 FOR UPDATE';
-        const balanceResult = await client.query(balanceQuery, [senderId]);
-
-        if (balanceResult.rows.length === 0) {
-          throw new Error('User not found');
-        }
-
-        const currentBalance = balanceResult.rows[0].token_balance || 0;
-
-        if (currentBalance < cost) {
-          throw new Error('Insufficient token balance');
-        }
-
-        // Deduct tokens from sender
-        await client.query(
-          'UPDATE users SET token_balance = token_balance - $1 WHERE supabase_id = $2',
-          [cost, senderId]
-        );
-
-        // Add tokens to recipient (creator earns from messages)
-        await client.query(
-          'UPDATE users SET token_balance = token_balance + $1 WHERE supabase_id = $2',
-          [cost, recipientId]
-        );
-
-        // Record the token transaction
-        await client.query(
-          `INSERT INTO token_transactions (user_id, type, amount, description, related_user_id) 
-           VALUES ($1, 'deduction', $2, $3, $4)`,
-          [senderId, cost, `Message to user (${messageType})`, recipientId]
-        );
-
-        await client.query(
-          `INSERT INTO token_transactions (user_id, type, amount, description, related_user_id) 
-           VALUES ($1, 'earning', $2, $3, $4)`,
-          [recipientId, cost, `Message received (${messageType})`, senderId]
-        );
-      }
-
-      // Insert message
-      const messageQuery = `
-        INSERT INTO chat_messages (sender_id, receiver_id, content, message_type)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, created_at
-      `;
-
-      const messageResult = await client.query(messageQuery, [senderId, recipientId, content, messageType]);
-
-      await client.query('COMMIT');
-
-      res.json({
-        success: true,
-        message: {
-          id: messageResult.rows[0].id,
-          sender_id: senderId,
-          receiver_id: recipientId,
-          content,
-          message_type: messageType,
-          created_at: messageResult.rows[0].created_at,
-          cost,
-          type: 'sent'
-        }
-      });
-
-    } catch (txError) {
-      await client.query('ROLLBACK');
-      throw txError;
-    } finally {
-      client.release();
-    }
-
-  } catch (error) {
-    console.error('Send message error:', error);
-    
-    let errorMessage = 'Failed to send message';
-    if (error.message === 'Insufficient token balance') {
-      errorMessage = 'Insufficient tokens to send this message';
-    } else if (error.message === 'User not found') {
-      errorMessage = 'User account not found';
-    }
-
-    res.status(500).json({
-      success: false,
-      error: errorMessage
-    });
-  }
-});
-
-// Mark messages as read
-router.put('/mark-read/:senderId', authenticateToken, async (req, res) => {
-  try {
-    const receiverId = req.user.supabase_id;
-    const { senderId } = req.params;
-
-    const query = `
-      UPDATE chat_messages 
-      SET read_at = NOW() 
-      WHERE sender_id = $1 AND receiver_id = $2 AND read_at IS NULL
-    `;
-
-    await pool.query(query, [senderId, receiverId]);
-
-    res.json({
-      success: true,
-      message: 'Messages marked as read'
-    });
-
-  } catch (error) {
-    console.error('Mark messages as read error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to mark messages as read'
-    });
-  }
-});
-
-// Delete a conversation
-router.delete('/conversation/:userId', authenticateToken, async (req, res) => {
-  try {
-    const currentUserId = req.user.supabase_id;
-    const { userId } = req.params;
-
-    const query = `
-      DELETE FROM chat_messages 
-      WHERE (sender_id = $1 AND receiver_id = $2) 
-         OR (sender_id = $2 AND receiver_id = $1)
-    `;
-
-    await pool.query(query, [currentUserId, userId]);
-
-    res.json({
-      success: true,
-      message: 'Conversation deleted'
-    });
-
-  } catch (error) {
-    console.error('Delete conversation error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to delete conversation'
-    });
-  }
-});
-
-// Search messages
-router.get('/search', authenticateToken, async (req, res) => {
+/**
+ * POST /api/v1/messages/upload
+ * Upload media for messages (images, videos, files)
+ */
+router.post('/upload', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.supabase_id;
-    const { query: searchQuery, limit = 50 } = req.query;
+    const { file, fileType, fileName } = req.body;
 
-    if (!searchQuery) {
-      return res.status(400).json({
-        success: false,
-        error: 'Search query is required'
-      });
+    if (!file) {
+      return res.status(400).json({ success: false, error: 'File is required' });
     }
 
-    const query = `
-      SELECT 
-        cm.id,
-        cm.sender_id,
-        cm.receiver_id,
-        cm.content,
-        cm.message_type,
-        cm.created_at,
-        u.email as other_user_name,
-        CASE WHEN cm.sender_id = $1 THEN 'sent' ELSE 'received' END as type
-      FROM chat_messages cm
-      JOIN users u ON (
-        CASE 
-          WHEN cm.sender_id = $1 THEN cm.receiver_id = u.supabase_id 
-          ELSE cm.sender_id = u.supabase_id 
-        END
-      )
-      WHERE (cm.sender_id = $1 OR cm.receiver_id = $1)
-        AND cm.content ILIKE $2
-      ORDER BY cm.created_at DESC
-      LIMIT $3
-    `;
+    // Upload to Supabase Storage
+    const fileExt = fileName.split('.').pop();
+    const filePath = `messages/${userId}/${Date.now()}.${fileExt}`;
 
-    const result = await pool.query(query, [userId, `%${searchQuery}%`, limit]);
+    const { data, error } = await supabase.storage
+      .from('message-media')
+      .upload(filePath, file, {
+        contentType: fileType,
+        upsert: false
+      });
+
+    if (error) throw error;
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('message-media')
+      .getPublicUrl(filePath);
 
     res.json({
       success: true,
-      messages: result.rows
+      url: urlData.publicUrl,
+      path: filePath
     });
-
   } catch (error) {
-    console.error('Search messages error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to search messages'
-    });
+    console.error('❌ Error uploading media:', error);
+    res.status(500).json({ success: false, error: 'Failed to upload media' });
   }
 });
 
