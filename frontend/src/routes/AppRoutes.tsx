@@ -103,13 +103,10 @@ function Explore() {
 }
 
 function Messages() {
-  const { user, isCreator } = useAuth();
   const navigate = useNavigate();
 
   return (
     <MessagesPage
-      user={user}
-      isCreator={isCreator}
       onStartVideoCall={(participant: any) => {
         const username = participant?.username || participant?.id;
         navigate(`/call/video/${username}`);
@@ -118,7 +115,6 @@ function Messages() {
         const username = participant?.username || participant?.id;
         navigate(`/call/voice/${username}`);
       }}
-      websocket={null}
     />
   );
 }
