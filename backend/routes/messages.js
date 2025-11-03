@@ -15,7 +15,21 @@ const { supabase, getSupabaseAdmin } = require('../utils/supabase');
  */
 router.get('/conversations', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.supabase_id;
+    const supabaseId = req.user.supabase_id;
+
+    // Get database ID from supabase_id
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('supabase_id', supabaseId)
+      .single();
+
+    if (userError || !userData) {
+      console.error('❌ User not found:', supabaseId);
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const userId = userData.id;
 
     const { data: conversations, error } = await supabase
       .from('conversations')
@@ -444,7 +458,21 @@ router.post('/:messageId/react', authenticateToken, async (req, res) => {
  */
 router.get('/unread/count', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.supabase_id;
+    const supabaseId = req.user.supabase_id;
+
+    // Get database ID from supabase_id
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('supabase_id', supabaseId)
+      .single();
+
+    if (userError || !userData) {
+      console.error('❌ User not found:', supabaseId);
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const userId = userData.id;
 
     const { data, error } = await supabase.rpc('get_unread_count', {
       p_user_id: userId
