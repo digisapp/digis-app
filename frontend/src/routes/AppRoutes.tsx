@@ -12,6 +12,8 @@ const WalletPage = lazy(() => import('../components/pages/WalletPage'));
 const TVPage = lazy(() => import('../components/pages/TVPage'));
 const ClassesPage = lazy(() => import('../components/pages/ClassesPage'));
 const ProfilePage = lazy(() => import('../components/pages/ProfilePage'));
+const CallRequestsPage = lazy(() => import('../components/pages/CallRequestsPage'));
+const SchedulePage = lazy(() => import('../components/pages/SchedulePage'));
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -172,6 +174,27 @@ function Profile() {
   );
 }
 
+function CallRequests() {
+  const { user } = useAuth();
+
+  return (
+    <CallRequestsPage
+      user={user}
+    />
+  );
+}
+
+function Schedule() {
+  const { user, isCreator } = useAuth();
+
+  return (
+    <SchedulePage
+      user={user}
+      isCreator={isCreator}
+    />
+  );
+}
+
 function Placeholder({ title }: { title: string }) {
   return (
     <div className="p-8">
@@ -243,6 +266,22 @@ export default function AppRoutes() {
           element={
             <Private>
               <Profile />
+            </Private>
+          }
+        />
+        <Route
+          path="/calls"
+          element={
+            <Private>
+              <CallRequests />
+            </Private>
+          }
+        />
+        <Route
+          path="/schedule"
+          element={
+            <Private>
+              <Schedule />
             </Private>
           }
         />
