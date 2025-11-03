@@ -4,18 +4,20 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Environment variables for Supabase
 const supabaseUrl = process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 // Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseServiceKey) {
   console.error('❌ Missing Supabase configuration');
   console.error('Looking for: SUPABASE_URL or REACT_APP_SUPABASE_URL');
-  console.error('Looking for: SUPABASE_ANON_KEY or REACT_APP_SUPABASE_ANON_KEY');
+  console.error('Looking for: SUPABASE_SERVICE_ROLE_KEY (required for backend)');
   // Don't throw - allow server to start but warn
 }
 
-// Initialize Supabase client
-const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey, {
+// Initialize Supabase client with SERVICE ROLE KEY for backend operations
+// This bypasses Row Level Security (RLS) which is required for backend operations
+const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     persistSession: false, // Backend doesn't need session persistence
     autoRefreshToken: false,

@@ -104,7 +104,7 @@ const VideoCall = forwardRef(({
   // SDK Loading state
   const [sdkLoading, setSdkLoading] = useState(false);
   const [sdkLoadError, setSdkLoadError] = useState(null);
-  const [agoraRTC, setAgoraRTC] = useState(null);
+  const sdkInitialized = useRef(false);
 
   const callStartTime = useRef(null);
   const durationInterval = useRef(null);
@@ -1011,8 +1011,7 @@ const VideoCall = forwardRef(({
         fallbackManager.current = null;
       }
 
-      // Clean up Agora loader if needed
-      agoraLoader.cleanup();
+      // Don't cleanup AgoraLoader - it's a singleton that should persist across component instances
 
       // Clean up remote users with better error handling
       const cleanupPromises = remoteUsers.map(async (user) => {
@@ -1157,13 +1156,13 @@ const VideoCall = forwardRef(({
     const initializeCall = async () => {
       try {
         // Load Agora SDK if not already loaded
-        if (!agoraRTC) {
+        if (!sdkInitialized.current) {
           setSdkLoading(true);
           setSdkLoadError(null);
-          
+
           try {
-            const loadedAgoraRTC = await agoraLoader.loadRTC();
-            setAgoraRTC(loadedAgoraRTC);
+            await agoraLoader.loadRTC();
+            sdkInitialized.current = true;
             console.log('✅ Agora RTC SDK loaded successfully');
           } catch (error) {
             console.error('❌ Failed to load Agora SDK:', error);
@@ -1179,9 +1178,9 @@ const VideoCall = forwardRef(({
           }
         }
 
-        client.current = agoraLoader.createClient({ 
-          mode: isStreaming ? 'live' : 'rtc', 
-          codec: 'vp8' 
+        client.current = agoraLoader.createClient({
+          mode: isStreaming ? 'live' : 'rtc',
+          codec: 'vp8'
         });
 
         console.log('VideoCall client created with mode:', isStreaming ? 'live' : 'rtc');
@@ -1198,7 +1197,7 @@ const VideoCall = forwardRef(({
     initializeCall();
 
     return cleanup;
-  }, [channel, token, uid, isHost, isStreaming, isVoiceOnly, agoraRTC, setupEventHandlers, joinChannel, cleanup]);
+  }, [channel, token, uid, isHost, isStreaming, isVoiceOnly, setupEventHandlers, joinChannel, cleanup]);
 
   // Update token when it changes
   useEffect(() => {

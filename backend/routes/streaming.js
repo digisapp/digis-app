@@ -396,9 +396,10 @@ router.post('/go-live', authenticateToken, async (req, res) => {
     // 7. Generate Agora token
     const { RtcTokenBuilder, RtcRole } = require('agora-token');
 
-    // Generate UID from creator ID (ensure it's in Agora's valid range: 0-10000)
+    // Generate UID from creator ID (Agora valid range: 1 to 2^32-1)
+    // Use 1,000,000 - 2,000,000 range for creators to avoid conflicts
     const hexValue = parseInt(creatorId.replace(/-/g, '').substring(0, 10), 16);
-    const uid = hexValue % 10000; // Mod 10000 to keep in valid range
+    const uid = 1000000 + (hexValue % 1000000); // Range: 1,000,000 - 1,999,999
     const expireTime = 7200; // 2 hours
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expireTime;
@@ -600,9 +601,10 @@ router.get('/stream/:streamId', authenticateToken, async (req, res) => {
 
     const { RtcTokenBuilder, RtcRole } = require('agora-token');
 
-    // Generate UID from viewer ID (ensure it's in Agora's valid range: 0-10000)
+    // Generate UID from viewer ID (Agora valid range: 1 to 2^32-1)
+    // Use 2,000,000 - 3,000,000 range for viewers to avoid conflicts with creators
     const hexValue = parseInt(viewerId.replace(/-/g, '').substring(0, 10), 16);
-    const uid = hexValue % 10000; // Mod 10000 to keep in valid range
+    const uid = 2000000 + (hexValue % 1000000); // Range: 2,000,000 - 2,999,999
     const expireTime = 7200; // 2 hours
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expireTime;
