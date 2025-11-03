@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
-require('dotenv').config();
+require('dotenv').config({ path: '.env.production' });
 
 async function runMigration() {
   // Use pg Pool for raw SQL execution with proper SSL config for Supabase pooler
