@@ -481,6 +481,178 @@ router.post('/go-live', authenticateToken, async (req, res) => {
   }
 });
 
+// Get stream info and generate token for viewer to join
+router.get('/stream/:streamId', authenticateToken, async (req, res) => {
+  const requestId = crypto.randomBytes(8).toString('hex');
+
+  try {
+    const { streamId } = req.params;
+    const viewerId = req.user.supabase_id;
+
+    logger.info(`[${requestId}] 👁️ Viewer join request`, {
+      streamId,
+      viewerId
+    });
+
+    // 1. Look up the stream and verify it's live
+    const streamResult = await pool.query(
+      `SELECT
+        s.id,
+        s.creator_id,
+        s.channel,
+        s.title,
+        s.description,
+        s.category,
+        s.status,
+        s.started_at,
+        s.is_free,
+        s.stream_settings,
+        u.username as creator_username,
+        u.display_name as creator_display_name,
+        u.profile_pic_url as creator_avatar
+      FROM streams s
+      JOIN users u ON s.creator_id = u.id
+      WHERE s.channel = $1`,
+      [streamId]
+    );
+
+    if (streamResult.rows.length === 0) {
+      logger.warn(`[${requestId}] ❌ Stream not found:`, streamId);
+      return res.status(404).json({
+        success: false,
+        code: 'NOT_FOUND',
+        message: 'Stream not found',
+        requestId
+      });
+    }
+
+    const stream = streamResult.rows[0];
+
+    // 2. Check if stream is live
+    if (stream.status !== 'live') {
+      logger.warn(`[${requestId}] ❌ Stream not live:`, {
+        streamId,
+        status: stream.status
+      });
+      return res.status(400).json({
+        success: false,
+        code: 'STREAM_NOT_LIVE',
+        message: 'This stream is not currently live',
+        requestId
+      });
+    }
+
+    // 3. Check privacy settings
+    const streamSettings = stream.stream_settings || {};
+    const privacy = streamSettings.privacy || 'public';
+
+    if (privacy !== 'public') {
+      // TODO: Add logic to check if viewer has access (subscriber, follower, etc.)
+      logger.info(`[${requestId}] ℹ️ Private stream access check needed`, {
+        streamId,
+        privacy,
+        viewerId
+      });
+    }
+
+    // 4. Generate Agora token for viewer
+    const appID = process.env.AGORA_APP_ID;
+    const appCertificate = process.env.AGORA_APP_CERTIFICATE;
+
+    if (!appID || !appCertificate) {
+      logger.error(`[${requestId}] ❌ Agora credentials missing`);
+      return res.status(500).json({
+        success: false,
+        code: 'AGORA_ENV_MISSING',
+        message: 'Streaming service not configured',
+        requestId
+      });
+    }
+
+    const { RtcTokenBuilder, RtcRole } = require('agora-token');
+
+    // Generate UID from viewer ID
+    const uid = parseInt(viewerId.replace(/-/g, '').substring(0, 10), 16);
+    const expireTime = 7200; // 2 hours
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpiredTs = currentTimestamp + expireTime;
+
+    const token = RtcTokenBuilder.buildTokenWithUid(
+      appID,
+      appCertificate,
+      stream.channel,
+      uid,
+      RtcRole.SUBSCRIBER, // Viewer is subscriber/audience
+      privilegeExpiredTs
+    );
+
+    // 5. Track viewer join (async - don't wait)
+    pool.query(
+      `INSERT INTO stream_viewers (stream_id, viewer_id, joined_at)
+       VALUES ($1, (SELECT id FROM users WHERE supabase_id = $2), NOW())
+       ON CONFLICT (stream_id, viewer_id)
+       DO UPDATE SET joined_at = NOW()`,
+      [stream.id, viewerId]
+    ).catch(err => logger.error('Failed to track viewer join:', err));
+
+    // 6. Update viewer count (async - don't wait)
+    pool.query(
+      `UPDATE streams
+       SET viewer_count = (
+         SELECT COUNT(DISTINCT viewer_id)
+         FROM stream_viewers
+         WHERE stream_id = $1 AND left_at IS NULL
+       ),
+       peak_viewers = GREATEST(
+         peak_viewers,
+         (SELECT COUNT(DISTINCT viewer_id) FROM stream_viewers WHERE stream_id = $1 AND left_at IS NULL)
+       )
+       WHERE id = $1`,
+      [stream.id]
+    ).catch(err => logger.error('Failed to update viewer count:', err));
+
+    logger.info(`[${requestId}] ✅ Viewer token generated`, {
+      streamId,
+      viewerId,
+      channel: stream.channel
+    });
+
+    res.json({
+      success: true,
+      stream: {
+        id: stream.id,
+        channel_name: stream.channel,
+        title: stream.title,
+        description: stream.description,
+        category: stream.category,
+        creator_id: stream.creator_id,
+        creator_username: stream.creator_username,
+        creator_display_name: stream.creator_display_name,
+        creator_avatar: stream.creator_avatar,
+        started_at: stream.started_at,
+        is_free: stream.is_free
+      },
+      agoraToken: token,
+      uid,
+      requestId
+    });
+
+  } catch (error) {
+    logger.error(`[${requestId}] ❌ Viewer join error:`, {
+      requestId,
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to join stream',
+      requestId
+    });
+  }
+});
+
 // Start stream recording
 router.post('/start-recording', authenticateToken, async (req, res) => {
   try {
