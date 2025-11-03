@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Authentication</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    button {
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px 0;
+      width: 100%;
+    }
+    button:hover {
+      background: #f0f0f0;
+    }
+    .log {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .success { color: #4ade80; }
+    .error { color: #f87171; }
+    .info { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 Reset Authentication</h1>
+    <p>Use this tool to completely reset your authentication state and start fresh.</p>
+
+    <button onclick="resetAuth()">🗑️ Clear All Sessions & Storage</button>
+    <button onclick="checkToken()">🔍 Check Current Token</button>
+    <button onclick="testBackend()">🧪 Test Backend Connection</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <script type="module">
+    const log = document.getElementById('log');
+
+    function addLog(message, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+      log.innerHTML += `<div class="${className}">[${time}] ${message}</div>`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    window.resetAuth = async function() {
+      try {
+        addLog('Starting full authentication reset...', 'info');
+
+        // 1. Clear localStorage
+        addLog('Clearing localStorage...', 'info');
+        localStorage.clear();
+        addLog('✅ localStorage cleared', 'success');
+
+        // 2. Clear sessionStorage
+        addLog('Clearing sessionStorage...', 'info');
+        sessionStorage.clear();
+        addLog('✅ sessionStorage cleared', 'success');
+
+        // 3. Clear all IndexedDB databases
+        addLog('Clearing IndexedDB databases...', 'info');
+        const dbs = await indexedDB.databases();
+        for (const db of dbs) {
+          indexedDB.deleteDatabase(db.name);
+          addLog(`  Deleted: ${db.name}`, 'info');
+        }
+        addLog('✅ IndexedDB cleared', 'success');
+
+        // 4. Clear service worker cache
+        if ('serviceWorker' in navigator && 'caches' in window) {
+          addLog('Clearing service worker caches...', 'info');
+          const cacheNames = await caches.keys();
+          for (const name of cacheNames) {
+            await caches.delete(name);
+            addLog(`  Deleted cache: ${name}`, 'info');
+          }
+          addLog('✅ Service worker caches cleared', 'success');
+        }
+
+        addLog('🎉 Authentication reset complete!', 'success');
+        addLog('Redirecting to login in 2 seconds...', 'info');
+
+        setTimeout(() => {
+          window.location.href = '/auth/signin';
+        }, 2000);
+
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.checkToken = async function() {
+      try {
+        addLog('Checking current authentication token...', 'info');
+
+        // Import Supabase
+        const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+
+        const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'https://lpphsjowsivjtcmafxnj.supabase.co';
+        const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwcGhzam93c2l2anRjbWFmeG5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA0Mzg4MzIsImV4cCI6MjA0NjAxNDgzMn0.n8VE8W7dqJh4rxjH9qDfZ0l02h4RjP2MJqkj5dZvhCo';
+
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          addLog('❌ No active session found', 'error');
+          return;
+        }
+
+        const token = session.access_token;
+        addLog(`Token found: ${token.substring(0, 20)}...`, 'info');
+
+        // Validate JWT format
+        const parts = token.split('.');
+        addLog(`Token parts: ${parts.length} (should be 3)`, parts.length === 3 ? 'success' : 'error');
+
+        if (parts.length === 3) {
+          // Decode payload
+          const payload = JSON.parse(atob(parts[1]));
+          addLog('Token payload:', 'info');
+          addLog(`  User ID: ${payload.sub}`, 'info');
+          addLog(`  Email: ${payload.email}`, 'info');
+          addLog(`  Role: ${payload.role || 'not set'}`, 'info');
+          addLog(`  Expires: ${new Date(payload.exp * 1000).toLocaleString()}`, 'info');
+
+          const isExpired = payload.exp * 1000 < Date.now();
+          addLog(`  Expired: ${isExpired}`, isExpired ? 'error' : 'success');
+        }
+
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.testBackend = async function() {
+      try {
+        addLog('Testing backend connection...', 'info');
+
+        const backendUrl = 'https://backend-digis.vercel.app/api/v1';
+
+        // Test health endpoint
+        addLog(`Testing: ${backendUrl}/health`, 'info');
+        const healthRes = await fetch(`${backendUrl}/health`);
+        addLog(`Health check: ${healthRes.status} ${healthRes.statusText}`, healthRes.ok ? 'success' : 'error');
+
+        // Test streaming status endpoint (should work without auth)
+        addLog(`Testing: ${backendUrl}/streaming/active`, 'info');
+        const statusRes = await fetch(`${backendUrl}/streaming/active`);
+        addLog(`Streaming active: ${statusRes.status} ${statusRes.statusText}`, statusRes.ok ? 'success' : 'error');
+
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    // Auto-check token on load
+    addLog('Diagnostic tool ready. Click a button above to start.', 'info');
+  </script>
+</body>
+</html>
