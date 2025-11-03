@@ -75,7 +75,15 @@ export async function apiPost(path: string, body?: unknown) {
     });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`HTTP ${res.status}: ${text}`);
+      let errorDetails;
+      try {
+        errorDetails = JSON.parse(text);
+        console.error(`❌ API Error [${res.status}]:`, errorDetails);
+      } catch {
+        errorDetails = { message: text };
+        console.error(`❌ API Error [${res.status}]:`, text);
+      }
+      throw new Error(`HTTP ${res.status}: ${JSON.stringify(errorDetails)}`);
     }
     return res.json();
   } catch (err: any) {
