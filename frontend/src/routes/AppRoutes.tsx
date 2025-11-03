@@ -1,21 +1,22 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import DashboardRouter from '../components/pages/DashboardRouter';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
 
-const HomePage = lazy(() => import('../components/HomePageNew'));
-const AuthPage = lazy(() => import('../components/Auth'));
-const ExplorePage = lazy(() => import('../components/pages/ExplorePage'));
-const CreatorProfile = lazy(() => import('../components/CreatorPublicProfileEnhanced'));
-const MessagesPage = lazy(() => import('../components/pages/MessagesPage'));
-const WalletPage = lazy(() => import('../components/pages/WalletPage'));
-const TVPage = lazy(() => import('../components/pages/TVPage'));
-const ClassesPage = lazy(() => import('../components/pages/ClassesPage'));
-const ProfilePage = lazy(() => import('../components/pages/ProfilePage'));
-const CallRequestsPage = lazy(() => import('../components/pages/CallRequestsPage'));
-const SchedulePage = lazy(() => import('../components/pages/SchedulePage'));
-const GoLivePage = lazy(() => import('../components/pages/GoLivePage'));
-const StreamPage = lazy(() => import('../components/pages/StreamPage'));
+const HomePage = lazyWithRetry(() => import('../components/HomePageNew'));
+const AuthPage = lazyWithRetry(() => import('../components/Auth'));
+const ExplorePage = lazyWithRetry(() => import('../components/pages/ExplorePage'));
+const CreatorProfile = lazyWithRetry(() => import('../components/CreatorPublicProfileEnhanced'));
+const MessagesPage = lazyWithRetry(() => import('../components/pages/MessagesPage'));
+const WalletPage = lazyWithRetry(() => import('../components/pages/WalletPage'));
+const TVPage = lazyWithRetry(() => import('../components/pages/TVPage'));
+const ClassesPage = lazyWithRetry(() => import('../components/pages/ClassesPage'));
+const ProfilePage = lazyWithRetry(() => import('../components/pages/ProfilePage'));
+const CallRequestsPage = lazyWithRetry(() => import('../components/pages/CallRequestsPage'));
+const SchedulePage = lazyWithRetry(() => import('../components/pages/SchedulePage'));
+const GoLivePage = lazyWithRetry(() => import('../components/pages/GoLivePage'));
+const StreamPage = lazyWithRetry(() => import('../components/pages/StreamPage'));
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
