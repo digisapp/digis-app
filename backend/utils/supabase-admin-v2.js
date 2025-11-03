@@ -119,9 +119,9 @@ const initializeSupabaseAdmin = () => {
 const verifySupabaseTokenAsymmetric = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'No token provided',
         message: 'Authorization header must be in format: Bearer <token>',
         timestamp: new Date().toISOString()
@@ -129,6 +129,31 @@ const verifySupabaseTokenAsymmetric = async (req, res, next) => {
     }
 
     const token = authHeader.split('Bearer ')[1];
+
+    // Validate token is not null, undefined, or empty string
+    if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+      logger.warn('Malformed token received:', { token: token.substring(0, 20) });
+      return res.status(401).json({
+        error: 'Invalid token',
+        message: 'Token is null, undefined, or empty',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Validate JWT format (must have 3 parts: header.payload.signature)
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      logger.warn('JWT token has invalid number of segments:', {
+        segmentCount: parts.length,
+        expectedCount: 3,
+        tokenPreview: token.substring(0, 20)
+      });
+      return res.status(401).json({
+        error: 'Invalid token',
+        message: 'Token is malformed: invalid number of segments (expected 3, got ' + parts.length + ')',
+        timestamp: new Date().toISOString()
+      });
+    }
 
     // Generate secure cache key using hash
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex').substring(0, 16);
