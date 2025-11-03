@@ -18,6 +18,9 @@ const tvSubscriptionRoutes = require('../tv-subscription');
 const realtimeRoutes = require('../realtime');
 const shopRoutes = require('../shop');
 const adminRoutes = require('../admin');
+const messagesRoutes = require('../messages');
+const subscriptionTiersRoutes = require('../subscription-tiers');
+const contentRoutes = require('../content-supabase');
 
 // Mount v1 routes
 router.use('/auth', authRoutes);
@@ -36,6 +39,9 @@ router.use('/tv-subscription', tvSubscriptionRoutes);
 router.use('/realtime', realtimeRoutes);
 router.use('/shop', shopRoutes);
 router.use('/admin', adminRoutes);
+router.use('/messages', messagesRoutes);
+router.use('/subscription-tiers', subscriptionTiersRoutes);
+router.use('/content', contentRoutes);
 
 // v1 specific endpoints
 router.get('/status', (req, res) => {

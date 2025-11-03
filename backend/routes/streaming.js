@@ -422,6 +422,7 @@ router.post('/go-live', authenticateToken, async (req, res) => {
       errorMessage: error.message,
       errorStack: error.stack,
       errorCode: error.code,
+      errorName: error.name,
       userId: req.user?.supabase_id || req.user?.id,
       email: req.user?.email,
       body: {
@@ -430,15 +431,37 @@ router.post('/go-live', authenticateToken, async (req, res) => {
       }
     });
 
+    // Determine specific error type
+    let errorCode = 'INTERNAL_ERROR';
+    let errorMessage = 'An internal error occurred';
+
+    // Check for specific error types
+    if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+      errorCode = 'DATABASE_TABLE_MISSING';
+      errorMessage = 'Database table not found. Please run migrations.';
+    } else if (error.code === '42P01') {
+      errorCode = 'DATABASE_TABLE_MISSING';
+      errorMessage = 'Database table not found. Please run migrations.';
+    } else if (error.code === '42703') {
+      errorCode = 'DATABASE_COLUMN_MISSING';
+      errorMessage = 'Database column missing. Please run migrations.';
+    } else if (error.message?.includes('agora-token')) {
+      errorCode = 'AGORA_PACKAGE_MISSING';
+      errorMessage = 'Agora token package not installed';
+    } else if (process.env.NODE_ENV !== 'production') {
+      errorMessage = error.message;
+    }
+
     res.status(500).json({
       success: false,
-      code: 'INTERNAL_ERROR',
+      code: errorCode,
       error: 'Failed to start stream',
-      message: process.env.NODE_ENV !== 'production' ? error.message : 'An internal error occurred',
+      message: errorMessage,
       requestId,
       debug: process.env.NODE_ENV !== 'production' ? {
         errorType: error.name,
-        errorCode: error.code
+        errorCode: error.code,
+        errorMessage: error.message
       } : undefined
     });
   } finally {
