@@ -320,7 +320,7 @@ router.post('/go-live', authenticateToken, async (req, res) => {
         title.trim(),
         description.trim(),
         category,
-        JSON.stringify(tags),
+        tags, // Pass array directly, not JSON string (column is ARRAY type)
         (audienceControl.joinPrice || 0) === 0, // is_free if no join price
         JSON.stringify({
           privacy,
