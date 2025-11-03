@@ -1,7 +1,7 @@
 // hooks/useMessageReactions.js
 // Hook to manage message reactions
 import { useState, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../utils/supabase-client-v2';
 import toast from 'react-hot-toast';
 
 /**

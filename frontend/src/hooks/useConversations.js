@@ -1,7 +1,7 @@
 // hooks/useConversations.js
 // Hook to fetch and subscribe to conversations
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../utils/supabase-client-v2';
 import { apiGet } from '../lib/api';
 
 /**

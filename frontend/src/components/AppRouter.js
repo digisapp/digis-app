@@ -58,9 +58,9 @@ const AppRouter = ({ user, isCreator, isAdmin, ...props }) => {
           path="/classes"
           element={<ClassesPage user={user} isCreator={isCreator} isAdmin={isAdmin} {...props} />}
         />
-        <Route 
-          path="/messages" 
-          element={<MessagesPage user={user} {...props} />} 
+        <Route
+          path="/messages"
+          element={<MessagesPage {...props} />}
         />
         <Route 
           path="/tokens" 

@@ -1,7 +1,7 @@
 // hooks/useTypingIndicator.js
 // Hook to manage typing indicators
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../utils/supabase-client-v2';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
