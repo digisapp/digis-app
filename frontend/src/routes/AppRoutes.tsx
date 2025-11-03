@@ -300,6 +300,14 @@ export default function AppRoutes() {
           }
         />
         <Route
+          path="/call-requests"
+          element={
+            <Private>
+              <CallRequests />
+            </Private>
+          }
+        />
+        <Route
           path="/schedule"
           element={
             <Private>
