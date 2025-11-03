@@ -8,6 +8,7 @@ const AuthPage = lazy(() => import('../components/Auth'));
 const ExplorePage = lazy(() => import('../components/pages/ExplorePage'));
 const CreatorProfile = lazy(() => import('../components/CreatorPublicProfileEnhanced'));
 const MessagesPage = lazy(() => import('../components/pages/MessagesPage'));
+const WalletPage = lazy(() => import('../components/pages/WalletPage'));
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -106,6 +107,24 @@ function Messages() {
   );
 }
 
+function Wallet() {
+  const { user, isCreator, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <WalletPage
+      user={user}
+      isCreator={isCreator}
+      isAdmin={isAdmin}
+      tokenBalance={0}
+      onTokenUpdate={() => {}}
+      onViewProfile={() => navigate('/profile')}
+      onTokenPurchase={() => {}}
+      setCurrentView={(view: string) => {}}
+    />
+  );
+}
+
 function Placeholder({ title }: { title: string }) {
   return (
     <div className="p-8">
@@ -152,7 +171,7 @@ export default function AppRoutes() {
           path="/wallet"
           element={
             <Private>
-              <Placeholder title="Wallet" />
+              <Wallet />
             </Private>
           }
         />
