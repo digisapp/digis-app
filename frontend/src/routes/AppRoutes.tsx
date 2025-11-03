@@ -9,6 +9,9 @@ const ExplorePage = lazy(() => import('../components/pages/ExplorePage'));
 const CreatorProfile = lazy(() => import('../components/CreatorPublicProfileEnhanced'));
 const MessagesPage = lazy(() => import('../components/pages/MessagesPage'));
 const WalletPage = lazy(() => import('../components/pages/WalletPage'));
+const TVPage = lazy(() => import('../components/pages/TVPage'));
+const ClassesPage = lazy(() => import('../components/pages/ClassesPage'));
+const ProfilePage = lazy(() => import('../components/pages/ProfilePage'));
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -125,6 +128,50 @@ function Wallet() {
   );
 }
 
+function TV() {
+  const { user, isCreator } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <TVPage
+      user={user}
+      isCreator={isCreator}
+      onJoinStream={(streamId: string) => navigate(`/stream/${streamId}`)}
+      onGoLive={() => navigate('/go-live')}
+      tokenBalance={0}
+      onTokenPurchase={() => navigate('/wallet')}
+    />
+  );
+}
+
+function Classes() {
+  const { user, isCreator } = useAuth();
+
+  return (
+    <ClassesPage
+      user={user}
+      isCreator={isCreator}
+      tokenBalance={0}
+      onTokenUpdate={() => {}}
+    />
+  );
+}
+
+function Profile() {
+  const { user, isCreator, signOut } = useAuth();
+
+  return (
+    <ProfilePage
+      user={user}
+      isCreator={isCreator}
+      onLogout={async () => {
+        await signOut();
+        window.location.href = '/auth?mode=signin';
+      }}
+    />
+  );
+}
+
 function Placeholder({ title }: { title: string }) {
   return (
     <div className="p-8">
@@ -176,10 +223,26 @@ export default function AppRoutes() {
           }
         />
         <Route
+          path="/tv"
+          element={
+            <Private>
+              <TV />
+            </Private>
+          }
+        />
+        <Route
+          path="/classes"
+          element={
+            <Private>
+              <Classes />
+            </Private>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <Private>
-              <Placeholder title="Profile" />
+              <Profile />
             </Private>
           }
         />
