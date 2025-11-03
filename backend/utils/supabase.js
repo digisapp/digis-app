@@ -1,30 +1,39 @@
-import { createClient } from '@supabase/supabase-js';
+// utils/supabase.js
+// Supabase client for backend (CommonJS)
+const { createClient } = require('@supabase/supabase-js');
 
 // Environment variables for Supabase
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 // Validate environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase configuration');
-  throw new Error('Supabase URL or Anon Key missing');
+  console.error('Looking for: SUPABASE_URL or REACT_APP_SUPABASE_URL');
+  console.error('Looking for: SUPABASE_ANON_KEY or REACT_APP_SUPABASE_ANON_KEY');
+  // Don't throw - allow server to start but warn
 }
 
 // Initialize Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
+    persistSession: false, // Backend doesn't need session persistence
+    autoRefreshToken: false,
   },
   realtime: {
     params: {
-      eventsPerSecond: 10, // Adjust based on your needs
+      eventsPerSecond: 10,
     },
   },
-});
+}) : null;
 
 // Real-time subscription for chat messages
-export function subscribeToChatMessages(channelName, callback) {
+function subscribeToChatMessages(channelName, callback) {
+  if (!supabase) {
+    console.error('❌ Supabase client not initialized');
+    return () => {};
+  }
+
   const subscription = supabase
     .channel(channelName)
     .on(
@@ -53,7 +62,12 @@ export function subscribeToChatMessages(channelName, callback) {
 }
 
 // Real-time subscription for session updates
-export function subscribeToSessionUpdates(channelName, callback) {
+function subscribeToSessionUpdates(channelName, callback) {
+  if (!supabase) {
+    console.error('❌ Supabase client not initialized');
+    return () => {};
+  }
+
   const subscription = supabase
     .channel(channelName)
     .on(
@@ -81,5 +95,16 @@ export function subscribeToSessionUpdates(channelName, callback) {
   };
 }
 
-// Optional: Log initialization (disable in production)
-console.log('📡 Supabase client initialized (client-side)');
+// Log initialization (disable in production)
+if (supabase) {
+  console.log('📡 Supabase client initialized (backend)');
+} else {
+  console.warn('⚠️ Supabase client not initialized - missing environment variables');
+}
+
+// Export for CommonJS
+module.exports = {
+  supabase,
+  subscribeToChatMessages,
+  subscribeToSessionUpdates
+};
