@@ -77,8 +77,18 @@ const ProfileDropdown = ({
   const dropdownRef = useRef(null);
 
   // Merge user and profile data for consistent access
-  const userData = { ...user, ...profile };
-  
+  // Extract username and display_name from the correct sources:
+  // 1. Profile data (from database) takes priority
+  // 2. User metadata from Supabase auth as fallback
+  // 3. Email as last resort
+  const userData = {
+    ...user,
+    ...profile,
+    username: profile?.username || user?.user_metadata?.username || user?.email?.split('@')[0],
+    display_name: profile?.display_name || user?.user_metadata?.display_name || profile?.username || user?.user_metadata?.username || user?.email?.split('@')[0],
+    profile_pic_url: profile?.profile_pic_url || user?.user_metadata?.profile_pic_url
+  };
+
   // Determine if user is actually a creator - check multiple possible fields
   // Check various possible fields where creator status might be stored
 

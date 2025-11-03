@@ -900,8 +900,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
         `SELECT COUNT(*) as count
          FROM followers
          WHERE creator_id = $1
-           AND follower_id != $2::text`,
-        [creatorDbId, supabaseId]
+           AND follower_id != $1`,
+        [creatorDbId]
       );
       followersCount = parseInt(followersResult.rows[0]?.count) || 0;
     } catch (error) {
@@ -916,10 +916,10 @@ router.get('/stats', authenticateToken, async (req, res) => {
         `SELECT COUNT(*) as count
          FROM creator_subscriptions
          WHERE creator_id = $1
-           AND subscriber_id != $2
+           AND subscriber_id != $1
            AND status = 'active'
            AND (current_period_end IS NULL OR current_period_end > NOW())`,
-        [creatorDbId, supabaseId]
+        [creatorDbId]
       );
       subscribersCount = parseInt(subscribersResult.rows[0]?.count) || 0;
     } catch (error) {

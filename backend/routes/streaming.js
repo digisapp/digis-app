@@ -243,14 +243,15 @@ router.post('/go-live', authenticateToken, async (req, res) => {
       tagsCount: tags.length
     });
 
-    // 1. Verify user is a creator
+    // 1. Verify user is a creator and get the database ID
     const creatorCheck = await client.query(
-      'SELECT is_creator, username FROM users WHERE supabase_id = $1',
+      'SELECT id, is_creator, username FROM users WHERE supabase_id = $1',
       [creatorId]
     );
 
     if (creatorCheck.rows.length === 0) {
       await client.query('ROLLBACK');
+      logger.error(`[${requestId}] ❌ User not found for supabase_id:`, creatorId);
       return res.status(404).json({ error: 'User not found' });
     }
 
@@ -258,6 +259,15 @@ router.post('/go-live', authenticateToken, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(403).json({ error: 'Only creators can go live' });
     }
+
+    // Use the database ID for foreign key references (not supabase_id)
+    const dbCreatorId = creatorCheck.rows[0].id;
+
+    logger.info(`[${requestId}] ✅ Creator verified`, {
+      supabaseId: creatorId,
+      dbId: dbCreatorId,
+      username: creatorCheck.rows[0].username
+    });
 
     // 2. Validate required fields
     if (!title || !title.trim()) {
@@ -274,7 +284,7 @@ router.post('/go-live', authenticateToken, async (req, res) => {
     const existingStream = await client.query(
       `SELECT id FROM streams
        WHERE creator_id = $1 AND status = 'live'`,
-      [creatorId]
+      [dbCreatorId]
     );
 
     if (existingStream.rows.length > 0) {
@@ -305,7 +315,7 @@ router.post('/go-live', authenticateToken, async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, 'live', NOW(), $6, $7, $8)
       RETURNING *`,
       [
-        creatorId,
+        dbCreatorId,  // Use database ID, not supabase_id
         channel,
         title.trim(),
         description.trim(),
@@ -377,7 +387,8 @@ router.post('/go-live', authenticateToken, async (req, res) => {
     if (privacy === 'public') {
       publishToChannel('stream-notifications', {
         type: 'stream_started',
-        creatorId,
+        creatorId: dbCreatorId,  // Use database ID
+        supabaseId: creatorId,   // Also include supabase_id for reference
         streamId: stream.id,
         title,
         category,
@@ -387,10 +398,11 @@ router.post('/go-live', authenticateToken, async (req, res) => {
 
     await client.query('COMMIT');
 
-    logger.info('✅ Stream created successfully', {
+    logger.info(`[${requestId}] ✅ Stream created successfully`, {
       streamId: stream.id,
       channel,
-      creatorId
+      dbCreatorId,
+      supabaseId: creatorId
     });
 
     res.json({

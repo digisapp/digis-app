@@ -401,10 +401,16 @@ const HybridCreatorDashboard = memo(({
       console.log('User not loaded yet, skipping dashboard fetch');
       return;
     }
-    
+
     try {
       const authToken = await getAuthToken();
-      
+
+      // If no auth token available, skip API calls that require authentication
+      if (!authToken) {
+        console.warn('⚠️ No auth token available, skipping authenticated API calls');
+        return;
+      }
+
       // Fetch creator profile
       const profileResponse = await fetchWithRetry(
         `${import.meta.env.VITE_BACKEND_URL}/public/creators/${user?.username || user?.id}`,
@@ -547,6 +553,12 @@ const HybridCreatorDashboard = memo(({
   const fetchDigitals = async () => {
     try {
       const authToken = await getAuthToken();
+
+      if (!authToken) {
+        console.warn('⚠️ No auth token available, skipping digitals fetch');
+        return;
+      }
+
       const response = await fetchWithRetry(
         `${import.meta.env.VITE_BACKEND_URL}/digitals/my`,
         {
@@ -577,6 +589,12 @@ const HybridCreatorDashboard = memo(({
   const fetchOffers = async () => {
     try {
       const authToken = await getAuthToken();
+
+      if (!authToken) {
+        console.warn('⚠️ No auth token available, skipping offers fetch');
+        return;
+      }
+
       const response = await fetchWithRetry(
         `${import.meta.env.VITE_BACKEND_URL}/offers/my-offers`,
         {
@@ -693,6 +711,12 @@ const HybridCreatorDashboard = memo(({
   const fetchAnalytics = async () => {
     try {
       const authToken = await getAuthToken();
+
+      if (!authToken) {
+        console.warn('⚠️ No auth token available, skipping analytics fetch');
+        return;
+      }
+
       const response = await fetchWithRetry(
         `${import.meta.env.VITE_BACKEND_URL}/analytics/creator/${user?.id}/overview?period=7d`,
         {
@@ -760,6 +784,12 @@ const HybridCreatorDashboard = memo(({
   const fetchTopFans = async () => {
     try {
       const authToken = await getAuthToken();
+
+      if (!authToken) {
+        console.warn('⚠️ No auth token available, skipping top fans fetch');
+        return;
+      }
+
       const response = await fetchWithRetry(
         `${import.meta.env.VITE_BACKEND_URL}/analytics/creator/${user?.id}/top-fans`,
         {

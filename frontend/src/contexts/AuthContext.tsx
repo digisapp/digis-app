@@ -45,14 +45,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(data.session);
           setUser(data.session.user);
         }
+      } else if (response.status === 404) {
+        // Route might not be deployed yet or available - silently skip
+        console.debug('ℹ️ Metadata sync endpoint not available (this is OK, skipping)');
       } else {
-        const errorText = await response.text();
-        console.warn('⚠️ Failed to sync user metadata:', response.status, errorText);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.warn('⚠️ Failed to sync user metadata (non-critical):', response.status, errorText);
         // Don't fail the login process if sync fails
         // User can still use the app, metadata will sync on next login
       }
     } catch (error) {
-      console.error('❌ Error syncing user metadata (non-critical):', error);
+      // Network errors or other issues - don't prevent login
+      console.debug('ℹ️ Could not sync user metadata (non-critical):', error instanceof Error ? error.message : 'Unknown error');
       // Non-critical error - don't prevent login
     }
   };
