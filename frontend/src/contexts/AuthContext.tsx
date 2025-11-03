@@ -60,32 +60,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getSession();
+
+      console.log('🔐 Initial session check:', {
+        hasSession: !!data.session,
+        hasUser: !!data.session?.user,
+        email: data.session?.user?.email
+      });
+
       setSession(data.session ?? null);
       setUser(data.session?.user ?? null);
-
-      // Always sync metadata on initial load if user is logged in
-      // This ensures database role is always reflected in the UI
-      if (data.session?.access_token) {
-        console.log('🔄 Syncing user metadata from database...');
-        await syncMetadata(data.session.access_token);
-      }
-
       setLoading(false);
+
+      // Sync metadata AFTER setting loading to false (non-blocking)
+      if (data.session?.access_token) {
+        console.log('🔄 Syncing user metadata from database (background)...');
+        syncMetadata(data.session.access_token).catch(err => {
+          console.error('Metadata sync failed (non-critical):', err);
+        });
+      }
     };
     init();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, s) => {
-      console.log(`🔐 Auth state changed: ${event}`);
+      console.log(`🔐 Auth state changed: ${event}`, {
+        hasSession: !!s,
+        hasUser: !!s?.user,
+        email: s?.user?.email
+      });
 
-      // Sync metadata on sign in BEFORE setting the session/user
-      if (event === 'SIGNED_IN' && s?.access_token) {
-        console.log('🔄 Syncing metadata before setting session...');
-        await syncMetadata(s.access_token);
-      }
-
-      // Set session and user after metadata sync completes
+      // Set session and user immediately (don't wait for metadata sync)
       setSession(s);
       setUser(s?.user ?? null);
+
+      // Sync metadata on sign in (non-blocking, in background)
+      if (event === 'SIGNED_IN' && s?.access_token) {
+        console.log('🔄 Syncing metadata in background...');
+        syncMetadata(s.access_token).catch(err => {
+          console.error('Metadata sync failed (non-critical):', err);
+        });
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, []);

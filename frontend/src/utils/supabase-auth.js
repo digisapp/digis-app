@@ -266,10 +266,10 @@ export const getAuthToken = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      // If no token at all, session has expired or user is not logged in
+      // If no token at all, return null (don't throw - might be on public page)
       if (!token) {
-        console.warn('⚠️ No auth token found - session expired or user not logged in');
-        throw new Error('NO_SESSION');
+        console.warn('⚠️ No auth token found - user not logged in');
+        return null;
       }
 
       // Validate JWT format (should have 3 parts: header.payload.signature)
@@ -280,7 +280,7 @@ export const getAuthToken = async () => {
 
         if (refreshError || !refreshedSession?.access_token) {
           console.error('❌ Failed to refresh session:', refreshError);
-          throw new Error('REFRESH_FAILED');
+          return null;
         }
 
         const refreshedToken = refreshedSession.access_token;
@@ -288,7 +288,7 @@ export const getAuthToken = async () => {
         // Validate refreshed token
         if (refreshedToken.split('.').length !== 3) {
           console.error('❌ Refreshed token is still malformed');
-          throw new Error('MALFORMED_TOKEN');
+          return null;
         }
 
         return refreshedToken;
@@ -300,17 +300,6 @@ export const getAuthToken = async () => {
     return result;
   } catch (error) {
     console.error('❌ Get auth token error:', error.message);
-
-    // If session is invalid/expired, clear local storage and redirect to login
-    if (error.message === 'NO_SESSION' || error.message === 'REFRESH_FAILED' || error.message === 'MALFORMED_TOKEN') {
-      console.warn('🔄 Clearing invalid session and redirecting to login...');
-      await supabase.auth.signOut();
-      // Don't redirect immediately if we're already on the auth page
-      if (!window.location.pathname.includes('/auth')) {
-        window.location.href = '/auth/signin?expired=true';
-      }
-    }
-
     return null;
   }
 };
