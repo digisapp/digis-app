@@ -2,74 +2,129 @@ import { supabase } from '../contexts/AuthContext';
 
 const API = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, ''); // no trailing slash
 
-async function authHeaders() {
-  console.log('🔐 authHeaders: Getting session...');
+async function getAccessToken(): Promise<string | null> {
+  // 1) Try current session
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  let token = data.session?.access_token ?? null;
 
-  console.log('🔐 authHeaders: Session data:', {
-    hasSession: !!data.session,
-    hasToken: !!token,
-    tokenPreview: token ? token.substring(0, 20) + '...' : 'NO TOKEN',
-    userId: data.session?.user?.id,
-    email: data.session?.user?.email
-  });
-
-  // Validate token format before using it
-  if (token) {
-    // JWT tokens must have 3 parts: header.payload.signature
-    if (token.split('.').length !== 3) {
-      console.error('❌ Malformed JWT token detected in authHeaders');
-      // Try to refresh session
-      const { data: refreshData } = await supabase.auth.refreshSession();
-      const refreshedToken = refreshData.session?.access_token;
-      if (refreshedToken && refreshedToken.split('.').length === 3) {
-        console.log('✅ Token refreshed successfully');
-        return { Authorization: `Bearer ${refreshedToken}` };
-      }
-      // If still invalid, return empty headers (will trigger 401 and force re-login)
-      console.error('❌ Failed to refresh token, returning empty headers');
-      return {};
-    }
-    console.log('✅ Valid token found, using it');
-    return { Authorization: `Bearer ${token}` };
+  // 2) If missing, try refresh once (Supabase auto-refreshes in background)
+  if (!token) {
+    console.log('🔄 No token in session, attempting refresh...');
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    token = refreshed.session?.access_token ?? null;
   }
 
-  console.warn('⚠️ No token found, returning empty headers');
-  return {};
+  return token;
+}
+
+async function authHeaders(extra: Record<string, string> = {}): Promise<Record<string, string>> {
+  const token = await getAccessToken();
+
+  console.log('🔐 authHeaders:', {
+    hasToken: !!token,
+    tokenPreview: token ? token.substring(0, 20) + '...' : 'NO TOKEN',
+    isValid: token ? token.split('.').length === 3 : false
+  });
+
+  if (!token || token === 'null' || token === 'undefined') {
+    // Don't fire backend calls that will 401; throw to let caller decide
+    console.error('❌ NO_SESSION_TOKEN - cannot make authenticated request');
+    throw new Error('NO_SESSION_TOKEN');
+  }
+
+  // Validate JWT format
+  if (token.split('.').length !== 3) {
+    console.error('❌ Malformed JWT token detected');
+    throw new Error('MALFORMED_TOKEN');
+  }
+
+  console.log('✅ Valid token, sending to backend');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...extra
+  };
 }
 
 export async function apiGet(path: string) {
-  const res = await fetch(`${API}${path}`, { headers: { ...(await authHeaders()) } });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+  try {
+    const headers = await authHeaders();
+    const res = await fetch(`${API}${path}`, { headers, credentials: 'omit' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    return res.json();
+  } catch (err: any) {
+    if (err.message === 'NO_SESSION_TOKEN') {
+      // Optionally redirect to login or show toast
+      console.error('Session expired, user needs to re-authenticate');
+    }
+    throw err;
+  }
 }
 
 export async function apiPost(path: string, body?: unknown) {
-  const res = await fetch(`${API}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+  try {
+    const headers = await authHeaders();
+    const res = await fetch(`${API}${path}`, {
+      method: 'POST',
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'omit'
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    return res.json();
+  } catch (err: any) {
+    if (err.message === 'NO_SESSION_TOKEN') {
+      console.error('Session expired, user needs to re-authenticate');
+    }
+    throw err;
+  }
 }
 
 export async function apiPut(path: string, body?: unknown) {
-  const res = await fetch(`${API}${path}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+  try {
+    const headers = await authHeaders();
+    const res = await fetch(`${API}${path}`, {
+      method: 'PUT',
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'omit'
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    return res.json();
+  } catch (err: any) {
+    if (err.message === 'NO_SESSION_TOKEN') {
+      console.error('Session expired, user needs to re-authenticate');
+    }
+    throw err;
+  }
 }
 
 export async function apiDelete(path: string) {
-  const res = await fetch(`${API}${path}`, {
-    method: 'DELETE',
-    headers: { ...(await authHeaders()) },
-  });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+  try {
+    const headers = await authHeaders();
+    const res = await fetch(`${API}${path}`, {
+      method: 'DELETE',
+      headers,
+      credentials: 'omit'
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    return res.json();
+  } catch (err: any) {
+    if (err.message === 'NO_SESSION_TOKEN') {
+      console.error('Session expired, user needs to re-authenticate');
+    }
+    throw err;
+  }
 }

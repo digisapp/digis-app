@@ -17,11 +17,11 @@ export default function Auth() {
 
   // Redirect if already logged in (wait for loading to complete)
   useEffect(() => {
-    if (user && !loading) {
+    if (!loading && user) {
       console.log('✅ User authenticated, redirecting to dashboard');
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [loading, user, navigate]);
 
   // Handle magic link callback or errors
   useEffect(() => {
