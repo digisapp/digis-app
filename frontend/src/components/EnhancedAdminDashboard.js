@@ -97,7 +97,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
   // Fetch Analytics Data
   const fetchAnalytics = useCallback(async () => {
     try {
-      const response = await fetchWithRetry('/api/admin/analytics/dashboard', {
+      const response = await fetchWithRetry('/admin/analytics/dashboard', {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
@@ -144,7 +144,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
   // Fetch Activity Feed
   const fetchActivityFeed = useCallback(async () => {
     try {
-      const response = await fetchWithRetry('/api/admin/activity-feed', {
+      const response = await fetchWithRetry('/admin/activity-feed', {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
@@ -160,7 +160,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
   // Fetch Audit Logs
   const fetchAuditLogs = useCallback(async () => {
     try {
-      const response = await fetchWithRetry('/api/admin/audit-logs', {
+      const response = await fetchWithRetry('/admin/audit-logs', {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
@@ -176,7 +176,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
   // Fetch Reported Content
   const fetchReportedContent = useCallback(async () => {
     try {
-      const response = await fetchWithRetry('/api/admin/moderation/reports', {
+      const response = await fetchWithRetry('/admin/moderation/reports', {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
@@ -870,7 +870,7 @@ const EnhancedAdminDashboard = memo(({ user, className = '' }) => {
 
   const logAuditAction = async (action, details) => {
     try {
-      await fetchWithRetry('/api/admin/audit-log', {
+      await fetchWithRetry('/admin/audit-log', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
