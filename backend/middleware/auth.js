@@ -181,13 +181,13 @@ const requireSuperAdmin = async (req, res, next) => {
 
     // Use db(req) to support both RLS and non-RLS contexts
     const result = await db(req).query(
-      `SELECT is_super_admin, role FROM users
+      `SELECT role FROM users
        WHERE supabase_id = $1
           OR email = (SELECT email FROM auth.users WHERE id = $1::uuid LIMIT 1)`,
       [userId]
     );
 
-    if (result.rows.length === 0 || (!result.rows[0].is_super_admin && result.rows[0].role !== 'admin')) {
+    if (result.rows.length === 0 || result.rows[0].role !== 'admin') {
       span.addEvent('access_denied');
       span.end();
       observability.trackMetric('auth_admin_denied', 1, 'count', {
@@ -197,7 +197,7 @@ const requireSuperAdmin = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         code: 'ADMIN_ONLY',
-        message: 'Super admin access required'
+        message: 'Admin access required'
       });
     }
 

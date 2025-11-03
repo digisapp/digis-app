@@ -17,7 +17,7 @@ const requireAdmin = async (req, res, next) => {
     }
     
     const userQuery = await pool.query(
-      'SELECT is_super_admin, role FROM users WHERE supabase_id = $1',
+      'SELECT role FROM users WHERE supabase_id = $1',
       [userId]
     );
 
@@ -26,7 +26,7 @@ const requireAdmin = async (req, res, next) => {
     }
 
     const user = userQuery.rows[0];
-    if (!user.is_super_admin && user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 

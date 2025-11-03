@@ -340,11 +340,11 @@ router.get('/creator/:creatorId', authenticateToken, async (req, res) => {
     const userId = getUserId(req);
     if (userId !== creatorId) {
       const userQuery = await pool.query(
-        'SELECT is_super_admin, role FROM users WHERE supabase_id = $1',
+        'SELECT role FROM users WHERE supabase_id = $1',
         [userId]
       );
       
-      if (userQuery.rows.length === 0 || (!userQuery.rows[0].is_super_admin && userQuery.rows[0].role !== 'admin')) {
+      if (userQuery.rows.length === 0 || (userQuery.rows[0].role !== 'admin')) {
         return res.status(403).json({ error: 'Access denied' });
       }
     }
@@ -592,11 +592,11 @@ router.get('/platform', authenticateToken, async (req, res) => {
     
     // Check admin status
     const userQuery = await pool.query(
-      'SELECT is_super_admin, role FROM users WHERE supabase_id = $1',
+      'SELECT role FROM users WHERE supabase_id = $1',
       [getUserId(req)]
     );
     
-    if (userQuery.rows.length === 0 || (!userQuery.rows[0].is_super_admin && userQuery.rows[0].role !== 'admin')) {
+    if (userQuery.rows.length === 0 || (userQuery.rows[0].role !== 'admin')) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -701,11 +701,11 @@ router.get('/predictions/:creatorId', authenticateToken, async (req, res) => {
     const userId = getUserId(req);
     if (userId !== creatorId) {
       const userQuery = await pool.query(
-        'SELECT is_super_admin, role FROM users WHERE supabase_id = $1',
+        'SELECT role FROM users WHERE supabase_id = $1',
         [userId]
       );
       
-      if (userQuery.rows.length === 0 || (!userQuery.rows[0].is_super_admin && userQuery.rows[0].role !== 'admin')) {
+      if (userQuery.rows.length === 0 || (userQuery.rows[0].role !== 'admin')) {
         return res.status(403).json({ error: 'Access denied' });
       }
     }

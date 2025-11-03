@@ -492,8 +492,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
         is_creator: rawProfile.is_creator === true ||
                     rawProfile.role === 'creator' ||
                     (rawProfile.creator_type !== null && rawProfile.creator_type !== undefined),
-        is_admin: rawProfile.is_super_admin === true ||
-                  rawProfile.role === 'admin',
+        is_admin: rawProfile.role === 'admin',
         // Ensure token balance fields are always numbers
         token_balance: parseFloat(rawProfile.token_balance) || 0,
         total_purchased: parseFloat(rawProfile.total_purchased) || 0,
@@ -676,7 +675,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       try {
         // Get all admin users
         const adminsQuery = await db(req).query(
-          'SELECT id FROM users WHERE is_super_admin = true'
+          'SELECT id FROM users WHERE role = 'admin''
         );
         
         // Create notification for each admin
@@ -772,8 +771,6 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       is_creator: rawNewUser.is_creator === true ||
                   rawNewUser.role === 'creator' ||
                   rawNewUser.creator_type != null,
-      is_admin: rawNewUser.is_super_admin === true ||
-                rawNewUser.role === 'admin'
     };
 
     // Commit transaction
@@ -943,8 +940,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       is_creator: rawProfile.is_creator === true ||
                   rawProfile.role === 'creator' ||
                   (rawProfile.creator_type !== null && rawProfile.creator_type !== undefined),
-      is_admin: rawProfile.is_super_admin === true ||
-                rawProfile.role === 'admin',
+      is_admin: rawProfile.role === 'admin',
       token_balance: parseFloat(rawProfile.token_balance) || 0,
       total_purchased: parseFloat(rawProfile.total_purchased) || 0,
       total_spent: parseFloat(rawProfile.total_spent) || 0,
@@ -1438,7 +1434,7 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
         u.id as db_id,
         u.supabase_id,
         COALESCE(u.is_creator, false) as is_creator,
-        COALESCE(u.is_super_admin, false) as is_admin
+        CASE WHEN u.role = 'admin' THEN true ELSE false END as is_admin
       FROM users u
       WHERE u.supabase_id = $1
       LIMIT 1
@@ -1539,7 +1535,7 @@ router.get('/session', verifySupabaseToken, async (req, res) => {
  *                   description: Canonical creator status (checks is_creator OR role='creator' OR creator_type != null)
  *                 is_admin:
  *                   type: boolean
- *                   description: Canonical admin status (checks is_super_admin OR role='admin')
+ *                   description: Canonical admin status (checks role='admin')
  *                 profile:
  *                   type: object
  *       401:
@@ -1585,8 +1581,7 @@ router.get('/me', noStore, verifySupabaseToken, async (req, res) => {
                       user.role === 'creator' ||
                       user.creator_type != null;
 
-    const isAdmin = user.is_super_admin === true ||
-                    user.role === 'admin';
+    const isAdmin = user.role === 'admin';
 
     // Return simplified, canonical response
     return res.json({
@@ -1760,8 +1755,7 @@ router.post('/sync-metadata', authenticateToken, async (req, res) => {
     // Get user from database
     const query = `
       SELECT id, email, username, bio, profile_pic_url,
-             is_creator, role, creator_type,
-             is_admin, is_super_admin
+             is_creator, role, creator_type
       FROM users
       WHERE id = $1::uuid
       LIMIT 1
@@ -1780,9 +1774,7 @@ router.post('/sync-metadata', authenticateToken, async (req, res) => {
                       user.role === 'creator' ||
                       user.creator_type != null;
 
-    const isAdmin = user.is_super_admin === true ||
-                    user.is_admin === true ||
-                    user.role === 'admin';
+    const isAdmin = user.role === 'admin';
 
     // Update Supabase Auth user metadata
     const admin = supabaseAdmin();
@@ -1790,6 +1782,7 @@ router.post('/sync-metadata', authenticateToken, async (req, res) => {
       user_metadata: {
         isCreator,
         isAdmin,
+        role: user.role || 'fan',
         username: user.username,
         bio: user.bio,
         profile_pic_url: user.profile_pic_url

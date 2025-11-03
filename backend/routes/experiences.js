@@ -107,7 +107,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
       SELECT 
         $1, supabase_id, 'experience_submission', $2, $3, $4, NOW()
       FROM users 
-      WHERE is_super_admin = true
+      WHERE role = 'admin'
     `, [
       uuidv4(),
       'New Experience Submission',
@@ -274,7 +274,7 @@ router.get('/my-experiences', authenticateToken, async (req, res) => {
 router.get('/admin/submissions', authenticateToken, async (req, res) => {
   try {
     // Check admin status
-    if (!req.user.is_super_admin) {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
     
@@ -306,7 +306,7 @@ router.post('/admin/submissions/:submissionId/:action', authenticateToken, async
   
   try {
     // Check admin status
-    if (!req.user.is_super_admin) {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
     

@@ -101,12 +101,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  // Simple derived state from user metadata
-  const isCreator = !!user?.user_metadata?.isCreator;
-  const isAdmin = !!user?.user_metadata?.isAdmin;
-
-  // Computed role for backwards compatibility
-  const role = isAdmin ? 'admin' : isCreator ? 'creator' : 'fan';
+  // Get role from user metadata (primary source)
+  // Falls back to computing from isCreator/isAdmin for backward compatibility
+  const metadataRole = user?.user_metadata?.role as 'admin' | 'creator' | 'fan' | undefined;
+  const isCreator = metadataRole === 'creator' || !!user?.user_metadata?.isCreator;
+  const isAdmin = metadataRole === 'admin' || !!user?.user_metadata?.isAdmin;
+  const role = metadataRole || (isAdmin ? 'admin' : isCreator ? 'creator' : 'fan');
 
   // Role is resolved when loading is complete
   const roleResolved = !loading;

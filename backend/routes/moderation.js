@@ -375,11 +375,11 @@ router.get('/admin/history', authenticateToken, async (req, res) => {
 
     // Check admin access
     const userQuery = await pool.query(
-      'SELECT is_super_admin, role FROM users WHERE supabase_id = $1',
+      'SELECT role FROM users WHERE supabase_id = $1',
       [req.user.supabase_id]
     );
 
-    if (userQuery.rows.length === 0 || (!userQuery.rows[0].is_super_admin && userQuery.rows[0].role !== 'admin')) {
+    if (userQuery.rows.length === 0 || (userQuery.rows[0].role !== 'admin')) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -453,11 +453,11 @@ router.post('/admin/review/:moderationId', authenticateToken, async (req, res) =
 
     // Check admin access
     const userQuery = await pool.query(
-      'SELECT is_super_admin, role FROM users WHERE supabase_id = $1',
+      'SELECT role FROM users WHERE supabase_id = $1',
       [adminId]
     );
 
-    if (userQuery.rows.length === 0 || (!userQuery.rows[0].is_super_admin && userQuery.rows[0].role !== 'admin')) {
+    if (userQuery.rows.length === 0 || (userQuery.rows[0].role !== 'admin')) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 

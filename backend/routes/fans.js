@@ -249,12 +249,12 @@ router.get('/:fanId', authenticateToken, async (req, res) => {
   try {
     // Check if requester is creator or admin
     const requesterCheck = await pool.query(
-      'SELECT is_creator, is_super_admin FROM users WHERE supabase_id = $1',
+      'SELECT is_creator, role FROM users WHERE supabase_id = $1',
       [creatorId]
     );
 
     const isCreator = requesterCheck.rows[0]?.is_creator;
-    const isAdmin = requesterCheck.rows[0]?.is_super_admin;
+    const isAdmin = requesterCheck.rows[0]?.role === 'admin';
 
     // Check if fan is viewing their own profile
     const isOwner = creatorId === fanId;

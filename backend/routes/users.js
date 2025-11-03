@@ -577,8 +577,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
                                 user.role === 'creator' ||
                                 (user.creator_type !== null && user.creator_type !== undefined);
 
-    const canonicalIsAdmin = user.is_super_admin === true ||
-                              user.role === 'admin';
+    const canonicalIsAdmin = user.role === 'admin';
 
     // Debug logging for role computation
     logger.info('🔍 /users/profile role computation:', {
@@ -586,7 +585,6 @@ router.get('/profile', authenticateToken, async (req, res) => {
       raw_is_creator: user.is_creator,
       raw_role: user.role,
       raw_creator_type: user.creator_type,
-      raw_is_super_admin: user.is_super_admin,
       canonical_is_creator: canonicalIsCreator,
       canonical_is_admin: canonicalIsAdmin
     });
