@@ -24,16 +24,13 @@ const StreamPage = ({ user }) => {
     try {
       setLoading(true);
 
-      // If coming from go-live setup, use the state data
+      // If coming from go-live setup, use the state data (token already provided)
       if (location.state && location.state.isHost && location.state.channelName) {
-        // Get Agora token from backend for the new stream
-        const tokenData = await apiGet(`/streaming/token/${location.state.channelName}`);
-
         setStreamData({
           channel: location.state.channelName,
-          token: tokenData.token,
-          chatToken: tokenData.chatToken,
-          uid: tokenData.uid,
+          token: location.state.agoraToken, // Use token from go-live response
+          chatToken: location.state.chatToken,
+          uid: location.state.agoraUid, // Use UID from go-live response
           streamTitle: location.state.title,
           streamCategory: location.state.category,
           streamDescription: location.state.description,
