@@ -675,7 +675,7 @@ router.post('/sync-user', verifySupabaseToken, async (req, res) => {
       try {
         // Get all admin users
         const adminsQuery = await db(req).query(
-          'SELECT id FROM users WHERE role = 'admin''
+          "SELECT id FROM users WHERE role = 'admin'"
         );
         
         // Create notification for each admin
