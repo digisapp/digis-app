@@ -55,8 +55,9 @@ export const fetchWithRetry = async (url, options = {}, retries = 3, delay = 100
         }
 
         // Handle JWT token errors (401) - try to refresh and retry once
+        let errorText = '';
         if (response.status === 401 && i === 0) {
-          const errorText = await response.text().catch(() => '');
+          errorText = await response.text().catch(() => '');
           if (errorText.includes('token is malformed') || errorText.includes('invalid JWT')) {
             console.warn('⚠️ JWT token error detected, attempting session refresh...');
             try {
@@ -82,7 +83,10 @@ export const fetchWithRetry = async (url, options = {}, retries = 3, delay = 100
           }
         }
 
-        const errorText = await response.text().catch(() => response.statusText);
+        // Read error text if not already read (avoid consuming body twice)
+        if (!errorText) {
+          errorText = await response.text().catch(() => response.statusText);
+        }
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
