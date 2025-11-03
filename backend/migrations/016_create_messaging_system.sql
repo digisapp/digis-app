@@ -2,10 +2,20 @@
 -- This replaces Agora Chat with a custom solution integrated with token economy
 
 -- ============================================================================
+-- CLEAN UP OLD TABLES (if they exist)
+-- ============================================================================
+-- Drop old tables to start fresh (be careful in production!)
+DROP TABLE IF EXISTS message_reports CASCADE;
+DROP TABLE IF EXISTS message_reactions CASCADE;
+DROP TABLE IF EXISTS typing_indicators CASCADE;
+DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS conversations CASCADE;
+
+-- ============================================================================
 -- CONVERSATIONS TABLE
 -- ============================================================================
 -- Tracks conversation threads between users
-CREATE TABLE IF NOT EXISTS conversations (
+CREATE TABLE conversations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
   -- Participants (always 2 users for 1-on-1 chat)
@@ -32,7 +42,7 @@ CREATE INDEX idx_conversations_user2 ON conversations(user2_id, last_message_at 
 -- ============================================================================
 -- MESSAGES TABLE
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS messages (
+CREATE TABLE messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
   -- Conversation reference
@@ -99,7 +109,7 @@ ALTER TABLE conversations
 -- TYPING INDICATORS TABLE
 -- ============================================================================
 -- Track who is typing in which conversation (ephemeral data)
-CREATE TABLE IF NOT EXISTS typing_indicators (
+CREATE TABLE typing_indicators (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -115,7 +125,7 @@ CREATE INDEX idx_typing_conversation ON typing_indicators(conversation_id, start
 -- MESSAGE REACTIONS TABLE
 -- ============================================================================
 -- Allow users to react to messages with emojis
-CREATE TABLE IF NOT EXISTS message_reactions (
+CREATE TABLE message_reactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -131,7 +141,7 @@ CREATE INDEX idx_reactions_message ON message_reactions(message_id);
 -- MESSAGE REPORTS TABLE
 -- ============================================================================
 -- Allow users to report inappropriate messages
-CREATE TABLE IF NOT EXISTS message_reports (
+CREATE TABLE message_reports (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
   reported_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
