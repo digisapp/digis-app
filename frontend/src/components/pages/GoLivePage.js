@@ -9,6 +9,12 @@ const GoLivePage = ({ user }) => {
 
   const handleGoLive = async (streamData) => {
     try {
+      console.log('🎬 Starting stream with config:', {
+        title: streamData.title,
+        category: streamData.category,
+        privacy: streamData.privacy
+      });
+
       // Extract only serializable data (no Agora tracks/client)
       const streamConfig = {
         title: streamData.title,
@@ -26,17 +32,27 @@ const GoLivePage = ({ user }) => {
       // Create the stream on the backend
       const response = await apiPost('/streaming/go-live', streamConfig);
 
+      console.log('✅ Stream created response:', response);
+
       if (response.stream) {
+        console.log('📺 Navigating to stream:', response.stream.channel);
+
         // Clean up the preview tracks since we'll create fresh ones in StreamingLayout
-        if (streamData.tracks?.video) {
-          streamData.tracks.video.close();
+        try {
+          if (streamData.tracks?.video) {
+            streamData.tracks.video.close();
+          }
+          if (streamData.tracks?.audio) {
+            streamData.tracks.audio.close();
+          }
+          if (streamData.client) {
+            await streamData.client.leave();
+          }
+        } catch (cleanupError) {
+          console.warn('Track cleanup warning (non-critical):', cleanupError);
         }
-        if (streamData.tracks?.audio) {
-          streamData.tracks.audio.close();
-        }
-        if (streamData.client) {
-          streamData.client.leave();
-        }
+
+        toast.success('Going live!');
 
         // Navigate with only serializable data
         // StreamingLayout will create its own Agora client and tracks
@@ -52,10 +68,13 @@ const GoLivePage = ({ user }) => {
             agoraUid: response.agora?.uid,
           }
         });
+      } else {
+        console.error('❌ Response missing stream data:', response);
+        toast.error('Stream created but missing data. Please try again.');
       }
     } catch (error) {
       console.error('Failed to create stream:', error);
-      toast.error('Failed to start stream. Please try again.');
+      toast.error(error.message || 'Failed to start stream. Please try again.');
     }
   };
 

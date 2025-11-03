@@ -513,7 +513,7 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
     }
 
     setLoading(true);
-    
+
     try {
       // Pass the local tracks and stream info to parent
       const streamConfig = {
@@ -537,9 +537,10 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
           opacity: 0.8
         } : null
       };
-      
+
       await onGoLive(streamConfig);
-      
+      // Don't reset loading here - navigation will unmount this component
+
     } catch (error) {
       console.error('Go live error:', error);
       toast.error('Failed to start live stream');
