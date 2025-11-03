@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../utils/supabase-auth.js';
 import { useAuth } from '../contexts/AuthContext';
+import useHybridStore from '../stores/useHybridStore';
 
 /**
  * AuthGate ensures the app doesn't render until the session is bootstrapped
@@ -12,7 +13,8 @@ import { useAuth } from '../contexts/AuthContext';
 export default function AuthGate({ children, fallback = null }) {
   const [ready, setReady] = useState(false);
   const [errored, setErrored] = useState(false);
-  const { setUser, setProfile, setRoleResolved, authLoading, setAuthLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
+  const setProfile = useHybridStore((state) => state.setProfile);
 
   useEffect(() => {
     let cancelled = false;
@@ -22,8 +24,6 @@ export default function AuthGate({ children, fallback = null }) {
       if (!cancelled) {
         console.warn('🔐 AuthGate: Hit 8s timeout, forcing fail-open render');
         setErrored(true);
-        setRoleResolved?.(true);     // Let routes render public/fan UI (defensive)
-        setAuthLoading?.(false);     // Defensive guard
         setReady(true);
       }
     }, 8000);
@@ -31,7 +31,6 @@ export default function AuthGate({ children, fallback = null }) {
     const bootstrapAuth = async () => {
       try {
         console.log('🔐 AuthGate: Bootstrapping auth before render...');
-        setAuthLoading?.(true);  // Defensive guard
 
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -72,18 +71,21 @@ export default function AuthGate({ children, fallback = null }) {
         }
 
         if (!cancelled) {
-          setUser?.(session?.user || null);    // Defensive guard
-          if (profile) setProfile?.(profile);  // Defensive guard
-          setRoleResolved?.(true);             // Always resolve - even if profile is fan or missing
-          setAuthLoading?.(false);             // Defensive guard
+          // Store profile in hybrid store for UI components to access
+          if (profile) {
+            console.log('📦 AuthGate: Storing profile in hybrid store:', {
+              username: profile.username,
+              display_name: profile.display_name,
+              email: profile.email
+            });
+            setProfile(profile);
+          }
           setReady(true);
         }
       } catch (error) {
         console.error('🔐 AuthGate: Error bootstrapping auth:', error);
         // Fail-open: still let app render. Public routes keep working.
         if (!cancelled) {
-          setRoleResolved?.(true);   // Defensive guard
-          setAuthLoading?.(false);   // Defensive guard
           setReady(true);
         }
       } finally {
@@ -97,7 +99,7 @@ export default function AuthGate({ children, fallback = null }) {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [setUser, setProfile, setRoleResolved, setAuthLoading]);
+  }, [setProfile]);
 
   if (!ready) {
     // Show loading fallback while auth is bootstrapping

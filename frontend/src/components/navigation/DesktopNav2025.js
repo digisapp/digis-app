@@ -63,6 +63,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
   const { currentUser, isCreator, isAdmin, role, roleResolved } = useAuth();
   const { activePath, onNavigate, badges = { notifications: 0 }, tokenBalance } = useNavigation();
   const storeTokenBalance = useHybridStore((state) => state.tokenBalance);
+  const userProfile = useHybridStore((state) => state.profile);
   const theme = useStore((state) => state.theme);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -455,7 +456,7 @@ const DesktopNav2025 = ({ onLogout, onShowGoLive }) => {
               {/* Profile with Status Indicator */}
               <ProfileDropdown
                 user={currentUser}
-                profile={currentUser}
+                profile={userProfile || currentUser}
                 isCreator={isCreator}
                 isAdmin={isAdmin}
                 onSignOut={onLogout}
