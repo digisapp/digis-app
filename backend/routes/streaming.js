@@ -188,12 +188,39 @@ router.get('/active', optionalAuth, async (req, res) => {
 
 // Unified Go Live endpoint - Creates stream and generates Agora token in one call
 router.post('/go-live', authenticateToken, async (req, res) => {
+  // Generate request ID for log correlation
+  const crypto = require('crypto');
+  const requestId = crypto.randomBytes(4).toString('hex');
+
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const creatorId = req.user.supabase_id;
+    // 1. Log request start with full context
+    logger.info(`[${requestId}] 🎬 Go live request started`, {
+      requestId,
+      userId: req.user?.id,
+      supabaseId: req.user?.supabase_id,
+      email: req.user?.email,
+      bodyKeys: Object.keys(req.body)
+    });
+
+    // 2. Validate user object
+    const creatorId = req.user?.supabase_id || req.user?.id;
+    if (!creatorId) {
+      logger.error(`[${requestId}] ❌ No creator ID found in request`, { user: req.user });
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(401).json({
+        success: false,
+        code: 'NO_USER_ID',
+        message: 'User ID not found in authentication token',
+        requestId
+      });
+    }
+
+    // 3. Extract and validate request body
     const {
       title,
       category,
@@ -207,7 +234,14 @@ router.post('/go-live', authenticateToken, async (req, res) => {
       overlaySettings = null
     } = req.body;
 
-    logger.info('🎬 Go live request', { creatorId, title, category });
+    logger.info(`[${requestId}] 📋 Request validated`, {
+      creatorId,
+      title,
+      category,
+      privacy,
+      hasDescription: !!description,
+      tagsCount: tags.length
+    });
 
     // 1. Verify user is a creator
     const creatorCheck = await client.query(
@@ -291,16 +325,38 @@ router.post('/go-live', authenticateToken, async (req, res) => {
 
     const stream = streamResult.rows[0];
 
-    // 6. Generate Agora token
-    const { RtcTokenBuilder, RtcRole } = require('agora-token');
+    // 6. Validate Agora environment variables
     const appID = process.env.AGORA_APP_ID;
     const appCertificate = process.env.AGORA_APP_CERTIFICATE;
 
+    logger.info(`[${requestId}] 🔑 Checking Agora credentials`, {
+      hasAppId: !!appID,
+      hasCertificate: !!appCertificate,
+      appIdLength: appID?.length || 0,
+      certLength: appCertificate?.length || 0
+    });
+
     if (!appID || !appCertificate) {
       await client.query('ROLLBACK');
-      logger.error('❌ Agora credentials missing');
-      return res.status(500).json({ error: 'Streaming service not configured' });
+      client.release();
+      logger.error(`[${requestId}] ❌ Agora credentials missing`, {
+        AGORA_APP_ID: !!appID,
+        AGORA_APP_CERTIFICATE: !!appCertificate
+      });
+      return res.status(500).json({
+        success: false,
+        code: 'AGORA_ENV_MISSING',
+        message: 'Streaming service not configured',
+        requestId,
+        debug: process.env.NODE_ENV !== 'production' ? {
+          hasAppId: !!appID,
+          hasCert: !!appCertificate
+        } : undefined
+      });
     }
+
+    // 7. Generate Agora token
+    const { RtcTokenBuilder, RtcRole } = require('agora-token');
 
     // Generate UID from creator ID (convert UUID to numeric)
     const uid = parseInt(creatorId.replace(/-/g, '').substring(0, 10), 16);
@@ -359,10 +415,31 @@ router.post('/go-live', authenticateToken, async (req, res) => {
 
   } catch (error) {
     await client.query('ROLLBACK');
-    logger.error('❌ Go live error:', error);
+
+    // Enhanced error logging with full context
+    logger.error(`[${requestId}] ❌ Go live error:`, {
+      requestId,
+      errorMessage: error.message,
+      errorStack: error.stack,
+      errorCode: error.code,
+      userId: req.user?.supabase_id || req.user?.id,
+      email: req.user?.email,
+      body: {
+        title: req.body?.title,
+        category: req.body?.category
+      }
+    });
+
     res.status(500).json({
+      success: false,
+      code: 'INTERNAL_ERROR',
       error: 'Failed to start stream',
-      message: error.message
+      message: process.env.NODE_ENV !== 'production' ? error.message : 'An internal error occurred',
+      requestId,
+      debug: process.env.NODE_ENV !== 'production' ? {
+        errorType: error.name,
+        errorCode: error.code
+      } : undefined
     });
   } finally {
     client.release();
