@@ -259,14 +259,24 @@ export const refreshSession = async () => {
   }
 };
 
-// Get auth token for API calls with retry
+// Get auth token for API calls with retry and validation
 export const getAuthToken = async () => {
   try {
     const result = await retry(async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      return session?.access_token || null;
+      const token = session?.access_token;
+
+      // Validate JWT format (should have 3 parts: header.payload.signature)
+      if (token && token.split('.').length !== 3) {
+        console.warn('⚠️ Malformed JWT token detected, refreshing session...');
+        // Try to refresh the session to get a valid token
+        const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+        return refreshedSession?.access_token || null;
+      }
+
+      return token || null;
     }, 2);
-    
+
     return result;
   } catch (error) {
     console.error('❌ Get auth token error:', error);

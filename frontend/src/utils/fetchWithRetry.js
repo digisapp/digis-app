@@ -47,12 +47,41 @@ export const fetchWithRetry = async (url, options = {}, retries = 3, delay = 100
         return response;
       }
       
-      // If it's a client error (4xx), don't retry (except 429 - rate limiting)
+      // If it's a client error (4xx), don't retry (except 429 - rate limiting and 401 for JWT issues)
       if (response.status >= 400 && response.status < 500 && response.status !== 429) {
         // For 404s, silently return the response to let component-level handlers deal with it
         if (response.status === 404) {
           return response;
         }
+
+        // Handle JWT token errors (401) - try to refresh and retry once
+        if (response.status === 401 && i === 0) {
+          const errorText = await response.text().catch(() => '');
+          if (errorText.includes('token is malformed') || errorText.includes('invalid JWT')) {
+            console.warn('⚠️ JWT token error detected, attempting session refresh...');
+            try {
+              // Dynamically import to avoid circular dependencies
+              const { supabase } = await import('./supabase-auth.js');
+              const { data: { session } } = await supabase.auth.refreshSession();
+
+              if (session?.access_token) {
+                // Update the Authorization header with new token
+                if (options.headers) {
+                  options.headers.Authorization = `Bearer ${session.access_token}`;
+                }
+                console.log('✅ Session refreshed, retrying request...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                continue; // Retry the request with new token
+              }
+            } catch (refreshError) {
+              console.error('❌ Failed to refresh session:', refreshError);
+              // Force user to re-login
+              window.location.href = '/auth/signin?expired=true';
+              throw new Error('Session expired. Please sign in again.');
+            }
+          }
+        }
+
         const errorText = await response.text().catch(() => response.statusText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
