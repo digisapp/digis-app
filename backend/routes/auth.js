@@ -1757,7 +1757,7 @@ router.post('/sync-metadata', authenticateToken, async (req, res) => {
       SELECT id, email, username, bio, profile_pic_url,
              is_creator, role, creator_type
       FROM users
-      WHERE id = $1::uuid
+      WHERE supabase_id = $1::uuid
       LIMIT 1
     `;
 
