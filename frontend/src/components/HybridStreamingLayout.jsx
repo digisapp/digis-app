@@ -36,7 +36,7 @@ import VideoCall from './VideoCall';
 import StreamingLayout from './StreamingLayout';
 import LiveChatSupabase from './LiveChatSupabase';
 import PrivateShowAnnouncement from './PrivateShowAnnouncement';
-import socketService from '../utils/socket';
+import socketService from '../services/socketServiceWrapper';
 
 const HybridStreamingLayout = ({
   user,
