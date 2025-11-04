@@ -1068,7 +1068,24 @@ const VideoCall = forwardRef(({
         heartbeatInterval.current = null;
       }
 
-      // Clean up local tracks
+      // Clean up local tracks - unpublish first, then stop and close
+      try {
+        const tracksToUnpublish = [];
+        if (localTracks.audioTrack) tracksToUnpublish.push(localTracks.audioTrack);
+        if (localTracks.videoTrack) tracksToUnpublish.push(localTracks.videoTrack);
+        if (localTracks.screenTrack) tracksToUnpublish.push(localTracks.screenTrack);
+
+        // Unpublish all tracks at once if client exists
+        if (client.current && tracksToUnpublish.length > 0 && isJoined) {
+          console.log('📡 Unpublishing local tracks...');
+          await client.current.unpublish(tracksToUnpublish);
+          console.log('✅ Local tracks unpublished');
+        }
+      } catch (unpublishError) {
+        console.warn('Failed to unpublish tracks (non-fatal):', unpublishError);
+      }
+
+      // Stop and close tracks
       if (localTracks.audioTrack) {
         localTracks.audioTrack.stop();
         localTracks.audioTrack.close();
@@ -1309,6 +1326,66 @@ const VideoCall = forwardRef(({
         client.current = getClient();
 
         console.log(`✅ Joined with UID: ${joinResult.uid}`);
+
+        // If host/streaming, create and publish tracks
+        if (isHost || isStreaming) {
+          console.log('🎤🎥 Creating and publishing tracks for host...');
+
+          try {
+            // Import AgoraRTC dynamically to access createMicrophoneAndCameraTracks
+            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+
+            // Determine which tracks to create
+            const tracks = [];
+            let micTrack = null;
+            let camTrack = null;
+
+            // Always create microphone track for host
+            console.log('🎤 Creating microphone track...');
+            micTrack = await AgoraRTC.createMicrophoneAudioTrack({
+              encoderConfig: 'music_standard'
+            });
+            tracks.push(micTrack);
+
+            // Create camera track unless voice-only
+            if (!isVoiceOnly) {
+              console.log('🎥 Creating camera track...');
+              camTrack = await AgoraRTC.createCameraVideoTrack({
+                encoderConfig: {
+                  width: 1280,
+                  height: 720,
+                  frameRate: 30,
+                  bitrateMin: 1000,
+                  bitrateMax: 3000
+                }
+              });
+              tracks.push(camTrack);
+            }
+
+            // Publish tracks to channel
+            if (tracks.length > 0) {
+              console.log('📡 Publishing tracks to channel...');
+              await client.current.publish(tracks);
+              console.log('✅ Tracks published successfully');
+
+              // Store tracks in state
+              setLocalTracks({
+                audioTrack: micTrack,
+                videoTrack: camTrack,
+                screenTrack: null
+              });
+
+              // Notify parent component if callback provided
+              if (onLocalTracksCreated) {
+                onLocalTracksCreated({ audioTrack: micTrack, videoTrack: camTrack });
+              }
+            }
+          } catch (trackError) {
+            console.error('❌ Failed to create/publish tracks:', trackError);
+            toast.error('Failed to start camera/microphone');
+            // Don't fail the entire call - continue without publishing
+          }
+        }
 
         // Setup event handlers after join
         setupEventHandlers();
