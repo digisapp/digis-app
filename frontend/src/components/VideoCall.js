@@ -949,8 +949,8 @@ const VideoCall = forwardRef(({
   const cleanup = useCallback(async () => {
     console.log('🧹 VideoCall cleanup starting...');
 
-    // Reset initialization flag to allow re-initialization
-    callInitialized.current = false;
+    // Don't reset initialization flag here - let it be reset only on unmount
+    // or explicit retry. This prevents infinite loops during error recovery.
 
     // Mark as intentional leave to skip guard prompts
     intentionalLeaveRef.current = true;
@@ -1217,7 +1217,15 @@ const VideoCall = forwardRef(({
     initializeCall();
 
     return cleanup;
-  }, [channel, token, uid, isHost, isStreaming, isVoiceOnly, setupEventHandlers, joinChannel, cleanup]);
+  }, [channel, token, uid, isHost, isStreaming, isVoiceOnly]);
+
+  // Reset initialization flag on unmount only
+  useEffect(() => {
+    return () => {
+      console.log('🔓 Unlocking initialization on unmount');
+      callInitialized.current = false;
+    };
+  }, []);
 
   // Update token when it changes
   useEffect(() => {
