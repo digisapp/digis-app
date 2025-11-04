@@ -487,7 +487,7 @@ const VideoCall = forwardRef(({
 
   // Create and publish tracks
   const createAndPublishTracks = useCallback(async () => {
-    if (!agoraRTC) {
+    if (!sdkInitialized.current) {
       throw new Error('Agora RTC SDK not loaded');
     }
 
@@ -603,7 +603,7 @@ const VideoCall = forwardRef(({
       console.error('Error creating/publishing tracks:', error);
       toast.error('Failed to setup media tracks');
     }
-  }, [agoraRTC, isAudioEnabled, isVideoEnabled, isVoiceOnly, isHost, isStreaming, getVideoEncoderConfig, onLocalTracksCreated]);
+  }, [isAudioEnabled, isVideoEnabled, isVoiceOnly, isHost, isStreaming, getVideoEncoderConfig, onLocalTracksCreated]);
 
   // Initialize quality controller
   const initializeQualityController = useCallback(() => {

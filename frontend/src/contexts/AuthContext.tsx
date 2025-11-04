@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sync user metadata from backend database to Supabase Auth
   const syncMetadata = async (accessToken: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/sync-metadata`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/sync-metadata`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
