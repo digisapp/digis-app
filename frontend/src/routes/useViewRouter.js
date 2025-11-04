@@ -31,6 +31,9 @@ export default function useViewRouter() {
 
   // 1) When store view changes, push URL (only if not already at that path)
   useEffect(() => {
+    // Skip routing logic on auth/public pages
+    if (location.pathname === '/auth' || location.pathname === '/') return;
+
     if (!currentView) return;
 
     // Don't navigate until role resolution is done to avoid battling "/" logic
@@ -101,6 +104,9 @@ export default function useViewRouter() {
 
   // 2) When URL changes (user clicks links / back/forward), update store view
   useEffect(() => {
+    // Skip routing logic on auth/public pages
+    if (location.pathname === '/auth' || location.pathname === '/') return;
+
     const path = location.pathname;
     const view = pathToViewSafe(path); // Use safe lookup with prefix fallback
 
@@ -115,6 +121,8 @@ export default function useViewRouter() {
   useEffect(() => {
     const onVisibilityChange = () => {
       if (document.visibilityState !== 'visible') return;
+      // Skip routing logic on auth/public pages
+      if (location.pathname === '/auth' || location.pathname === '/') return;
       if (!roleResolved || !currentView) return;
 
       const expectedPath = VIEW_TO_PATH[currentView];

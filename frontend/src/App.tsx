@@ -13,6 +13,10 @@ function AppInner() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Enable legacy view router adapter for backward compatibility
+  // Safe to call on all pages - it skips auth/public pages internally
+  useViewRouter();
+
   // Don't show navigation on public homepage or auth page
   const isAuthPage = location.pathname === '/auth' || location.pathname === '/';
 
