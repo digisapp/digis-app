@@ -53,6 +53,15 @@ export default function useViewRouter() {
     const isAtExpectedPath = location.pathname === expectedPath ||
       (location.pathname.startsWith(expectedPath + '/') && expectedPath !== '/');
 
+    // CRITICAL: Check if current URL is a valid route (even if view doesn't match yet)
+    // This prevents redirecting away from valid routes during navigation
+    const currentUrlView = pathToViewSafe(location.pathname);
+    if (currentUrlView && currentUrlView !== currentView) {
+      // URL is a valid route but view hasn't updated yet - let the second useEffect handle it
+      console.log('📍 [useViewRouter] URL is valid route, waiting for view sync:', location.pathname, '→', currentUrlView);
+      return;
+    }
+
     // DISABLED: Don't auto-redirect from root - let users see the homepage
     // Users can navigate to their dashboard/explore via navigation links
     // if (isAtRoot && roleResolved && expectedPath !== '/') {
