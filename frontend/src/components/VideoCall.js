@@ -1160,6 +1160,10 @@ const VideoCall = forwardRef(({
       return;
     }
 
+    // Mark as initializing IMMEDIATELY to block duplicate calls
+    callInitialized.current = true;
+    console.log('🔒 Locking initialization...');
+
     // Clear errors when params change
     errorsShownRef.current.clear();
 
@@ -1182,6 +1186,8 @@ const VideoCall = forwardRef(({
               errorsShownRef.current.add(errorKey);
               toast.error('Failed to load video SDK');
             }
+            // Reset flag on error so user can retry
+            callInitialized.current = false;
             return;
           } finally {
             setSdkLoading(false);
@@ -1197,14 +1203,14 @@ const VideoCall = forwardRef(({
         setupEventHandlers();
         await joinChannel(numericUid);
 
-        // Mark as initialized after successful setup
-        callInitialized.current = true;
         console.log('✅ VideoCall initialized successfully');
       } catch (error) {
         console.error('VideoCall initialization error:', error);
         setConnectionState('FAILED');
         setSdkLoadError(error.message);
         toast.error('Failed to initialize video call');
+        // Reset flag on error so user can retry
+        callInitialized.current = false;
       }
     };
 
