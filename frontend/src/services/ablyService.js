@@ -263,7 +263,9 @@ class AblyService {
   async joinStream(streamId) {
     try {
       if (!this.isConnected) {
-        throw new Error('Not connected to Ably');
+        console.warn('⚠️ Ably not connected - streaming will continue without real-time features');
+        // Return mock response instead of throwing - allow streaming to continue
+        return { streamId, viewerCount: 0, timestamp: Date.now(), offline: true };
       }
 
       const channelName = `stream:${streamId}`;
