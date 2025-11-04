@@ -1031,7 +1031,14 @@ const VideoCall = forwardRef(({
 
   // Define cleanup function
   const cleanup = useCallback(async () => {
-    console.log('🧹 VideoCall cleanup starting...');
+    console.log('🧹 VideoCall cleanup starting...', {
+      sessionWasEstablished: sessionEstablished.current,
+      isJoined,
+      channel,
+      uid,
+      willCallOnSessionEnd: sessionEstablished.current && !!onSessionEnd,
+      callStack: new Error().stack?.split('\n').slice(2, 6).join('\n') // Show where cleanup was called from
+    });
 
     // Don't reset initialization flag here - let it be reset only on unmount
     // or explicit retry. This prevents infinite loops during error recovery.
@@ -1202,8 +1209,16 @@ const VideoCall = forwardRef(({
   
   // Initialize video call
   useEffect(() => {
-    console.log('VideoCall initializing:', { channel, token, uid, isHost, isStreaming, isVoiceOnly });
-    
+    console.log('🎯 VideoCall useEffect triggered:', {
+      channel,
+      hasToken: !!token,
+      uid,
+      isHost,
+      isStreaming,
+      isVoiceOnly,
+      reason: 'One of the dependencies changed'
+    });
+
     // Validate required parameters
     if (!channel || !token || !uid) {
       console.warn('VideoCall: Missing required params');
