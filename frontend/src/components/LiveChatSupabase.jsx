@@ -52,6 +52,12 @@ const LiveChatSupabase = ({
 
   // Fetch chat history
   const fetchHistory = useCallback(async () => {
+    // Validate channel before making request
+    if (!channel || channel === 'undefined') {
+      console.debug('ℹ️ LiveChatSupabase: No valid channel, skipping history fetch');
+      return;
+    }
+
     try {
       const authToken = await getAuthToken();
       authTokenRef.current = authToken;

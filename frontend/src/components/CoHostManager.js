@@ -15,13 +15,19 @@ const CoHostManager = ({ streamId, isCreator, user, onCoHostsUpdate, onRequestsU
 
   // Debounced fetch current co-hosts
   const fetchCoHosts = useCallback(async () => {
+    // Validate streamId before making request
+    if (!streamId || streamId === 'undefined') {
+      console.debug('ℹ️ CoHostManager: No valid streamId, skipping co-host fetch');
+      return;
+    }
+
     // Rate limiting - don't fetch more than once every 5 seconds
     const now = Date.now();
     if (now - lastFetchRef.current < 5000) {
       return;
     }
     lastFetchRef.current = now;
-    
+
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
@@ -51,14 +57,20 @@ const CoHostManager = ({ streamId, isCreator, user, onCoHostsUpdate, onRequestsU
   // Debounced fetch pending requests (for creators)
   const fetchRequests = useCallback(async () => {
     if (!isCreator) return;
-    
+
+    // Validate streamId before making request
+    if (!streamId || streamId === 'undefined') {
+      console.debug('ℹ️ CoHostManager: No valid streamId, skipping requests fetch');
+      return;
+    }
+
     // Rate limiting - don't fetch more than once every 5 seconds
     const now = Date.now();
     if (now - lastFetchRef.current < 5000) {
       return;
     }
     lastFetchRef.current = now;
-    
+
     try {
       const authToken = await getAuthToken();
       const response = await fetchWithRetry(
