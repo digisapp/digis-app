@@ -1,17 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, optionalAuth } = require('../middleware/auth');
 const { pool } = require('../utils/db');
 
 // Check TV subscription status (including 60-day free trial)
-router.get('/status', authenticateToken, async (req, res) => {
+// Uses optional auth - returns basic info for non-authenticated requests
+router.get('/status', optionalAuth, async (req, res) => {
   try {
-    const userId = req.user.supabase_id || req.user.id || req.user.uid;
-    
+    const userId = req.user?.supabase_id || req.user?.id || req.user?.uid;
+
+    // If no user authenticated, return minimal response
     if (!userId) {
-      return res.status(400).json({
-        error: 'User ID not found',
-        timestamp: new Date().toISOString()
+      return res.json({
+        authenticated: false,
+        hasAccess: false,
+        isTrial: false,
+        subscription: null,
+        isTrialAvailable: false
       });
     }
 
