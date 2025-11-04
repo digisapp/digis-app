@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import StreamingLayout from '../StreamingLayout';
+import HybridStreamingLayout from '../HybridStreamingLayout';
 import { apiGet } from '../../lib/api';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -117,18 +117,20 @@ const StreamPage = ({ user }) => {
   }
 
   return (
-    <StreamingLayout
+    <HybridStreamingLayout
       user={user}
       channel={streamData.channel}
       token={streamData.token}
       chatToken={streamData.chatToken}
       uid={streamData.uid}
       isHost={streamData.isHost}
-      streamTitle={streamData.streamTitle}
-      streamCategory={streamData.streamCategory}
-      streamDescription={streamData.streamDescription}
-      onStreamEnd={handleStreamEnd}
-      onLeave={handleLeaveStream}
+      isStreaming={true}
+      streamConfig={{
+        title: streamData.streamTitle,
+        category: streamData.streamCategory,
+        description: streamData.streamDescription
+      }}
+      onSessionEnd={handleStreamEnd}
     />
   );
 };
