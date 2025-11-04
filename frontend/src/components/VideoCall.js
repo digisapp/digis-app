@@ -105,6 +105,7 @@ const VideoCall = forwardRef(({
   const [sdkLoading, setSdkLoading] = useState(false);
   const [sdkLoadError, setSdkLoadError] = useState(null);
   const sdkInitialized = useRef(false);
+  const callInitialized = useRef(false); // Prevent duplicate initialization
 
   const callStartTime = useRef(null);
   const durationInterval = useRef(null);
@@ -948,6 +949,9 @@ const VideoCall = forwardRef(({
   const cleanup = useCallback(async () => {
     console.log('🧹 VideoCall cleanup starting...');
 
+    // Reset initialization flag to allow re-initialization
+    callInitialized.current = false;
+
     // Mark as intentional leave to skip guard prompts
     intentionalLeaveRef.current = true;
 
@@ -1150,6 +1154,12 @@ const VideoCall = forwardRef(({
       return;
     }
     
+    // Prevent duplicate initialization - exit if already initialized
+    if (callInitialized.current) {
+      console.log('⚠️ Call already initialized, skipping...');
+      return;
+    }
+
     // Clear errors when params change
     errorsShownRef.current.clear();
 
@@ -1186,6 +1196,10 @@ const VideoCall = forwardRef(({
         console.log('VideoCall client created with mode:', isStreaming ? 'live' : 'rtc');
         setupEventHandlers();
         await joinChannel(numericUid);
+
+        // Mark as initialized after successful setup
+        callInitialized.current = true;
+        console.log('✅ VideoCall initialized successfully');
       } catch (error) {
         console.error('VideoCall initialization error:', error);
         setConnectionState('FAILED');
