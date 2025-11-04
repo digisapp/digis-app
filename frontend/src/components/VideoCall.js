@@ -1009,7 +1009,7 @@ const VideoCall = forwardRef(({
           callInitialized.current = false;
           releaseGlobalLock(channel, uid);
           console.log('🔄 Ready for retry after UID_CONFLICT');
-          toast.info('Please try reconnecting');
+          toast.success('Ready to reconnect', { duration: 2000 });
         }, 2000);
       } else {
         toast.error(`Failed to join session: ${error.message}`);
@@ -1286,12 +1286,17 @@ const VideoCall = forwardRef(({
           }
         }
 
-        client.current = agoraLoader.createClient({
-          mode: isStreaming ? 'live' : 'rtc',
-          codec: 'vp8'
-        });
+        // Reuse existing client or create new one
+        if (!client.current) {
+          client.current = agoraLoader.createClient({
+            mode: isStreaming ? 'live' : 'rtc',
+            codec: 'vp8'
+          });
+          console.log('✅ VideoCall client created with mode:', isStreaming ? 'live' : 'rtc');
+        } else {
+          console.log('ℹ️ Reusing existing Agora client');
+        }
 
-        console.log('VideoCall client created with mode:', isStreaming ? 'live' : 'rtc');
         setupEventHandlers();
         await joinChannel(numericUid);
 
