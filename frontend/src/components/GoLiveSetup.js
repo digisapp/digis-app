@@ -467,15 +467,25 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
   const handleGoLive = async () => {
     console.log('🎬 [GoLiveSetup] Start Stream button clicked!');
 
+    // CRITICAL: Set loading IMMEDIATELY to prevent double-clicks
+    // This must happen BEFORE any validation to disable the button instantly
+    if (loading) {
+      console.log('⚠️ [GoLiveSetup] Already processing, ignoring duplicate click');
+      return;
+    }
+    setLoading(true);
+
     // Validate stream information
     if (!streamTitle.trim()) {
       console.log('❌ [GoLiveSetup] Missing title');
       toast.error('Please enter a stream title');
+      setLoading(false);
       return;
     }
 
     if (!streamCategory) {
       toast.error('Please select a category');
+      setLoading(false);
       return;
     }
 
@@ -487,6 +497,7 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
       } catch (error) {
         console.error('Failed to create Agora tracks:', error);
         toast.error('Failed to initialize streaming. Please try again.');
+        setLoading(false);
         return;
       }
     }
@@ -494,26 +505,28 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
     // Validate that we have both video and audio tracks
     if (!localTracks.video && !window.currentStream?.getVideoTracks()?.length) {
       toast.error('Camera is required to go live. Please enable your camera.');
+      setLoading(false);
       return;
     }
 
     if (!localTracks.audio && !window.currentStream?.getAudioTracks()?.length) {
       toast.error('Microphone is required to go live. Please enable your microphone.');
+      setLoading(false);
       return;
     }
 
     // Validate that tracks are enabled
     if (!isVideoEnabled) {
       toast.error('Please enable your camera before going live');
+      setLoading(false);
       return;
     }
 
     if (!isAudioEnabled) {
       toast.error('Please enable your microphone before going live');
+      setLoading(false);
       return;
     }
-
-    setLoading(true);
 
     try {
       // Pass the local tracks and stream info to parent
