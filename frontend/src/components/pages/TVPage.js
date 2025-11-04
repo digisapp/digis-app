@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../utils/supabase-auth';
+import { apiGet } from '../../lib/api';
 import Button from '../ui/Button';
 import {
   PlayIcon,
@@ -226,16 +227,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tv-subscription/status`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await apiGet('/api/v1/tv-subscription/status');
         console.log('Subscription data:', data);
         setHasAccess(data.hasAccess);
         setSubscription(data.subscription);
@@ -266,12 +258,9 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
         if (!data.hasAccess && !data.isTrial) {
           setShowSubscriptionModal(true);
         }
-      } else {
-        console.error('Failed to check subscription status:', response.status);
-        setHasAccess(false);
-      }
     } catch (error) {
-      console.error('Error checking subscription:', error);
+      console.error('Error checking subscription (non-fatal):', error);
+      // Don't block TV page if subscription check fails
       setHasAccess(false);
     } finally {
       console.log('Setting checkingSubscription to false');

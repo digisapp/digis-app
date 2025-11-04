@@ -54,9 +54,11 @@ const StreamPage = ({ user }) => {
       }
 
       // Otherwise, fetch stream data from API (viewer joining existing stream)
+      console.log('📡 StreamPage: Fetching stream data from API for streamId:', streamId);
       const data = await apiGet(`/streaming/stream/${streamId}`);
 
       if (data.stream) {
+        console.log('✅ StreamPage: Received stream data from API:', data);
         setStreamData({
           channel: data.stream.channel_name,
           token: data.agoraToken,
@@ -68,12 +70,13 @@ const StreamPage = ({ user }) => {
           isHost: data.stream.creator_id === user?.id,
         });
       } else {
+        console.warn('⚠️ StreamPage: No stream in API response');
         setError('Stream not found or is no longer live');
       }
     } catch (err) {
-      console.error('Error fetching stream data:', err);
-      setError('Failed to load stream. The stream may have ended.');
-      toast.error('Failed to load stream');
+      console.error('❌ StreamPage: Error fetching stream data:', err);
+      setError('Failed to load stream. Please try again.');
+      // Don't navigate away - let user retry
     } finally {
       setLoading(false);
     }
@@ -102,12 +105,23 @@ const StreamPage = ({ user }) => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Stream Unavailable</h1>
           <p className="text-gray-400 mb-6">{error}</p>
-          <button
-            onClick={() => navigate('/tv')}
-            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-          >
-            Back to Digis TV
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => {
+                setError(null);
+                fetchStreamData();
+              }}
+              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => navigate('/tv')}
+              className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            >
+              Back to Digis TV
+            </button>
+          </div>
         </div>
       </div>
     );
