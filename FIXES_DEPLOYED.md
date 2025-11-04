@@ -100,7 +100,58 @@ releaseGlobalLock(channel, uid);
 
 ---
 
-### 4. Hybrid Streaming Layout System (✅ DEPLOYED - Commit 6e3c6d8)
+### 4. Ably Connection Blocking Stream (✅ FIXED - Commit 114d8b8)
+
+**Problem:**
+- Stream page loading for split second then redirecting to Digis TV
+- "Not connected to Ably" error thrown in StreamingLayout.js:124
+- Error caused stream initialization to fail and trigger redirect
+
+**Evidence from logs:**
+```javascript
+ablyService.js:291 Failed to join stream: Error: Not connected to Ably
+    at Object.joinStream (ablyService.js:266:15)
+    at StreamingLayout.js:124:29
+```
+
+**Root Cause:**
+- `socketService.joinStream()` threw error when Ably wasn't connected
+- StreamingLayout caught the error and failed to initialize
+- Failed initialization triggered automatic redirect to TV page
+- Ably connection could fail for multiple reasons:
+  - Backend `/realtime/ably/token` endpoint down
+  - Network firewall blocking Ably
+  - Token authentication failing
+  - CDN cache preventing connection
+
+**Solution:**
+Changed `joinStream()` to gracefully degrade instead of throwing:
+```javascript
+// BEFORE:
+if (!this.isConnected) {
+  throw new Error('Not connected to Ably');
+}
+
+// AFTER:
+if (!this.isConnected) {
+  console.warn('⚠️ Ably not connected - streaming will continue without real-time features');
+  return { streamId, viewerCount: 0, timestamp: Date.now(), offline: true };
+}
+```
+
+**Files Changed:**
+- `frontend/src/services/ablyService.js`
+
+**Expected Behavior:**
+- Stream loads successfully regardless of Ably connection status
+- Console shows warning if Ably unavailable
+- Real-time features (viewer count, tips, chat) gracefully degrade
+- No redirect to TV page
+- Streaming functionality works normally
+
+---
+
+### 5. Hybrid Streaming Layout System (✅ DEPLOYED - Commit 6e3c6d8)
 
 **New Feature:**
 - Device-aware streaming layouts
