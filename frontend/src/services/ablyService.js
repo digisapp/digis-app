@@ -239,7 +239,18 @@ class AblyService {
    */
   getChannel(channelName) {
     if (!this.client) {
-      throw new Error('Ably client not initialized');
+      console.warn('⚠️ Ably client not initialized - returning mock channel');
+      // Return mock channel that does nothing (graceful degradation)
+      return {
+        subscribe: () => {},
+        unsubscribe: () => {},
+        publish: () => Promise.resolve(),
+        presence: {
+          enter: () => Promise.resolve(),
+          leave: () => Promise.resolve(),
+          get: () => Promise.resolve([])
+        }
+      };
     }
 
     if (this.channels.has(channelName)) {
