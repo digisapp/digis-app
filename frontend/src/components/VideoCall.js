@@ -939,6 +939,18 @@ const VideoCall = forwardRef(({
         console.log(`Set client role: ${shouldBeHost ? 'host' : 'audience'}`);
       }
 
+      // EMERGENCY FIX: Force leave any stale connection first
+      if (client.current.connectionState !== 'DISCONNECTED') {
+        console.log('⚠️ Force leaving stale connection to prevent UID_CONFLICT...');
+        try {
+          await client.current.leave();
+          await new Promise(resolve => setTimeout(resolve, 500));
+          console.log('✅ Stale connection cleared');
+        } catch (leaveErr) {
+          console.warn('Leave error (non-fatal):', leaveErr);
+        }
+      }
+
       const assignedUid = await client.current.join(
         import.meta.env.VITE_AGORA_APP_ID,
         channel,
