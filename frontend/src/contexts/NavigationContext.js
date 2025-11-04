@@ -46,6 +46,8 @@ export const NavigationProvider = ({
     '/followers': 'followers',
     '/subscribers': 'subscribers',
     '/tv': 'tv',
+    '/go-live': 'go-live',
+    '/stream': 'stream',
     '/classes': 'classes',
     '/shop': 'shop',
     '/collections': 'collections',
