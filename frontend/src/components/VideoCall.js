@@ -988,7 +988,32 @@ const VideoCall = forwardRef(({
       console.error('Join error:', error);
       setIsJoined(false);
       setConnectionState('FAILED');
-      toast.error(`Failed to join session: ${error.message}`);
+
+      // Handle UID_CONFLICT specifically - the channel might have a stale connection
+      if (error.code === 'UID_CONFLICT' || error.message?.includes('UID_CONFLICT')) {
+        console.error('⚠️ UID_CONFLICT detected - attempting recovery...');
+        toast.error('Connection conflict detected. Retrying...', { duration: 3000 });
+
+        // Try to leave any existing connection
+        if (client.current) {
+          try {
+            await client.current.leave();
+            console.log('Left stale connection');
+          } catch (leaveError) {
+            console.warn('Error leaving during UID_CONFLICT recovery:', leaveError);
+          }
+        }
+
+        // Wait a bit and reset initialization flag to allow retry
+        setTimeout(() => {
+          callInitialized.current = false;
+          releaseGlobalLock(channel, uid);
+          console.log('🔄 Ready for retry after UID_CONFLICT');
+          toast.info('Please try reconnecting');
+        }, 2000);
+      } else {
+        toast.error(`Failed to join session: ${error.message}`);
+      }
     }
   }, [channel, token, isStreaming, isHost, refreshToken, fetchTokenBalance, startCostCalculation, createAndPublishTracks, initializeQualityController, initializeConnectionResilience]);
 
@@ -1532,29 +1557,42 @@ const VideoCall = forwardRef(({
         console.warn('Failed to send pagehide beacon:', err);
       }
 
-      // Synchronous cleanup (pagehide doesn't wait for async)
-      try {
-        // Stop local tracks immediately
-        if (localTracks.audioTrack) {
-          localTracks.audioTrack.stop();
-          localTracks.audioTrack.close();
-        }
-        if (localTracks.videoTrack) {
-          localTracks.videoTrack.stop();
-          localTracks.videoTrack.close();
-        }
-        if (localTracks.screenTrack) {
-          localTracks.screenTrack.stop();
-          localTracks.screenTrack.close();
-        }
+      // Async cleanup (modern browsers support this)
+      (async () => {
+        try {
+          console.log('🔄 pagehide: Starting Agora cleanup...');
 
-        // Leave Agora channel (synchronous)
-        if (client.current) {
-          client.current.leave();
+          // Stop local tracks immediately
+          if (localTracks.audioTrack) {
+            localTracks.audioTrack.stop();
+            localTracks.audioTrack.close();
+          }
+          if (localTracks.videoTrack) {
+            localTracks.videoTrack.stop();
+            localTracks.videoTrack.close();
+          }
+          if (localTracks.screenTrack) {
+            localTracks.screenTrack.stop();
+            localTracks.screenTrack.close();
+          }
+
+          // Leave Agora channel with timeout to prevent blocking
+          if (client.current && isJoined) {
+            const leavePromise = client.current.leave();
+            await Promise.race([
+              leavePromise,
+              new Promise((resolve) => setTimeout(resolve, 1000))
+            ]);
+            console.log('✅ pagehide: Left Agora channel');
+          }
+
+          // Release global lock
+          releaseGlobalLock(channel, uid);
+        } catch (err) {
+          console.warn('Failed pagehide cleanup:', err);
         }
-      } catch (err) {
-        console.warn('Failed pagehide cleanup:', err);
-      }
+      })();
+
     };
 
     const handlePageShow = (e) => {

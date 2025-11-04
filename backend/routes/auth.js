@@ -1746,10 +1746,21 @@ router.get('/debug-db-info', async (req, res) => {
 // Sync user metadata from database to Supabase Auth
 router.post('/sync-metadata', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.supabase_id;
+    const userId = req.user?.supabase_id || req.user?.id;
+
+    console.log('📥 sync-metadata request:', {
+      userId,
+      hasUser: !!req.user,
+      userKeys: req.user ? Object.keys(req.user) : []
+    });
 
     if (!userId) {
-      return res.status(400).json({ error: 'User ID not found' });
+      console.error('❌ sync-metadata: User ID not found in request');
+      return res.status(400).json({
+        success: false,
+        error: 'User ID not found',
+        message: 'Authentication token does not contain user ID'
+      });
     }
 
     // Get user from database
@@ -1761,13 +1772,24 @@ router.post('/sync-metadata', authenticateToken, async (req, res) => {
       LIMIT 1
     `;
 
+    console.log('🔍 Querying user with supabase_id:', userId);
     const result = await db(req).query(query, [userId]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found in database' });
+      console.error('❌ User not found in database:', userId);
+      return res.status(404).json({
+        success: false,
+        error: 'User not found in database',
+        userId
+      });
     }
 
     const user = result.rows[0];
+    console.log('✅ Found user:', {
+      username: user.username,
+      is_creator: user.is_creator,
+      role: user.role
+    });
 
     // Determine creator and admin status from database
     const isCreator = user.is_creator === true ||
@@ -1777,19 +1799,28 @@ router.post('/sync-metadata', authenticateToken, async (req, res) => {
     const isAdmin = user.role === 'admin';
 
     // Update Supabase Auth user metadata
-    const admin = supabaseAdmin();
-    await admin.auth.admin.updateUserById(userId, {
-      user_metadata: {
-        isCreator,
-        isAdmin,
-        role: user.role || 'fan',
-        username: user.username,
-        bio: user.bio,
-        profile_pic_url: user.profile_pic_url
+    try {
+      const admin = supabaseAdmin();
+      if (!admin) {
+        throw new Error('Supabase admin client not initialized');
       }
-    });
 
-    console.log(`✅ Synced metadata for user ${userId}: isCreator=${isCreator}, isAdmin=${isAdmin}`);
+      await admin.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          isCreator,
+          isAdmin,
+          role: user.role || 'fan',
+          username: user.username,
+          bio: user.bio,
+          profile_pic_url: user.profile_pic_url
+        }
+      });
+
+      console.log(`✅ Synced metadata for user ${userId}: isCreator=${isCreator}, isAdmin=${isAdmin}`);
+    } catch (supabaseError) {
+      console.error('❌ Supabase metadata update failed:', supabaseError);
+      // Non-fatal: continue anyway
+    }
 
     return res.json({
       success: true,
@@ -1802,10 +1833,16 @@ router.post('/sync-metadata', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error syncing user metadata:', error);
+    console.error('❌ Error syncing user metadata:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
     return res.status(500).json({
+      success: false,
       error: 'Failed to sync user metadata',
-      message: error.message
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

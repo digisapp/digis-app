@@ -14,6 +14,23 @@ router.get('/history/:streamId', authenticateToken, async (req, res) => {
     const { streamId } = req.params;
     const { limit = 50, before } = req.query;
 
+    console.log('📥 Stream chat history request:', {
+      streamId,
+      limit,
+      before,
+      userId: req.user?.supabase_id || req.user?.id
+    });
+
+    // Check if Supabase client is initialized
+    if (!supabase) {
+      console.error('❌ Supabase client not initialized');
+      return res.status(500).json({
+        success: false,
+        error: 'Server configuration error',
+        message: 'Database client not available'
+      });
+    }
+
     let query = supabase
       .from('stream_chat_messages')
       .select(`
@@ -31,15 +48,35 @@ router.get('/history/:streamId', authenticateToken, async (req, res) => {
 
     const { data: messages, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Supabase query error:', {
+        error,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      throw error;
+    }
+
+    console.log(`✅ Fetched ${messages?.length || 0} messages for stream ${streamId}`);
 
     res.json({
       success: true,
       messages: messages.reverse() // Return oldest first (chronological)
     });
   } catch (error) {
-    console.error('❌ Error fetching stream chat:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch messages' });
+    console.error('❌ Error fetching stream chat:', {
+      message: error.message,
+      stack: error.stack,
+      streamId: req.params.streamId
+    });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch messages',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
