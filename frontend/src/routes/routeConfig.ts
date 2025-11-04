@@ -35,6 +35,8 @@ export const VIEW_TO_PATH: Record<string, string> = {
   'shop': '/shop',
   'collections': '/collections',
   'streaming': '/streaming',
+  'go-live': '/go-live',
+  'stream': '/stream',
 
   // Social
   'following': '/following',

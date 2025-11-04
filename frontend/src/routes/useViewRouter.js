@@ -49,7 +49,9 @@ export default function useViewRouter() {
     }
 
     const isAtRoot = location.pathname === '/';
-    const isAtExpectedPath = location.pathname === expectedPath;
+    // Check for exact match or prefix match (for dynamic routes like /stream/:id)
+    const isAtExpectedPath = location.pathname === expectedPath ||
+      (location.pathname.startsWith(expectedPath + '/') && expectedPath !== '/');
 
     // DISABLED: Don't auto-redirect from root - let users see the homepage
     // Users can navigate to their dashboard/explore via navigation links
@@ -107,7 +109,11 @@ export default function useViewRouter() {
       if (!roleResolved || !currentView) return;
 
       const expectedPath = VIEW_TO_PATH[currentView];
-      if (expectedPath && location.pathname !== expectedPath) {
+      // Check for exact match or prefix match (for dynamic routes)
+      const isAtExpectedPath = location.pathname === expectedPath ||
+        (location.pathname.startsWith(expectedPath + '/') && expectedPath !== '/');
+
+      if (expectedPath && !isAtExpectedPath) {
         console.log('📍 Tab woke up - syncing URL to:', currentView, '→', expectedPath);
         const url = new URL(window.location.href);
         navigate(`${expectedPath}${url.search}${url.hash}`, { replace: true });

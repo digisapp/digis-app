@@ -21,6 +21,8 @@ export const VIEW_TO_PATH = {
   // Media & streaming
   tv: '/tv',
   streaming: '/streaming',
+  'go-live': '/go-live',
+  stream: '/stream',
   videoCall: '/call/video',
   voiceCall: '/call/voice',
 
