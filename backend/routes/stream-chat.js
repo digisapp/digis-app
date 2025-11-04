@@ -14,6 +14,12 @@ router.get('/history/:streamId', authenticateToken, async (req, res) => {
     const { streamId } = req.params;
     const { limit = 50, before } = req.query;
 
+    // ✅ Auth early-return - don't proceed without bearer
+    if (!req.headers.authorization?.startsWith('Bearer ')) {
+      console.warn('⚠️ Stream chat history: Missing auth header');
+      return res.status(401).json({ success: false, error: 'MISSING_AUTH' });
+    }
+
     console.log('📥 Stream chat history request:', {
       streamId,
       limit,
@@ -49,14 +55,23 @@ router.get('/history/:streamId', authenticateToken, async (req, res) => {
     const { data: messages, error } = await query;
 
     if (error) {
-      console.error('❌ Supabase query error:', {
-        error,
+      // ✅ Structured Supabase error logging
+      console.error('❌ Supabase query error (stream_chat_messages):', {
+        streamId,
         code: error.code,
         message: error.message,
         details: error.details,
+        hint: error.hint,
+        stack: error.stack
+      });
+      // Return structured error response
+      return res.status(500).json({
+        success: false,
+        error: 'DB_ERROR',
+        message: error.message,
+        code: error.code,
         hint: error.hint
       });
-      throw error;
     }
 
     console.log(`✅ Fetched ${messages?.length || 0} messages for stream ${streamId}`);

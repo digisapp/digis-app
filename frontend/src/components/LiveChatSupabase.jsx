@@ -50,8 +50,8 @@ const LiveChatSupabase = ({
   const channelRef = useRef(null);
   const authTokenRef = useRef(null);
 
-  // Fetch chat history
-  const fetchHistory = useCallback(async () => {
+  // Fetch chat history with abort support
+  const fetchHistory = useCallback(async (signal) => {
     // Validate channel before making request
     if (!channel || channel === 'undefined') {
       console.debug('ℹ️ LiveChatSupabase: No valid channel, skipping history fetch');
@@ -68,7 +68,8 @@ const LiveChatSupabase = ({
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
-          }
+          },
+          signal // Add abort signal
         }
       );
 
@@ -79,7 +80,13 @@ const LiveChatSupabase = ({
         }
       }
     } catch (error) {
+      // Ignore aborted requests (happens on unmount/route change)
+      if (signal?.aborted) {
+        console.debug('ℹ️ LiveChatSupabase: Fetch aborted (component unmounted)');
+        return;
+      }
       console.error('Error fetching chat history:', error);
+      // Don't toast on abort, only real errors
     }
   }, [channel]);
 
@@ -87,10 +94,12 @@ const LiveChatSupabase = ({
   useEffect(() => {
     if (!channel || !user) return;
 
+    const abortController = new AbortController();
+
     const initChat = async () => {
       try {
-        // Fetch initial history
-        await fetchHistory();
+        // Fetch initial history with abort signal
+        await fetchHistory(abortController.signal);
 
         // Subscribe to new messages
         const streamChannel = supabase
@@ -158,6 +167,7 @@ const LiveChatSupabase = ({
     initChat();
 
     return () => {
+      abortController.abort(); // ✅ Cancel any in-flight fetch on unmount
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
