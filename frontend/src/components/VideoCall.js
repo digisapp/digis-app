@@ -151,6 +151,7 @@ const VideoCall = forwardRef(({
   const [sdkLoadError, setSdkLoadError] = useState(null);
   const sdkInitialized = useRef(false);
   const callInitialized = useRef(false); // Prevent duplicate initialization
+  const sessionEstablished = useRef(false); // Track if session successfully joined
 
   const callStartTime = useRef(null);
   const durationInterval = useRef(null);
@@ -948,7 +949,8 @@ const VideoCall = forwardRef(({
       console.log('Successfully joined channel with UID:', assignedUid);
       setIsJoined(true);
       setConnectionState('CONNECTED');
-      
+      sessionEstablished.current = true; // Mark session as established
+
       callStartTime.current = Date.now();
       durationInterval.current = setInterval(() => {
         durationRef.current = Math.floor((Date.now() - callStartTime.current) / 1000);
@@ -1136,9 +1138,17 @@ const VideoCall = forwardRef(({
       // Release global lock
       releaseGlobalLock(channel, uid);
 
-      if (onSessionEnd) {
+      // Only call onSessionEnd if session was actually established
+      // This prevents redirect when initialization fails (UID_CONFLICT, etc)
+      if (sessionEstablished.current && onSessionEnd) {
+        console.log('📞 Session ended - calling onSessionEnd callback');
         onSessionEnd();
+      } else if (!sessionEstablished.current) {
+        console.log('ℹ️ Cleanup called but session never established - skipping onSessionEnd');
       }
+
+      // Reset session flag
+      sessionEstablished.current = false;
       
     } catch (error) {
       console.error('❌ VideoCall cleanup error:', error);
