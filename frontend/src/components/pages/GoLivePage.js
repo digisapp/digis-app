@@ -61,9 +61,12 @@ const GoLivePage = ({ user }) => {
 
         toast.success('Going live!');
 
+        const streamPath = `/stream/${response.stream.channel}`;
+        console.log('🚀 [GoLivePage] Navigating to stream page:', streamPath);
+
         // Navigate with only serializable data
         // StreamingLayout will create its own Agora client and tracks
-        navigate(`/stream/${response.stream.channel}`, {
+        navigate(streamPath, {
           state: {
             isHost: true,
             streamId: response.stream.id,

@@ -57,6 +57,17 @@ const HybridStreamingLayout = ({
   const [deviceType] = useState(() => isMobileDevice() ? 'mobile' : 'desktop');
   const [layoutMode] = useState(() => getOptimalLayout());
 
+  console.log('🎭 [HybridStreamingLayout] Rendered:', {
+    deviceType,
+    layoutMode,
+    channel,
+    hasToken: !!token,
+    uid,
+    isHost,
+    isStreaming,
+    willUseDesktop: deviceType === 'desktop' || layoutMode === 'classic'
+  });
+
   // Mobile-specific state
   const [showMenu, setShowMenu] = useState(false);
   const [activePanel, setActivePanel] = useState(null); // 'chat', 'analytics', 'settings'
@@ -99,6 +110,7 @@ const HybridStreamingLayout = ({
 
   // Desktop mode: Use classic StreamingLayout
   if (deviceType === 'desktop' || layoutMode === 'classic') {
+    console.log('🎭 [HybridStreamingLayout] Using desktop StreamingLayout');
     return (
       <StreamingLayout
         user={user}
@@ -120,6 +132,8 @@ const HybridStreamingLayout = ({
   }
 
   // Mobile mode: Use immersive layout
+  console.log('🎭 [HybridStreamingLayout] Using mobile immersive layout');
+
   // Duration counter
   useEffect(() => {
     if (!isStreaming) return;

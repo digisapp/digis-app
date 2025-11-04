@@ -13,20 +13,30 @@ const StreamPage = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  console.log('📺 [StreamPage] Component mounted/updated:', {
+    streamId,
+    hasLocationState: !!location.state,
+    isHost: location.state?.isHost,
+    hasAgora: !!location.state?.agora,
+    userId: user?.id
+  });
+
   // Check if user is the host (from state or if it's their stream)
   const isHost = location.state?.isHost || false;
 
   useEffect(() => {
+    console.log('📺 [StreamPage] useEffect - fetching stream data for:', streamId);
     fetchStreamData();
   }, [streamId]);
 
   const fetchStreamData = async () => {
+    console.log('📺 [StreamPage] fetchStreamData called');
     try {
       setLoading(true);
 
       // If coming from go-live setup, use the state data (token already provided)
       if (location.state && location.state.isHost && location.state.channelName) {
-        console.log('🎬 StreamPage: Loading from go-live state:', {
+        console.log('🎬 [StreamPage] Loading from go-live state:', {
           hasAgora: !!location.state.agora,
           hasToken: !!location.state.agoraToken,
           hasUid: !!location.state.agoraUid,
@@ -83,6 +93,7 @@ const StreamPage = ({ user }) => {
   };
 
   const handleStreamEnd = () => {
+    console.log('📺 [StreamPage] handleStreamEnd called - navigating to /tv');
     toast.success('Stream ended');
     navigate('/tv');
   };
@@ -91,7 +102,10 @@ const StreamPage = ({ user }) => {
     navigate('/tv');
   };
 
+  console.log('📺 [StreamPage] Render state:', { loading, error, hasStreamData: !!streamData });
+
   if (loading) {
+    console.log('📺 [StreamPage] Rendering loading spinner');
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <LoadingSpinner size="large" />
@@ -100,6 +114,7 @@ const StreamPage = ({ user }) => {
   }
 
   if (error) {
+    console.log('📺 [StreamPage] Rendering error state:', error);
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -128,6 +143,7 @@ const StreamPage = ({ user }) => {
   }
 
   if (!streamData) {
+    console.log('📺 [StreamPage] No stream data - rendering not found');
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -142,6 +158,13 @@ const StreamPage = ({ user }) => {
       </div>
     );
   }
+
+  console.log('📺 [StreamPage] Rendering HybridStreamingLayout with streamData:', {
+    channel: streamData.channel,
+    hasToken: !!streamData.token,
+    uid: streamData.uid,
+    isHost: streamData.isHost
+  });
 
   return (
     <HybridStreamingLayout
