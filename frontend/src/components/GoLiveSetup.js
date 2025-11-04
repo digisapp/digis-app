@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import agoraLoader from '../utils/AgoraLoader';
+import AgoraRTC from 'agora-rtc-sdk-ng';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import SimpleProductSelector from './streaming/SimpleProductSelector';
@@ -251,14 +251,13 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
         console.log('Native getUserMedia failed, falling back to Agora:', nativeError);
       }
       
-      // Load Agora SDK if native failed
+      // Use Agora SDK from npm package (already imported)
       if (!agoraRTC) {
         setSdkLoading(true);
-        console.log('📦 Loading Agora SDK...');
+        console.log('📦 Using Agora SDK from npm...');
         try {
-          const AgoraRTC = await agoraLoader.loadRTC();
           setAgoraRTC(AgoraRTC);
-          console.log('✅ Agora SDK loaded');
+          console.log('✅ Agora SDK ready');
           
           // Create Agora client
           if (!clientRef.current) {
@@ -356,9 +355,8 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
   const loadAgoraInBackground = async () => {
     if (!agoraRTC) {
       try {
-        const AgoraRTC = await agoraLoader.loadRTC();
         setAgoraRTC(AgoraRTC);
-        console.log('✅ Agora SDK loaded in background');
+        console.log('✅ Agora SDK ready (from npm)');
         
         // Create client for later use
         if (!clientRef.current) {

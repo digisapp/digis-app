@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle, memo } from 'react';
 import { loadAgoraRTC, createAgoraClient, createLocalTracks, cleanupAgoraResources, preloadAgoraSDKs } from '../utils/agoraLazyLoader';
-import agoraLoader from '../utils/AgoraLoader';
+import { joinAsHost, joinAsAudience, getClient, safeLeave } from '../lib/agoraClient';
 import { supabase, getAuthToken } from '../utils/supabase-auth.js';
 import { fetchWithRetry, fetchJSONWithRetry } from '../utils/fetchWithRetry.js';
 import toast from 'react-hot-toast';
@@ -1272,32 +1272,7 @@ const VideoCall = forwardRef(({
 
     const initializeCall = async () => {
       try {
-        // Load Agora SDK if not already loaded
-        if (!sdkInitialized.current) {
-          setSdkLoading(true);
-          setSdkLoadError(null);
-
-          try {
-            await agoraLoader.loadRTC();
-            sdkInitialized.current = true;
-            console.log('✅ Agora RTC SDK loaded successfully');
-          } catch (error) {
-            console.error('❌ Failed to load Agora SDK:', error);
-            setSdkLoadError(error.message);
-            const errorKey = 'sdk-load-failed';
-            if (!errorsShownRef.current.has(errorKey)) {
-              errorsShownRef.current.add(errorKey);
-              toast.error('Failed to load video SDK');
-            }
-            // Reset flag on error so user can retry
-            callInitialized.current = false;
-            releaseGlobalLock(channel, uid);
-            return;
-          } finally {
-            setSdkLoading(false);
-          }
-        }
-
+        // Agora SDK is already loaded via npm package (no CDN loading needed)
         // Use singleton client - prevents UID_CONFLICT
         console.log('🎯 Using Agora singleton to join channel');
 
