@@ -48,6 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (response.status === 404) {
         // Route might not be deployed yet or available - silently skip
         console.debug('ℹ️ Metadata sync endpoint not available (this is OK, skipping)');
+      } else if (response.status >= 500) {
+        // Server error - database might not have user record yet
+        // This is normal for new users before they complete onboarding
+        console.debug('ℹ️ Metadata sync failed (server error, non-critical):', response.status);
+        // User can still use the app, metadata will sync on next login
       } else {
         const errorText = await response.text().catch(() => 'Unknown error');
         console.warn('⚠️ Failed to sync user metadata (non-critical):', response.status, errorText);
