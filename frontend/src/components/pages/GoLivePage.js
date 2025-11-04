@@ -64,6 +64,15 @@ const GoLivePage = ({ user }) => {
             title: streamConfig.title,
             category: streamConfig.category,
             description: streamConfig.description,
+            // Pass full Agora config for singleton
+            agora: {
+              appId: response.agora?.appId || import.meta.env.VITE_AGORA_APP_ID,
+              token: response.agora?.token,
+              channel: response.stream.channel,
+              uid: response.agora?.uid, // CRITICAL: Backend's UID for UID-bound token
+              role: response.agora?.role || 'host'
+            },
+            // Legacy support (remove after migration)
             agoraToken: response.agora?.token,
             agoraUid: response.agora?.uid,
           }

@@ -1298,19 +1298,44 @@ const VideoCall = forwardRef(({
           }
         }
 
-        // Reuse existing client or create new one
-        if (!client.current) {
-          client.current = agoraLoader.createClient({
-            mode: isStreaming ? 'live' : 'rtc',
-            codec: 'vp8'
-          });
-          console.log('✅ VideoCall client created with mode:', isStreaming ? 'live' : 'rtc');
-        } else {
-          console.log('ℹ️ Reusing existing Agora client');
-        }
+        // Use singleton client - prevents UID_CONFLICT
+        console.log('🎯 Using Agora singleton to join channel');
 
+        const joinResult = isHost || isStreaming
+          ? await joinAsHost({
+              appId: import.meta.env.VITE_AGORA_APP_ID,
+              channel,
+              token,
+              uid: numericUid // CRITICAL: Use backend's UID (UID-bound token)
+            })
+          : await joinAsAudience({
+              appId: import.meta.env.VITE_AGORA_APP_ID,
+              channel,
+              token,
+              uid: numericUid
+            });
+
+        // Get the singleton client
+        client.current = getClient();
+
+        console.log(`✅ Joined with UID: ${joinResult.uid}`);
+
+        // Setup event handlers after join
         setupEventHandlers();
-        await joinChannel(numericUid);
+
+        // Mark as joined
+        setIsJoined(true);
+        setConnectionState('CONNECTED');
+        sessionEstablished.current = true;
+
+        // Start duration tracking
+        callStartTime.current = Date.now();
+        durationInterval.current = setInterval(() => {
+          durationRef.current = Math.floor((Date.now() - callStartTime.current) / 1000);
+          if (durationRef.current % 10 === 0) {
+            setCallDuration(durationRef.current);
+          }
+        }, 1000);
 
         console.log('✅ VideoCall initialized successfully');
       } catch (error) {
