@@ -4,13 +4,26 @@ const API = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, ''); // no t
 
 async function getAccessToken(): Promise<string | null> {
   // 1) Try current session
-  const { data } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) {
+    console.error('❌ Error getting session:', error);
+    return null;
+  }
+
   let token = data.session?.access_token ?? null;
 
-  // 2) If missing, try refresh once (Supabase auto-refreshes in background)
-  if (!token) {
-    console.log('🔄 No token in session, attempting refresh...');
-    const { data: refreshed } = await supabase.auth.refreshSession();
+  // 2) If missing or session expired, try refresh once
+  if (!token || (data.session?.expires_at && data.session.expires_at * 1000 < Date.now())) {
+    console.log('🔄 Token missing or expired, attempting refresh...');
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+
+    if (refreshError) {
+      console.error('❌ Failed to refresh session:', refreshError);
+      // Session completely expired - user needs to log in again
+      throw new Error('SESSION_EXPIRED');
+    }
+
     token = refreshed.session?.access_token ?? null;
   }
 
@@ -83,12 +96,23 @@ export async function apiPost(path: string, body?: unknown) {
         errorDetails = { message: text };
         console.error(`❌ API Error [${res.status}]:`, text);
       }
+
+      // Handle auth-specific errors
+      if (res.status === 401) {
+        const errorMsg = errorDetails.message || '';
+        if (errorMsg.includes('Auth session missing') || errorMsg.includes('Invalid token')) {
+          throw new Error('SESSION_EXPIRED');
+        }
+      }
+
       throw new Error(`HTTP ${res.status}: ${JSON.stringify(errorDetails)}`);
     }
     return res.json();
   } catch (err: any) {
-    if (err.message === 'NO_SESSION_TOKEN') {
-      console.error('Session expired, user needs to re-authenticate');
+    if (err.message === 'NO_SESSION_TOKEN' || err.message === 'SESSION_EXPIRED') {
+      console.error('🔒 Session expired - redirecting to login...');
+      // Optional: redirect to login or show modal
+      window.location.href = '/login';
     }
     throw err;
   }
