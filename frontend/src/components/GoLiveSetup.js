@@ -465,8 +465,11 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
   };
 
   const handleGoLive = async () => {
+    console.log('🎬 [GoLiveSetup] Start Stream button clicked!');
+
     // Validate stream information
     if (!streamTitle.trim()) {
+      console.log('❌ [GoLiveSetup] Missing title');
       toast.error('Please enter a stream title');
       return;
     }
@@ -536,11 +539,20 @@ const GoLiveSetup = ({ onGoLive, onCancel, user }) => {
         } : null
       };
 
+      console.log('📤 [GoLiveSetup] Calling onGoLive with config:', {
+        title: streamConfig.title,
+        category: streamConfig.category,
+        hasVideo: !!streamConfig.tracks?.video,
+        hasAudio: !!streamConfig.tracks?.audio
+      });
+
       await onGoLive(streamConfig);
+
+      console.log('✅ [GoLiveSetup] onGoLive completed successfully');
       // Don't reset loading here - navigation will unmount this component
 
     } catch (error) {
-      console.error('Go live error:', error);
+      console.error('❌ [GoLiveSetup] Go live error:', error);
       toast.error('Failed to start live stream');
       setLoading(false);
     }
