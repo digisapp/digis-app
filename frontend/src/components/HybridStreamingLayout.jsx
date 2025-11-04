@@ -4,7 +4,7 @@
  * and desktop-optimized classic layout based on device detection
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isMobileDevice, getOptimalLayout, supportsScreenShare } from '../utils/deviceDetection';
 import toast from 'react-hot-toast';
