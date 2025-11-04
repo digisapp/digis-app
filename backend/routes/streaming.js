@@ -293,9 +293,9 @@ router.post('/go-live', authenticateToken, async (req, res) => {
       const stream = existingStream.rows[0];
       const minutesLive = stream.minutes_live;
 
-      // If stream has been "live" for more than 10 minutes, it's likely stuck
+      // If stream has been "live" for more than 2 minutes, it's likely stuck
       // Auto-cleanup and allow creator to go live again
-      if (minutesLive > 10) {
+      if (minutesLive > 2) {
         logger.warn(`[${requestId}] Auto-ending stuck stream`, {
           streamId: stream.id,
           minutesLive: Math.round(minutesLive)
