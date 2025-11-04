@@ -227,7 +227,7 @@ const TVPage = ({ user, isCreator, onJoinStream, onGoLive, tokenBalance, onToken
     }
 
     try {
-      const data = await apiGet('/api/v1/tv-subscription/status');
+      const data = await apiGet('/tv-subscription/status');
         console.log('Subscription data:', data);
         setHasAccess(data.hasAccess);
         setSubscription(data.subscription);
