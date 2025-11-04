@@ -1310,10 +1310,16 @@ const VideoCall = forwardRef(({
       if (!localTracks.videoTrack && localVideo.current && isHost && !isVoiceOnly) {
         try {
           console.log('🎥 Using direct camera access as fallback...');
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: 1280, height: 720 }, 
-            audio: false 
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 1280, height: 720 },
+            audio: false
           });
+          // Re-check ref after async operation (component might have unmounted)
+          if (!localVideo.current) {
+            console.warn('⚠️ Video ref became null during getUserMedia - component unmounted');
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
           localVideo.current.srcObject = stream;
           await localVideo.current.play();
           console.log('✅ Direct camera stream playing');
@@ -1338,10 +1344,16 @@ const VideoCall = forwardRef(({
             if (localVideo.current && (localVideo.current.videoWidth === 0 || localVideo.current.videoHeight === 0)) {
               console.warn('⚠️ Video dimensions are 0, using fallback');
               try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                  video: { width: 1280, height: 720 }, 
-                  audio: false 
+                const stream = await navigator.mediaDevices.getUserMedia({
+                  video: { width: 1280, height: 720 },
+                  audio: false
                 });
+                // Re-check ref after async operation
+                if (!localVideo.current) {
+                  console.warn('⚠️ Video ref became null during fallback getUserMedia');
+                  stream.getTracks().forEach(track => track.stop());
+                  return;
+                }
                 localVideo.current.srcObject = stream;
                 await localVideo.current.play();
                 console.log('✅ Fallback stream playing');
