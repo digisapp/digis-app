@@ -34,8 +34,15 @@ const GoLivePage = ({ user }) => {
 
       console.log('✅ Stream created response:', response);
 
-      if (response.stream) {
+      if (response.stream && response.agora && response.agora.token && response.agora.uid) {
         console.log('📺 Navigating to stream:', response.stream.channel);
+        console.log('🔑 Agora credentials:', {
+          hasAppId: !!response.agora.appId,
+          hasToken: !!response.agora.token,
+          hasUid: !!response.agora.uid,
+          uid: response.agora.uid,
+          channel: response.stream.channel
+        });
 
         // Clean up the preview tracks since we'll create fresh ones in StreamingLayout
         try {
@@ -78,8 +85,14 @@ const GoLivePage = ({ user }) => {
           }
         });
       } else {
-        console.error('❌ Response missing stream data:', response);
-        toast.error('Stream created but missing data. Please try again.');
+        console.error('❌ Response missing required data:', {
+          hasStream: !!response.stream,
+          hasAgora: !!response.agora,
+          hasToken: !!response.agora?.token,
+          hasUid: !!response.agora?.uid,
+          response
+        });
+        toast.error('Failed to get streaming credentials. Please try again.');
       }
     } catch (error) {
       console.error('Failed to create stream:', error);

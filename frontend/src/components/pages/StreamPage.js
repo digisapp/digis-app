@@ -26,7 +26,16 @@ const StreamPage = ({ user }) => {
 
       // If coming from go-live setup, use the state data (token already provided)
       if (location.state && location.state.isHost && location.state.channelName) {
-        setStreamData({
+        console.log('🎬 StreamPage: Loading from go-live state:', {
+          hasAgora: !!location.state.agora,
+          hasToken: !!location.state.agoraToken,
+          hasUid: !!location.state.agoraUid,
+          channel: location.state.channelName,
+          uid: location.state.agoraUid,
+          agoraConfig: location.state.agora
+        });
+
+        const streamData = {
           channel: location.state.channelName,
           token: location.state.agoraToken, // Use token from go-live response
           chatToken: location.state.chatToken,
@@ -35,7 +44,11 @@ const StreamPage = ({ user }) => {
           streamCategory: location.state.category,
           streamDescription: location.state.description,
           isHost: true,
-        });
+          agora: location.state.agora // Pass through full agora config
+        };
+
+        console.log('✅ StreamPage: Built streamData:', streamData);
+        setStreamData(streamData);
         setLoading(false);
         return;
       }
