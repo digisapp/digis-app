@@ -19,6 +19,51 @@ import { fireBeacon } from '../utils/beacon';
 import { analytics } from '../lib/analytics';
 import socketService from '../services/socketServiceWrapper';
 
+// Global singleton lock to prevent multiple VideoCall instances from initializing simultaneously
+// This addresses the issue where multiple components mount (React StrictMode, routing bugs, etc.)
+const globalAgoraLock = {
+  activeChannel: null,
+  activeUid: null,
+  lockTime: null
+};
+
+const acquireGlobalLock = (channel, uid) => {
+  const now = Date.now();
+
+  // Check if there's an active lock for a DIFFERENT channel/uid
+  if (globalAgoraLock.activeChannel &&
+      (globalAgoraLock.activeChannel !== channel || globalAgoraLock.activeUid !== uid)) {
+    console.warn('🚫 BLOCKED: Another VideoCall instance is active', {
+      active: { channel: globalAgoraLock.activeChannel, uid: globalAgoraLock.activeUid },
+      attempting: { channel, uid },
+      lockAge: now - globalAgoraLock.lockTime
+    });
+    return false;
+  }
+
+  // If lock is for same channel/uid, it's the same component re-rendering - allow
+  if (globalAgoraLock.activeChannel === channel && globalAgoraLock.activeUid === uid) {
+    console.log('✅ Lock already held by this channel/uid - allowing');
+    return true;
+  }
+
+  // Acquire new lock
+  globalAgoraLock.activeChannel = channel;
+  globalAgoraLock.activeUid = uid;
+  globalAgoraLock.lockTime = now;
+  console.log('🔒 Global lock acquired', { channel, uid });
+  return true;
+};
+
+const releaseGlobalLock = (channel, uid) => {
+  if (globalAgoraLock.activeChannel === channel && globalAgoraLock.activeUid === uid) {
+    console.log('🔓 Global lock released', { channel, uid });
+    globalAgoraLock.activeChannel = null;
+    globalAgoraLock.activeUid = null;
+    globalAgoraLock.lockTime = null;
+  }
+};
+
 const VideoCall = forwardRef(({
   channel,
   token: initialToken,
@@ -1087,7 +1132,10 @@ const VideoCall = forwardRef(({
       setSessionCost(0);
 
       console.log('✅ VideoCall cleanup completed');
-      
+
+      // Release global lock
+      releaseGlobalLock(channel, uid);
+
       if (onSessionEnd) {
         onSessionEnd();
       }
@@ -1164,6 +1212,14 @@ const VideoCall = forwardRef(({
     callInitialized.current = true;
     console.log('🔒 Locking initialization...');
 
+    // Acquire global lock to prevent multiple component instances from racing
+    if (!acquireGlobalLock(channel, uid)) {
+      console.error('🚫 BLOCKED: Global lock held by another VideoCall instance');
+      toast.error('Another video session is already active');
+      callInitialized.current = false; // Release component lock
+      return;
+    }
+
     // Clear errors when params change
     errorsShownRef.current.clear();
 
@@ -1188,6 +1244,7 @@ const VideoCall = forwardRef(({
             }
             // Reset flag on error so user can retry
             callInitialized.current = false;
+            releaseGlobalLock(channel, uid);
             return;
           } finally {
             setSdkLoading(false);
@@ -1211,6 +1268,7 @@ const VideoCall = forwardRef(({
         toast.error('Failed to initialize video call');
         // Reset flag on error so user can retry
         callInitialized.current = false;
+        releaseGlobalLock(channel, uid);
       }
     };
 
@@ -1224,8 +1282,9 @@ const VideoCall = forwardRef(({
     return () => {
       console.log('🔓 Unlocking initialization on unmount');
       callInitialized.current = false;
+      releaseGlobalLock(channel, uid);
     };
-  }, []);
+  }, [channel, uid]);
 
   // Update token when it changes
   useEffect(() => {

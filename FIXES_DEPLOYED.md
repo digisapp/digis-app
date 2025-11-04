@@ -41,7 +41,66 @@
 
 ---
 
-### 3. Hybrid Streaming Layout System (✅ DEPLOYED - Commit 6e3c6d8)
+### 3. Multiple VideoCall Component Instances (✅ FIXED - Just Deployed)
+
+**Problem:**
+- 4 separate VideoCall components mounting simultaneously within 50ms
+- Each component creating its own Agora client with same UID
+- 3 clients getting UID_CONFLICT, 1 successfully connecting
+- Caused by React StrictMode double-rendering or routing issues
+
+**Evidence from logs:**
+```javascript
+01:41:30:735 [client-fad16][createClient]
+01:41:30:737 [client-6cc14][createClient]  // 2ms later
+01:41:30:786 [client-0a6e2][createClient]  // 49ms later
+01:41:30:787 [client-142a0][createClient]  // 1ms later
+```
+
+**Root Cause:**
+- Component-level `callInitialized.current` only prevents re-initialization within SAME component
+- Multiple component instances each have their own ref, so they don't block each other
+- React StrictMode or routing bugs causing multiple mounts
+
+**Solution:**
+1. Added **global singleton lock** at module level (shared across all instances)
+2. Lock uses `channel + uid` as key to identify unique sessions
+3. Only ONE component can initialize for a given channel/uid combination
+4. Lock is released on cleanup, unmount, or error
+5. Other instances are blocked with clear error message
+
+**Code Changes:**
+```javascript
+// Global lock at module level (outside component)
+const globalAgoraLock = {
+  activeChannel: null,
+  activeUid: null,
+  lockTime: null
+};
+
+// Acquire lock before initialization
+if (!acquireGlobalLock(channel, uid)) {
+  console.error('🚫 BLOCKED: Global lock held by another VideoCall instance');
+  toast.error('Another video session is already active');
+  callInitialized.current = false;
+  return;
+}
+
+// Release lock on cleanup
+releaseGlobalLock(channel, uid);
+```
+
+**Files Changed:**
+- `frontend/src/components/VideoCall.js`
+
+**Expected Behavior:**
+- Only 1 Agora client created per go-live action
+- Other component instances blocked with warning message
+- No more UID_CONFLICT errors from multiple instances
+
+---
+
+### 4. Hybrid Streaming Layout System (✅ DEPLOYED - Commit 6e3c6d8)
 
 **New Feature:**
 - Device-aware streaming layouts
@@ -90,9 +149,11 @@
 
 ### Verify Fixes
 1. **No UID_CONFLICT loop** - Should see single Agora client
-2. **No Ably errors** - Socket connection should work
-3. **Mobile layout** - Full-screen immersive on phone
-4. **Desktop layout** - Classic side-by-side on laptop
+2. **Global lock working** - Look for "🔒 Global lock acquired" in console (only once)
+3. **No multiple instances** - Should NOT see "🚫 BLOCKED" messages
+4. **No Ably errors** - Socket connection should work
+5. **Mobile layout** - Full-screen immersive on phone
+6. **Desktop layout** - Classic side-by-side on laptop
 
 ### If Issues Persist
 1. **Incognito mode** - Tests with fresh cache
