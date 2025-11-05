@@ -978,7 +978,6 @@ const VideoCall = forwardRef(({
         // Wait a bit and reset initialization flag to allow retry
         setTimeout(() => {
           callInitialized.current = false;
-          releaseGlobalLock(channel, uid);
           console.log('🔄 Ready for retry after UID_CONFLICT');
           toast.success('Ready to reconnect', { duration: 2000 });
         }, 2000);
@@ -1155,9 +1154,6 @@ const VideoCall = forwardRef(({
 
       console.log('✅ VideoCall cleanup completed');
 
-      // Release global lock
-      releaseGlobalLock(channel, uid);
-
       // Only call onSessionEnd if session was actually established
       // This prevents redirect when initialization fails (UID_CONFLICT, etc)
       if (sessionEstablished.current && onSessionEnd) {
@@ -1246,17 +1242,12 @@ const VideoCall = forwardRef(({
       return;
     }
 
-    // Mark as initializing IMMEDIATELY to block duplicate calls
-    callInitialized.current = true;
-    console.log('🔒 Locking initialization...');
-
-    // Acquire global lock to prevent multiple component instances from racing
-    if (!acquireGlobalLock(channel, uid)) {
-      console.error('🚫 BLOCKED: Global lock held by another VideoCall instance');
-      toast.error('Another video session is already active');
-      callInitialized.current = false; // Release component lock
+    // Prevent duplicate initialization
+    if (callInitialized.current) {
+      console.log('⚠️ Already initialized, skipping...');
       return;
     }
+    callInitialized.current = true;
 
     // Clear errors when params change
     errorsShownRef.current.clear();
@@ -1635,9 +1626,6 @@ const VideoCall = forwardRef(({
             ]);
             console.log('✅ pagehide: Left Agora channel');
           }
-
-          // Release global lock
-          releaseGlobalLock(channel, uid);
         } catch (err) {
           console.warn('Failed pagehide cleanup:', err);
         }
