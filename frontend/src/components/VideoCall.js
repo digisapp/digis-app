@@ -64,6 +64,9 @@ const releaseGlobalLock = (channel, uid) => {
   }
 };
 
+// Publish mutex to prevent double publish across renders/StrictMode
+let publishMutex = false;
+
 const VideoCall = forwardRef(({
   channel,
   token: initialToken,
@@ -91,6 +94,10 @@ const VideoCall = forwardRef(({
   const localPreviewVideo = useRef(null);  // Separate ref for preview
   const remoteVideo = useRef(null);
   const intentionalLeaveRef = useRef(false); // Track intentional call end to skip guard prompts
+  // Track what we've actually published (prevents double publish)
+  const publishedRef = useRef({ audio: false, video: false });
+  // Keep current local tracks so we can unpublish/close precisely
+  const tracksRef = useRef({ mic: null, cam: null });
   const [token, setToken] = useState(initialToken);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(isHost ? !isVoiceOnly : (!isStreaming && !isVoiceOnly));
@@ -503,6 +510,34 @@ const VideoCall = forwardRef(({
       toast.error(`Connection error: ${error.message}`);
     });
   }, [refreshToken]);
+
+  // Safe publish helper - only publishes tracks that haven't been published yet
+  const safePublish = useCallback(async (client, { mic, cam }) => {
+    const toPublish = [];
+    if (mic && !publishedRef.current.audio) toPublish.push(mic);
+    if (cam && !publishedRef.current.video) toPublish.push(cam);
+    if (!toPublish.length) return;
+
+    await client.publish(toPublish);
+
+    if (mic) publishedRef.current.audio = true;
+    if (cam) publishedRef.current.video = true;
+  }, []);
+
+  // Unpublish and close existing video track helper
+  const unpublishVideoIfAny = useCallback(async (client) => {
+    try {
+      const v = tracksRef.current.cam;
+      if (v) {
+        try { await client.unpublish([v]); } catch {}
+        try { v.stop?.(); v.close?.(); } catch {}
+        tracksRef.current.cam = null;
+        publishedRef.current.video = false;
+      }
+    } catch (e) {
+      console.warn('Could not unpublish/close existing video track', e);
+    }
+  }, []);
 
   // Get video encoder configuration based on quality setting
   const getVideoEncoderConfig = useCallback((quality) => {
@@ -1328,145 +1363,109 @@ const VideoCall = forwardRef(({
 
         console.log(`✅ Joined with UID: ${joinResult.uid}`);
 
-        // If host/streaming, create and publish tracks
+        // Wait until actually connected before publishing
+        if (agoraClient.connectionState !== 'CONNECTED') {
+          await new Promise((r) => {
+            const handler = (state) => {
+              if (state === 'CONNECTED') {
+                agoraClient.off('connection-state-change', handler);
+                r();
+              }
+            };
+            agoraClient.on('connection-state-change', handler);
+          });
+        }
+
+        // If host/streaming, create and publish tracks with mutex protection
         if (isHost || isStreaming) {
-          // Guard: Skip if we already have local tracks published to prevent duplicates
-          // This prevents React StrictMode double-mounting from creating multiple tracks
-          const existingTracks = agoraClient.localTracks || [];
-          const hasExistingAudio = existingTracks.some(t => t.trackMediaType === 'audio');
-          const hasExistingVideo = existingTracks.some(t => t.trackMediaType === 'video');
-
-          if (hasExistingAudio && hasExistingVideo) {
-            console.log('⚠️ Tracks already published, skipping track creation to prevent duplicates');
-            // Still set the tracks in state from what's already published
-            setLocalTracks({
-              audioTrack: existingTracks.find(t => t.trackMediaType === 'audio'),
-              videoTrack: existingTracks.find(t => t.trackMediaType === 'video'),
-              screenTrack: null
-            });
+          if (publishMutex) {
+            console.log('⛔ publish in progress, skipping');
           } else {
-            console.log('🎤🎥 Creating and publishing tracks for host...');
-
+            publishMutex = true;
             try {
-              // Import AgoraRTC dynamically to access createMicrophoneAndCameraTracks
-              const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
-
-              // Determine which tracks to create
-              const tracks = [];
-              let micTrack = null;
-              let camTrack = null;
-
-              // Always create microphone track for host
-              console.log('🎤 Creating microphone track...');
-              micTrack = await AgoraRTC.createMicrophoneAudioTrack({
-                encoderConfig: 'music_standard'
-              });
-              tracks.push(micTrack);
-
-            // Create camera track unless voice-only
-            if (!isVoiceOnly) {
-              console.log('🎥 Creating camera track...');
-              camTrack = await AgoraRTC.createCameraVideoTrack({
-                encoderConfig: {
-                  width: 1280,
-                  height: 720,
-                  frameRate: 30,
-                  bitrateMin: 1000,
-                  bitrateMax: 3000
-                }
-              });
-              tracks.push(camTrack);
-            }
-
-            // Publish tracks to channel (use local agoraClient variable to avoid race conditions)
-            if (tracks.length > 0 && agoraClient) {
-              // Wait for connection to be fully established before publishing
-              const currentState = agoraClient.connectionState;
-              console.log('🔌 Current connection state:', currentState);
-
-              if (currentState !== 'CONNECTED') {
-                console.log('⏳ Waiting for connection state to be CONNECTED...');
-
-                // Wait for connection-state-change event
-                await new Promise((resolve, reject) => {
-                  const timeout = setTimeout(() => {
-                    reject(new Error('Timeout waiting for CONNECTED state'));
-                  }, 10000); // 10 second timeout
-
-                  const handler = (curState) => {
-                    console.log('🔌 Connection state changed to:', curState);
-                    if (curState === 'CONNECTED') {
-                      clearTimeout(timeout);
-                      agoraClient.off('connection-state-change', handler);
-                      resolve();
-                    }
-                  };
-
-                  agoraClient.on('connection-state-change', handler);
+              // If we somehow already have published tracks, just reuse them
+              if (publishedRef.current.audio && publishedRef.current.video) {
+                console.log('⚠️ Already published; reusing existing local tracks');
+                setLocalTracks({
+                  audioTrack: tracksRef.current.mic,
+                  videoTrack: tracksRef.current.cam,
+                  screenTrack: null
                 });
-              }
+              } else {
+                // (Re)create only missing tracks
+                const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
 
-              console.log('✅ Connection state is CONNECTED, safe to publish');
+                const videoConfig = {
+                  encoderConfig: { width: 1280, height: 720, frameRate: 30, bitrate: 2000 },
+                  facingMode: 'user',
+                };
 
-              // Verify client role is "host" before publishing
-              // @ts-ignore - _role is internal but necessary to check
-              if (agoraClient._role !== 'host') {
-                console.warn('⚠️ Client role is not host, setting it now...');
-                await agoraClient.setClientRole('host');
-                // Wait a moment for role change to propagate
-                await new Promise(resolve => setTimeout(resolve, 150));
-              }
-
-              // Check for and FULLY REMOVE any existing tracks before publishing new ones
-              // This prevents "CAN_NOT_PUBLISH_MULTIPLE_VIDEO_TRACKS" error
-              const existingLocalTracks = agoraClient.localTracks || [];
-              if (existingLocalTracks.length > 0) {
-                console.log('⚠️ Found existing published tracks, cleaning them up...', existingLocalTracks.map(t => t.trackMediaType));
-                try {
-                  // 1. Unpublish from Agora
-                  await agoraClient.unpublish(existingLocalTracks);
-                  console.log('✅ Existing tracks unpublished');
-
-                  // 2. Stop and close each track to fully dispose
-                  for (const track of existingLocalTracks) {
-                    try {
-                      track.stop();
-                      track.close();
-                      console.log(`✅ Closed ${track.trackMediaType} track`);
-                    } catch (closeErr) {
-                      console.warn(`Failed to close track ${track.trackMediaType}:`, closeErr);
-                    }
-                  }
-
-                  // 3. Wait a moment for cleanup to complete
-                  await new Promise(resolve => setTimeout(resolve, 100));
-                } catch (cleanupErr) {
-                  console.warn('Failed to cleanup existing tracks:', cleanupErr);
+                if (!tracksRef.current.mic) {
+                  console.log('🎤 Creating mic track…');
+                  tracksRef.current.mic = await AgoraRTC.createMicrophoneAudioTrack({
+                    encoderConfig: 'music_standard'
+                  });
                 }
+
+                if (!tracksRef.current.cam && !isVoiceOnly) {
+                  console.log('🎥 Creating camera track…');
+                  tracksRef.current.cam = await AgoraRTC.createCameraVideoTrack(videoConfig);
+                }
+
+                // Try to publish; if Agora complains about multiple video tracks, heal automatically
+                try {
+                  console.log('📡 Publishing…');
+                  await safePublish(agoraClient, {
+                    mic: tracksRef.current.mic,
+                    cam: tracksRef.current.cam
+                  });
+                  console.log('✅ Published');
+                } catch (err) {
+                  const msg = String(err?.message || err?.code || err);
+                  if (msg.includes('CAN_NOT_PUBLISH_MULTIPLE_VIDEO_TRACKS')) {
+                    console.warn('♻️ Recovering: unpublish old video, close, recreate, publish once');
+                    await unpublishVideoIfAny(agoraClient);
+
+                    const AgoraRTC2 = (await import('agora-rtc-sdk-ng')).default;
+                    tracksRef.current.cam = await AgoraRTC2.createCameraVideoTrack(videoConfig);
+
+                    await safePublish(agoraClient, {
+                      mic: tracksRef.current.mic, // keep the same mic
+                      cam: tracksRef.current.cam  // brand new cam
+                    });
+                    console.log('✅ Recovered and published single video track');
+                  } else {
+                    throw err;
+                  }
+                }
+
+                // Store tracks in state
+                setLocalTracks({
+                  audioTrack: tracksRef.current.mic,
+                  videoTrack: tracksRef.current.cam,
+                  screenTrack: null
+                });
+
+                // Notify parent component if callback provided
+                if (onLocalTracksCreated) {
+                  onLocalTracksCreated({
+                    audioTrack: tracksRef.current.mic,
+                    videoTrack: tracksRef.current.cam
+                  });
+                }
+
+                // Optional: play local video to a container
+                const container = document.getElementById('local-player');
+                tracksRef.current.cam?.play(container || undefined);
               }
-
-              console.log('📡 Publishing tracks to channel...');
-              await agoraClient.publish(tracks);
-              console.log('✅ Tracks published successfully');
-
-              // Store tracks in state
-              setLocalTracks({
-                audioTrack: micTrack,
-                videoTrack: camTrack,
-                screenTrack: null
-              });
-
-              // Notify parent component if callback provided
-              if (onLocalTracksCreated) {
-                onLocalTracksCreated({ audioTrack: micTrack, videoTrack: camTrack });
-              }
-            }
-            } catch (trackError) {
-              console.error('❌ Failed to create/publish tracks:', trackError);
+            } catch (e) {
+              console.error('❌ Failed to publish:', e);
               toast.error('Failed to start camera/microphone');
-              // Don't fail the entire call - continue without publishing
+              // Do not crash the page; user can retry
+            } finally {
+              publishMutex = false;
             }
-          } // End of else block (track creation)
+          }
         } // End of if (isHost || isStreaming)
 
         // Setup event handlers after join
@@ -1511,6 +1510,31 @@ const VideoCall = forwardRef(({
       releaseGlobalLock(channel, uid);
     };
   }, [channel, uid]);
+
+  // Cleanup tracks on unmount to prevent "already live" or duplicate track issues
+  useEffect(() => {
+    return () => {
+      (async () => {
+        try {
+          if (tracksRef.current.cam || tracksRef.current.mic) {
+            const toUnpub = [tracksRef.current.cam, tracksRef.current.mic].filter(Boolean);
+            if (toUnpub.length && client.current) {
+              await client.current.unpublish(toUnpub).catch(() => {});
+            }
+            tracksRef.current.cam?.stop?.();
+            tracksRef.current.cam?.close?.();
+            tracksRef.current.mic?.stop?.();
+            tracksRef.current.mic?.close?.();
+            tracksRef.current = { mic: null, cam: null };
+            publishedRef.current = { audio: false, video: false };
+            console.log('✅ Tracks cleaned up on unmount');
+          }
+        } catch (e) {
+          console.warn('Cleanup failed', e);
+        }
+      })();
+    };
+  }, []);
 
   // Update token when it changes
   useEffect(() => {
