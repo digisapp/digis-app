@@ -516,9 +516,19 @@ const VideoCall = forwardRef(({
     const toPublish = [];
     if (mic && !publishedRef.current.audio) toPublish.push(mic);
     if (cam && !publishedRef.current.video) toPublish.push(cam);
-    if (!toPublish.length) return;
+    if (!toPublish.length) {
+      console.log('⚠️ No tracks to publish (already published)');
+      return;
+    }
 
+    // Verify client is actually joined before publishing
+    if (!client.channelName) {
+      throw new Error('Cannot publish: client is not joined to a channel');
+    }
+
+    console.log(`📡 Publishing ${toPublish.length} tracks to channel: ${client.channelName}`);
     await client.publish(toPublish);
+    console.log('✅ Tracks published successfully');
 
     if (mic) publishedRef.current.audio = true;
     if (cam) publishedRef.current.video = true;
@@ -1388,18 +1398,34 @@ const VideoCall = forwardRef(({
 
         console.log(`✅ Joined with UID: ${joinResult.uid}`);
 
+        // Verify we're actually joined by checking channel name
+        if (!agoraClient.channelName) {
+          throw new Error('Join failed: channelName is null after joinAsHost');
+        }
+
+        console.log('✅ Verified joined to channel:', agoraClient.channelName);
+
         // Wait until actually connected before publishing
         if (agoraClient.connectionState !== 'CONNECTED') {
-          await new Promise((r) => {
+          console.log('⏳ Waiting for CONNECTED state...');
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Timeout waiting for CONNECTED state'));
+            }, 10000);
+
             const handler = (state) => {
+              console.log('🔌 Connection state changed to:', state);
               if (state === 'CONNECTED') {
+                clearTimeout(timeout);
                 agoraClient.off('connection-state-change', handler);
-                r();
+                resolve();
               }
             };
             agoraClient.on('connection-state-change', handler);
           });
         }
+
+        console.log('✅ Connection state is CONNECTED, ready to publish');
 
         // If host/streaming, create and publish tracks with mutex protection
         if (isHost || isStreaming) {

@@ -119,6 +119,17 @@ export async function joinAsHost(opts: {
 
     console.log(`✅ Successfully joined as host with UID: ${_uid}`);
 
+    // Small delay to ensure SDK state is fully updated
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Verify join succeeded by checking channelName
+    if (!c.channelName) {
+      console.error('❌ Join verification failed: channelName is null');
+      throw new Error('Join failed: channelName not set after join');
+    }
+
+    console.log(`✅ Join verified: channelName = ${c.channelName}`);
+
     return { client: c, uid: _uid };
   } finally {
     _joining = false;
@@ -162,6 +173,17 @@ export async function joinAsAudience(opts: {
     _uid = Number(assigned);
 
     console.log(`✅ Joined as audience with UID: ${_uid}`);
+
+    // Small delay to ensure SDK state is fully updated
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Verify join succeeded
+    if (!c.channelName) {
+      console.error('❌ Join verification failed: channelName is null');
+      throw new Error('Join failed: channelName not set after join');
+    }
+
+    console.log(`✅ Join verified: channelName = ${c.channelName}`);
 
     return { client: c, uid: _uid };
   } finally {
