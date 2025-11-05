@@ -98,6 +98,8 @@ const VideoCall = forwardRef(({
   const publishedRef = useRef({ audio: false, video: false });
   // Keep current local tracks so we can unpublish/close precisely
   const tracksRef = useRef({ mic: null, cam: null });
+  // Track the joined channel explicitly (don't rely on SDK's channelName property)
+  const joinedChannelRef = useRef(null);
   const [token, setToken] = useState(initialToken);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(isHost ? !isVoiceOnly : (!isStreaming && !isVoiceOnly));
@@ -521,12 +523,10 @@ const VideoCall = forwardRef(({
       return;
     }
 
-    // Verify client is actually joined before publishing
-    if (!client.channelName) {
-      throw new Error('Cannot publish: client is not joined to a channel');
-    }
+    // Log which channel we're publishing to (use our tracked channel, not SDK's channelName)
+    const channelName = joinedChannelRef.current || 'unknown';
+    console.log(`📡 Publishing ${toPublish.length} tracks to channel: ${channelName}`);
 
-    console.log(`📡 Publishing ${toPublish.length} tracks to channel: ${client.channelName}`);
     await client.publish(toPublish);
     console.log('✅ Tracks published successfully');
 
@@ -1399,49 +1399,42 @@ const VideoCall = forwardRef(({
 
         console.log(`✅ Joined with UID: ${joinResult.uid}`);
 
-        // Double-check the client state after assignment
-        console.log('🔍 [VideoCall] Client state after join:', {
-          hasClient: !!agoraClient,
-          channelName: agoraClient?.channelName,
-          connectionState: agoraClient?.connectionState,
-          uid: agoraClient?.uid,
-          joinResultUid: joinResult.uid,
-          expectedChannel: channel
-        });
+        // Track the joined channel explicitly instead of relying on SDK internals
+        // (client.channelName is not guaranteed in Agora SDK v4)
+        const joinedChannel =
+          (joinResult && (joinResult.channel || joinResult.channelName)) ||
+          channel; // fall back to the prop we navigated with
 
-        // Verify we're actually joined by checking channel name
-        // This should always pass since joinAsHost already verified it
-        if (!agoraClient.channelName) {
-          console.error('❌ [VideoCall] channelName is null!', {
-            clientExists: !!agoraClient,
-            clientKeys: Object.keys(agoraClient || {}),
-            connectionState: agoraClient?.connectionState
-          });
-          throw new Error('Join failed: channelName is null after joinAsHost');
+        if (!joinedChannel) {
+          throw new Error('Join failed: missing channel after join');
         }
 
-        console.log('✅ Verified joined to channel:', agoraClient.channelName);
+        joinedChannelRef.current = joinedChannel;
+        console.log('✅ Joined to channel:', joinedChannel);
 
-        // Wait until actually connected before publishing
-        if (agoraClient.connectionState !== 'CONNECTED') {
+        // Wait for client to be CONNECTED before publishing
+        const waitForConnected = async () => {
+          if (agoraClient.connectionState === 'CONNECTED') {
+            console.log('✅ Already CONNECTED');
+            return;
+          }
           console.log('⏳ Waiting for CONNECTED state...');
           await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Timeout waiting for CONNECTED state'));
-            }, 10000);
-
-            const handler = (state) => {
-              console.log('🔌 Connection state changed to:', state);
-              if (state === 'CONNECTED') {
+            const timeout = setTimeout(() => reject(new Error('Join timeout')), 8000);
+            const onChange = (cur, prev, reason) => {
+              console.log(`🔌 Connection state: ${prev} → ${cur}`, reason || '');
+              if (cur === 'CONNECTED') {
                 clearTimeout(timeout);
-                agoraClient.off('connection-state-change', handler);
+                agoraClient.off('connection-state-change', onChange);
                 resolve();
               }
             };
-            agoraClient.on('connection-state-change', handler);
+            agoraClient.on('connection-state-change', onChange);
           });
-        }
+        };
 
+        await waitForConnected();
+        setIsJoined(true);
         console.log('✅ Connection state is CONNECTED, ready to publish');
 
         // If host/streaming, create and publish tracks with mutex protection
@@ -1451,8 +1444,12 @@ const VideoCall = forwardRef(({
           } else {
             publishMutex = true;
             try {
-              // If we somehow already have published tracks, just reuse them
-              if (publishedRef.current.audio && publishedRef.current.video) {
+              // Check if we already have tracks using our refs (more reliable than SDK's localTracks)
+              const hasExistingAudio = !!(tracksRef.current.mic || localTracks.audioTrack);
+              const hasExistingVideo = !!(tracksRef.current.cam || localTracks.videoTrack);
+
+              // If we already have published tracks, just reuse them
+              if (hasExistingAudio && hasExistingVideo && publishedRef.current.audio && publishedRef.current.video) {
                 console.log('⚠️ Already published; reusing existing local tracks');
                 setLocalTracks({
                   audioTrack: tracksRef.current.mic,

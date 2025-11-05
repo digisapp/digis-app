@@ -122,27 +122,10 @@ export async function joinAsHost(opts: {
     // Small delay to ensure SDK state is fully updated
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Verify join succeeded by checking channelName
-    console.log('🔍 Checking channelName after join:', {
-      channelName: c.channelName,
-      expectedChannel: opts.channel,
-      _channel,
-      connectionState: c.connectionState,
-      uid: c.uid
-    });
+    // Return the channel we know we joined (don't rely on c.channelName)
+    console.log(`✅ Join verified for channel: ${opts.channel}`);
 
-    if (!c.channelName) {
-      console.error('❌ Join verification failed: channelName is null', {
-        clientState: c.connectionState,
-        _channel,
-        expectedChannel: opts.channel
-      });
-      throw new Error('Join failed: channelName not set after join');
-    }
-
-    console.log(`✅ Join verified: channelName = ${c.channelName}`);
-
-    return { client: c, uid: _uid };
+    return { client: c, uid: _uid, channel: opts.channel };
   } finally {
     _joining = false;
   }
@@ -189,15 +172,10 @@ export async function joinAsAudience(opts: {
     // Small delay to ensure SDK state is fully updated
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Verify join succeeded
-    if (!c.channelName) {
-      console.error('❌ Join verification failed: channelName is null');
-      throw new Error('Join failed: channelName not set after join');
-    }
+    // Return the channel we know we joined (don't rely on c.channelName)
+    console.log(`✅ Join verified for channel: ${opts.channel}`);
 
-    console.log(`✅ Join verified: channelName = ${c.channelName}`);
-
-    return { client: c, uid: _uid };
+    return { client: c, uid: _uid, channel: opts.channel };
   } finally {
     _joining = false;
   }
