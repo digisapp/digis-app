@@ -1399,9 +1399,24 @@ const VideoCall = forwardRef(({
 
         console.log(`✅ Joined with UID: ${joinResult.uid}`);
 
+        // Double-check the client state after assignment
+        console.log('🔍 [VideoCall] Client state after join:', {
+          hasClient: !!agoraClient,
+          channelName: agoraClient?.channelName,
+          connectionState: agoraClient?.connectionState,
+          uid: agoraClient?.uid,
+          joinResultUid: joinResult.uid,
+          expectedChannel: channel
+        });
+
         // Verify we're actually joined by checking channel name
         // This should always pass since joinAsHost already verified it
         if (!agoraClient.channelName) {
+          console.error('❌ [VideoCall] channelName is null!', {
+            clientExists: !!agoraClient,
+            clientKeys: Object.keys(agoraClient || {}),
+            connectionState: agoraClient?.connectionState
+          });
           throw new Error('Join failed: channelName is null after joinAsHost');
         }
 

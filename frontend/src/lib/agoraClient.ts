@@ -123,8 +123,20 @@ export async function joinAsHost(opts: {
     await new Promise(resolve => setTimeout(resolve, 100));
 
     // Verify join succeeded by checking channelName
+    console.log('🔍 Checking channelName after join:', {
+      channelName: c.channelName,
+      expectedChannel: opts.channel,
+      _channel,
+      connectionState: c.connectionState,
+      uid: c.uid
+    });
+
     if (!c.channelName) {
-      console.error('❌ Join verification failed: channelName is null');
+      console.error('❌ Join verification failed: channelName is null', {
+        clientState: c.connectionState,
+        _channel,
+        expectedChannel: opts.channel
+      });
       throw new Error('Join failed: channelName not set after join');
     }
 
