@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle, memo } from 'react';
 import { loadAgoraRTC, createAgoraClient, createLocalTracks, cleanupAgoraResources, preloadAgoraSDKs } from '../utils/agoraLazyLoader';
-import { joinAsHost, joinAsAudience, getClient, safeLeave } from '../lib/agoraClient';
+import AgoraRTC from 'agora-rtc-sdk-ng';
 import { supabase, getAuthToken } from '../utils/supabase-auth.js';
 import { fetchWithRetry, fetchJSONWithRetry } from '../utils/fetchWithRetry.js';
 import toast from 'react-hot-toast';
@@ -19,53 +19,7 @@ import { fireBeacon } from '../utils/beacon';
 import { analytics } from '../lib/analytics';
 import socketService from '../services/socketServiceWrapper';
 
-// Global singleton lock to prevent multiple VideoCall instances from initializing simultaneously
-// This addresses the issue where multiple components mount (React StrictMode, routing bugs, etc.)
-const globalAgoraLock = {
-  activeChannel: null,
-  activeUid: null,
-  lockTime: null
-};
-
-const acquireGlobalLock = (channel, uid) => {
-  const now = Date.now();
-
-  // Check if there's an active lock for a DIFFERENT channel/uid
-  if (globalAgoraLock.activeChannel &&
-      (globalAgoraLock.activeChannel !== channel || globalAgoraLock.activeUid !== uid)) {
-    console.warn('🚫 BLOCKED: Another VideoCall instance is active', {
-      active: { channel: globalAgoraLock.activeChannel, uid: globalAgoraLock.activeUid },
-      attempting: { channel, uid },
-      lockAge: now - globalAgoraLock.lockTime
-    });
-    return false;
-  }
-
-  // If lock is for same channel/uid, it's the same component re-rendering - allow
-  if (globalAgoraLock.activeChannel === channel && globalAgoraLock.activeUid === uid) {
-    console.log('✅ Lock already held by this channel/uid - allowing');
-    return true;
-  }
-
-  // Acquire new lock
-  globalAgoraLock.activeChannel = channel;
-  globalAgoraLock.activeUid = uid;
-  globalAgoraLock.lockTime = now;
-  console.log('🔒 Global lock acquired', { channel, uid });
-  return true;
-};
-
-const releaseGlobalLock = (channel, uid) => {
-  if (globalAgoraLock.activeChannel === channel && globalAgoraLock.activeUid === uid) {
-    console.log('🔓 Global lock released', { channel, uid });
-    globalAgoraLock.activeChannel = null;
-    globalAgoraLock.activeUid = null;
-    globalAgoraLock.lockTime = null;
-  }
-};
-
-// Publish mutex to prevent double publish across renders/StrictMode
-let publishMutex = false;
+// Simplified - no complex locks or mutexes
 
 const VideoCall = forwardRef(({
   channel,
@@ -91,15 +45,10 @@ const VideoCall = forwardRef(({
 }, ref) => {
   const client = useRef(null);
   const localVideo = useRef(null);
-  const localPreviewVideo = useRef(null);  // Separate ref for preview
+  const localPreviewVideo = useRef(null);
   const remoteVideo = useRef(null);
-  const intentionalLeaveRef = useRef(false); // Track intentional call end to skip guard prompts
-  // Track what we've actually published (prevents double publish)
-  const publishedRef = useRef({ audio: false, video: false });
-  // Keep current local tracks so we can unpublish/close precisely
-  const tracksRef = useRef({ mic: null, cam: null });
-  // Track the joined channel explicitly (don't rely on SDK's channelName property)
-  const joinedChannelRef = useRef(null);
+  const intentionalLeaveRef = useRef(false);
+  const callInitialized = useRef(false); // Prevent double initialization
   const [token, setToken] = useState(initialToken);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(isHost ? !isVoiceOnly : (!isStreaming && !isVoiceOnly));
@@ -159,7 +108,6 @@ const VideoCall = forwardRef(({
   const [sdkLoading, setSdkLoading] = useState(false);
   const [sdkLoadError, setSdkLoadError] = useState(null);
   const sdkInitialized = useRef(false);
-  const callInitialized = useRef(false); // Prevent duplicate initialization
   const sessionEstablished = useRef(false); // Track if session successfully joined
 
   const callStartTime = useRef(null);
@@ -513,41 +461,7 @@ const VideoCall = forwardRef(({
     });
   }, [refreshToken]);
 
-  // Safe publish helper - only publishes tracks that haven't been published yet
-  const safePublish = useCallback(async (client, { mic, cam }) => {
-    const toPublish = [];
-    if (mic && !publishedRef.current.audio) toPublish.push(mic);
-    if (cam && !publishedRef.current.video) toPublish.push(cam);
-    if (!toPublish.length) {
-      console.log('⚠️ No tracks to publish (already published)');
-      return;
-    }
-
-    // Log which channel we're publishing to (use our tracked channel, not SDK's channelName)
-    const channelName = joinedChannelRef.current || 'unknown';
-    console.log(`📡 Publishing ${toPublish.length} tracks to channel: ${channelName}`);
-
-    await client.publish(toPublish);
-    console.log('✅ Tracks published successfully');
-
-    if (mic) publishedRef.current.audio = true;
-    if (cam) publishedRef.current.video = true;
-  }, []);
-
-  // Unpublish and close existing video track helper
-  const unpublishVideoIfAny = useCallback(async (client) => {
-    try {
-      const v = tracksRef.current.cam;
-      if (v) {
-        try { await client.unpublish([v]); } catch {}
-        try { v.stop?.(); v.close?.(); } catch {}
-        tracksRef.current.cam = null;
-        publishedRef.current.video = false;
-      }
-    } catch (e) {
-      console.warn('Could not unpublish/close existing video track', e);
-    }
-  }, []);
+  // Removed complex helper functions - using simple direct Agora SDK calls instead
 
   // Get video encoder configuration based on quality setting
   const getVideoEncoderConfig = useCallback((quality) => {
@@ -1113,35 +1027,24 @@ const VideoCall = forwardRef(({
         heartbeatInterval.current = null;
       }
 
-      // Clean up local tracks - unpublish first, then stop and close
-      // Handle both tracksRef (new mutex system) and localTracks (state)
+      // Clean up local tracks
       try {
         const tracksToUnpublish = [];
-
-        // Add from localTracks state
         if (localTracks.audioTrack) tracksToUnpublish.push(localTracks.audioTrack);
         if (localTracks.videoTrack) tracksToUnpublish.push(localTracks.videoTrack);
         if (localTracks.screenTrack) tracksToUnpublish.push(localTracks.screenTrack);
 
-        // Add from tracksRef if different
-        if (tracksRef.current.mic && !tracksToUnpublish.includes(tracksRef.current.mic)) {
-          tracksToUnpublish.push(tracksRef.current.mic);
-        }
-        if (tracksRef.current.cam && !tracksToUnpublish.includes(tracksRef.current.cam)) {
-          tracksToUnpublish.push(tracksRef.current.cam);
-        }
-
-        // Unpublish all tracks at once if client exists
+        // Unpublish tracks
         if (client.current && tracksToUnpublish.length > 0 && isJoined) {
-          console.log('📡 Unpublishing local tracks...');
+          console.log('📡 Unpublishing tracks...');
           await client.current.unpublish(tracksToUnpublish);
-          console.log('✅ Local tracks unpublished');
+          console.log('✅ Tracks unpublished');
         }
       } catch (unpublishError) {
         console.warn('Failed to unpublish tracks (non-fatal):', unpublishError);
       }
 
-      // Stop and close tracks from state
+      // Stop and close tracks
       if (localTracks.audioTrack) {
         localTracks.audioTrack.stop();
         localTracks.audioTrack.close();
@@ -1154,20 +1057,6 @@ const VideoCall = forwardRef(({
         localTracks.screenTrack.stop();
         localTracks.screenTrack.close();
       }
-
-      // Stop and close tracks from tracksRef
-      if (tracksRef.current.mic) {
-        tracksRef.current.mic.stop();
-        tracksRef.current.mic.close();
-      }
-      if (tracksRef.current.cam) {
-        tracksRef.current.cam.stop();
-        tracksRef.current.cam.close();
-      }
-
-      // Reset refs
-      tracksRef.current = { mic: null, cam: null };
-      publishedRef.current = { audio: false, video: false };
 
       // Clear recording interval
       if (window.recordingInterval) {
@@ -1374,166 +1263,76 @@ const VideoCall = forwardRef(({
 
     const initializeCall = async () => {
       try {
-        // Agora SDK is already loaded via npm package (no CDN loading needed)
-        // Use singleton client - prevents UID_CONFLICT
-        console.log('🎯 Using Agora singleton to join channel');
+        console.log('🎬 Starting stream initialization...');
 
-        const joinResult = isHost || isStreaming
-          ? await joinAsHost({
-              appId: import.meta.env.VITE_AGORA_APP_ID,
-              channel,
-              token,
-              uid: numericUid // CRITICAL: Use backend's UID (UID-bound token)
-            })
-          : await joinAsAudience({
-              appId: import.meta.env.VITE_AGORA_APP_ID,
-              channel,
-              token,
-              uid: numericUid
-            });
-
-        // IMPORTANT: Use the client returned by joinAsHost/joinAsAudience
-        // Don't call getClient() again - use the client from joinResult
-        const agoraClient = joinResult.client;
+        // 1. Create Agora client
+        const agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
         client.current = agoraClient;
 
-        console.log(`✅ Joined with UID: ${joinResult.uid}`);
+        // 2. Join channel
+        const numericUid = uid ? Number(uid) : null;
+        console.log('📞 Joining channel:', channel);
+        await agoraClient.join(
+          import.meta.env.VITE_AGORA_APP_ID,
+          channel,
+          token,
+          numericUid
+        );
+        console.log('✅ Joined channel successfully');
 
-        // Track the joined channel explicitly instead of relying on SDK internals
-        // (client.channelName is not guaranteed in Agora SDK v4)
-        const joinedChannel =
-          (joinResult && (joinResult.channel || joinResult.channelName)) ||
-          channel; // fall back to the prop we navigated with
+        // 3. Set role (host or audience)
+        if (isHost || isStreaming) {
+          await agoraClient.setClientRole('host');
+          console.log('✅ Set role to host');
 
-        if (!joinedChannel) {
-          throw new Error('Join failed: missing channel after join');
+          // Small delay to ensure role is set
+          await new Promise(r => setTimeout(r, 300));
+
+          // 4. Create tracks
+          console.log('🎤🎥 Creating tracks...');
+          const tracks = [];
+          let micTrack = null;
+          let camTrack = null;
+
+          // Create microphone track
+          micTrack = await AgoraRTC.createMicrophoneAudioTrack({
+            encoderConfig: 'music_standard'
+          });
+          tracks.push(micTrack);
+          console.log('✅ Mic track created');
+
+          // Create camera track (unless voice-only)
+          if (!isVoiceOnly) {
+            camTrack = await AgoraRTC.createCameraVideoTrack({
+              encoderConfig: { width: 1280, height: 720, frameRate: 30 }
+            });
+            tracks.push(camTrack);
+            console.log('✅ Camera track created');
+          }
+
+          // 5. Publish tracks
+          console.log('📡 Publishing tracks...');
+          await agoraClient.publish(tracks);
+          console.log('✅ Tracks published');
+
+          // Store tracks in state
+          setLocalTracks({
+            audioTrack: micTrack,
+            videoTrack: camTrack,
+            screenTrack: null
+          });
+
+          // Notify parent
+          if (onLocalTracksCreated) {
+            onLocalTracksCreated({ audioTrack: micTrack, videoTrack: camTrack });
+          }
+        } else {
+          // Viewer - set role to audience
+          await agoraClient.setClientRole('audience');
+          console.log('✅ Set role to audience');
         }
 
-        joinedChannelRef.current = joinedChannel;
-        console.log('✅ Joined to channel:', joinedChannel);
-
-        // Wait for client to be CONNECTED before publishing
-        const waitForConnected = async () => {
-          if (agoraClient.connectionState === 'CONNECTED') {
-            console.log('✅ Already CONNECTED');
-            return;
-          }
-          console.log('⏳ Waiting for CONNECTED state...');
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Join timeout')), 8000);
-            const onChange = (cur, prev, reason) => {
-              console.log(`🔌 Connection state: ${prev} → ${cur}`, reason || '');
-              if (cur === 'CONNECTED') {
-                clearTimeout(timeout);
-                agoraClient.off('connection-state-change', onChange);
-                resolve();
-              }
-            };
-            agoraClient.on('connection-state-change', onChange);
-          });
-        };
-
-        await waitForConnected();
-        setIsJoined(true);
-        console.log('✅ Connection state is CONNECTED, ready to publish');
-
-        // If host/streaming, create and publish tracks with mutex protection
-        if (isHost || isStreaming) {
-          if (publishMutex) {
-            console.log('⛔ publish in progress, skipping');
-          } else {
-            publishMutex = true;
-            try {
-              // Check if we already have tracks using our refs (more reliable than SDK's localTracks)
-              const hasExistingAudio = !!(tracksRef.current.mic || localTracks.audioTrack);
-              const hasExistingVideo = !!(tracksRef.current.cam || localTracks.videoTrack);
-
-              // If we already have published tracks, just reuse them
-              if (hasExistingAudio && hasExistingVideo && publishedRef.current.audio && publishedRef.current.video) {
-                console.log('⚠️ Already published; reusing existing local tracks');
-                setLocalTracks({
-                  audioTrack: tracksRef.current.mic,
-                  videoTrack: tracksRef.current.cam,
-                  screenTrack: null
-                });
-              } else {
-                // (Re)create only missing tracks
-                const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
-
-                const videoConfig = {
-                  encoderConfig: { width: 1280, height: 720, frameRate: 30, bitrate: 2000 },
-                  facingMode: 'user',
-                };
-
-                if (!tracksRef.current.mic) {
-                  console.log('🎤 Creating mic track…');
-                  tracksRef.current.mic = await AgoraRTC.createMicrophoneAudioTrack({
-                    encoderConfig: 'music_standard'
-                  });
-                }
-
-                if (!tracksRef.current.cam && !isVoiceOnly) {
-                  console.log('🎥 Creating camera track…');
-                  tracksRef.current.cam = await AgoraRTC.createCameraVideoTrack(videoConfig);
-                }
-
-                // Try to publish; if Agora complains about multiple video tracks, heal automatically
-                try {
-                  console.log('📡 Publishing…');
-                  await safePublish(agoraClient, {
-                    mic: tracksRef.current.mic,
-                    cam: tracksRef.current.cam
-                  });
-                  console.log('✅ Published');
-                } catch (err) {
-                  const msg = String(err?.message || err?.code || err);
-                  if (msg.includes('CAN_NOT_PUBLISH_MULTIPLE_VIDEO_TRACKS')) {
-                    console.warn('♻️ Recovering: unpublish old video, close, recreate, publish once');
-                    await unpublishVideoIfAny(agoraClient);
-
-                    const AgoraRTC2 = (await import('agora-rtc-sdk-ng')).default;
-                    tracksRef.current.cam = await AgoraRTC2.createCameraVideoTrack(videoConfig);
-
-                    await safePublish(agoraClient, {
-                      mic: tracksRef.current.mic, // keep the same mic
-                      cam: tracksRef.current.cam  // brand new cam
-                    });
-                    console.log('✅ Recovered and published single video track');
-                  } else {
-                    throw err;
-                  }
-                }
-
-                // Store tracks in state
-                setLocalTracks({
-                  audioTrack: tracksRef.current.mic,
-                  videoTrack: tracksRef.current.cam,
-                  screenTrack: null
-                });
-
-                // Notify parent component if callback provided
-                if (onLocalTracksCreated) {
-                  onLocalTracksCreated({
-                    audioTrack: tracksRef.current.mic,
-                    videoTrack: tracksRef.current.cam
-                  });
-                }
-
-                // Optional: play local video to a container
-                const container = document.getElementById('local-player');
-                tracksRef.current.cam?.play(container || undefined);
-              }
-            } catch (e) {
-              console.error('❌ Failed to publish:', e);
-              toast.error('Failed to start camera/microphone');
-              // Do not crash the page; user can retry
-            } finally {
-              publishMutex = false;
-            }
-          }
-        } // End of if (isHost || isStreaming)
-
-        // Setup event handlers after join
+        // Setup event handlers
         setupEventHandlers();
 
         // Mark as joined
@@ -1550,15 +1349,13 @@ const VideoCall = forwardRef(({
           }
         }, 1000);
 
-        console.log('✅ VideoCall initialized successfully');
+        console.log('✅ Stream started successfully!');
       } catch (error) {
-        console.error('VideoCall initialization error:', error);
+        console.error('❌ Stream initialization error:', error);
         setConnectionState('FAILED');
         setSdkLoadError(error.message);
-        toast.error('Failed to initialize video call');
-        // Reset flag on error so user can retry
+        toast.error(`Failed to start stream: ${error.message}`);
         callInitialized.current = false;
-        releaseGlobalLock(channel, uid);
       }
     };
 
@@ -1567,53 +1364,10 @@ const VideoCall = forwardRef(({
     return cleanup;
   }, [channel, token, uid, isHost, isStreaming, isVoiceOnly]);
 
-  // Reset initialization flag on unmount only
+  // Reset initialization flag on unmount
   useEffect(() => {
     return () => {
-      console.log('🔓 Unlocking initialization on unmount');
       callInitialized.current = false;
-      releaseGlobalLock(channel, uid);
-    };
-  }, [channel, uid]);
-
-  // Cleanup tracks on unmount to prevent "already live" or duplicate track issues
-  // Note: This runs ONLY on final unmount (empty deps array)
-  useEffect(() => {
-    return () => {
-      console.log('🧹 Track cleanup on unmount triggered');
-      // Don't use async IIFE - it won't be awaited anyway on unmount
-      // Just synchronously stop and close tracks
-      try {
-        if (tracksRef.current.cam || tracksRef.current.mic) {
-          console.log('🧹 Cleaning up tracksRef tracks');
-
-          // Unpublish is async and won't complete on unmount, so skip it
-          // Just stop and close synchronously
-          if (tracksRef.current.cam) {
-            try {
-              tracksRef.current.cam.stop();
-              tracksRef.current.cam.close();
-            } catch (e) {
-              console.warn('Failed to close cam:', e);
-            }
-          }
-
-          if (tracksRef.current.mic) {
-            try {
-              tracksRef.current.mic.stop();
-              tracksRef.current.mic.close();
-            } catch (e) {
-              console.warn('Failed to close mic:', e);
-            }
-          }
-
-          tracksRef.current = { mic: null, cam: null };
-          publishedRef.current = { audio: false, video: false };
-          console.log('✅ TracksRef cleaned up on unmount');
-        }
-      } catch (e) {
-        console.warn('Track cleanup failed', e);
-      }
     };
   }, []);
 
