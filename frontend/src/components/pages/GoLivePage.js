@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 const GoLivePage = ({ user }) => {
   const navigate = useNavigate();
 
-  const handleGoLive = async (streamData) => {
+  const handleGoLive = async (streamData, retryCount = 0) => {
     try {
       console.log('🎬 Starting stream with config:', {
         title: streamData.title,
@@ -99,7 +99,49 @@ const GoLivePage = ({ user }) => {
       }
     } catch (error) {
       console.error('Failed to create stream:', error);
-      toast.error(error.message || 'Failed to start stream. Please try again.');
+
+      // Handle "already live" error - auto-end the old stream and retry
+      if (error.message && error.message.toLowerCase().includes('already live')) {
+        try {
+          // Extract streamId from error message (format: "HTTP 400: {json}")
+          let existingStreamId = null;
+          try {
+            const jsonMatch = error.message.match(/\{.*\}/);
+            if (jsonMatch) {
+              const errorData = JSON.parse(jsonMatch[0]);
+              existingStreamId = errorData.streamId;
+            }
+          } catch (parseError) {
+            console.warn('Could not parse streamId from error:', parseError);
+          }
+
+          console.log('⚠️ Already live - ending existing stream:', existingStreamId);
+          toast.loading('Ending previous stream...', { id: 'end-stream' });
+
+          // End the existing stream
+          if (existingStreamId) {
+            await apiPost(`/streaming/end-stream/${existingStreamId}`);
+          }
+
+          toast.success('Previous stream ended', { id: 'end-stream' });
+
+          // Retry going live after a short delay (only retry once)
+          if (retryCount < 1) {
+            console.log('🔄 Retrying go-live...');
+            setTimeout(() => {
+              handleGoLive(streamData, retryCount + 1);
+            }, 500);
+            return; // Don't show error toast, we're retrying
+          } else {
+            toast.error('Unable to start stream after ending previous one. Please try again.');
+          }
+        } catch (endError) {
+          console.error('Failed to end existing stream:', endError);
+          toast.error('Failed to end previous stream. Please try ending it manually from the TV page.');
+        }
+      } else {
+        toast.error(error.message || 'Failed to start stream. Please try again.');
+      }
     }
   };
 
