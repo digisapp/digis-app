@@ -1365,6 +1365,34 @@ const VideoCall = forwardRef(({
 
             // Publish tracks to channel (use local agoraClient variable to avoid race conditions)
             if (tracks.length > 0 && agoraClient) {
+              // Wait for connection to be fully established before publishing
+              const currentState = agoraClient.connectionState;
+              console.log('🔌 Current connection state:', currentState);
+
+              if (currentState !== 'CONNECTED') {
+                console.log('⏳ Waiting for connection state to be CONNECTED...');
+
+                // Wait for connection-state-change event
+                await new Promise((resolve, reject) => {
+                  const timeout = setTimeout(() => {
+                    reject(new Error('Timeout waiting for CONNECTED state'));
+                  }, 10000); // 10 second timeout
+
+                  const handler = (curState) => {
+                    console.log('🔌 Connection state changed to:', curState);
+                    if (curState === 'CONNECTED') {
+                      clearTimeout(timeout);
+                      agoraClient.off('connection-state-change', handler);
+                      resolve();
+                    }
+                  };
+
+                  agoraClient.on('connection-state-change', handler);
+                });
+              }
+
+              console.log('✅ Connection state is CONNECTED, safe to publish');
+
               // Verify client role is "host" before publishing
               // @ts-ignore - _role is internal but necessary to check
               if (agoraClient._role !== 'host') {
