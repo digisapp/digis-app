@@ -1417,16 +1417,31 @@ const VideoCall = forwardRef(({
                 await new Promise(resolve => setTimeout(resolve, 150));
               }
 
-              // Check for and unpublish any existing tracks before publishing new ones
+              // Check for and FULLY REMOVE any existing tracks before publishing new ones
               // This prevents "CAN_NOT_PUBLISH_MULTIPLE_VIDEO_TRACKS" error
-              const localTracks = agoraClient.localTracks;
-              if (localTracks && localTracks.length > 0) {
-                console.log('⚠️ Found existing published tracks, unpublishing them first...', localTracks.map(t => t.trackMediaType));
+              const existingLocalTracks = agoraClient.localTracks || [];
+              if (existingLocalTracks.length > 0) {
+                console.log('⚠️ Found existing published tracks, cleaning them up...', existingLocalTracks.map(t => t.trackMediaType));
                 try {
-                  await agoraClient.unpublish(localTracks);
+                  // 1. Unpublish from Agora
+                  await agoraClient.unpublish(existingLocalTracks);
                   console.log('✅ Existing tracks unpublished');
-                } catch (unpublishErr) {
-                  console.warn('Failed to unpublish existing tracks (continuing anyway):', unpublishErr);
+
+                  // 2. Stop and close each track to fully dispose
+                  for (const track of existingLocalTracks) {
+                    try {
+                      track.stop();
+                      track.close();
+                      console.log(`✅ Closed ${track.trackMediaType} track`);
+                    } catch (closeErr) {
+                      console.warn(`Failed to close track ${track.trackMediaType}:`, closeErr);
+                    }
+                  }
+
+                  // 3. Wait a moment for cleanup to complete
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                } catch (cleanupErr) {
+                  console.warn('Failed to cleanup existing tracks:', cleanupErr);
                 }
               }
 
