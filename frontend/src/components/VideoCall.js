@@ -1104,11 +1104,22 @@ const VideoCall = forwardRef(({
       }
 
       // Clean up local tracks - unpublish first, then stop and close
+      // Handle both tracksRef (new mutex system) and localTracks (state)
       try {
         const tracksToUnpublish = [];
+
+        // Add from localTracks state
         if (localTracks.audioTrack) tracksToUnpublish.push(localTracks.audioTrack);
         if (localTracks.videoTrack) tracksToUnpublish.push(localTracks.videoTrack);
         if (localTracks.screenTrack) tracksToUnpublish.push(localTracks.screenTrack);
+
+        // Add from tracksRef if different
+        if (tracksRef.current.mic && !tracksToUnpublish.includes(tracksRef.current.mic)) {
+          tracksToUnpublish.push(tracksRef.current.mic);
+        }
+        if (tracksRef.current.cam && !tracksToUnpublish.includes(tracksRef.current.cam)) {
+          tracksToUnpublish.push(tracksRef.current.cam);
+        }
 
         // Unpublish all tracks at once if client exists
         if (client.current && tracksToUnpublish.length > 0 && isJoined) {
@@ -1120,7 +1131,7 @@ const VideoCall = forwardRef(({
         console.warn('Failed to unpublish tracks (non-fatal):', unpublishError);
       }
 
-      // Stop and close tracks
+      // Stop and close tracks from state
       if (localTracks.audioTrack) {
         localTracks.audioTrack.stop();
         localTracks.audioTrack.close();
@@ -1133,6 +1144,20 @@ const VideoCall = forwardRef(({
         localTracks.screenTrack.stop();
         localTracks.screenTrack.close();
       }
+
+      // Stop and close tracks from tracksRef
+      if (tracksRef.current.mic) {
+        tracksRef.current.mic.stop();
+        tracksRef.current.mic.close();
+      }
+      if (tracksRef.current.cam) {
+        tracksRef.current.cam.stop();
+        tracksRef.current.cam.close();
+      }
+
+      // Reset refs
+      tracksRef.current = { mic: null, cam: null };
+      publishedRef.current = { audio: false, video: false };
 
       // Clear recording interval
       if (window.recordingInterval) {
@@ -1512,27 +1537,43 @@ const VideoCall = forwardRef(({
   }, [channel, uid]);
 
   // Cleanup tracks on unmount to prevent "already live" or duplicate track issues
+  // Note: This runs ONLY on final unmount (empty deps array)
   useEffect(() => {
     return () => {
-      (async () => {
-        try {
-          if (tracksRef.current.cam || tracksRef.current.mic) {
-            const toUnpub = [tracksRef.current.cam, tracksRef.current.mic].filter(Boolean);
-            if (toUnpub.length && client.current) {
-              await client.current.unpublish(toUnpub).catch(() => {});
+      console.log('🧹 Track cleanup on unmount triggered');
+      // Don't use async IIFE - it won't be awaited anyway on unmount
+      // Just synchronously stop and close tracks
+      try {
+        if (tracksRef.current.cam || tracksRef.current.mic) {
+          console.log('🧹 Cleaning up tracksRef tracks');
+
+          // Unpublish is async and won't complete on unmount, so skip it
+          // Just stop and close synchronously
+          if (tracksRef.current.cam) {
+            try {
+              tracksRef.current.cam.stop();
+              tracksRef.current.cam.close();
+            } catch (e) {
+              console.warn('Failed to close cam:', e);
             }
-            tracksRef.current.cam?.stop?.();
-            tracksRef.current.cam?.close?.();
-            tracksRef.current.mic?.stop?.();
-            tracksRef.current.mic?.close?.();
-            tracksRef.current = { mic: null, cam: null };
-            publishedRef.current = { audio: false, video: false };
-            console.log('✅ Tracks cleaned up on unmount');
           }
-        } catch (e) {
-          console.warn('Cleanup failed', e);
+
+          if (tracksRef.current.mic) {
+            try {
+              tracksRef.current.mic.stop();
+              tracksRef.current.mic.close();
+            } catch (e) {
+              console.warn('Failed to close mic:', e);
+            }
+          }
+
+          tracksRef.current = { mic: null, cam: null };
+          publishedRef.current = { audio: false, video: false };
+          console.log('✅ TracksRef cleaned up on unmount');
         }
-      })();
+      } catch (e) {
+        console.warn('Track cleanup failed', e);
+      }
     };
   }, []);
 
