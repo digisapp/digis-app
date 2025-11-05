@@ -1365,6 +1365,15 @@ const VideoCall = forwardRef(({
 
             // Publish tracks to channel (use local agoraClient variable to avoid race conditions)
             if (tracks.length > 0 && agoraClient) {
+              // Verify client role is "host" before publishing
+              // @ts-ignore - _role is internal but necessary to check
+              if (agoraClient._role !== 'host') {
+                console.warn('⚠️ Client role is not host, setting it now...');
+                await agoraClient.setClientRole('host');
+                // Wait a moment for role change to propagate
+                await new Promise(resolve => setTimeout(resolve, 150));
+              }
+
               console.log('📡 Publishing tracks to channel...');
               await agoraClient.publish(tracks);
               console.log('✅ Tracks published successfully');

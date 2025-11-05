@@ -101,9 +101,18 @@ export async function joinAsHost(opts: {
       opts.uid ?? undefined // undefined = Agora assigns UID (for UID-agnostic tokens)
     );
 
-    // Set client role to host
+    // Set client role to host and verify it took effect
     await c.setClientRole("host");
     console.log('✅ Set client role to host');
+
+    // Verify the role was actually set
+    // @ts-ignore - _role is internal but we need to verify
+    if (c._role !== "host") {
+      console.warn('⚠️ Role mismatch detected, retrying setClientRole...');
+      await c.setClientRole("host");
+      // Small delay to ensure role change propagates
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
 
     _channel = opts.channel;
     _uid = Number(assigned);
