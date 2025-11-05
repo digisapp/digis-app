@@ -6,6 +6,51 @@ const { authenticateToken } = require('../middleware/auth');
 const { supabase, getSupabaseAdmin } = require('../utils/supabase');
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get or create user in database from Supabase Auth
+ * This ensures users exist in the database even if they weren't created during registration
+ */
+async function getOrCreateUser(supabaseId, email) {
+  // Try to get existing user
+  let { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('supabase_id', supabaseId)
+    .single();
+
+  // If user exists, return their ID
+  if (userData && !userError) {
+    return userData.id;
+  }
+
+  // User doesn't exist - create them
+  console.log('📝 Creating user record for supabase_id:', supabaseId);
+
+  const { data: newUser, error: createError } = await supabase
+    .from('users')
+    .insert({
+      supabase_id: supabaseId,
+      email: email,
+      username: email?.split('@')[0] || `user_${supabaseId.substring(0, 8)}`,
+      display_name: email?.split('@')[0] || 'User',
+      created_at: new Date().toISOString()
+    })
+    .select('id')
+    .single();
+
+  if (createError) {
+    console.error('❌ Failed to create user:', createError);
+    throw new Error('Failed to create user record');
+  }
+
+  console.log('✅ User created with ID:', newUser.id);
+  return newUser.id;
+}
+
+// ============================================================================
 // CONVERSATIONS
 // ============================================================================
 
@@ -16,20 +61,10 @@ const { supabase, getSupabaseAdmin } = require('../utils/supabase');
 router.get('/conversations', authenticateToken, async (req, res) => {
   try {
     const supabaseId = req.user.supabase_id;
+    const email = req.user.email;
 
-    // Get database ID from supabase_id
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('supabase_id', supabaseId)
-      .single();
-
-    if (userError || !userData) {
-      console.error('❌ User not found:', supabaseId);
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    const userId = userData.id;
+    // Get or create user in database
+    const userId = await getOrCreateUser(supabaseId, email);
 
     const { data: conversations, error } = await supabase
       .from('conversations')
@@ -459,20 +494,10 @@ router.post('/:messageId/react', authenticateToken, async (req, res) => {
 router.get('/unread/count', authenticateToken, async (req, res) => {
   try {
     const supabaseId = req.user.supabase_id;
+    const email = req.user.email;
 
-    // Get database ID from supabase_id
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('supabase_id', supabaseId)
-      .single();
-
-    if (userError || !userData) {
-      console.error('❌ User not found:', supabaseId);
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    const userId = userData.id;
+    // Get or create user in database
+    const userId = await getOrCreateUser(supabaseId, email);
 
     const { data, error } = await supabase.rpc('get_unread_count', {
       p_user_id: userId
