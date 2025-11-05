@@ -1330,23 +1330,38 @@ const VideoCall = forwardRef(({
 
         // If host/streaming, create and publish tracks
         if (isHost || isStreaming) {
-          console.log('🎤🎥 Creating and publishing tracks for host...');
+          // Guard: Skip if we already have local tracks published to prevent duplicates
+          // This prevents React StrictMode double-mounting from creating multiple tracks
+          const existingTracks = agoraClient.localTracks || [];
+          const hasExistingAudio = existingTracks.some(t => t.trackMediaType === 'audio');
+          const hasExistingVideo = existingTracks.some(t => t.trackMediaType === 'video');
 
-          try {
-            // Import AgoraRTC dynamically to access createMicrophoneAndCameraTracks
-            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
-
-            // Determine which tracks to create
-            const tracks = [];
-            let micTrack = null;
-            let camTrack = null;
-
-            // Always create microphone track for host
-            console.log('🎤 Creating microphone track...');
-            micTrack = await AgoraRTC.createMicrophoneAudioTrack({
-              encoderConfig: 'music_standard'
+          if (hasExistingAudio && hasExistingVideo) {
+            console.log('⚠️ Tracks already published, skipping track creation to prevent duplicates');
+            // Still set the tracks in state from what's already published
+            setLocalTracks({
+              audioTrack: existingTracks.find(t => t.trackMediaType === 'audio'),
+              videoTrack: existingTracks.find(t => t.trackMediaType === 'video'),
+              screenTrack: null
             });
-            tracks.push(micTrack);
+          } else {
+            console.log('🎤🎥 Creating and publishing tracks for host...');
+
+            try {
+              // Import AgoraRTC dynamically to access createMicrophoneAndCameraTracks
+              const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+
+              // Determine which tracks to create
+              const tracks = [];
+              let micTrack = null;
+              let camTrack = null;
+
+              // Always create microphone track for host
+              console.log('🎤 Creating microphone track...');
+              micTrack = await AgoraRTC.createMicrophoneAudioTrack({
+                encoderConfig: 'music_standard'
+              });
+              tracks.push(micTrack);
 
             // Create camera track unless voice-only
             if (!isVoiceOnly) {
@@ -1431,12 +1446,13 @@ const VideoCall = forwardRef(({
                 onLocalTracksCreated({ audioTrack: micTrack, videoTrack: camTrack });
               }
             }
-          } catch (trackError) {
-            console.error('❌ Failed to create/publish tracks:', trackError);
-            toast.error('Failed to start camera/microphone');
-            // Don't fail the entire call - continue without publishing
-          }
-        }
+            } catch (trackError) {
+              console.error('❌ Failed to create/publish tracks:', trackError);
+              toast.error('Failed to start camera/microphone');
+              // Don't fail the entire call - continue without publishing
+            }
+          } // End of else block (track creation)
+        } // End of if (isHost || isStreaming)
 
         // Setup event handlers after join
         setupEventHandlers();
