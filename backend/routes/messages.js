@@ -10,34 +10,35 @@ const { supabase, getSupabaseAdmin } = require('../utils/supabase');
 // ============================================================================
 
 /**
- * Get or create user in database from Supabase Auth
- * This ensures users exist in the database even if they weren't created during registration
+ * Ensure user exists in database (for RLS policies)
+ * The conversations/messages tables use supabase_id (UUID) directly
  */
-async function getOrCreateUser(supabaseId, email) {
-  // Try to get existing user
-  let { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('supabase_id', supabaseId)
-    .single();
-
-  // If user exists, return their ID
-  if (userData && !userError) {
-    return userData.id;
-  }
-
-  // User doesn't exist - create them
-  console.log('📝 Creating user record for supabase_id:', supabaseId);
-
-  // Generate unique username to avoid conflicts
-  const baseUsername = email?.split('@')[0] || `user`;
-  const randomSuffix = Math.random().toString(36).substring(2, 8);
-  const username = `${baseUsername}_${randomSuffix}`;
-
+async function ensureUserExists(supabaseId, email) {
   try {
+    // Check if user exists
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', supabaseId)
+      .maybeSingle();
+
+    // If user exists, we're done
+    if (userData) {
+      return supabaseId;
+    }
+
+    // User doesn't exist - create them
+    console.log('📝 Creating user record for supabase_id:', supabaseId);
+
+    // Generate unique username to avoid conflicts
+    const baseUsername = email?.split('@')[0] || `user`;
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    const username = `${baseUsername}_${randomSuffix}`;
+
     const { data: newUser, error: createError } = await supabase
       .from('users')
       .insert({
+        id: supabaseId, // Use supabase_id as primary key
         supabase_id: supabaseId,
         email: email,
         username: username,
@@ -51,29 +52,21 @@ async function getOrCreateUser(supabaseId, email) {
     if (createError) {
       // Check if it's a race condition (user was created by another request)
       if (createError.code === '23505') { // Unique constraint violation
-        console.log('⚠️ User already exists (race condition), fetching existing user...');
-        const { data: existingUser, error: fetchError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('supabase_id', supabaseId)
-          .single();
-
-        if (existingUser && !fetchError) {
-          console.log('✅ Found existing user with ID:', existingUser.id);
-          return existingUser.id;
-        }
+        console.log('⚠️ User already exists (race condition), continuing...');
+        return supabaseId;
       }
 
       console.error('❌ Failed to create user:', createError);
-      throw createError; // Throw original error for better debugging
+      // Don't throw - just return the supabase_id and let the query proceed
+      return supabaseId;
     }
 
     console.log('✅ User created with ID:', newUser.id);
-    return newUser.id;
+    return supabaseId;
   } catch (error) {
-    console.error('❌ Exception in getOrCreateUser:', error);
-    // Return a more helpful error message
-    throw new Error(`Failed to get or create user: ${error.message}`);
+    console.error('❌ Exception in ensureUserExists:', error);
+    // Don't throw - just return the supabase_id
+    return supabaseId;
   }
 }
 
@@ -90,8 +83,8 @@ router.get('/conversations', authenticateToken, async (req, res) => {
     const supabaseId = req.user.supabase_id;
     const email = req.user.email;
 
-    // Get or create user in database
-    const userId = await getOrCreateUser(supabaseId, email);
+    // Ensure user exists in database
+    await ensureUserExists(supabaseId, email);
 
     const { data: conversations, error } = await supabase
       .from('conversations')
@@ -101,14 +94,14 @@ router.get('/conversations', authenticateToken, async (req, res) => {
         user2:user2_id(id, username, display_name, profile_pic_url),
         last_message:last_message_id(id, content, media_url, message_type, created_at, sender_id)
       `)
-      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+      .or(`user1_id.eq.${supabaseId},user2_id.eq.${supabaseId}`)
       .order('last_message_at', { ascending: false });
 
     if (error) throw error;
 
     // Format conversations to show the "other" user
-    const formattedConversations = conversations.map(conv => {
-      const otherUser = conv.user1_id === userId ? conv.user2 : conv.user1;
+    const formattedConversations = (conversations || []).map(conv => {
+      const otherUser = conv.user1_id === supabaseId ? conv.user2 : conv.user1;
       return {
         id: conv.id,
         otherUser,
@@ -529,11 +522,11 @@ router.get('/unread/count', authenticateToken, async (req, res) => {
     const supabaseId = req.user.supabase_id;
     const email = req.user.email;
 
-    // Get or create user in database
-    const userId = await getOrCreateUser(supabaseId, email);
+    // Ensure user exists in database
+    await ensureUserExists(supabaseId, email);
 
     const { data, error } = await supabase.rpc('get_unread_count', {
-      p_user_id: userId
+      p_user_id: supabaseId
     });
 
     if (error) throw error;
