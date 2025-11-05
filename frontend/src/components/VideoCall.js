@@ -1392,13 +1392,15 @@ const VideoCall = forwardRef(({
               uid: numericUid
             });
 
-        // Get the singleton client and store in local variable to prevent race conditions
-        const agoraClient = getClient();
+        // IMPORTANT: Use the client returned by joinAsHost/joinAsAudience
+        // Don't call getClient() again - use the client from joinResult
+        const agoraClient = joinResult.client;
         client.current = agoraClient;
 
         console.log(`✅ Joined with UID: ${joinResult.uid}`);
 
         // Verify we're actually joined by checking channel name
+        // This should always pass since joinAsHost already verified it
         if (!agoraClient.channelName) {
           throw new Error('Join failed: channelName is null after joinAsHost');
         }
