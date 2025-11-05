@@ -1260,15 +1260,42 @@ const VideoCall = forwardRef(({
         const agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
         client.current = agoraClient;
 
-        // 2. Join channel
+        // 2. Join channel (with UID_CONFLICT recovery)
         const numericUid = uid ? Number(uid) : null;
         console.log('📞 Joining channel:', channel);
-        await agoraClient.join(
-          import.meta.env.VITE_AGORA_APP_ID,
-          channel,
-          token,
-          numericUid
-        );
+
+        try {
+          await agoraClient.join(
+            import.meta.env.VITE_AGORA_APP_ID,
+            channel,
+            token,
+            numericUid
+          );
+        } catch (joinError) {
+          // Handle UID_CONFLICT - leave and retry once
+          if (joinError.code === 'UID_CONFLICT') {
+            console.warn('⚠️ UID_CONFLICT detected, attempting recovery...');
+            try {
+              await agoraClient.leave();
+            } catch (e) {
+              console.warn('Leave during recovery failed (non-fatal):', e);
+            }
+            // Wait a moment for Agora to clear the session
+            await new Promise(r => setTimeout(r, 1000));
+            // Retry join
+            console.log('🔄 Retrying join after UID_CONFLICT...');
+            await agoraClient.join(
+              import.meta.env.VITE_AGORA_APP_ID,
+              channel,
+              token,
+              numericUid
+            );
+            console.log('✅ Recovered from UID_CONFLICT');
+          } else {
+            throw joinError; // Re-throw if not UID_CONFLICT
+          }
+        }
+
         console.log('✅ Joined channel successfully');
 
         // 3. Set role (host or audience)
