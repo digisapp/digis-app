@@ -29,25 +29,52 @@ async function getOrCreateUser(supabaseId, email) {
   // User doesn't exist - create them
   console.log('📝 Creating user record for supabase_id:', supabaseId);
 
-  const { data: newUser, error: createError } = await supabase
-    .from('users')
-    .insert({
-      supabase_id: supabaseId,
-      email: email,
-      username: email?.split('@')[0] || `user_${supabaseId.substring(0, 8)}`,
-      display_name: email?.split('@')[0] || 'User',
-      created_at: new Date().toISOString()
-    })
-    .select('id')
-    .single();
+  // Generate unique username to avoid conflicts
+  const baseUsername = email?.split('@')[0] || `user`;
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  const username = `${baseUsername}_${randomSuffix}`;
 
-  if (createError) {
-    console.error('❌ Failed to create user:', createError);
-    throw new Error('Failed to create user record');
+  try {
+    const { data: newUser, error: createError } = await supabase
+      .from('users')
+      .insert({
+        supabase_id: supabaseId,
+        email: email,
+        username: username,
+        display_name: email?.split('@')[0] || 'User',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select('id')
+      .single();
+
+    if (createError) {
+      // Check if it's a race condition (user was created by another request)
+      if (createError.code === '23505') { // Unique constraint violation
+        console.log('⚠️ User already exists (race condition), fetching existing user...');
+        const { data: existingUser, error: fetchError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('supabase_id', supabaseId)
+          .single();
+
+        if (existingUser && !fetchError) {
+          console.log('✅ Found existing user with ID:', existingUser.id);
+          return existingUser.id;
+        }
+      }
+
+      console.error('❌ Failed to create user:', createError);
+      throw createError; // Throw original error for better debugging
+    }
+
+    console.log('✅ User created with ID:', newUser.id);
+    return newUser.id;
+  } catch (error) {
+    console.error('❌ Exception in getOrCreateUser:', error);
+    // Return a more helpful error message
+    throw new Error(`Failed to get or create user: ${error.message}`);
   }
-
-  console.log('✅ User created with ID:', newUser.id);
-  return newUser.id;
 }
 
 // ============================================================================
@@ -94,7 +121,13 @@ router.get('/conversations', authenticateToken, async (req, res) => {
     res.json({ success: true, conversations: formattedConversations });
   } catch (error) {
     console.error('❌ Error fetching conversations:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch conversations' });
+    // Provide more specific error message for debugging
+    const errorMessage = error.message || 'Failed to fetch conversations';
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch conversations',
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    });
   }
 });
 
@@ -508,7 +541,13 @@ router.get('/unread/count', authenticateToken, async (req, res) => {
     res.json({ success: true, count: data });
   } catch (error) {
     console.error('❌ Error fetching unread count:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch unread count' });
+    // Provide more specific error message for debugging
+    const errorMessage = error.message || 'Failed to fetch unread count';
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch unread count',
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    });
   }
 });
 
