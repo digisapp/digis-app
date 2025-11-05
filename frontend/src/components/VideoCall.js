@@ -1402,6 +1402,19 @@ const VideoCall = forwardRef(({
                 await new Promise(resolve => setTimeout(resolve, 150));
               }
 
+              // Check for and unpublish any existing tracks before publishing new ones
+              // This prevents "CAN_NOT_PUBLISH_MULTIPLE_VIDEO_TRACKS" error
+              const localTracks = agoraClient.localTracks;
+              if (localTracks && localTracks.length > 0) {
+                console.log('⚠️ Found existing published tracks, unpublishing them first...', localTracks.map(t => t.trackMediaType));
+                try {
+                  await agoraClient.unpublish(localTracks);
+                  console.log('✅ Existing tracks unpublished');
+                } catch (unpublishErr) {
+                  console.warn('Failed to unpublish existing tracks (continuing anyway):', unpublishErr);
+                }
+              }
+
               console.log('📡 Publishing tracks to channel...');
               await agoraClient.publish(tracks);
               console.log('✅ Tracks published successfully');
