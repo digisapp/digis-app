@@ -1322,8 +1322,9 @@ const VideoCall = forwardRef(({
               uid: numericUid
             });
 
-        // Get the singleton client
-        client.current = getClient();
+        // Get the singleton client and store in local variable to prevent race conditions
+        const agoraClient = getClient();
+        client.current = agoraClient;
 
         console.log(`✅ Joined with UID: ${joinResult.uid}`);
 
@@ -1362,10 +1363,10 @@ const VideoCall = forwardRef(({
               tracks.push(camTrack);
             }
 
-            // Publish tracks to channel
-            if (tracks.length > 0) {
+            // Publish tracks to channel (use local agoraClient variable to avoid race conditions)
+            if (tracks.length > 0 && agoraClient) {
               console.log('📡 Publishing tracks to channel...');
-              await client.current.publish(tracks);
+              await agoraClient.publish(tracks);
               console.log('✅ Tracks published successfully');
 
               // Store tracks in state
