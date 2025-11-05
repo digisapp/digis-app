@@ -73,7 +73,8 @@ export async function joinAsHost(opts: {
   // Debounce concurrent joins
   if (_joining) {
     console.log('⚠️ Join already in progress, skipping duplicate call');
-    return { uid: _uid };
+    const c = getClient();
+    return { client: c, uid: _uid, channel: _channel };
   }
 
   _joining = true;
@@ -142,7 +143,8 @@ export async function joinAsAudience(opts: {
 }) {
   if (_joining) {
     console.log('⚠️ Join already in progress');
-    return { uid: _uid };
+    const c = getClient();
+    return { client: c, uid: _uid, channel: _channel };
   }
 
   _joining = true;
